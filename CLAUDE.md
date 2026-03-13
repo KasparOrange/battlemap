@@ -2,12 +2,14 @@
 
 ## Project Vision
 
-A **Flutter web app** that turns a TV (laid flat as a table surface) into a D&D digital battlemap. The same app runs in two modes:
+A **Flutter app** that turns a TV (laid flat as a table surface) into a D&D digital battlemap. The same app runs in two modes:
 
 - **Table Mode** — fullscreen on the TV, displays the grid, tokens, maps, and effects
 - **Companion Mode** — runs on a phone, used to control the table: draw on the map, place tokens, trigger effects
 
-Both modes are the **same Flutter web app** served from the same URL, switching behavior based on user selection or screen size.
+Both modes are the **same Flutter APK**. The TV box runs the Table Mode APK installed via sideload. The phone runs the same APK in Companion Mode, connecting to the TV over local Wi-Fi.
+
+**Web builds** (GitHub Pages) are used only for rapid testing during development — the production target is native Android APK.
 
 ## Hardware
 
@@ -23,7 +25,7 @@ The target TV device is the **Xiaomi TV Box S 3rd Gen** (~$60-70), chosen after 
 
 The Xiaomi's **2x GPU advantage** is critical for the visual effects we want (glow, bloom, sprite animations). The 2 GB RAM tradeoff is acceptable for a single-purpose app — just be mindful of texture atlas sizes and dispose unused assets.
 
-The TV box runs a browser (Chrome). The app is accessed via a **URL** — no native app install needed on the box. Just a bookmark.
+The app is sideloaded as an APK onto the TV box via ADB. Version codes in `pubspec.yaml` handle upgrades (`adb install -r` replaces lower version codes automatically).
 
 ## Features Roadmap
 
@@ -42,17 +44,22 @@ The TV box runs a browser (Chrome). The app is accessed via a **URL** — no nat
 
 | Tech | Purpose |
 |------|---------|
-| Flutter Web | Cross-platform UI (same app on TV browser and phone browser) |
-| GitHub Pages | Free hosting, auto-deployed |
-| GitHub Actions | CI/CD — every push to `main` builds and deploys automatically |
+| Flutter (Android APK) | Production build — sideloaded onto TV box and phone |
+| Flutter Web | Development testing only — quick iteration via GitHub Pages |
+| GitHub Actions | CI/CD — builds web for testing, can build APK for releases |
 
 ### Deployment
 
-The app auto-deploys to **GitHub Pages** via GitHub Actions on every push to `main`.
+**Production (APK):**
+- Build: `flutter build apk --release`
+- Install on TV box: `adb install -r build/app/outputs/flutter-apk/app-release.apk`
+- Update: bump `version` in `pubspec.yaml` (e.g. `1.0.0+1` → `1.0.1+2`), rebuild, reinstall with `adb install -r`
+- The `+N` part is the **version code** — Android uses this integer to determine if an APK is an upgrade. Always increment it.
 
-Live URL: `<https://kasparorange.github.io/battlemap/`>
-
-The workflow is in `.github/workflows/deploy.yml`.
+**Development (Web):**
+- Auto-deploys to GitHub Pages on push to `main` for quick phone/browser testing
+- Live URL: `https://kasparorange.github.io/battlemap/`
+- Workflow: `.github/workflows/deploy.yml`
 
 ## Development Workflow
 
@@ -62,8 +69,8 @@ The workflow:
 1. **Describe features** conversationally to Claude Code
 2. **Claude writes code**, commits, and pushes to `main`
 3. **GitHub Actions** auto-builds and deploys to GitHub Pages
-4. **Test on phone** by opening the GitHub Pages URL in the phone browser
-5. **Test on TV** by opening the same URL in the Xiaomi Box's browser
+4. **Test on phone** by opening the GitHub Pages URL (web) or installing the APK
+5. **Test on TV** by sideloading the APK onto the Xiaomi Box via ADB
 6. **Report back** with feedback ("glow effect lags", "tokens too small", etc.)
 7. **Iterate**
 
@@ -74,7 +81,7 @@ No IDE, no terminal, no desktop. Just chat and a browser.
 - Keep it simple — this is a creative/game project, not enterprise software
 - Prioritize **visual quality and performance** over architecture purity
 - The GPU is the bottleneck on the target hardware — optimize draw calls and effects
-- Test on actual target hardware (TV browser) regularly, not just phone
+- Test on actual target hardware (TV box via APK) regularly, not just phone
 - Dispose textures and assets when not in use (2 GB RAM constraint)
 
 ## Progress Tracker
