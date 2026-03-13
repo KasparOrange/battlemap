@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:vector_math/vector_math_64.dart' show Vector4;
 import 'game_state.dart';
 import 'grid_painter.dart';
 
@@ -49,10 +48,8 @@ class _CompanionScreenState extends State<CompanionScreen> {
   void _onGameChanged() => setState(() {});
 
   Offset _toScene(Offset screenPos) {
-    final matrix = _transformController.value;
-    final inverse = Matrix4.inverted(matrix);
-    final v = inverse.transform3(Vector4(screenPos.dx, screenPos.dy, 0, 1));
-    return Offset(v.x, v.y);
+    final inverse = Matrix4.inverted(_transformController.value);
+    return MatrixUtils.transformPoint(inverse, screenPos);
   }
 
   (int, int) _toGrid(Offset scenePos) {
