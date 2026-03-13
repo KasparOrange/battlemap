@@ -77,6 +77,23 @@ No IDE, no terminal, no desktop. Just chat and a browser.
 - Test on actual target hardware (TV browser) regularly, not just phone
 - Dispose textures and assets when not in use (2 GB RAM constraint)
 
+## Progress Tracker
+
+**IMPORTANT:** Update this tracker after every action — feature added, bug fixed, refactor done, etc. Keep it current so we always know where the project stands.
+
+| # | Feature / Task | Status | Notes |
+|---|---------------|--------|-------|
+| 1 | Project scaffold (pubspec, main.dart, web/) | Done | Flutter web project created |
+| 2 | Mode selector (Table / Companion) | Done | Landing screen with two mode buttons |
+| 3 | GitHub Actions deploy workflow | Done | Auto-deploys to GitHub Pages on push to main |
+| 4 | Grid-based battlemap canvas | Not started | MVP core — pinch-to-zoom, drag-to-pan |
+| 5 | Basic token placement & movement | Not started | MVP core |
+| 6 | Companion mode drawing | Not started | MVP core — draw on phone, see on TV |
+| 7 | PDF map support | Not started | Load PDF battlemaps as backgrounds |
+| 8 | Custom sprite animations | Not started | Animated tokens, spell effects |
+| 9 | Visual effects (glow, fog, bloom) | Not started | GPU-heavy features |
+| 10 | Drawing tools (shapes, AoE) | Not started | Freehand, shapes from companion |
+
 ## Directory Structure
 battlemap/
 ├── lib/
