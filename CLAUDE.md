@@ -86,9 +86,9 @@ No IDE, no terminal, no desktop. Just chat and a browser.
 | 1 | Project scaffold (pubspec, main.dart, web/) | Done | Flutter web project created |
 | 2 | Mode selector (Table / Companion) | Done | Landing screen with two mode buttons |
 | 3 | GitHub Actions deploy workflow | Done | Auto-deploys to GitHub Pages on push to main |
-| 4 | Grid-based battlemap canvas | Not started | MVP core — pinch-to-zoom, drag-to-pan |
-| 5 | Basic token placement & movement | Not started | MVP core |
-| 6 | Companion mode drawing | Not started | MVP core — draw on phone, see on TV |
+| 4 | Grid-based battlemap canvas | Done | 24x16 grid, pinch-to-zoom, drag-to-pan via InteractiveViewer |
+| 5 | Basic token placement & movement | Done | Tap to place, drag to move, long-press to remove, colored & numbered |
+| 6 | Companion mode drawing | Done | Freehand drawing with color picker, brush size, draw/token mode toggle |
 | 7 | PDF map support | Not started | Load PDF battlemaps as backgrounds |
 | 8 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 9 | Visual effects (glow, fog, bloom) | Not started | GPU-heavy features |
@@ -97,7 +97,11 @@ No IDE, no terminal, no desktop. Just chat and a browser.
 ## Directory Structure
 battlemap/
 ├── lib/
-│   └── main.dart          # App entry point
+│   ├── main.dart            # App entry point & mode selector
+│   ├── game_state.dart      # Shared state: tokens, drawings, grid config
+│   ├── grid_painter.dart    # CustomPainter for grid, tokens, strokes
+│   ├── table_screen.dart    # Table Mode — TV display with zoom/pan/tokens
+│   └── companion_screen.dart # Companion Mode — phone drawing & token controls
 ├── web/
 │   ├── index.html         # Flutter web shell
 │   └── manifest.json      # PWA manifest (fullscreen, landscape)
