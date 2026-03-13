@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vector_math/vector_math_64.dart' show Vector4;
 import 'game_state.dart';
 import 'grid_painter.dart';
 
