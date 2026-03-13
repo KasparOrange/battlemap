@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:vector_math/vector_math_64.dart' show Vector4;
 import 'game_state.dart';
 import 'grid_painter.dart';
 
@@ -41,11 +40,8 @@ class _TableScreenState extends State<TableScreen> {
 
   /// Convert screen position to grid coordinates.
   Offset _toScene(Offset screenPos) {
-    final matrix = _transformController.value;
-    final inverseMatrix = Matrix4.inverted(matrix);
-    final vector =
-        inverseMatrix.transform3(Vector4(screenPos.dx, screenPos.dy, 0, 1));
-    return Offset(vector.x, vector.y);
+    final inverse = Matrix4.inverted(_transformController.value);
+    return MatrixUtils.transformPoint(inverse, screenPos);
   }
 
   (int, int) _toGrid(Offset scenePos) {
