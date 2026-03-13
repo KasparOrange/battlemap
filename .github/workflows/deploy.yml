@@ -1,11 +1,11 @@
-name: Deploy to GitHub Pages
+name: Build & Deploy
 
 on:
   push:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -24,12 +24,50 @@ jobs:
           channel: stable
 
       - run: flutter pub get
+
+      # Build web for GitHub Pages
       - run: flutter build web --release --base-href /battlemap/
 
-      - name: Upload artifact
+      - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
+
+      # Build APK
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - run: flutter build apk --release
+
+      - name: Upload APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: battlemap-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # Create/update GitHub Release with the APK
+      - name: Get version from pubspec
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //')
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}-build.${{ github.run_number }}
+          name: Build ${{ github.run_number }}
+          body: |
+            Auto-built from commit ${{ github.sha }}.
+
+            Download `app-release.apk` and install on your device:
+            ```
+            adb install -r app-release.apk
+            ```
+          files: build/app/outputs/flutter-apk/app-release.apk
 
   deploy:
     environment:
