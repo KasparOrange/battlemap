@@ -45,6 +45,7 @@ The app is sideloaded as an APK onto the TV box via ADB. Version codes in `pubsp
 | Tech | Purpose |
 |------|---------|
 | Flutter (Android APK) | Production build — sideloaded onto TV box and phone |
+| Flame Engine | Game rendering — component model, sprites, effects, Canvas-based |
 | Flutter Web | Development testing only — quick iteration via GitHub Pages |
 | GitHub Actions | CI/CD — builds web for testing, can build APK for releases |
 
@@ -63,18 +64,24 @@ The app is sideloaded as an APK onto the TV box via ADB. Version codes in `pubsp
 
 ## Development Workflow
 
-This project is developed **entirely from a phone** using Claude Code as a challenge to see if full app development is possible without a desktop.
+**This project is developed entirely from an iPhone. This is a core guideline and will not change.**
+
+The setup:
+- **Kaspar** uses **Prompt 3** (iOS SSH client) to connect to a **rented VPS**
+- **Claude Code** runs on the VPS and writes all the code
+- **Flutter SDK is installed on the VPS** — enables local web dev server with hot reload
+- **GitHub Actions** handles CI/CD (web deploy to GitHub Pages, APK builds for releases)
 
 The workflow:
-1. **Describe features** conversationally to Claude Code
-2. **Claude writes code**, commits, and pushes to `main`
-3. **GitHub Actions** auto-builds and deploys to GitHub Pages
-4. **Test on phone** by opening the GitHub Pages URL (web) or installing the APK
+1. **Describe features** conversationally to Claude Code via SSH from the phone
+2. **Claude writes code**
+3. **Test locally** using `flutter run -d web-server --web-port=4242 --web-hostname=0.0.0.0` for instant hot reload
+4. **Test on phone** by opening `http://<VPS_IP>:4242` in a browser, or via GitHub Pages after push
 5. **Test on TV** by sideloading the APK onto the Xiaomi Box via ADB
 6. **Report back** with feedback ("glow effect lags", "tokens too small", etc.)
-7. **Iterate**
+7. **Commit & push** when the feature is working
 
-No IDE, no terminal, no desktop. Just chat and a browser.
+No IDE, no desktop. Just SSH + chat + hot reload.
 
 ## Code Conventions
 
@@ -96,24 +103,40 @@ No IDE, no terminal, no desktop. Just chat and a browser.
 | 4 | Grid-based battlemap canvas | Done | 24x16 grid, pinch-to-zoom, drag-to-pan via InteractiveViewer |
 | 5 | Basic token placement & movement | Done | Tap to place, drag to move, long-press to remove, colored & numbered |
 | 6 | Companion mode drawing | Done | Freehand drawing with color picker, brush size, draw/token mode toggle |
-| 7 | PDF map support | Not started | Load PDF battlemaps as backgrounds |
-| 8 | Custom sprite animations | Not started | Animated tokens, spell effects |
-| 9 | Visual effects (glow, fog, bloom) | Not started | GPU-heavy features |
-| 10 | Drawing tools (shapes, AoE) | Not started | Freehand, shapes from companion |
+| 7 | Phone-to-TV networking | Done | WebSocket server on TV, client on phone, JSON state sync, auto-reconnect |
+| 8 | PDF map support | Done | Load PDF battlemaps as backgrounds, page nav, network sync |
+| 12 | Flame engine migration | Done | Replaced CustomPainter with Flame game engine components |
+| 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
+| 10 | Visual effects (glow, fog, bloom) | Not started | GPU-heavy features |
+| 11 | Drawing tools (shapes, AoE) | Not started | Freehand, shapes from companion |
 
 ## Directory Structure
 battlemap/
 ├── lib/
-│   ├── main.dart            # App entry point & mode selector
-│   ├── game_state.dart      # Shared state: tokens, drawings, grid config
-│   ├── grid_painter.dart    # CustomPainter for grid, tokens, strokes
-│   ├── table_screen.dart    # Table Mode — TV display with zoom/pan/tokens
-│   └── companion_screen.dart # Companion Mode — phone drawing & token controls
+│   ├── main.dart              # App entry point & mode selector
+│   ├── game_state.dart        # Shared state: tokens, drawings, grid config
+│   ├── pdf_helper.dart        # PDF loading & rendering (pdfrx)
+│   ├── table_screen.dart      # Table Mode — TV display with zoom/pan/tokens
+│   ├── companion_screen.dart  # Companion Mode — phone drawing & token controls
+│   ├── game/
+│   │   ├── battlemap_game.dart           # FlameGame — orchestrates all components
+│   │   └── components/
+│   │       ├── grid_component.dart       # Grid lines renderer
+│   │       ├── pdf_background_component.dart # PDF map background
+│   │       ├── strokes_component.dart    # Drawing strokes
+│   │       ├── live_stroke_component.dart # Real-time stroke preview
+│   │       ├── token_component.dart      # Single token renderer
+│   │       └── token_layer.dart          # Token container with diff sync
+│   └── network/
+│       ├── server.dart        # WebSocket server (TV side, uses dart:io)
+│       ├── server_stub.dart   # No-op stub for web builds
+│       ├── client.dart        # WebSocket client (phone side, uses dart:io)
+│       └── client_stub.dart   # No-op stub for web builds
 ├── web/
-│   ├── index.html         # Flutter web shell
-│   └── manifest.json      # PWA manifest (fullscreen, landscape)
+│   ├── index.html           # Flutter web shell + remote console logger
+│   └── manifest.json        # PWA manifest (fullscreen, landscape)
 ├── .github/
 │   └── workflows/
-│       └── deploy.yml     # GitHub Pages auto-deploy
-├── pubspec.yaml           # Flutter dependencies
-└── CLAUDE.md              # This file
+│       └── deploy.yml       # GitHub Pages auto-deploy
+├── pubspec.yaml             # Flutter dependencies
+└── CLAUDE.md                # This file
