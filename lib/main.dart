@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'game_state.dart';
 import 'table_screen.dart';
 import 'companion_screen.dart';
+import 'ui/vtt_screen.dart';
 
 void main() {
   runApp(const BattlemapApp());
@@ -98,6 +99,18 @@ class ModeSelector extends StatelessWidget {
                   _showConnectDialog(context);
                 }
               },
+            ),
+            const SizedBox(height: 24),
+            _ModeButton(
+              label: 'VTT Table Mode',
+              subtitle: 'Physical table with miniatures',
+              icon: Icons.map,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const VttScreen(),
+                ),
+              ),
             ),
           ],
         ),
