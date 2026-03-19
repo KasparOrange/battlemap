@@ -1,9 +1,16 @@
+import 'dart:async';
+
+import 'package:flame/game.dart' hide Route, Matrix4, Vector2, Vector3, Vector4;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'game_state.dart';
-import 'grid_painter.dart';
+import 'game/battlemap_game.dart';
+
+// Conditional import — only available on native (APK), not web
+import 'network/server_stub.dart' if (dart.library.io) 'network/server.dart';
 
 /// Table Mode — fullscreen battlemap on the TV.
-/// Supports pinch-to-zoom, drag-to-pan, tap to place tokens, drag tokens to move.
+/// Starts a WebSocket server so companions can connect.
 class TableScreen extends StatefulWidget {
   final GameState gameState;
   const TableScreen({super.key, required this.gameState});
@@ -13,97 +20,55 @@ class TableScreen extends StatefulWidget {
 }
 
 class _TableScreenState extends State<TableScreen> {
-  // Transform for zoom/pan
   final TransformationController _transformController =
       TransformationController();
 
-  // Token dragging
-  String? _draggingTokenId;
-  Offset? _dragStart;
+  late final BattlemapGame _game;
+
+  BattlemapServer? _server;
+  String? _serverIp;
+  int _clientCount = 0;
+  StreamSubscription<int>? _clientSub;
 
   GameState get game => widget.gameState;
 
   @override
   void initState() {
     super.initState();
-    game.addListener(_onGameChanged);
+    _game = BattlemapGame(gameState: game, mode: BattlemapMode.table);
+    if (!kIsWeb) _startServer();
   }
 
   @override
   void dispose() {
-    game.removeListener(_onGameChanged);
     _transformController.dispose();
+    _clientSub?.cancel();
+    _server?.dispose();
     super.dispose();
   }
 
-  void _onGameChanged() => setState(() {});
+  Future<void> _startServer() async {
+    _server = BattlemapServer(gameState: game);
+    await _server!.start();
+    _clientSub = _server!.clientCountStream.listen((count) {
+      setState(() => _clientCount = count);
+    });
+    setState(() => _serverIp = _server!.localIp);
+  }
 
-  /// Convert screen position to grid coordinates.
   Offset _toScene(Offset screenPos) {
     final inverse = Matrix4.inverted(_transformController.value);
     return MatrixUtils.transformPoint(inverse, screenPos);
   }
 
-  (int, int) _toGrid(Offset scenePos) {
-    final gx = (scenePos.dx / GameState.cellSize).floor();
-    final gy = (scenePos.dy / GameState.cellSize).floor();
-    return (
-      gx.clamp(0, GameState.gridColumns - 1),
-      gy.clamp(0, GameState.gridRows - 1),
-    );
-  }
-
-  /// Find token at a scene position.
-  MapToken? _tokenAt(Offset scenePos) {
-    final (gx, gy) = _toGrid(scenePos);
-    try {
-      return game.tokens.firstWhere((t) => t.gridX == gx && t.gridY == gy);
-    } catch (_) {
-      return null;
-    }
-  }
-
   void _onTapUp(TapUpDetails details) {
     final scenePos = _toScene(details.localPosition);
-    final (gx, gy) = _toGrid(scenePos);
-
-    // If tapping an existing token, ignore (could add selection later)
-    if (_tokenAt(scenePos) != null) return;
-
-    // Place a new token
-    game.addToken(gx, gy);
+    _game.handleTapAtScene(scenePos);
   }
 
   void _onLongPressStart(LongPressStartDetails details) {
     final scenePos = _toScene(details.localPosition);
-    final token = _tokenAt(scenePos);
-    if (token != null) {
-      game.removeToken(token.id);
-    }
-  }
-
-  void _onScaleStart(ScaleStartDetails details) {
-    if (details.pointerCount == 1) {
-      final scenePos = _toScene(details.localFocalPoint);
-      final token = _tokenAt(scenePos);
-      if (token != null) {
-        _draggingTokenId = token.id;
-        _dragStart = scenePos;
-      }
-    }
-  }
-
-  void _onScaleUpdate(ScaleUpdateDetails details) {
-    if (_draggingTokenId != null && details.pointerCount == 1) {
-      final scenePos = _toScene(details.localFocalPoint);
-      final (gx, gy) = _toGrid(scenePos);
-      game.moveToken(_draggingTokenId!, gx, gy);
-    }
-  }
-
-  void _onScaleEnd(ScaleEndDetails details) {
-    _draggingTokenId = null;
-    _dragStart = null;
+    _game.handleLongPressAtScene(scenePos);
   }
 
   @override
@@ -120,26 +85,77 @@ class _TableScreenState extends State<TableScreen> {
             child: GestureDetector(
               onTapUp: _onTapUp,
               onLongPressStart: _onLongPressStart,
-              child: CustomPaint(
-                painter: GridPainter(game),
-                size: Size(game.gridWidth, game.gridHeight),
+              child: SizedBox(
+                width: game.gridWidth,
+                height: game.gridHeight,
+                child: GameWidget(game: _game),
               ),
             ),
           ),
-          // Token count badge
+          // Server info + token count (top-right)
           Positioned(
             top: 16,
             right: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '${game.tokens.length} tokens',
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (!kIsWeb && _serverIp != null)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _clientCount > 0
+                              ? Icons.wifi
+                              : Icons.wifi_find,
+                          color: _clientCount > 0
+                              ? Colors.greenAccent
+                              : Colors.orangeAccent,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$_serverIp:${_server?.port ?? 8080}',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                        if (_clientCount > 0) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '$_clientCount connected',
+                            style: const TextStyle(
+                              color: Colors.greenAccent,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${game.tokens.length} tokens',
+                    style:
+                        const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ],
             ),
           ),
           // Back button
@@ -164,9 +180,14 @@ class _TableScreenState extends State<TableScreen> {
                   color: Colors.black45,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  'Tap to place token  •  Drag token to move  •  Long-press to remove  •  Pinch to zoom',
-                  style: TextStyle(color: Colors.white38, fontSize: 11),
+                child: Text(
+                  kIsWeb
+                      ? 'Tap to place token  •  Drag to move  •  Long-press to remove  •  Pinch to zoom'
+                      : _clientCount > 0
+                          ? 'Companion connected — waiting for input'
+                          : 'Enter this address in Companion Mode to connect',
+                  style:
+                      const TextStyle(color: Colors.white38, fontSize: 11),
                 ),
               ),
             ),

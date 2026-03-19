@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'game_state.dart';
 import 'table_screen.dart';
@@ -67,7 +68,7 @@ class ModeSelector extends StatelessWidget {
             const SizedBox(height: 64),
             _ModeButton(
               label: 'Table Mode',
-              subtitle: 'Display on TV',
+              subtitle: kIsWeb ? 'Display (local only)' : 'Display on TV',
               icon: Icons.tv,
               onTap: () => Navigator.push(
                 context,
@@ -79,17 +80,106 @@ class ModeSelector extends StatelessWidget {
             const SizedBox(height: 24),
             _ModeButton(
               label: 'Companion Mode',
-              subtitle: 'Control from phone',
+              subtitle:
+                  kIsWeb ? 'Control (local only)' : 'Connect to TV via Wi-Fi',
               icon: Icons.phone_android,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CompanionScreen(gameState: gameState),
-                ),
-              ),
+              onTap: () {
+                if (kIsWeb) {
+                  // Web: go directly to companion in local mode
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          CompanionScreen(gameState: gameState),
+                    ),
+                  );
+                } else {
+                  // Native: show connect dialog first
+                  _showConnectDialog(context);
+                }
+              },
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showConnectDialog(BuildContext context) {
+    final ipController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Connect to Table'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Enter the IP address shown on the TV',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: ipController,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 18,
+              ),
+              decoration: InputDecoration(
+                hintText: '192.168.1.xxx',
+                hintStyle: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Local mode (no server)
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      CompanionScreen(gameState: gameState),
+                ),
+              );
+            },
+            child: const Text('Local Mode'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final ip = ipController.text.trim();
+              if (ip.isEmpty) return;
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CompanionScreen(
+                    gameState: gameState,
+                    serverHost: ip,
+                  ),
+                ),
+              );
+            },
+            child: const Text('Connect'),
+          ),
+        ],
       ),
     );
   }
