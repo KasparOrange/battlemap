@@ -445,14 +445,55 @@ lib/
 
 -----
 
-## Implementation Order
+## Claude Sessions — Scoped Implementation Phases
 
-1. `UvttParser` + model classes + unit tests with a sample .dd2vtt file
-2. `MapImageComponent` + `VttGame` with camera pan/zoom — Phase 1 done
-3. `GridOverlayComponent` — Phase 2 done
-4. `FogOfWarComponent` with tap-to-reveal — Phase 4 done (skip walls for now)
-5. `DmControlPanel` with file picker and reveal all/hide all — Phase 6 done
-6. `PortalComponent` — Phase 5 done
-7. Physical calibration — Phase 7 done
-8. `WallComponent` (DM debug view) — Phase 3 done
-9. Iterate on UX — fog reveal brush size, long-press to reveal area, etc.
+Each session is sized to be completable in one Claude Code conversation.
+
+### Session 1 — Foundation: UVTT Parser + Map Display + Camera
+**Covers:** Phase 1 + Phase 2 + test asset download
+- Download a sample .dd2vtt file for testing
+- Create data model classes (`UvttMap`, `UvttResolution`, `UvttPortal`, `UvttLight`)
+- Build `UvttParser` to parse .dd2vtt JSON + decode base64 image
+- Create `VttState` (ChangeNotifier) with `loadMap()`
+- Create `VttGame` (FlameGame) with `CameraComponent` pan/zoom
+- Create `MapImageComponent` to render the map image
+- Create `GridOverlayComponent` with toggle
+- Create `VttScreen` with `GameWidget` + basic file picker
+- **Test:** Load .dd2vtt, see map, pan/zoom, toggle grid
+- **Status:** NOT STARTED
+
+### Session 2 — Fog of War
+**Covers:** Phase 4 + DM reveal controls
+- Create `FogOfWarComponent` with saveLayer/dstOut rendering
+- Add tap-to-reveal and tap-to-hide on grid cells
+- Add reveal all / hide all to `VttState`
+- Add basic DM control buttons (reveal all, hide all) to `VttScreen`
+- **Test:** Map loads fully fogged, tap to reveal squares, buttons work
+- **Status:** NOT STARTED
+
+### Session 3 — DM Controls + Doors
+**Covers:** Phase 5 + Phase 6
+- Create `DmControlPanel` widget (load map, reveal/hide, grid toggle, walls toggle)
+- Create `PortalComponent` with `TapCallbacks` for open/close
+- Parse portal data from .dd2vtt and spawn PortalComponents
+- Add `openPortals` set to `VttState`
+- **Test:** DM panel works, doors toggle open/closed visually
+- **Status:** NOT STARTED
+
+### Session 4 — Walls + Calibration
+**Covers:** Phase 3 + Phase 7
+- Create `WallComponent` rendering line_of_sight polygons
+- Add DM toggle for wall visibility
+- Add physical calibration dialog (TV width in inches)
+- Calculate and apply calibrated base zoom
+- Clamp zoom-out to base zoom so grid matches physical inches
+- **Test:** Walls visible in debug mode, grid matches 1-inch squares on TV
+- **Status:** NOT STARTED
+
+### Session 5 — Polish + Integration
+- UX improvements: fog reveal brush size, long-press to reveal area
+- Smooth fog edge transitions
+- Test on actual Xiaomi TV Box via APK
+- Performance profiling on target hardware
+- Bug fixes from hardware testing
+- **Status:** NOT STARTED
