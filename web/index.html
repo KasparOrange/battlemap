@@ -23,6 +23,41 @@
   </style>
 </head>
 <body>
+  <script>
+    // Remote console logger — sends browser logs to VPS log server
+    (function() {
+      var LOG_URL = window.location.origin + '/log';
+      var queue = [];
+      var timer = null;
+
+      function flush() {
+        if (!queue.length) return;
+        var batch = queue.splice(0, 50);
+        try { fetch(LOG_URL, { method: 'POST', body: JSON.stringify(batch), headers: {'Content-Type':'application/json'} }).catch(function(){}); } catch(e) {}
+      }
+
+      function push(level, args) {
+        var msg = Array.prototype.slice.call(args).map(function(a) {
+          if (typeof a === 'string') return a;
+          try { return JSON.stringify(a); } catch(e) { return String(a); }
+        }).join(' ');
+        queue.push({ level: level, msg: msg });
+        if (!timer) timer = setInterval(flush, 500);
+      }
+
+      var origLog = console.log, origWarn = console.warn, origError = console.error;
+      console.log = function() { origLog.apply(console, arguments); push('log', arguments); };
+      console.warn = function() { origWarn.apply(console, arguments); push('warn', arguments); };
+      console.error = function() { origError.apply(console, arguments); push('error', arguments); };
+
+      window.addEventListener('error', function(e) {
+        push('error', ['Uncaught: ' + e.message + ' at ' + e.filename + ':' + e.lineno]);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        push('error', ['Unhandled rejection: ' + (e.reason && e.reason.stack || e.reason)]);
+      });
+    })();
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

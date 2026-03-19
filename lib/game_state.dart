@@ -1,3 +1,7 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 /// A token on the battlemap grid.
@@ -15,6 +19,22 @@ class MapToken {
     required this.gridX,
     required this.gridY,
   });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'label': label,
+        'color': color.toARGB32().toRadixString(16).padLeft(8, '0'),
+        'gridX': gridX,
+        'gridY': gridY,
+      };
+
+  factory MapToken.fromJson(Map<String, dynamic> json) => MapToken(
+        id: json['id'] as String,
+        label: json['label'] as String,
+        color: Color(int.parse(json['color'] as String, radix: 16)),
+        gridX: json['gridX'] as int,
+        gridY: json['gridY'] as int,
+      );
 }
 
 /// A single stroke drawn on the map.
@@ -28,6 +48,20 @@ class DrawStroke {
     required this.color,
     required this.width,
   });
+
+  Map<String, dynamic> toJson() => {
+        'points': points.map((p) => [p.dx, p.dy]).toList(),
+        'color': color.toARGB32().toRadixString(16).padLeft(8, '0'),
+        'width': width,
+      };
+
+  factory DrawStroke.fromJson(Map<String, dynamic> json) => DrawStroke(
+        points: (json['points'] as List)
+            .map((p) => Offset((p[0] as num).toDouble(), (p[1] as num).toDouble()))
+            .toList(),
+        color: Color(int.parse(json['color'] as String, radix: 16)),
+        width: (json['width'] as num).toDouble(),
+      );
 }
 
 /// Shared game state — tokens, drawings, grid settings.
@@ -58,6 +92,70 @@ class GameState extends ChangeNotifier {
     Color(0xFFFF8F00), // orange
   ];
   int _nextColorIndex = 0;
+
+  // PDF background map
+  Uint8List? _pdfBytes;
+  int _pdfPageIndex = 0;
+  int _pdfPageCount = 0;
+  ui.Image? _backgroundImage;
+
+  Uint8List? get pdfBytes => _pdfBytes;
+  int get pdfPageIndex => _pdfPageIndex;
+  int get pdfPageCount => _pdfPageCount;
+  ui.Image? get backgroundImage => _backgroundImage;
+  bool get hasPdf => _pdfBytes != null;
+
+  /// Set the rendered background image (called by PdfHelper).
+  void setPdfState({
+    required Uint8List bytes,
+    required int pageCount,
+    required int pageIndex,
+    required ui.Image image,
+  }) {
+    _backgroundImage?.dispose();
+    _pdfBytes = bytes;
+    _pdfPageCount = pageCount;
+    _pdfPageIndex = pageIndex;
+    _backgroundImage = image;
+    notifyListeners();
+  }
+
+  /// Clear the PDF background.
+  void clearPdf() {
+    _backgroundImage?.dispose();
+    _backgroundImage = null;
+    _pdfBytes = null;
+    _pdfPageCount = 0;
+    _pdfPageIndex = 0;
+    notifyListeners();
+  }
+
+  // Live stroke from a remote companion (for real-time preview on TV)
+  DrawStroke? _liveStroke;
+  DrawStroke? get liveStroke => _liveStroke;
+  set liveStroke(DrawStroke? stroke) {
+    _liveStroke = stroke;
+    notifyListeners();
+  }
+
+  Map<String, dynamic> toJson() => {
+        'tokens': _tokens.map((t) => t.toJson()).toList(),
+        'strokes': _strokes.map((s) => s.toJson()).toList(),
+        'nextColorIndex': _nextColorIndex,
+      };
+
+  void applyFullState(Map<String, dynamic> json) {
+    _tokens.clear();
+    for (final t in json['tokens'] as List) {
+      _tokens.add(MapToken.fromJson(t as Map<String, dynamic>));
+    }
+    _strokes.clear();
+    for (final s in json['strokes'] as List) {
+      _strokes.add(DrawStroke.fromJson(s as Map<String, dynamic>));
+    }
+    _nextColorIndex = json['nextColorIndex'] as int;
+    notifyListeners();
+  }
 
   void addToken(int gridX, int gridY) {
     final color = tokenColors[_nextColorIndex % tokenColors.length];
