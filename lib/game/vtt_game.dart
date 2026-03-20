@@ -11,6 +11,8 @@ import '../state/vtt_state.dart';
 import 'components/fog_of_war_component.dart';
 import 'components/grid_overlay_component.dart';
 import 'components/map_image_component.dart';
+import 'components/portal_component.dart';
+import 'components/wall_component.dart';
 
 /// Flame game for VTT table display.
 /// Renders the map image with grid overlay, handles camera pan/zoom.
@@ -19,6 +21,8 @@ class VttGame extends FlameGame with ScaleDetector, PanDetector {
 
   VttMapImageComponent? _mapImage;
   VttGridOverlayComponent? _gridOverlay;
+  WallComponent? _wallComponent;
+  final List<PortalComponent> _portalComponents = [];
   FogOfWarComponent? _fogOfWar;
 
   VttGame({required this.state});
@@ -47,6 +51,7 @@ class VttGame extends FlameGame with ScaleDetector, PanDetector {
     }
     // Sync visibility
     _gridOverlay?.isVisible = state.showGrid;
+    _wallComponent?.isVisible = state.showWalls;
     _fogOfWar?.isVisible = state.fogEnabled;
   }
 
@@ -79,9 +84,33 @@ class VttGame extends FlameGame with ScaleDetector, PanDetector {
     _gridOverlay!.isVisible = state.showGrid;
     world.add(_gridOverlay!);
 
-    // Fog of war
     final gridCols = map.resolution.mapSize.dx.toInt();
     final gridRows = map.resolution.mapSize.dy.toInt();
+    final mapSizeVec = Vector2(mapPixelW, mapPixelH);
+
+    // Walls (DM debug, hidden by default)
+    final allWalls = [...map.lineOfSight, ...map.objectsLineOfSight];
+    _wallComponent = WallComponent(
+      walls: allWalls,
+      pixelsPerGrid: map.resolution.pixelsPerGrid,
+      mapSize: mapSizeVec,
+    );
+    _wallComponent!.isVisible = state.showWalls;
+    world.add(_wallComponent!);
+
+    // Portals (doors)
+    for (int i = 0; i < map.portals.length; i++) {
+      final portal = PortalComponent(
+        portalIndex: i,
+        portal: map.portals[i],
+        state: state,
+        pixelsPerGrid: map.resolution.pixelsPerGrid,
+      );
+      _portalComponents.add(portal);
+      world.add(portal);
+    }
+
+    // Fog of war
     _fogOfWar = FogOfWarComponent(
       state: state,
       pixelsPerGrid: map.resolution.pixelsPerGrid,
@@ -112,6 +141,12 @@ class VttGame extends FlameGame with ScaleDetector, PanDetector {
     _mapImage = null;
     _gridOverlay?.removeFromParent();
     _gridOverlay = null;
+    _wallComponent?.removeFromParent();
+    _wallComponent = null;
+    for (final p in _portalComponents) {
+      p.removeFromParent();
+    }
+    _portalComponents.clear();
     _fogOfWar?.removeFromParent();
     _fogOfWar = null;
   }

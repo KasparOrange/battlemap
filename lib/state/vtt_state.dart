@@ -11,15 +11,23 @@ class VttState extends ChangeNotifier {
   UvttMap? map;
   bool showGrid = true;
   bool fogEnabled = true;
+  bool showWalls = false;
   Set<int> revealedCells = {};
+  Set<int> openPortals = {};
 
   /// Load a .dd2vtt file from raw bytes.
   void loadMap(Uint8List fileBytes) {
     final jsonString = utf8.decode(fileBytes);
     map = UvttParser.parse(jsonString);
+    // Initialize portal states from file defaults
+    openPortals.clear();
+    for (int i = 0; i < map!.portals.length; i++) {
+      if (!map!.portals[i].closed) openPortals.add(i);
+    }
     debugPrint('Loaded UVTT map: ${map!.resolution.mapSize.dx.toInt()}x'
         '${map!.resolution.mapSize.dy.toInt()} grid, '
-        '${map!.resolution.pixelsPerGrid}ppg');
+        '${map!.resolution.pixelsPerGrid}ppg, '
+        '${map!.portals.length} portals');
     notifyListeners();
   }
 
@@ -47,6 +55,20 @@ class VttState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void togglePortal(int index) {
+    if (openPortals.contains(index)) {
+      openPortals.remove(index);
+    } else {
+      openPortals.add(index);
+    }
+    notifyListeners();
+  }
+
+  void toggleWalls() {
+    showWalls = !showWalls;
+    notifyListeners();
+  }
+
   void toggleFog() {
     fogEnabled = !fogEnabled;
     notifyListeners();
@@ -55,7 +77,9 @@ class VttState extends ChangeNotifier {
   void clearMap() {
     map = null;
     revealedCells.clear();
+    openPortals.clear();
     fogEnabled = true;
+    showWalls = false;
     notifyListeners();
   }
 }

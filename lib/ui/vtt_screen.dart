@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../game/vtt_game.dart';
 import '../state/vtt_state.dart';
+import 'dm_control_panel.dart';
 
 /// VTT Table Mode — fullscreen map display for physical table with miniatures.
 class VttScreen extends StatefulWidget {
@@ -72,54 +73,13 @@ class _VttScreenState extends State<VttScreen> {
             ),
           ),
 
-          // Controls
+          // DM Control Panel
           Positioned(
             bottom: 16,
             right: 16,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Load map
-                _ControlButton(
-                  icon: Icons.folder_open,
-                  label: 'Load Map',
-                  onTap: _pickMap,
-                ),
-                const SizedBox(width: 8),
-                // Toggle grid
-                if (_state.map != null) ...[
-                  _ControlButton(
-                    icon: _state.showGrid ? Icons.grid_on : Icons.grid_off,
-                    label: 'Grid',
-                    onTap: () => _state.toggleGrid(),
-                    active: _state.showGrid,
-                  ),
-                  const SizedBox(width: 8),
-                  _ControlButton(
-                    icon: _state.fogEnabled ? Icons.cloud : Icons.cloud_off,
-                    label: 'Fog',
-                    onTap: () => _state.toggleFog(),
-                    active: _state.fogEnabled,
-                  ),
-                  const SizedBox(width: 8),
-                  _ControlButton(
-                    icon: Icons.visibility,
-                    label: 'Reveal All',
-                    onTap: () {
-                      final m = _state.map!;
-                      final total = m.resolution.mapSize.dx.toInt() *
-                          m.resolution.mapSize.dy.toInt();
-                      _state.revealAll(total);
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  _ControlButton(
-                    icon: Icons.visibility_off,
-                    label: 'Hide All',
-                    onTap: () => _state.hideAll(),
-                  ),
-                ],
-              ],
+            child: DmControlPanel(
+              state: _state,
+              onLoadMap: _pickMap,
             ),
           ),
 
@@ -137,7 +97,8 @@ class _VttScreenState extends State<VttScreen> {
                 child: Text(
                   '${_state.map!.resolution.mapSize.dx.toInt()}x'
                   '${_state.map!.resolution.mapSize.dy.toInt()} grid  •  '
-                  '${_state.map!.resolution.pixelsPerGrid}ppg',
+                  '${_state.map!.resolution.pixelsPerGrid}ppg  •  '
+                  '${_state.map!.portals.length} doors',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
@@ -149,55 +110,20 @@ class _VttScreenState extends State<VttScreen> {
 
           // Empty state hint
           if (_state.map == null)
-            const Center(
-              child: Text(
-                'Tap "Load Map" to open a .dd2vtt file',
-                style: TextStyle(color: Colors.white24, fontSize: 16),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.map, color: Colors.white12, size: 64),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Tap the gear icon to load a .dd2vtt map',
+                    style: TextStyle(color: Colors.white24, fontSize: 16),
+                  ),
+                ],
               ),
             ),
         ],
-      ),
-    );
-  }
-}
-
-class _ControlButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool active;
-
-  const _ControlButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.active = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: active ? Colors.white.withValues(alpha: 0.15) : Colors.black54,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: Colors.white70, size: 18),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-          ],
-        ),
       ),
     );
   }

@@ -1,9 +1,10 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
-import 'package:flutter/material.dart' show Colors;
 
+import '../../model/uvtt_map.dart';
 import '../../state/vtt_state.dart';
 
 /// Renders fog of war as a dark overlay with cutouts for revealed cells.
@@ -52,8 +53,32 @@ class FogOfWarComponent extends PositionComponent with TapCallbacks, HasVisibili
   @override
   void onTapDown(TapDownEvent event) {
     final worldPos = event.localPosition;
-    final cellX = (worldPos.x / pixelsPerGrid).floor();
-    final cellY = (worldPos.y / pixelsPerGrid).floor();
+
+    // Check if tap hits a portal — route to portal toggle instead of fog reveal
+    final portals = state.map?.portals ?? [];
+    final ppg = pixelsPerGrid.toDouble();
+    const pad = 8.0;
+    for (int i = 0; i < portals.length; i++) {
+      final p = portals[i];
+      final p0x = p.bounds[0].x * ppg;
+      final p0y = p.bounds[0].y * ppg;
+      final p1x = p.bounds[1].x * ppg;
+      final p1y = p.bounds[1].y * ppg;
+      final rect = Rect.fromLTRB(
+        min(p0x, p1x) - pad,
+        min(p0y, p1y) - pad,
+        max(p0x, p1x) + pad,
+        max(p0y, p1y) + pad,
+      );
+      if (rect.contains(worldPos.toOffset())) {
+        state.togglePortal(i);
+        return;
+      }
+    }
+
+    // Normal fog reveal
+    final cellX = (worldPos.x / ppg).floor();
+    final cellY = (worldPos.y / ppg).floor();
     if (cellX < 0 || cellX >= gridCols || cellY < 0 || cellY >= gridRows) return;
     final index = cellY * gridCols + cellX;
     state.toggleReveal(index);
