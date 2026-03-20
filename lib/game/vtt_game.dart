@@ -53,6 +53,12 @@ class VttGame extends FlameGame with ScaleDetector, PanDetector {
     _gridOverlay?.isVisible = state.showGrid;
     _wallComponent?.isVisible = state.showWalls;
     _fogOfWar?.isVisible = state.fogEnabled;
+
+    // Enforce calibrated zoom floor
+    if (state.calibratedBaseZoom != null &&
+        camera.viewfinder.zoom < state.calibratedBaseZoom!) {
+      camera.viewfinder.zoom = state.calibratedBaseZoom!;
+    }
   }
 
   Future<void> _loadMap(UvttMap map) async {
@@ -151,6 +157,57 @@ class VttGame extends FlameGame with ScaleDetector, PanDetector {
     _fogOfWar = null;
   }
 
+  // --- Public camera controls (called from DM panel) ---
+
+  void zoomIn() {
+    final minZoom = state.calibratedBaseZoom ?? 0.1;
+    camera.viewfinder.zoom = (camera.viewfinder.zoom * 1.3).clamp(minZoom, 10.0);
+  }
+
+  void zoomOut() {
+    final minZoom = state.calibratedBaseZoom ?? 0.1;
+    camera.viewfinder.zoom = (camera.viewfinder.zoom / 1.3).clamp(minZoom, 10.0);
+  }
+
+  void zoomToFit() {
+    if (state.map == null) return;
+    _zoomToFit(state.map!.pixelWidth, state.map!.pixelHeight);
+    camera.viewfinder.position = Vector2(
+      state.map!.pixelWidth / 2,
+      state.map!.pixelHeight / 2,
+    );
+  }
+
+  void rotateCW() {
+    camera.viewfinder.angle += 1.5707963; // π/2
+  }
+
+  void rotateCCW() {
+    camera.viewfinder.angle -= 1.5707963; // π/2
+  }
+
+  void resetRotation() {
+    camera.viewfinder.angle = 0;
+  }
+
+  double get currentZoom => camera.viewfinder.zoom;
+  double get currentAngleDegrees => (camera.viewfinder.angle * 180 / 3.14159265).roundToDouble();
+
+  /// Set camera to match TV state (called on phone after receiving vtt.fullState).
+  void syncCamera(double x, double y, double zoom, double angle) {
+    camera.viewfinder.position = Vector2(x, y);
+    camera.viewfinder.zoom = zoom;
+    camera.viewfinder.angle = angle;
+  }
+
+  /// Get current camera state for broadcasting.
+  Map<String, double> getCameraState() => {
+        'x': camera.viewfinder.position.x,
+        'y': camera.viewfinder.position.y,
+        'zoom': camera.viewfinder.zoom,
+        'angle': camera.viewfinder.angle,
+      };
+
   // --- Camera gestures ---
 
   double _initialZoom = 1.0;
@@ -163,7 +220,8 @@ class VttGame extends FlameGame with ScaleDetector, PanDetector {
   @override
   void onScaleUpdate(ScaleUpdateInfo info) {
     final newZoom = _initialZoom * info.scale.global.x;
-    camera.viewfinder.zoom = newZoom.clamp(0.1, 10.0);
+    final minZoom = state.calibratedBaseZoom ?? 0.1;
+    camera.viewfinder.zoom = newZoom.clamp(minZoom, 10.0);
   }
 
   @override

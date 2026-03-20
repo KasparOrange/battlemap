@@ -4,8 +4,10 @@
 
 A **Flutter app** that turns a TV (laid flat as a table surface) into a D&D digital battlemap. The same app runs in two modes:
 
-- **Table Mode** — fullscreen on the TV, displays the grid, tokens, maps, and effects
-- **Companion Mode** — runs on a phone, used to control the table: draw on the map, place tokens, trigger effects
+- **Table Mode (TV)** — fullscreen display only. **The TV has no touch screen and no usable remote.** It is a pure rendering surface. All interaction comes from the companion phone over WebSocket.
+- **Companion Mode (Phone)** — the DM's control surface. Connects to the TV over local Wi-Fi. All map loading, fog reveal, door toggling, camera control, and drawing happens here.
+
+**This is the core interaction model: the TV only displays, the phone only controls.** There is no direct user interaction on the TV. The TV box has no mouse, no keyboard, no touch — the Xiaomi TV remote is not used. The app on the TV should start in Table Mode automatically and wait for a companion to connect.
 
 Both modes are the **same Flutter APK**. The TV box runs the Table Mode APK installed via sideload. The phone runs the same APK in Companion Mode, connecting to the TV over local Wi-Fi.
 
@@ -62,6 +64,17 @@ The app is sideloaded as an APK onto the TV box via ADB. Version codes in `pubsp
 - Live URL: `https://kasparorange.github.io/battlemap/`
 - Workflow: `.github/workflows/deploy.yml`
 
+### After Every Feature Implementation
+
+**IMPORTANT:** After every feature is implemented, run this full deploy sequence so the TV always has the latest build:
+
+1. **Bump version code** in `pubspec.yaml` — increment the `+N` part (e.g. `+2` → `+3`)
+2. **Build web** — `flutter build web --release`
+3. **Build APK** — `flutter build apk --release`
+4. **Copy APK to web server** — `cp build/app/outputs/flutter-apk/app-release.apk build/web/battlemap.apk`
+5. **Restart dev server** — `pkill -f dev_server; python3 tools/dev_server.py &`
+6. **TV downloads update** — open `http://<VPS_IP>:4242/battlemap.apk` in TV browser, install over existing app
+
 ## Development Workflow
 
 **This project is developed entirely from an iPhone. This is a core guideline and will not change.**
@@ -106,6 +119,12 @@ No IDE, no desktop. Just SSH + chat + hot reload.
 | 7 | Phone-to-TV networking | Done | WebSocket server on TV, client on phone, JSON state sync, auto-reconnect |
 | 8 | PDF map support | Done | Load PDF battlemaps as backgrounds, page nav, network sync |
 | 12 | Flame engine migration | Done | Replaced CustomPainter with Flame game engine components |
+| 13 | VTT table mode — UVTT parser + map display | Done | Load .dd2vtt files, display map, grid overlay, camera pan/zoom |
+| 14 | VTT fog of war | Done | saveLayer + dstOut rendering, tap/drag to reveal, brush sizes |
+| 15 | VTT doors + walls + DM panel | Done | Portal toggle, wall debug view, collapsible control panel |
+| 16 | VTT calibration + brush reveal | Done | Physical TV calibration, drag-to-reveal, soft fog edges, camera controls |
+| 17 | VTT WebSocket sync (phone→TV) | Done | All VTT controls routed through companion phone via WebSocket |
+| 18 | Web-compatible WebSocket (web_socket_channel) | Not started | Allow iOS Safari to connect to TV as companion (fallback for iPhone users) |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects (glow, fog, bloom) | Not started | GPU-heavy features |
 | 11 | Drawing tools (shapes, AoE) | Not started | Freehand, shapes from companion |
@@ -120,13 +139,27 @@ battlemap/
 │   ├── companion_screen.dart  # Companion Mode — phone drawing & token controls
 │   ├── game/
 │   │   ├── battlemap_game.dart           # FlameGame — orchestrates all components
+│   │   ├── vtt_game.dart                 # FlameGame — VTT table display
 │   │   └── components/
 │   │       ├── grid_component.dart       # Grid lines renderer
 │   │       ├── pdf_background_component.dart # PDF map background
 │   │       ├── strokes_component.dart    # Drawing strokes
 │   │       ├── live_stroke_component.dart # Real-time stroke preview
 │   │       ├── token_component.dart      # Single token renderer
-│   │       └── token_layer.dart          # Token container with diff sync
+│   │       ├── token_layer.dart          # Token container with diff sync
+│   │       ├── map_image_component.dart  # VTT map image renderer
+│   │       ├── grid_overlay_component.dart # VTT grid overlay
+│   │       ├── fog_of_war_component.dart # VTT fog of war (saveLayer + dstOut)
+│   │       ├── wall_component.dart       # VTT wall outlines (DM debug)
+│   │       └── portal_component.dart     # VTT door/portal indicators
+│   ├── model/
+│   │   ├── uvtt_map.dart      # UVTT data classes (map, resolution, portal, light)
+│   │   └── uvtt_parser.dart   # .dd2vtt JSON parser
+│   ├── state/
+│   │   └── vtt_state.dart     # VTT runtime state (fog, portals, calibration)
+│   ├── ui/
+│   │   ├── vtt_screen.dart    # VTT screen — GameWidget + DM overlay
+│   │   └── dm_control_panel.dart # Collapsible DM control panel
 │   └── network/
 │       ├── server.dart        # WebSocket server (TV side, uses dart:io)
 │       ├── server_stub.dart   # No-op stub for web builds
