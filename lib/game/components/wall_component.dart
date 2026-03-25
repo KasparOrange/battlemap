@@ -21,7 +21,7 @@ class WallComponent extends PositionComponent with HasVisibility {
     required this.walls,
     required this.pixelsPerGrid,
     required Vector2 mapSize,
-  }) : super(size: mapSize, priority: 2);
+  }) : super(size: mapSize, priority: 5);
 
   @override
   void render(Canvas canvas) {

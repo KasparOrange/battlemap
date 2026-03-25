@@ -1,31 +1,18 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'game_state.dart';
-import 'table_screen.dart';
-import 'companion_screen.dart';
-import 'ui/vtt_screen.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'ui/tv_shell.dart';
 import 'ui/vtt_companion_screen.dart';
+import 'ui/dev_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
   runApp(const BattlemapApp());
 }
 
-class BattlemapApp extends StatefulWidget {
+class BattlemapApp extends StatelessWidget {
   const BattlemapApp({super.key});
-
-  @override
-  State<BattlemapApp> createState() => _BattlemapAppState();
-}
-
-class _BattlemapAppState extends State<BattlemapApp> {
-  final GameState _gameState = GameState();
-
-  @override
-  void dispose() {
-    _gameState.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,15 +22,14 @@ class _BattlemapAppState extends State<BattlemapApp> {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF1A1A2E),
       ),
-      home: ModeSelector(gameState: _gameState),
+      home: const ModeSelector(),
     );
   }
 }
 
-/// Landing screen — pick Table Mode or Companion Mode.
+/// Landing screen — pick TV Mode, Companion Mode, or Developer.
 class ModeSelector extends StatelessWidget {
-  final GameState gameState;
-  const ModeSelector({super.key, required this.gameState});
+  const ModeSelector({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -53,136 +39,76 @@ class ModeSelector extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Battlemap',
-              style: TextStyle(
-                fontSize: 48,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'D&D Digital Battlemap',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.white.withValues(alpha: 0.6),
-              ),
-            ),
-            const SizedBox(height: 64),
-            _ModeButton(
-              label: 'Table Mode',
-              subtitle: kIsWeb ? 'Display (local only)' : 'Display on TV',
-              icon: Icons.tv,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => TableScreen(gameState: gameState),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Battlemap',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            _ModeButton(
-              label: 'Companion Mode',
-              subtitle:
-                  kIsWeb ? 'Control (local only)' : 'Connect to TV via Wi-Fi',
-              icon: Icons.phone_android,
-              onTap: () {
-                if (kIsWeb) {
-                  // Web: go directly to companion in local mode
-                  Navigator.push(
+                const SizedBox(height: 8),
+                Text(
+                  'D&D Digital Battlemap',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white.withValues(alpha: 0.6),
+                  ),
+                ),
+                const SizedBox(height: 64),
+                _ModeButton(
+                  label: 'TV Mode',
+                  subtitle: 'Display on TV (no touch)',
+                  icon: Icons.tv,
+                  autofocus: true,
+                  onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          CompanionScreen(gameState: gameState),
+                      builder: (_) => const TvShell(),
                     ),
-                  );
-                } else {
-                  // Native: show connect dialog first
-                  _showConnectDialog(context);
-                }
-              },
-            ),
-            const SizedBox(height: 24),
-            _ModeButton(
-              label: 'VTT Table Mode',
-              subtitle: 'Display on TV (no touch)',
-              icon: Icons.tv,
-              autofocus: true,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const VttScreen(),
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            _ModeButton(
-              label: 'VTT Companion',
-              subtitle: kIsWeb
-                  ? 'DM control (local only)'
-                  : 'DM control via Wi-Fi',
-              icon: Icons.map,
-              onTap: () {
-                if (kIsWeb) {
-                  Navigator.push(
+                const SizedBox(height: 24),
+                _ModeButton(
+                  label: 'Companion Mode',
+                  subtitle: 'DM control via relay',
+                  icon: Icons.phone_android,
+                  onTap: () => _showCompanionDialog(context),
+                ),
+                const SizedBox(height: 24),
+                _ModeButton(
+                  label: 'Developer',
+                  subtitle: 'Logs & diagnostics',
+                  icon: Icons.terminal,
+                  onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const VttCompanionScreen(),
+                      builder: (_) => const DevScreen(),
                     ),
-                  );
-                } else {
-                  _showVttConnectDialog(context);
-                }
-              },
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-      ),
       ),
     );
   }
 
-  void _showConnectDialog(BuildContext context) {
-    final ipController = TextEditingController();
+  void _showCompanionDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Connect to Table'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Enter the IP address shown on the TV',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: ipController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 18,
-              ),
-              decoration: InputDecoration(
-                hintText: '192.168.1.xxx',
-                hintStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              autofocus: true,
-            ),
-          ],
+        title: const Text('Companion Mode'),
+        content: Text(
+          'Connect to the TV via the VPS relay,\nor use local mode for testing.',
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 14,
+          ),
         ),
         actions: [
           TextButton(
@@ -191,100 +117,23 @@ class ModeSelector extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              // Local mode (no server)
               Navigator.pop(ctx);
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      CompanionScreen(gameState: gameState),
+                  builder: (_) => const VttCompanionScreen(localMode: true),
                 ),
               );
             },
             child: const Text('Local Mode'),
           ),
           FilledButton(
-            onPressed: () {
-              final ip = ipController.text.trim();
-              if (ip.isEmpty) return;
-              Navigator.pop(ctx);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CompanionScreen(
-                    gameState: gameState,
-                    serverHost: ip,
-                  ),
-                ),
-              );
-            },
-            child: const Text('Connect'),
-          ),
-        ],
-      ),
-    );
-  }
-  void _showVttConnectDialog(BuildContext context) {
-    final ipController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Connect to VTT Table'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Enter the IP address shown on the TV',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: ipController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 18),
-              decoration: InputDecoration(
-                hintText: '192.168.1.xxx',
-                hintStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.3),
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (_) => const VttCompanionScreen(),
-                ),
-              );
-            },
-            child: const Text('Local Mode'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final ip = ipController.text.trim();
-              if (ip.isEmpty) return;
-              Navigator.pop(ctx);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => VttCompanionScreen(serverHost: ip),
                 ),
               );
             },
@@ -362,10 +211,10 @@ class _ModeButtonState extends State<_ModeButton> {
                   children: [
                     Text(
                       widget.label,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
-                        color: _focused ? Colors.white : Colors.white,
+                        color: Colors.white,
                       ),
                     ),
                     Text(

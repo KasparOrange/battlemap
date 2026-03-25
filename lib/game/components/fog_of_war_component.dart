@@ -1,17 +1,14 @@
-import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flame/events.dart';
 
 import '../../state/vtt_state.dart';
 
 /// Renders fog of war as a dark overlay with cutouts for revealed cells.
 ///
 /// Uses saveLayer + BlendMode.dstOut for efficient GPU compositing.
-/// Supports tap-to-toggle and drag-to-paint brush reveal.
-class FogOfWarComponent extends PositionComponent
-    with TapCallbacks, DragCallbacks, HasVisibility {
+/// This is a pure visual component — all input handling is in VttGame.
+class FogOfWarComponent extends PositionComponent with HasVisibility {
   final VttState state;
   final int pixelsPerGrid;
   final int gridCols;
@@ -45,91 +42,6 @@ class FogOfWarComponent extends PositionComponent
     }
 
     canvas.restore();
-  }
-
-  // --- Tap: toggle single cell or portal ---
-
-  @override
-  void onTapDown(TapDownEvent event) {
-    if (!state.isInteractive) return;
-    final worldPos = event.localPosition;
-
-    // Check if tap hits a portal
-    if (_tryTogglePortal(worldPos)) return;
-
-    // Toggle single cell
-    final ppg = pixelsPerGrid.toDouble();
-    final cellX = (worldPos.x / ppg).floor();
-    final cellY = (worldPos.y / ppg).floor();
-    if (cellX < 0 || cellX >= gridCols || cellY < 0 || cellY >= gridRows) return;
-    final index = cellY * gridCols + cellX;
-    state.toggleReveal(index);
-  }
-
-  // --- Drag: brush reveal/hide ---
-
-  @override
-  void onDragStart(DragStartEvent event) {
-    if (!state.isInteractive) return;
-    _brushAt(event.localPosition);
-  }
-
-  @override
-  void onDragUpdate(DragUpdateEvent event) {
-    if (!state.isInteractive) return;
-    _brushAt(event.localEndPosition);
-  }
-
-  void _brushAt(Vector2 worldPos) {
-    final ppg = pixelsPerGrid.toDouble();
-    final centerX = (worldPos.x / ppg).floor();
-    final centerY = (worldPos.y / ppg).floor();
-    final r = state.brushRadius;
-    bool changed = false;
-
-    for (int dy = -r; dy <= r; dy++) {
-      for (int dx = -r; dx <= r; dx++) {
-        // Circular brush
-        if (dx * dx + dy * dy > r * r + r) continue;
-        final cx = centerX + dx;
-        final cy = centerY + dy;
-        if (cx < 0 || cx >= gridCols || cy < 0 || cy >= gridRows) continue;
-        final index = cy * gridCols + cx;
-        if (state.revealMode) {
-          if (state.revealedCells.add(index)) changed = true;
-        } else {
-          if (state.revealedCells.remove(index)) changed = true;
-        }
-      }
-    }
-
-    if (changed) state.notifyListeners();
-  }
-
-  // --- Portal hit test ---
-
-  bool _tryTogglePortal(Vector2 worldPos) {
-    final portals = state.map?.portals ?? [];
-    final ppg = pixelsPerGrid.toDouble();
-    const pad = 8.0;
-    for (int i = 0; i < portals.length; i++) {
-      final p = portals[i];
-      final p0x = p.bounds[0].x * ppg;
-      final p0y = p.bounds[0].y * ppg;
-      final p1x = p.bounds[1].x * ppg;
-      final p1y = p.bounds[1].y * ppg;
-      final rect = Rect.fromLTRB(
-        min(p0x, p1x) - pad,
-        min(p0y, p1y) - pad,
-        max(p0x, p1x) + pad,
-        max(p0y, p1y) + pad,
-      );
-      if (rect.contains(worldPos.toOffset())) {
-        state.togglePortal(i);
-        return true;
-      }
-    }
-    return false;
   }
 
   @override

@@ -2,26 +2,97 @@ import 'package:flutter/material.dart';
 
 import '../state/vtt_state.dart';
 
-/// Callback bundle for DM panel actions.
-/// Each screen provides implementations that either act locally or send network commands.
+/// Bundle of callbacks for every action the DM control panel can trigger.
+///
+/// Each screen that hosts a [DmControlPanel] provides its own
+/// implementations. In networked mode ([VttCompanionScreen]), callbacks
+/// send commands through the [VttRelayClient]. In local mode, callbacks
+/// act directly on [VttState] and [VttGame].
+///
+/// See also:
+/// - [DmControlPanel], the widget that invokes these callbacks.
 class DmCallbacks {
+  /// Opens a file picker to load a `.dd2vtt` / `.uvtt` map file.
   final VoidCallback onLoadMap;
+
+  /// Toggles the fog-of-war layer on or off.
   final VoidCallback onToggleFog;
+
+  /// Reveals all fog cells on the current map at once.
   final VoidCallback onRevealAll;
+
+  /// Hides all fog cells on the current map at once.
   final VoidCallback onHideAll;
+
+  /// Toggles the grid overlay visibility.
   final VoidCallback onToggleGrid;
+
+  /// Toggles the wall debug overlay visibility.
   final VoidCallback onToggleWalls;
+
+  /// Toggles the fog brush between reveal and hide mode.
   final VoidCallback onToggleRevealMode;
+
+  /// Sets the fog brush radius to [radius] grid cells (0, 1, or 2).
   final void Function(int radius) onSetBrushRadius;
+
+  /// Zooms the camera in by one step.
   final VoidCallback onZoomIn;
+
+  /// Zooms the camera out by one step.
   final VoidCallback onZoomOut;
+
+  /// Resets the camera zoom so the entire map fits on screen.
   final VoidCallback onZoomToFit;
+
+  /// Rotates the camera 90 degrees clockwise.
   final VoidCallback onRotateCW;
+
+  /// Rotates the camera 90 degrees counter-clockwise.
   final VoidCallback onRotateCCW;
+
+  /// Resets the camera rotation to 0 degrees.
   final VoidCallback onResetRotation;
+
+  /// Calibrates the grid so squares match 1-inch miniature bases.
+  ///
+  /// [tvWidthInches] is the physical width of the TV screen in inches.
   final void Function(double tvWidthInches) onCalibrate;
+
+  /// Resets calibration to the default zoom behaviour.
   final VoidCallback onResetCalibration;
 
+  // Interaction mode
+
+  /// Switches to fog reveal/hide interaction mode.
+  final VoidCallback onSetFogMode;
+
+  /// Switches to freehand drawing interaction mode.
+  final VoidCallback onSetDrawMode;
+
+  /// Switches to token placement interaction mode.
+  final VoidCallback onSetTokenMode;
+
+  // Drawing
+
+  /// Sets the drawing stroke color to the given [Color].
+  final void Function(Color) onSetDrawColor;
+
+  /// Sets the drawing stroke width in logical pixels.
+  final void Function(double) onSetDrawWidth;
+
+  /// Clears all drawing strokes from the map.
+  final VoidCallback onClearDrawings;
+
+  /// Undoes the most recent drawing stroke.
+  final VoidCallback onUndoStroke;
+
+  // Tokens
+
+  /// Removes all tokens from the map.
+  final VoidCallback onClearTokens;
+
+  /// Creates a [DmCallbacks] with all required action handlers.
   const DmCallbacks({
     required this.onLoadMap,
     required this.onToggleFog,
@@ -39,14 +110,38 @@ class DmCallbacks {
     required this.onResetRotation,
     required this.onCalibrate,
     required this.onResetCalibration,
+    required this.onSetFogMode,
+    required this.onSetDrawMode,
+    required this.onSetTokenMode,
+    required this.onSetDrawColor,
+    required this.onSetDrawWidth,
+    required this.onClearDrawings,
+    required this.onUndoStroke,
+    required this.onClearTokens,
   });
 }
 
 /// Collapsible DM control panel overlaid on the VTT game canvas.
+///
+/// When collapsed, it displays as a small gear icon. When expanded, it
+/// shows context-sensitive sections (fog, draw, token, camera, calibration)
+/// depending on the current [InteractionMode] in [state].
+///
+/// All user actions are routed through [callbacks], which may either act
+/// locally or send commands over the network depending on the hosting
+/// screen.
+///
+/// See also:
+/// - [DmCallbacks], the callback bundle wiring panel buttons to actions.
+/// - [VttCompanionScreen], the primary host for this panel.
 class DmControlPanel extends StatefulWidget {
+  /// The current VTT game state used to render toggle states and labels.
   final VttState state;
+
+  /// Action handlers invoked when the DM taps panel controls.
   final DmCallbacks callbacks;
 
+  /// Creates a DM control panel bound to [state] and [callbacks].
   const DmControlPanel({
     super.key,
     required this.state,
@@ -128,73 +223,32 @@ class _DmControlPanelState extends State<DmControlPanel> {
           const SizedBox(height: 8),
 
           if (state.map != null) ...[
-            // Fog section
-            _SectionLabel('Fog'),
-            _PanelToggle(
-              icon: state.fogEnabled ? Icons.cloud : Icons.cloud_off,
-              label: 'Fog',
-              active: state.fogEnabled,
-              onTap: cb.onToggleFog,
-            ),
-            const SizedBox(height: 4),
+            // Mode section
+            _SectionLabel('Mode'),
             Row(
               children: [
-                Expanded(
-                  child: _PanelButton(
-                    icon: Icons.visibility,
-                    label: 'Reveal',
-                    onTap: cb.onRevealAll,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: _PanelButton(
-                    icon: Icons.visibility_off,
-                    label: 'Hide',
-                    onTap: cb.onHideAll,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            // Brush controls
-            _PanelToggle(
-              icon: state.revealMode ? Icons.wb_sunny : Icons.dark_mode,
-              label: state.revealMode ? 'Reveal' : 'Hide',
-              active: state.revealMode,
-              onTap: cb.onToggleRevealMode,
-            ),
-            const SizedBox(height: 4),
-            // Brush size
-            Row(
-              children: [
-                const Icon(Icons.brush, color: Colors.white30, size: 14),
-                const SizedBox(width: 4),
-                for (final entry in {0: '1', 1: '3', 2: '5'}.entries) ...[
-                  if (entry.key > 0) const SizedBox(width: 2),
+                for (final entry in [
+                  (InteractionMode.fogReveal, Icons.cloud, 'Fog'),
+                  (InteractionMode.draw, Icons.brush, 'Draw'),
+                  (InteractionMode.token, Icons.person_pin, 'Token'),
+                ]) ...[
+                  if (entry != (InteractionMode.fogReveal, Icons.cloud, 'Fog'))
+                    const SizedBox(width: 4),
                   Expanded(
-                    child: GestureDetector(
-                      onTap: () => cb.onSetBrushRadius(entry.key),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        decoration: BoxDecoration(
-                          color: state.brushRadius == entry.key
-                              ? Colors.white.withValues(alpha: 0.15)
-                              : Colors.white.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Center(
-                          child: Text(
-                            entry.value,
-                            style: TextStyle(
-                              color: state.brushRadius == entry.key
-                                  ? Colors.white70
-                                  : Colors.white30,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ),
-                      ),
+                    child: _ModeButton(
+                      icon: entry.$2,
+                      label: entry.$3,
+                      active: state.interactionMode == entry.$1,
+                      onTap: () {
+                        switch (entry.$1) {
+                          case InteractionMode.fogReveal:
+                            cb.onSetFogMode();
+                          case InteractionMode.draw:
+                            cb.onSetDrawMode();
+                          case InteractionMode.token:
+                            cb.onSetTokenMode();
+                        }
+                      },
                     ),
                   ),
                 ],
@@ -202,6 +256,198 @@ class _DmControlPanelState extends State<DmControlPanel> {
             ),
 
             const SizedBox(height: 8),
+
+            // Fog section (visible only in fogReveal mode)
+            if (state.interactionMode == InteractionMode.fogReveal) ...[
+              _SectionLabel('Fog'),
+              _PanelToggle(
+                icon: state.fogEnabled ? Icons.cloud : Icons.cloud_off,
+                label: 'Fog',
+                active: state.fogEnabled,
+                onTap: cb.onToggleFog,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PanelButton(
+                      icon: Icons.visibility,
+                      label: 'Reveal',
+                      onTap: cb.onRevealAll,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: _PanelButton(
+                      icon: Icons.visibility_off,
+                      label: 'Hide',
+                      onTap: cb.onHideAll,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              // Brush controls
+              _PanelToggle(
+                icon: state.revealMode ? Icons.wb_sunny : Icons.dark_mode,
+                label: state.revealMode ? 'Reveal' : 'Hide',
+                active: state.revealMode,
+                onTap: cb.onToggleRevealMode,
+              ),
+              const SizedBox(height: 4),
+              // Brush size
+              Row(
+                children: [
+                  const Icon(Icons.brush, color: Colors.white30, size: 14),
+                  const SizedBox(width: 4),
+                  for (final entry in {0: '1', 1: '3', 2: '5'}.entries) ...[
+                    if (entry.key > 0) const SizedBox(width: 2),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => cb.onSetBrushRadius(entry.key),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          decoration: BoxDecoration(
+                            color: state.brushRadius == entry.key
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : Colors.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Center(
+                            child: Text(
+                              entry.value,
+                              style: TextStyle(
+                                color: state.brushRadius == entry.key
+                                    ? Colors.white70
+                                    : Colors.white30,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+
+            // Draw section (visible only in draw mode)
+            if (state.interactionMode == InteractionMode.draw) ...[
+              _SectionLabel('Draw'),
+              // Color dots
+              Row(
+                children: [
+                  for (final color in const [
+                    Color(0xFFE53935), // red
+                    Color(0xFF43A047), // green
+                    Color(0xFF1E88E5), // blue
+                    Color(0xFFFDD835), // yellow
+                    Color(0xFFFF8F00), // orange
+                    Color(0xFFFFFFFF), // white
+                  ]) ...[
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => cb.onSetDrawColor(color),
+                        child: Center(
+                          child: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                              border: state.drawColor.toARGB32() == color.toARGB32()
+                                  ? Border.all(color: Colors.white, width: 2)
+                                  : Border.all(color: Colors.white24, width: 1),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Width presets
+              Row(
+                children: [
+                  const Icon(Icons.line_weight, color: Colors.white30, size: 14),
+                  const SizedBox(width: 4),
+                  for (final entry in {2.0: 'S', 4.0: 'M', 8.0: 'L'}.entries) ...[
+                    if (entry.key != 2.0) const SizedBox(width: 2),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => cb.onSetDrawWidth(entry.key),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          decoration: BoxDecoration(
+                            color: state.drawWidth == entry.key
+                                ? Colors.white.withValues(alpha: 0.15)
+                                : Colors.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Center(
+                            child: Text(
+                              entry.value,
+                              style: TextStyle(
+                                color: state.drawWidth == entry.key
+                                    ? Colors.white70
+                                    : Colors.white30,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 6),
+              // Clear / Undo
+              Row(
+                children: [
+                  Expanded(
+                    child: _PanelButton(
+                      icon: Icons.delete_outline,
+                      label: 'Clear',
+                      onTap: cb.onClearDrawings,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: _PanelButton(
+                      icon: Icons.undo,
+                      label: 'Undo',
+                      onTap: cb.onUndoStroke,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+
+            // Token section (visible only in token mode)
+            if (state.interactionMode == InteractionMode.token) ...[
+              _SectionLabel('Tokens'),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Text(
+                  'Tap map to place',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+              _PanelButton(
+                icon: Icons.delete_outline,
+                label: 'Clear All',
+                onTap: cb.onClearTokens,
+              ),
+              const SizedBox(height: 8),
+            ],
 
             // Calibration
             _SectionLabel('Calibrate'),
@@ -409,6 +655,53 @@ class _PanelButton extends StatelessWidget {
               const SizedBox(width: 6),
               Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ModeButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _ModeButton({
+    required this.icon,
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        decoration: BoxDecoration(
+          color: active
+              ? Colors.white.withValues(alpha: 0.2)
+              : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(6),
+          border: active
+              ? Border.all(color: Colors.white.withValues(alpha: 0.3))
+              : null,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: active ? Colors.white : Colors.white38, size: 16),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: active ? Colors.white : Colors.white38,
+                fontSize: 10,
+              ),
+            ),
           ],
         ),
       ),

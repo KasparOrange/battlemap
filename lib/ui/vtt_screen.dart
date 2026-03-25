@@ -1,19 +1,17 @@
 import 'dart:async';
-import 'dart:io' show NetworkInterface, InternetAddressType;
+import 'dart:typed_data';
 
 import 'package:flame/game.dart' hide Route, Matrix4, Vector2, Vector3, Vector4;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../game/vtt_game.dart';
+import '../network/relay_config.dart';
+import '../network/vtt_relay_client.dart';
 import '../state/vtt_state.dart';
 
-// Conditional import for server
-import '../network/vtt_server_stub.dart'
-    if (dart.library.io) '../network/vtt_server.dart';
-
 /// VTT Table Mode — fullscreen map display on the TV.
-/// Starts a WebSocket server and waits for companion phone to connect.
+/// Connects to the VPS relay and waits for companion phone to pair.
 class VttScreen extends StatefulWidget {
   const VttScreen({super.key});
 
@@ -25,23 +23,14 @@ class _VttScreenState extends State<VttScreen> {
   final VttState _state = VttState();
   late final VttGame _game;
 
-  VttServer? _server;
-  String? _serverIp;
-  int _clientCount = 0;
-  StreamSubscription<int>? _clientSub;
+  late final VttRelayClient _relay;
+  RelayConnectionState _relayState = RelayConnectionState.disconnected;
+  StreamSubscription<RelayConnectionState>? _relaySub;
+  double? _transferProgress;
 
-  // On-screen debug log
-  final List<String> _logs = [];
-  static const int _maxLogs = 20;
-
-  void _log(String msg) {
-    final ts = DateTime.now().toString().substring(11, 19);
-    setState(() {
-      _logs.add('[$ts] $msg');
-      if (_logs.length > _maxLogs) _logs.removeAt(0);
-    });
-    debugPrint('VTT-TV: $msg');
-  }
+  // Throttled broadcast
+  bool _dirty = false;
+  Timer? _broadcastTimer;
 
   @override
   void initState() {
@@ -49,60 +38,117 @@ class _VttScreenState extends State<VttScreen> {
     _state.isInteractive = false;
     _game = VttGame(state: _state);
     _state.addListener(_onStateChanged);
-    _log('VTT Table Mode started');
-    if (!kIsWeb) {
-      _startServer();
-    } else {
-      _log('Web build — server disabled');
-      _detectNetworkInfo();
-    }
+    _connectRelay();
   }
 
   @override
   void dispose() {
     _state.removeListener(_onStateChanged);
-    _clientSub?.cancel();
-    _server?.dispose();
+    _broadcastTimer?.cancel();
+    _relaySub?.cancel();
+    _relay.dispose();
     _state.dispose();
     super.dispose();
   }
 
-  void _onStateChanged() => setState(() {});
-
-  Future<void> _detectNetworkInfo() async {
-    try {
-      if (!kIsWeb) {
-        final interfaces = await NetworkInterface.list(
-          type: InternetAddressType.IPv4,
-          includeLoopback: false,
-        );
-        for (final iface in interfaces) {
-          for (final addr in iface.addresses) {
-            _log('Network: ${iface.name} = ${addr.address}');
-          }
-        }
+  void _connectRelay() {
+    _relay = VttRelayClient(role: 'table');
+    _relay.onCommand = _handleCommand;
+    _relay.onMapLoaded = _onMapReceived;
+    _relay.onTransferProgress = (p) {
+      setState(() => _transferProgress = p < 0 ? null : p);
+    };
+    _relaySub = _relay.stateStream.listen((s) {
+      setState(() => _relayState = s);
+      // When companion connects, send current map + state
+      if (s == RelayConnectionState.paired) {
+        _sendInitialState();
       }
-    } catch (e) {
-      _log('Network detection failed: $e');
-    }
+    });
+    _relay.connect();
   }
 
-  Future<void> _startServer() async {
-    _log('Starting WebSocket server on port 8080...');
-    await _detectNetworkInfo();
+  void _onMapReceived(Uint8List bytes) {
+    _state.loadMap(bytes);
+    _game.zoomToFit();
+  }
+
+  void _sendInitialState() {
+    if (_state.rawMapBytes != null) {
+      _relay.sendMapChunked(_state.rawMapBytes!);
+    }
+    _relay.sendFullState(_state.toJson(), _game.getCameraState());
+  }
+
+  void _onStateChanged() {
+    setState(() {});
+    // Throttle broadcasts to max once per 50ms
+    _dirty = true;
+    _broadcastTimer ??= Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (_dirty && _relayState == RelayConnectionState.paired) {
+        _dirty = false;
+        _relay.sendFullState(_state.toJson(), _game.getCameraState());
+      }
+    });
+  }
+
+  void _handleCommand(Map<String, dynamic> msg) {
     try {
-      _server = VttServer(state: _state, game: _game);
-      await _server!.start();
-      _clientSub = _server!.clientCountStream.listen((count) {
-        if (count != _clientCount) {
-          _log('Clients: $count');
-        }
-        setState(() => _clientCount = count);
-      });
-      setState(() => _serverIp = _server!.localIp);
-      _log('Server started on ${_server!.localIp}:${_server!.port}');
+      final type = msg['type'] as String;
+
+      switch (type) {
+        case 'vtt.clearMap':
+          _state.clearMap();
+        case 'vtt.toggleReveal':
+          _state.toggleReveal(msg['index'] as int);
+        case 'vtt.brushReveal':
+          final indices = (msg['indices'] as List).cast<int>();
+          _state.applyBrushReveal(indices);
+        case 'vtt.revealAll':
+          if (_state.map != null) {
+            final total = _state.map!.resolution.mapSize.dx.toInt() *
+                _state.map!.resolution.mapSize.dy.toInt();
+            _state.revealAll(total);
+          }
+        case 'vtt.hideAll':
+          _state.hideAll();
+        case 'vtt.togglePortal':
+          _state.togglePortal(msg['index'] as int);
+        case 'vtt.toggleGrid':
+          _state.toggleGrid();
+        case 'vtt.toggleFog':
+          _state.toggleFog();
+        case 'vtt.toggleWalls':
+          _state.toggleWalls();
+        case 'vtt.setBrushRadius':
+          _state.setBrushRadius(msg['radius'] as int);
+        case 'vtt.toggleRevealMode':
+          _state.toggleRevealMode();
+        case 'vtt.zoomIn':
+          _game.zoomIn();
+        case 'vtt.zoomOut':
+          _game.zoomOut();
+        case 'vtt.zoomToFit':
+          _game.zoomToFit();
+        case 'vtt.rotateCW':
+          _game.rotateCW();
+        case 'vtt.rotateCCW':
+          _game.rotateCCW();
+        case 'vtt.resetRotation':
+          _game.resetRotation();
+        case 'vtt.calibrate':
+          final screenWidth = MediaQueryData.fromView(
+            WidgetsBinding.instance.platformDispatcher.views.first,
+          ).size.width;
+          _state.calibrate(
+            (msg['tvWidthInches'] as num).toDouble(),
+            screenWidth,
+          );
+        case 'vtt.resetCalibration':
+          _state.resetCalibration();
+      }
     } catch (e) {
-      _log('Server FAILED: $e');
+      debugPrint('VTT command error: $e');
     }
   }
 
@@ -126,7 +172,7 @@ class _VttScreenState extends State<VttScreen> {
             ),
           ),
 
-          // Server info (top-right)
+          // Relay status (top-right)
           Positioned(
             top: 16,
             right: 16,
@@ -136,129 +182,113 @@ class _VttScreenState extends State<VttScreen> {
                 color: Colors.black54,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        _clientCount > 0 ? Icons.wifi : Icons.wifi_find,
-                        color: _clientCount > 0
-                            ? Colors.greenAccent
-                            : Colors.orangeAccent,
-                        size: 16,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _serverIp != null
-                            ? '$_serverIp:${_server?.port ?? 8080}'
-                            : 'Starting...',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 13,
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ],
+                  Icon(
+                    _relayStatusIcon,
+                    color: _relayStatusColor,
+                    size: 16,
                   ),
-                  if (_clientCount > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        '$_clientCount companion(s) connected',
-                        style: const TextStyle(
-                          color: Colors.greenAccent,
-                          fontSize: 11,
-                        ),
-                      ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _relayStatusText,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 13,
+                      fontFamily: 'monospace',
                     ),
+                  ),
                 ],
               ),
             ),
           ),
 
-          // Waiting hint (center, when no map)
-          if (_state.map == null)
+          // Transfer progress bar
+          if (_transferProgress != null)
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.downloading, color: Colors.white38, size: 48),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: 240,
+                    child: LinearProgressIndicator(
+                      value: _transferProgress,
+                      backgroundColor: Colors.white12,
+                      color: Colors.greenAccent,
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Receiving map... ${(_transferProgress! * 100).toInt()}%',
+                    style: const TextStyle(color: Colors.white38, fontSize: 16),
+                  ),
+                ],
+              ),
+            )
+          // Waiting hint (center, when no map and no transfer)
+          else if (_state.map == null)
             Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    _clientCount > 0 ? Icons.check_circle : Icons.wifi_find,
-                    color:
-                        _clientCount > 0 ? Colors.greenAccent : Colors.white12,
+                    _relayState == RelayConnectionState.paired
+                        ? Icons.check_circle
+                        : _relayState == RelayConnectionState.connected
+                            ? Icons.wifi_find
+                            : Icons.cloud_off,
+                    color: _relayState == RelayConnectionState.paired
+                        ? Colors.greenAccent
+                        : Colors.white12,
                     size: 64,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _clientCount > 0
-                        ? 'Companion connected\nLoad a map from your phone'
-                        : _serverIp != null
-                            ? 'Open VTT Companion on your phone\nand connect to:'
-                            : 'Starting server...',
+                    _waitingHintText,
                     textAlign: TextAlign.center,
                     style: const TextStyle(color: Colors.white38, fontSize: 18),
                   ),
-                  if (_serverIp != null && _clientCount == 0) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '$_serverIp:${_server?.port ?? 8080}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontFamily: 'monospace',
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
-              ),
-            ),
-
-          // On-screen debug log (bottom-left)
-          if (_logs.isNotEmpty)
-            Positioned(
-              bottom: 8,
-              left: 8,
-              child: Container(
-                width: 420,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final log in _logs)
-                      Text(
-                        log,
-                        style: const TextStyle(
-                          color: Colors.white38,
-                          fontSize: 10,
-                          fontFamily: 'monospace',
-                          height: 1.4,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                  ],
-                ),
               ),
             ),
         ],
       ),
     );
   }
+
+  IconData get _relayStatusIcon => switch (_relayState) {
+        RelayConnectionState.paired => Icons.wifi,
+        RelayConnectionState.connected => Icons.wifi_find,
+        RelayConnectionState.connecting => Icons.cloud_sync,
+        RelayConnectionState.disconnected => Icons.cloud_off,
+      };
+
+  Color get _relayStatusColor => switch (_relayState) {
+        RelayConnectionState.paired => Colors.greenAccent,
+        RelayConnectionState.connected => Colors.orangeAccent,
+        RelayConnectionState.connecting => Colors.orangeAccent,
+        RelayConnectionState.disconnected => Colors.redAccent,
+      };
+
+  String get _relayStatusText => switch (_relayState) {
+        RelayConnectionState.paired => 'Companion connected',
+        RelayConnectionState.connected => 'Waiting for companion...',
+        RelayConnectionState.connecting => 'Connecting to relay...',
+        RelayConnectionState.disconnected => 'Disconnected',
+      };
+
+  String get _waitingHintText => switch (_relayState) {
+        RelayConnectionState.paired =>
+          'Companion connected\nLoad a map from your phone',
+        RelayConnectionState.connected =>
+          'Connected to relay\nOpen VTT Companion on your phone',
+        RelayConnectionState.connecting => 'Connecting to relay...',
+        RelayConnectionState.disconnected =>
+          'Connecting to ${RelayConfig.host}...',
+      };
 }

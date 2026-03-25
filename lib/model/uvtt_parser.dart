@@ -3,8 +3,35 @@ import 'dart:typed_data';
 
 import 'uvtt_map.dart';
 
-/// Parses .dd2vtt / .uvtt files (Universal VTT format).
+/// Parser for Universal VTT map files (`.dd2vtt` / `.uvtt`).
+///
+/// The Universal VTT (UVTT) format is a JSON file containing:
+/// - A base64-encoded map image (`"image"`)
+/// - Grid resolution metadata (`"resolution"`)
+/// - Wall geometry for line-of-sight (`"line_of_sight"`, `"objects_line_of_sight"`)
+/// - Interactive portals / doors (`"portals"`)
+/// - Light sources (`"lights"`)
+/// - Environment settings (`"environment"`)
+///
+/// Usage:
+/// ```dart
+/// final map = UvttParser.parse(utf8.decode(fileBytes));
+/// ```
+///
+/// See also:
+/// * [UvttMap], the parsed output containing all map data.
+/// * [VttState.loadMap], which uses this parser to load map files.
 class UvttParser {
+  /// Parses a `.dd2vtt` / `.uvtt` JSON string into a [UvttMap].
+  ///
+  /// The [jsonString] must be valid JSON conforming to the Universal VTT
+  /// format. The `"image"` field is decoded from base64 into raw image bytes.
+  ///
+  /// Missing optional sections (`line_of_sight`, `objects_line_of_sight`,
+  /// `portals`, `lights`, `environment`) are treated as empty/default.
+  ///
+  /// Throws [FormatException] if the JSON is malformed or required fields
+  /// are missing.
   static UvttMap parse(String jsonString) {
     final json = jsonDecode(jsonString) as Map<String, dynamic>;
 
@@ -26,6 +53,10 @@ class UvttParser {
     );
   }
 
+  /// Parses a list of polylines (wall segments) from JSON.
+  ///
+  /// Each polyline is a list of [UvttPoint] objects. Returns an empty
+  /// list if [data] is `null`.
   static List<List<UvttPoint>> _parsePolylines(dynamic data) {
     if (data == null) return [];
     return (data as List).map((polyline) {
@@ -35,6 +66,9 @@ class UvttParser {
     }).toList();
   }
 
+  /// Parses the portals array from JSON.
+  ///
+  /// Returns an empty list if [data] is `null`.
   static List<UvttPortal> _parsePortals(dynamic data) {
     if (data == null) return [];
     return (data as List)
@@ -42,6 +76,9 @@ class UvttParser {
         .toList();
   }
 
+  /// Parses the lights array from JSON.
+  ///
+  /// Returns an empty list if [data] is `null`.
   static List<UvttLight> _parseLights(dynamic data) {
     if (data == null) return [];
     return (data as List)

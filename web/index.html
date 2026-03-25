@@ -26,7 +26,7 @@
   <script>
     // Remote console logger — sends browser logs to VPS log server
     (function() {
-      var LOG_URL = window.location.origin + '/log';
+      var LOG_URL = window.location.protocol + '//' + window.location.hostname + ':4243/';
       var queue = [];
       var timer = null;
 
@@ -41,7 +41,7 @@
           if (typeof a === 'string') return a;
           try { return JSON.stringify(a); } catch(e) { return String(a); }
         }).join(' ');
-        queue.push({ level: level, msg: msg });
+        queue.push({ src: 'companion', msg: msg });
         if (!timer) timer = setInterval(flush, 500);
       }
 

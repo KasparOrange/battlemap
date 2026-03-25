@@ -2,13 +2,13 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
-import 'package:flame/events.dart';
 
 import '../../model/uvtt_map.dart';
 import '../../state/vtt_state.dart';
 
-/// Renders a door/portal indicator and handles tap-to-toggle.
-class PortalComponent extends PositionComponent with TapCallbacks {
+/// Renders a door/portal indicator.
+/// Input handling (tap-to-toggle) is in VttGame's input router.
+class PortalComponent extends PositionComponent {
   final int portalIndex;
   final UvttPortal portal;
   final VttState state;
@@ -29,7 +29,7 @@ class PortalComponent extends PositionComponent with TapCallbacks {
     required this.portal,
     required this.state,
     required this.pixelsPerGrid,
-  }) : super(priority: 3) {
+  }) : super(priority: 6) {
     // Compute position and size from portal bounds
     final ppg = pixelsPerGrid.toDouble();
     final p0x = portal.bounds[0].x * ppg;
@@ -57,15 +57,5 @@ class PortalComponent extends PositionComponent with TapCallbacks {
     final rect = size.toRect();
     canvas.drawRect(rect, isOpen ? _openPaint : _closedPaint);
     canvas.drawRect(rect, _borderPaint);
-  }
-
-  @override
-  void onTapDown(TapDownEvent event) {
-    state.togglePortal(portalIndex);
-  }
-
-  @override
-  bool containsLocalPoint(Vector2 point) {
-    return size.toRect().contains(point.toOffset());
   }
 }

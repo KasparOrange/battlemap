@@ -1,15 +1,22 @@
 import 'package:flame/components.dart';
 
-import '../../game_state.dart';
+import '../../state/vtt_state.dart';
 import 'token_component.dart';
 
-/// Container for token components. Diffs against GameState to efficiently
+/// Container for token components. Diffs against VttState to efficiently
 /// add, remove, and update individual token components.
 class TokenLayer extends Component {
-  TokenLayer() : super(priority: 4);
+  final VttState state;
+  final double cellSize;
 
-  void syncFromState(GameState gs) {
-    final stateTokens = gs.tokens;
+  TokenLayer({
+    required this.state,
+    required this.cellSize,
+  }) : super(priority: 4);
+
+  /// Sync token components to match current VttState.tokens.
+  void sync() {
+    final stateTokens = state.tokens;
     final stateIds = stateTokens.map((t) => t.id).toSet();
 
     // Build map of current children by token ID
@@ -37,6 +44,7 @@ class TokenLayer extends Component {
           color: token.color,
           gridX: token.gridX,
           gridY: token.gridY,
+          cellSize: cellSize,
         ));
       }
     }

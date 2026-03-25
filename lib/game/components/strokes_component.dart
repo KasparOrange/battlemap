@@ -1,28 +1,21 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-import '../../game_state.dart';
+import '../../state/vtt_state.dart';
 
 /// Draws all completed drawing strokes.
+/// Reads strokes from VttState and re-renders on state change.
 class StrokesComponent extends PositionComponent {
-  List<DrawStroke> _strokes = [];
+  final VttState state;
 
-  StrokesComponent()
-      : super(
-          size: Vector2(
-            GameState.gridColumns * GameState.cellSize,
-            GameState.gridRows * GameState.cellSize,
-          ),
-          priority: 2,
-        );
-
-  void syncFromState(GameState gs) {
-    _strokes = gs.strokes;
-  }
+  StrokesComponent({
+    required this.state,
+    required Vector2 mapSize,
+  }) : super(size: mapSize, priority: 2);
 
   @override
   void render(Canvas canvas) {
-    for (final stroke in _strokes) {
+    for (final stroke in state.strokes) {
       if (stroke.points.length < 2) continue;
       final paint = Paint()
         ..color = stroke.color

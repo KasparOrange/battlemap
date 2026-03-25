@@ -1,15 +1,17 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-import '../../game_state.dart';
+import '../../model/map_token.dart';
 
 /// Draws a single token on the battlemap.
+/// Accepts a dynamic cellSize instead of hardcoded GameState.cellSize.
 class TokenComponent extends PositionComponent {
   String tokenId;
   String label;
   Color color;
   int gridX;
   int gridY;
+  final double cellSize;
 
   TokenComponent({
     required this.tokenId,
@@ -17,12 +19,13 @@ class TokenComponent extends PositionComponent {
     required this.color,
     required this.gridX,
     required this.gridY,
+    required this.cellSize,
   }) : super(
           position: Vector2(
-            gridX * GameState.cellSize,
-            gridY * GameState.cellSize,
+            gridX * cellSize,
+            gridY * cellSize,
           ),
-          size: Vector2(GameState.cellSize, GameState.cellSize),
+          size: Vector2(cellSize, cellSize),
         );
 
   void updateFrom(MapToken token) {
@@ -32,17 +35,16 @@ class TokenComponent extends PositionComponent {
       gridX = token.gridX;
       gridY = token.gridY;
       position = Vector2(
-        gridX * GameState.cellSize,
-        gridY * GameState.cellSize,
+        gridX * cellSize,
+        gridY * cellSize,
       );
     }
   }
 
   @override
   void render(Canvas canvas) {
-    final cell = GameState.cellSize;
-    final center = Offset(cell / 2, cell / 2);
-    final radius = cell * 0.4;
+    final center = Offset(cellSize / 2, cellSize / 2);
+    final radius = cellSize * 0.4;
 
     // Shadow
     canvas.drawCircle(
