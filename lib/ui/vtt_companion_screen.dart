@@ -81,6 +81,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   double? _updateDownloadProgress;
   String? _updateDownloadStatus;
 
+  // Session loading progress
+  String? _loadingSessionId;
+
   bool get _isNetworked => !widget.localMode;
 
   @override
@@ -117,6 +120,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       final view = msg['tvView'] as String?;
       if (!mounted) return;
       if (view != null && view != _tvView) {
+        // Clear loading state when TV switches to game view
+        if (view == 'game') {
+          _loadingSessionId = null;
+        }
         setState(() => _tvView = view);
       }
       setState(() {
@@ -597,35 +604,64 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
 
   Widget _buildSessionRow(Session session) {
     final ago = _timeAgo(session.lastModifiedAt);
+    final isLoading = _loadingSessionId == session.id;
+    final progress = isLoading ? (_transferProgress ?? 0.0) : 0.0;
+
     return GestureDetector(
       onTap: () {
+        if (mounted) setState(() => _loadingSessionId = session.id);
         _relay?.sendGoToGame(session.mapId, sessionId: session.id);
       },
       child: Container(
         margin: const EdgeInsets.only(top: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Row(
+        child: Stack(
           children: [
-            const Icon(Icons.play_arrow, color: Colors.greenAccent, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                session.name,
-                style: const TextStyle(color: Colors.white54, fontSize: 13),
+            // Progress fill (left to right)
+            if (isLoading)
+              Positioned.fill(
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: progress.clamp(0.0, 1.0),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.greenAccent.withValues(alpha: 0.15),
+                    ),
+                  ),
+                ),
               ),
-            ),
-            Text(
-              ago,
-              style: const TextStyle(color: Colors.white24, fontSize: 11),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              onTap: () => _relay?.sendDeleteSession(session.id),
-              child: const Icon(Icons.close, color: Colors.white24, size: 16),
+            // Content
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    isLoading ? Icons.downloading : Icons.play_arrow,
+                    color: Colors.greenAccent,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      session.name,
+                      style: const TextStyle(color: Colors.white54, fontSize: 13),
+                    ),
+                  ),
+                  Text(
+                    isLoading ? '${(progress * 100).toInt()}%' : ago,
+                    style: const TextStyle(color: Colors.white24, fontSize: 11),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _relay?.sendDeleteSession(session.id),
+                    child: const Icon(Icons.close, color: Colors.white24, size: 16),
+                  ),
+                ],
+              ),
             ),
           ],
         ),

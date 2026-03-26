@@ -326,14 +326,18 @@ class _TvShellState extends State<TvShell> {
       _game!.syncCamera(
           session.cameraX, session.cameraY, session.cameraZoom, session.cameraAngle);
 
-      // Tell companion to download map from VPS (fast) instead of chunked relay
+      // Send map to companion so it can display it
       final entry = _library.getEntry(session.mapId);
       if (entry?.vpsUrl != null) {
+        _log('Telling companion to download map from ${entry!.vpsUrl}');
         _relay.sendRaw(jsonEncode({
           'type': 'vtt.downloadMap',
-          'url': entry!.vpsUrl,
+          'url': entry.vpsUrl,
           'displayName': entry.displayName,
         }));
+      } else {
+        _log('No VPS URL, sending map via chunks');
+        _relay.sendMapChunked(bytes);
       }
       _broadcastFullState();
       _log('Session resumed: ${session.name}');
