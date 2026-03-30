@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="API docs for the VttState class from the vtt_state library, for the Dart programming language.">
+  <title>VttState class - vtt_state library - Dart API</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="../static-assets/github.css?v1">
+  <link rel="stylesheet" href="../static-assets/styles.css?v1">
+  <link rel="icon" href="../static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="../" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li><a href="../index.html">battlemap</a></li>
+    <li><a href="../state_vtt_state/">state&#47;vtt_state.dart</a></li>
+    <li class="self-crumb">VttState class</li>
+  </ol>
+  <div class="self-name">VttState</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <button class="toggle" id="theme-button" title="Toggle between light and dark mode" aria-label="Light and dark mode toggle">
+    <span id="dark-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      dark_mode
+    </span>
+    <span id="light-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      light_mode
+    </span>
+  </button>
+</header>
+<main>
+<div
+    id="dartdoc-main-content"
+    class="main-content"
+    data-above-sidebar="state_vtt_state&#47;state_vtt_state-library-sidebar.html"
+    data-below-sidebar="state_vtt_state&#47;VttState-class-sidebar.html">
+    <div>
+<h1><span class="kind-class">VttState</span> class 
+ 
+</h1></div>
+
+    
+<section class="desc markdown">
+  <p>DM-controlled runtime state for the VTT table display.</p>
+<p>This is the central state object shared between the Flame game engine
+(<a href="../game_vtt_game/VttGame-class.html">VttGame</a>), the UI panels (<a href="../ui_dm_control_panel/DmControlPanel-class.html">DmControlPanel</a>, <a href="../ui_vtt_companion_screen/VttCompanionScreen-class.html">VttCompanionScreen</a>),
+and the network layer (<a href="../network_vtt_relay_client/VttRelayClient-class.html">VttRelayClient</a>). It extends <a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier-class.html">ChangeNotifier</a>
+so that listeners (Flame components, Flutter widgets) are notified
+whenever the state changes.</p>
+<p>State is organized into several groups:</p>
+<ul>
+<li><strong>Map data</strong> -- the loaded <a href="../model_uvtt_map/UvttMap-class.html">UvttMap</a> and its raw bytes.</li>
+<li><strong>Fog of war</strong> -- which cells are revealed, brush settings, reveal mode.</li>
+<li><strong>Portals</strong> -- which doors/gates are currently open.</li>
+<li><strong>Display toggles</strong> -- grid visibility, fog on/off, wall debug view.</li>
+<li><strong>Calibration</strong> -- physical TV size mapping for accurate grid scale.</li>
+<li><strong>Tokens</strong> -- placed creatures/objects on the grid.</li>
+<li><strong>Drawings</strong> -- freehand strokes and the in-progress live stroke.</li>
+<li><strong>Interaction mode</strong> -- which tool is active (fog, draw, token).</li>
+<li><strong>Relay callbacks</strong> -- hooks for forwarding local changes to the network.</li>
+</ul>
+<p>The full state (excluding raw map bytes and live stroke) can be serialized
+with <a href="../state_vtt_state/VttState/toJson.html">toJson</a> and restored with <a href="../state_vtt_state/VttState/applyRemoteState.html">applyRemoteState</a> for WebSocket sync.</p>
+<p>See also:</p>
+<ul>
+<li><a href="../game_vtt_game/VttGame-class.html">VttGame</a>, the Flame engine that renders based on this state.</li>
+<li><a href="../model_session/Session-class.html">Session</a>, which persists a snapshot of this state to disk.</li>
+<li><a href="../network_vtt_relay_client/VttRelayClient-class.html">VttRelayClient</a>, which syncs state between TV and companion phone.</li>
+</ul>
+</section>
+
+
+    <section>
+      <dl class="dl-horizontal">
+        
+  <dt>Inheritance</dt>
+  <dd>
+    <ul class="gt-separated dark clazz-relationships">
+      <li><a href="https://api.flutter.dev/flutter/dart-core/Object-class.html">Object</a></li>
+        <li><a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier-class.html">ChangeNotifier</a></li>
+      <li>VttState</li>
+    </ul>
+  </dd>
+
+        
+        
+
+
+        
+        
+
+
+      </dl>
+    </section>
+
+    
+  <section class="summary offset-anchor" id="constructors">
+    <h2>Constructors</h2>
+    <dl class="constructor-summary-list">
+        <dt id="VttState.new" class="callable">
+          <span class="name"><a href="../state_vtt_state/VttState/VttState.html">VttState</a></span><span class="signature">()</span>
+        </dt>
+        <dd>
+          
+        </dd>
+    </dl>
+  </section>
+    
+  <section
+      class="summary offset-anchor"
+      id="instance-properties">
+    <h2>Properties</h2>
+    <dl class="properties">
+        <dt id="brushRadius" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/brushRadius.html">brushRadius</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd>
+  Fog brush radius in grid cells.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="calibratedBaseZoom" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/calibratedBaseZoom.html">calibratedBaseZoom</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a>?</span>
+  
+
+</dt>
+<dd>
+  Computed base zoom level that maps one grid square to one physical inch.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="drawColor" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/drawColor.html">drawColor</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a></span>
+  
+
+</dt>
+<dd>
+  Current drawing color for new strokes.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="drawWidth" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/drawWidth.html">drawWidth</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>
+  
+
+</dt>
+<dd>
+  Current line width for new strokes, in world pixels.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="fogEnabled" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/fogEnabled.html">fogEnabled</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether fog of war rendering is enabled.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="hashCode" class="property inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/hashCode.html">hashCode</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd class="inherited">
+  The hash code for this object.
+  <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="hasListeners" class="property inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier/hasListeners.html">hasListeners</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd class="inherited">
+  Whether any listeners are currently registered.
+  <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="interactionMode" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/interactionMode.html">interactionMode</a></span>
+  <span class="signature">&#8596; <a href="../state_vtt_state/InteractionMode.html">InteractionMode</a></span>
+  
+
+</dt>
+<dd>
+  The currently active interaction tool.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="isInteractive" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/isInteractive.html">isInteractive</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether this instance accepts touch/gesture input.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="liveStroke" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/liveStroke.html">liveStroke</a></span>
+  <span class="signature">&#8596; <a href="../model_draw_stroke/DrawStroke-class.html">DrawStroke</a>?</span>
+  
+
+</dt>
+<dd>
+  The in-progress stroke being drawn right now, or <code>null</code> if idle.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="map" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/map.html">map</a></span>
+  <span class="signature">&#8596; <a href="../model_uvtt_map/UvttMap-class.html">UvttMap</a>?</span>
+  
+
+</dt>
+<dd>
+  The currently loaded UVTT map, or <code>null</code> if no map is loaded.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onBrushPaint" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onBrushPaint.html">onBrushPaint</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-indices"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span> <span class="parameter-name">indices</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when the fog brush paints cells, so the relay can forward
+the indices to the peer.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onDrawingsCleared" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onDrawingsCleared.html">onDrawingsCleared</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">()</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when all drawings are cleared, for relay forwarding.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onLiveStrokeChanged" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onLiveStrokeChanged.html">onLiveStrokeChanged</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-stroke"><span class="type-annotation"><a href="../model_draw_stroke/DrawStroke-class.html">DrawStroke</a>?</span> <span class="parameter-name">stroke</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when the live stroke preview changes, for relay forwarding.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onPortalTap" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onPortalTap.html">onPortalTap</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-index"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">index</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a portal is tapped (toggled), so the relay can forward
+the portal index to the peer.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onStrokeAdded" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onStrokeAdded.html">onStrokeAdded</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-stroke"><span class="type-annotation"><a href="../model_draw_stroke/DrawStroke-class.html">DrawStroke</a></span> <span class="parameter-name">stroke</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a completed stroke is added, for relay forwarding.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onTokenAdded" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onTokenAdded.html">onTokenAdded</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-token"><span class="type-annotation"><a href="../model_map_token/MapToken-class.html">MapToken</a></span> <span class="parameter-name">token</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a new token is added locally, for relay forwarding.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onTokenMoved" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onTokenMoved.html">onTokenMoved</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, </span><span class="parameter" id="param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">y</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a token is moved locally, for relay forwarding.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onTokenRemoved" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onTokenRemoved.html">onTokenRemoved</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a token is removed locally, for relay forwarding.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="openPortals" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/openPortals.html">openPortals</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  Set of portal indices that are currently open.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="rawMapBytes" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/rawMapBytes.html">rawMapBytes</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a>?</span>
+  
+
+</dt>
+<dd>
+  Raw bytes of the loaded <code>.dd2vtt</code> file.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="revealedCells" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/revealedCells.html">revealedCells</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  Set of revealed fog cell indices.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="revealMode" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/revealMode.html">revealMode</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether the brush reveals or hides fog.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="runtimeType" class="property inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/runtimeType.html">runtimeType</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Type-class.html">Type</a></span>
+  
+
+</dt>
+<dd class="inherited">
+  A representation of the runtime type of the object.
+  <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="showGrid" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/showGrid.html">showGrid</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether the grid overlay is visible on the map.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="showWalls" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/showWalls.html">showWalls</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether wall debug outlines are displayed.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="strokes" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/strokes.html">strokes</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../model_draw_stroke/DrawStroke-class.html">DrawStroke</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  Completed freehand strokes drawn on the map.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="tokens" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/tokens.html">tokens</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../model_map_token/MapToken-class.html">MapToken</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  All tokens currently placed on the map.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="tvWidthInches" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/tvWidthInches.html">tvWidthInches</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a>?</span>
+  
+
+</dt>
+<dd>
+  Physical width of the TV screen in inches.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+    </dl>
+  </section>
+
+    
+  <section
+      class="summary offset-anchor"
+      id="instance-methods">
+    <h2>Methods</h2>
+    <dl class="callables">
+        <dt id="addListener" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier/addListener.html">addListener</a></span><span class="signature">(<wbr><span class="parameter" id="addListener-param-listener"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">listener</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  Register a closure to be called when the object changes.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="addStroke" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/addStroke.html">addStroke</a></span><span class="signature">(<wbr><span class="parameter" id="addStroke-param-stroke"><span class="type-annotation"><a href="../model_draw_stroke/DrawStroke-class.html">DrawStroke</a></span> <span class="parameter-name">stroke</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Adds a completed <code>stroke</code> to the drawing layer.
+  
+
+</dd>
+
+        <dt id="addToken" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/addToken.html">addToken</a></span><span class="signature">(<wbr><span class="parameter" id="addToken-param-gridX"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridX</span>, </span><span class="parameter" id="addToken-param-gridY"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridY</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Creates a new token at the given grid position and adds it to <a href="../state_vtt_state/VttState/tokens.html">tokens</a>.
+  
+
+</dd>
+
+        <dt id="applyBrushReveal" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/applyBrushReveal.html">applyBrushReveal</a></span><span class="signature">(<wbr><span class="parameter" id="applyBrushReveal-param-indices"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span> <span class="parameter-name">indices</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Batch reveal or hide fog cells (used by brush drag painting).
+  
+
+</dd>
+
+        <dt id="applyRemoteState" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/applyRemoteState.html">applyRemoteState</a></span><span class="signature">(<wbr><span class="parameter" id="applyRemoteState-param-json"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">json</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Applies a full state snapshot received from the relay (TV to phone sync).
+  
+
+</dd>
+
+        <dt id="calibrate" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/calibrate.html">calibrate</a></span><span class="signature">(<wbr><span class="parameter" id="calibrate-param-tvWidth"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">tvWidth</span>, </span><span class="parameter" id="calibrate-param-screenWidthPx"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">screenWidthPx</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Calibrates the zoom level so that grid squares match physical inches.
+  
+
+</dd>
+
+        <dt id="clearDrawings" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/clearDrawings.html">clearDrawings</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Removes all drawing strokes from the map.
+  
+
+</dd>
+
+        <dt id="clearMap" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/clearMap.html">clearMap</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Unloads the current map and resets all map-related state.
+  
+
+</dd>
+
+        <dt id="clearTokens" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/clearTokens.html">clearTokens</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Removes all tokens from the map.
+  
+
+</dd>
+
+        <dt id="dispose" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier/dispose.html">dispose</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  Discards any resources used by the object. After this is called, the
+object is not in a usable state and should be discarded (calls to
+<a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier/addListener.html">addListener</a> will throw after the object is disposed).
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="hideAll" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/hideAll.html">hideAll</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Hides all fog cells (restores full fog coverage).
+  
+
+</dd>
+
+        <dt id="loadMap" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/loadMap.html">loadMap</a></span><span class="signature">(<wbr><span class="parameter" id="loadMap-param-fileBytes"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a></span> <span class="parameter-name">fileBytes</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Loads a <code>.dd2vtt</code> map file from raw bytes.
+  
+
+</dd>
+
+        <dt id="moveToken" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/moveToken.html">moveToken</a></span><span class="signature">(<wbr><span class="parameter" id="moveToken-param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, </span><span class="parameter" id="moveToken-param-newGridX"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">newGridX</span>, </span><span class="parameter" id="moveToken-param-newGridY"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">newGridY</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Moves an existing token to a new grid position.
+  
+
+</dd>
+
+        <dt id="noSuchMethod" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/noSuchMethod.html">noSuchMethod</a></span><span class="signature">(<wbr><span class="parameter" id="noSuchMethod-param-invocation"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Invocation-class.html">Invocation</a></span> <span class="parameter-name">invocation</span></span>)
+    <span class="returntype parameter">&#8594; dynamic</span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  Invoked when a nonexistent method or property is accessed.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="notifyListeners" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier/notifyListeners.html">notifyListeners</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  Call all the registered listeners.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="removeListener" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier/removeListener.html">removeListener</a></span><span class="signature">(<wbr><span class="parameter" id="removeListener-param-listener"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">listener</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  Remove a previously registered closure from the list of closures that are
+notified when the object changes.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="removeToken" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/removeToken.html">removeToken</a></span><span class="signature">(<wbr><span class="parameter" id="removeToken-param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Removes a token by <code>id</code>.
+  
+
+</dd>
+
+        <dt id="resetCalibration" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/resetCalibration.html">resetCalibration</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Clears calibration data, returning to default zoom behavior.
+  
+
+</dd>
+
+        <dt id="revealAll" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/revealAll.html">revealAll</a></span><span class="signature">(<wbr><span class="parameter" id="revealAll-param-totalCells"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">totalCells</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Reveals all fog cells on the map.
+  
+
+</dd>
+
+        <dt id="setBrushRadius" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setBrushRadius.html">setBrushRadius</a></span><span class="signature">(<wbr><span class="parameter" id="setBrushRadius-param-radius"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">radius</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the fog brush radius.
+  
+
+</dd>
+
+        <dt id="setDrawColor" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setDrawColor.html">setDrawColor</a></span><span class="signature">(<wbr><span class="parameter" id="setDrawColor-param-c"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a></span> <span class="parameter-name">c</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the drawing color for new strokes.
+  
+
+</dd>
+
+        <dt id="setDrawWidth" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setDrawWidth.html">setDrawWidth</a></span><span class="signature">(<wbr><span class="parameter" id="setDrawWidth-param-w"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">w</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the drawing line width for new strokes.
+  
+
+</dd>
+
+        <dt id="setInteractionMode" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setInteractionMode.html">setInteractionMode</a></span><span class="signature">(<wbr><span class="parameter" id="setInteractionMode-param-mode"><span class="type-annotation"><a href="../state_vtt_state/InteractionMode.html">InteractionMode</a></span> <span class="parameter-name">mode</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the active interaction mode (fog, draw, or token).
+  
+
+</dd>
+
+        <dt id="setLiveStroke" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setLiveStroke.html">setLiveStroke</a></span><span class="signature">(<wbr><span class="parameter" id="setLiveStroke-param-stroke"><span class="type-annotation"><a href="../model_draw_stroke/DrawStroke-class.html">DrawStroke</a>?</span> <span class="parameter-name">stroke</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Updates the live stroke preview, or clears it if <code>stroke</code> is <code>null</code>.
+  
+
+</dd>
+
+        <dt id="toggleFog" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/toggleFog.html">toggleFog</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles fog of war on/off.
+  
+
+</dd>
+
+        <dt id="toggleGrid" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/toggleGrid.html">toggleGrid</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles grid overlay visibility on/off.
+  
+
+</dd>
+
+        <dt id="togglePortal" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/togglePortal.html">togglePortal</a></span><span class="signature">(<wbr><span class="parameter" id="togglePortal-param-index"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">index</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles a portal (door/gate) between open and closed.
+  
+
+</dd>
+
+        <dt id="toggleReveal" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/toggleReveal.html">toggleReveal</a></span><span class="signature">(<wbr><span class="parameter" id="toggleReveal-param-index"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">index</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles a single fog cell between revealed and hidden.
+  
+
+</dd>
+
+        <dt id="toggleRevealMode" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/toggleRevealMode.html">toggleRevealMode</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles <a href="../state_vtt_state/VttState/revealMode.html">revealMode</a> between reveal (<code>true</code>) and hide (<code>false</code>).
+  
+
+</dd>
+
+        <dt id="toggleWalls" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/toggleWalls.html">toggleWalls</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles wall debug outline visibility on/off.
+  
+
+</dd>
+
+        <dt id="toJson" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/toJson.html">toJson</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span>
+  </span>
+  
+
+</dt>
+<dd>
+  Serializes the full state to a JSON-compatible map for relay broadcast.
+  
+
+</dd>
+
+        <dt id="toString" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/toString.html">toString</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  A string representation of this object.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="undoStroke" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/undoStroke.html">undoStroke</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Removes the most recently added stroke (undo).
+  
+
+</dd>
+
+    </dl>
+  </section>
+    
+  <section
+      class="summary offset-anchor inherited"
+      id="operators">
+    <h2>Operators</h2>
+    <dl class="callables">
+        <dt id="operator ==" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/operator_equals.html">operator ==</a></span><span class="signature">(<wbr><span class="parameter" id="==-param-other"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Object-class.html">Object</a></span> <span class="parameter-name">other</span></span>)
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  The equality operator.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+    </dl>
+  </section>
+    
+    
+    
+
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li><a href="../index.html">battlemap</a></li>
+    <li><a href="../state_vtt_state/">vtt_state</a></li>
+    <li class="self-crumb">VttState class</li>
+</ol>
+
+    <h5>vtt_state library</h5>
+    <div id="dartdoc-sidebar-left-content"></div>
+  </div>
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+  </div><!--/.sidebar-offcanvas-->
+</main>
+<footer>
+  <span class="no-break">
+    battlemap
+      1.0.8+9
+  </span>
+  
+</footer>
+
+
+<script src="../static-assets/highlight.pack.js?v1"></script>
+<script src="../static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+

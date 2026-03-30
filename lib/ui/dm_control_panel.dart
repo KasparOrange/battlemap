@@ -1,6 +1,34 @@
 import 'package:flutter/material.dart';
 
+import '../model/aoe_template.dart';
+import '../model/map_token.dart';
 import '../state/vtt_state.dart';
+
+// ─── Medieval warm color palette ────────────────────────────────────
+
+/// Dark parchment background for the panel shell.
+const _kPanelBg = Color(0xFF1a1512);
+
+/// Primary gold used for active icons, text, and accents.
+const _kAccentGold = Color(0xFFd4a76a);
+
+/// Dimmed gold for inactive icons and secondary text.
+const _kAccentGoldDim = Color(0xFF8a7044);
+
+/// Border color used for panel edges and dividers.
+const _kBorderGold = Color(0xFF5a4a30);
+
+/// Primary text color (gold tone).
+const _kTextPrimary = Color(0xFFd4a76a);
+
+/// Secondary / hint text color (dim gold).
+const _kTextSecondary = Color(0xFF8a7044);
+
+/// Surface color for cards and list items.
+const _kSurface = Color(0xFF241e18);
+
+/// Highlighted surface color for active / selected items.
+const _kSurfaceActive = Color(0xFF3a3020);
 
 /// Bundle of callbacks for every action the DM control panel can trigger.
 ///
@@ -73,6 +101,9 @@ class DmCallbacks {
   /// Switches to token placement interaction mode.
   final VoidCallback onSetTokenMode;
 
+  /// Switches to distance measurement interaction mode.
+  final VoidCallback onSetMeasureMode;
+
   // Drawing
 
   /// Sets the drawing stroke color to the given [Color].
@@ -91,6 +122,54 @@ class DmCallbacks {
 
   /// Removes all tokens from the map.
   final VoidCallback onClearTokens;
+
+  /// Edits combat metadata on an existing token.
+  ///
+  /// [id] identifies the token. Named parameters [name], [maxHp],
+  /// [currentHp], and [conditions] are applied if non-null.
+  final void Function(String id,
+      {String? name,
+      int? maxHp,
+      int? currentHp,
+      Set<String>? conditions}) onEditToken;
+
+  // ── Undo / Redo ───────────────────────────────────────────────────
+
+  /// Undoes the most recent action on the TV.
+  final VoidCallback onUndo;
+
+  /// Redoes the most recently undone action on the TV.
+  final VoidCallback onRedo;
+
+  // ── Shadow mode ───────────────────────────────────────────────────
+
+  /// Toggles shadow (preview) mode for fog painting.
+  final VoidCallback onToggleShadowMode;
+
+  /// Commits pending shadow fog cells.
+  final VoidCallback onCommitShadow;
+
+  /// Discards pending shadow fog cells without committing.
+  final VoidCallback onClearShadow;
+
+  // ── Room reveal ───────────────────────────────────────────────────
+
+  /// Switches to room-reveal interaction mode.
+  final VoidCallback onSetRoomRevealMode;
+
+  /// Reveals a connected room given a list of cell indices.
+  final void Function(List<int> cells) onRoomReveal;
+
+  // ── AoE templates ─────────────────────────────────────────────────
+
+  /// Switches to AoE template interaction mode.
+  final VoidCallback onSetAoeMode;
+
+  /// Places an area-of-effect template on the map.
+  final void Function(AoeTemplate template) onSetAoe;
+
+  /// Removes the active area-of-effect template.
+  final VoidCallback onClearAoe;
 
   /// Creates a [DmCallbacks] with all required action handlers.
   const DmCallbacks({
@@ -113,19 +192,31 @@ class DmCallbacks {
     required this.onSetFogMode,
     required this.onSetDrawMode,
     required this.onSetTokenMode,
+    required this.onSetMeasureMode,
     required this.onSetDrawColor,
     required this.onSetDrawWidth,
     required this.onClearDrawings,
     required this.onUndoStroke,
     required this.onClearTokens,
+    required this.onEditToken,
+    required this.onUndo,
+    required this.onRedo,
+    required this.onToggleShadowMode,
+    required this.onCommitShadow,
+    required this.onClearShadow,
+    required this.onSetRoomRevealMode,
+    required this.onRoomReveal,
+    required this.onSetAoeMode,
+    required this.onSetAoe,
+    required this.onClearAoe,
   });
 }
 
-/// Collapsible DM control panel overlaid on the VTT game canvas.
+/// Collapsible DM control panel with a tabbed medieval-themed UI.
 ///
-/// When collapsed, it displays as a small gear icon. When expanded, it
-/// shows context-sensitive sections (fog, draw, token, camera, calibration)
-/// depending on the current [InteractionMode] in [state].
+/// When collapsed, it displays as a golden shield icon (48x48). When
+/// expanded, it shows a 220px-wide panel with 6 tabs: Combat, Fog,
+/// Draw, Measure, Camera, and Settings.
 ///
 /// All user actions are routed through [callbacks], which may either act
 /// locally or send commands over the network depending on the hosting
@@ -154,9 +245,38 @@ class DmControlPanel extends StatefulWidget {
 
 class _DmControlPanelState extends State<DmControlPanel> {
   bool _expanded = false;
+  int _activeTab = 0;
+
+  // AoE template state
+  AoeShape _aoeShape = AoeShape.circle;
+  int _aoeSizeFt = 20;
+
+  /// Sends the current AoE template configuration to the TV via callback.
+  ///
+  /// Converts the size from feet to grid squares (5ft per square),
+  /// placing the origin at map center (0, 0) as a default.
+  void _sendCurrentAoe() {
+    final radiusInSquares = _aoeSizeFt / 5.0;
+    cb.onSetAoe(AoeTemplate(
+      shape: _aoeShape,
+      originX: 0,
+      originY: 0,
+      radius: radiusInSquares,
+    ));
+  }
 
   VttState get state => widget.state;
   DmCallbacks get cb => widget.callbacks;
+
+  /// Tab definitions: icon and tooltip label.
+  static const _tabs = [
+    (Icons.shield, 'Combat'),
+    (Icons.cloud, 'Fog'),
+    (Icons.brush, 'Draw'),
+    (Icons.straighten, 'Measure'),
+    (Icons.videocam, 'Camera'),
+    (Icons.tune, 'Settings'),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -167,363 +287,1059 @@ class _DmControlPanelState extends State<DmControlPanel> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
-            color: Colors.black54,
+            color: _kPanelBg,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+            border: Border.all(color: _kBorderGold),
           ),
-          child: const Icon(Icons.settings, color: Colors.white70, size: 22),
+          child: const Icon(Icons.shield, color: _kAccentGold, size: 22),
         ),
       );
     }
 
     return Container(
-      width: 200,
-      padding: const EdgeInsets.all(12),
+      width: 220,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height - 80,
+      ),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.8),
+        color: _kPanelBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+        border: Border.all(color: _kBorderGold),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Header
-          GestureDetector(
-            onTap: () => setState(() => _expanded = false),
-            child: Row(
-              children: [
-                const Icon(Icons.settings, color: Colors.white70, size: 18),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'DM Controls',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const Icon(Icons.close, color: Colors.white38, size: 18),
-              ],
+          _buildHeader(),
+          // Tab bar
+          _buildTabBar(),
+          // Divider
+          Container(height: 1, color: _kBorderGold),
+          // Tab content
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(12),
+              child: _buildTabContent(),
             ),
           ),
-
-          const SizedBox(height: 12),
-
-          // Map section
-          _SectionLabel('Map'),
-          _PanelButton(
-            icon: Icons.folder_open,
-            label: 'Load Map',
-            onTap: cb.onLoadMap,
-          ),
-
-          const SizedBox(height: 8),
-
-          if (state.map != null) ...[
-            // Mode section
-            _SectionLabel('Mode'),
-            Row(
-              children: [
-                for (final entry in [
-                  (InteractionMode.fogReveal, Icons.cloud, 'Fog'),
-                  (InteractionMode.draw, Icons.brush, 'Draw'),
-                  (InteractionMode.token, Icons.person_pin, 'Token'),
-                ]) ...[
-                  if (entry != (InteractionMode.fogReveal, Icons.cloud, 'Fog'))
-                    const SizedBox(width: 4),
-                  Expanded(
-                    child: _ModeButton(
-                      icon: entry.$2,
-                      label: entry.$3,
-                      active: state.interactionMode == entry.$1,
-                      onTap: () {
-                        switch (entry.$1) {
-                          case InteractionMode.fogReveal:
-                            cb.onSetFogMode();
-                          case InteractionMode.draw:
-                            cb.onSetDrawMode();
-                          case InteractionMode.token:
-                            cb.onSetTokenMode();
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Fog section (visible only in fogReveal mode)
-            if (state.interactionMode == InteractionMode.fogReveal) ...[
-              _SectionLabel('Fog'),
-              _PanelToggle(
-                icon: state.fogEnabled ? Icons.cloud : Icons.cloud_off,
-                label: 'Fog',
-                active: state.fogEnabled,
-                onTap: cb.onToggleFog,
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Expanded(
-                    child: _PanelButton(
-                      icon: Icons.visibility,
-                      label: 'Reveal',
-                      onTap: cb.onRevealAll,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: _PanelButton(
-                      icon: Icons.visibility_off,
-                      label: 'Hide',
-                      onTap: cb.onHideAll,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              // Brush controls
-              _PanelToggle(
-                icon: state.revealMode ? Icons.wb_sunny : Icons.dark_mode,
-                label: state.revealMode ? 'Reveal' : 'Hide',
-                active: state.revealMode,
-                onTap: cb.onToggleRevealMode,
-              ),
-              const SizedBox(height: 4),
-              // Brush size
-              Row(
-                children: [
-                  const Icon(Icons.brush, color: Colors.white30, size: 14),
-                  const SizedBox(width: 4),
-                  for (final entry in {0: '1', 1: '3', 2: '5'}.entries) ...[
-                    if (entry.key > 0) const SizedBox(width: 2),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => cb.onSetBrushRadius(entry.key),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          decoration: BoxDecoration(
-                            color: state.brushRadius == entry.key
-                                ? Colors.white.withValues(alpha: 0.15)
-                                : Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Center(
-                            child: Text(
-                              entry.value,
-                              style: TextStyle(
-                                color: state.brushRadius == entry.key
-                                    ? Colors.white70
-                                    : Colors.white30,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-
-            // Draw section (visible only in draw mode)
-            if (state.interactionMode == InteractionMode.draw) ...[
-              _SectionLabel('Draw'),
-              // Color dots
-              Row(
-                children: [
-                  for (final color in const [
-                    Color(0xFFE53935), // red
-                    Color(0xFF43A047), // green
-                    Color(0xFF1E88E5), // blue
-                    Color(0xFFFDD835), // yellow
-                    Color(0xFFFF8F00), // orange
-                    Color(0xFFFFFFFF), // white
-                  ]) ...[
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => cb.onSetDrawColor(color),
-                        child: Center(
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: BoxDecoration(
-                              color: color,
-                              shape: BoxShape.circle,
-                              border: state.drawColor.toARGB32() == color.toARGB32()
-                                  ? Border.all(color: Colors.white, width: 2)
-                                  : Border.all(color: Colors.white24, width: 1),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 6),
-              // Width presets
-              Row(
-                children: [
-                  const Icon(Icons.line_weight, color: Colors.white30, size: 14),
-                  const SizedBox(width: 4),
-                  for (final entry in {2.0: 'S', 4.0: 'M', 8.0: 'L'}.entries) ...[
-                    if (entry.key != 2.0) const SizedBox(width: 2),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => cb.onSetDrawWidth(entry.key),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          decoration: BoxDecoration(
-                            color: state.drawWidth == entry.key
-                                ? Colors.white.withValues(alpha: 0.15)
-                                : Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Center(
-                            child: Text(
-                              entry.value,
-                              style: TextStyle(
-                                color: state.drawWidth == entry.key
-                                    ? Colors.white70
-                                    : Colors.white30,
-                                fontSize: 11,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 6),
-              // Clear / Undo
-              Row(
-                children: [
-                  Expanded(
-                    child: _PanelButton(
-                      icon: Icons.delete_outline,
-                      label: 'Clear',
-                      onTap: cb.onClearDrawings,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: _PanelButton(
-                      icon: Icons.undo,
-                      label: 'Undo',
-                      onTap: cb.onUndoStroke,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-
-            // Token section (visible only in token mode)
-            if (state.interactionMode == InteractionMode.token) ...[
-              _SectionLabel('Tokens'),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Text(
-                  'Tap map to place',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.4),
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-              _PanelButton(
-                icon: Icons.delete_outline,
-                label: 'Clear All',
-                onTap: cb.onClearTokens,
-              ),
-              const SizedBox(height: 8),
-            ],
-
-            // Calibration
-            _SectionLabel('Calibrate'),
-            _PanelButton(
-              icon: Icons.straighten,
-              label: state.calibratedBaseZoom != null
-                  ? '${state.tvWidthInches!.round()}" calibrated'
-                  : 'Set TV size',
-              onTap: () => _showCalibrationDialog(context),
-            ),
-
-            const SizedBox(height: 8),
-
-            // View section
-            _SectionLabel('View'),
-            _PanelToggle(
-              icon: state.showGrid ? Icons.grid_on : Icons.grid_off,
-              label: 'Grid',
-              active: state.showGrid,
-              onTap: cb.onToggleGrid,
-            ),
-            const SizedBox(height: 4),
-            _PanelToggle(
-              icon: Icons.line_style,
-              label: 'Walls',
-              active: state.showWalls,
-              onTap: cb.onToggleWalls,
-            ),
-
-            const SizedBox(height: 8),
-
-            // Camera section
-            _SectionLabel('Camera'),
-            Row(
-              children: [
-                Expanded(
-                  child: _PanelButton(icon: Icons.remove, label: '', onTap: cb.onZoomOut),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  flex: 2,
-                  child: _PanelButton(icon: Icons.fit_screen, label: 'Fit', onTap: cb.onZoomToFit),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: _PanelButton(icon: Icons.add, label: '', onTap: cb.onZoomIn),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Expanded(
-                  child: _PanelButton(icon: Icons.rotate_left, label: '', onTap: cb.onRotateCCW),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  flex: 2,
-                  child: _PanelButton(
-                    icon: Icons.screen_rotation_alt,
-                    label: '0\u00B0',
-                    onTap: cb.onResetRotation,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: _PanelButton(icon: Icons.rotate_right, label: '', onTap: cb.onRotateCW),
-                ),
-              ],
-            ),
-          ],
         ],
       ),
     );
   }
 
+  /// Builds the panel header with "DM" title, undo/redo buttons, and close button.
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 4, 4),
+      child: Row(
+        children: [
+          const Icon(Icons.shield, color: _kAccentGold, size: 16),
+          const SizedBox(width: 6),
+          const Expanded(
+            child: Text(
+              'DM',
+              style: TextStyle(
+                color: _kTextPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ),
+          // Undo button
+          GestureDetector(
+            onTap: state.canUndo ? cb.onUndo : null,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                Icons.undo,
+                color: state.canUndo ? _kAccentGold : _kAccentGoldDim,
+                size: 18,
+              ),
+            ),
+          ),
+          // Redo button
+          GestureDetector(
+            onTap: state.canRedo ? cb.onRedo : null,
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(
+                Icons.redo,
+                color: state.canRedo ? _kAccentGold : _kAccentGoldDim,
+                size: 18,
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => setState(() => _expanded = false),
+            child: const Padding(
+              padding: EdgeInsets.all(8),
+              child: Icon(Icons.close, color: _kAccentGoldDim, size: 18),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds the 6-icon horizontal tab bar.
+  Widget _buildTabBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Row(
+        children: [
+          for (int i = 0; i < _tabs.length; i++)
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => _activeTab = i);
+                  // Auto-activate measure mode when switching to Measure tab
+                  if (i == 3) cb.onSetMeasureMode();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    border: _activeTab == i
+                        ? const Border(
+                            bottom:
+                                BorderSide(color: _kAccentGold, width: 2),
+                          )
+                        : null,
+                  ),
+                  child: Icon(
+                    _tabs[i].$1,
+                    color: _activeTab == i ? _kAccentGold : _kAccentGoldDim,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Dispatches to the correct tab content builder.
+  Widget _buildTabContent() {
+    switch (_activeTab) {
+      case 0:
+        return _buildCombatTab();
+      case 1:
+        return _buildFogTab();
+      case 2:
+        return _buildDrawTab();
+      case 3:
+        return _buildMeasureTab();
+      case 4:
+        return _buildCameraTab();
+      case 5:
+        return _buildSettingsTab();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  // ─── Combat Tab ──────────────────────────────────────────
+
+  /// Builds the Combat tab: token placement toggle, token list with
+  /// HP controls, and a clear-all button.
+  Widget _buildCombatTab() {
+    final tokens = state.tokens;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GoldButton(
+          icon: Icons.person_pin,
+          label: 'Place Token',
+          active: state.interactionMode == InteractionMode.token,
+          onTap: cb.onSetTokenMode,
+        ),
+        const SizedBox(height: 8),
+        if (tokens.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              'Switch to token mode\nand tap the map',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _kTextSecondary,
+                fontSize: 12,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          )
+        else ...[
+          for (final token in tokens) ...[
+            _buildTokenRow(token),
+            const SizedBox(height: 6),
+          ],
+        ],
+        if (tokens.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          _GoldButton(
+            icon: Icons.delete_outline,
+            label: 'Clear All Tokens',
+            onTap: cb.onClearTokens,
+          ),
+        ],
+        // ── AoE Templates ──────────────────────────────────────────
+        const SizedBox(height: 12),
+        Container(height: 1, color: _kBorderGold),
+        const SizedBox(height: 8),
+        const _GoldLabel('AoE'),
+        const SizedBox(height: 4),
+        // Shape selector
+        Row(
+          children: [
+            for (final entry in {
+              AoeShape.circle: Icons.circle_outlined,
+              AoeShape.cone: Icons.pie_chart_outline,
+              AoeShape.line: Icons.horizontal_rule,
+              AoeShape.square: Icons.crop_square,
+            }.entries) ...[
+              if (entry.key != AoeShape.circle) const SizedBox(width: 4),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _aoeShape = entry.key);
+                    _sendCurrentAoe();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: _aoeShape == entry.key
+                          ? _kSurfaceActive
+                          : _kSurface,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: _aoeShape == entry.key
+                            ? _kAccentGold
+                            : _kBorderGold,
+                      ),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        entry.value,
+                        color: _aoeShape == entry.key
+                            ? _kAccentGold
+                            : _kAccentGoldDim,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 6),
+        // Size selector (in feet: 10, 15, 20, 30, 60)
+        const _GoldLabel('Size'),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: [
+            for (final ft in [10, 15, 20, 30, 60])
+              GestureDetector(
+                onTap: () {
+                  setState(() => _aoeSizeFt = ft);
+                  _sendCurrentAoe();
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _aoeSizeFt == ft
+                        ? _kSurfaceActive
+                        : _kSurface,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: _aoeSizeFt == ft
+                          ? _kAccentGold
+                          : _kBorderGold,
+                    ),
+                  ),
+                  child: Text(
+                    '${ft}ft',
+                    style: TextStyle(
+                      color: _aoeSizeFt == ft
+                          ? _kTextPrimary
+                          : _kTextSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.my_location,
+                label: 'AoE Mode',
+                active: false,
+                onTap: cb.onSetAoeMode,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.close,
+                label: 'Clear',
+                onTap: cb.onClearAoe,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  /// Builds a single token row with colored dot, name, conditions,
+  /// and HP increment/decrement controls.
+  Widget _buildTokenRow(MapToken token) {
+    final displayName =
+        token.name.isNotEmpty ? token.name : token.label;
+    return GestureDetector(
+      onTap: () => _showTokenEditDialog(token),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: _kSurface,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: _kBorderGold.withValues(alpha: 0.5)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Name row
+            Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: token.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    displayName,
+                    style: const TextStyle(
+                      color: _kTextPrimary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                // Condition dots
+                if (token.conditions.isNotEmpty)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final cond in token.conditions.take(4))
+                        Padding(
+                          padding: const EdgeInsets.only(left: 3),
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(
+                                MapToken.conditionColors[cond] ?? 0xFFFFFFFF,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+              ],
+            ),
+            // HP row (only if maxHp > 0)
+            if (token.maxHp > 0) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  // Minus button
+                  _HpButton(
+                    icon: Icons.remove,
+                    onTap: () {
+                      final newHp = (token.currentHp - 1).clamp(0, token.maxHp);
+                      cb.onEditToken(token.id, currentHp: newHp);
+                    },
+                  ),
+                  const SizedBox(width: 6),
+                  // HP display
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        '${token.currentHp} / ${token.maxHp}',
+                        style: TextStyle(
+                          color: token.currentHp <= 0
+                              ? Colors.redAccent
+                              : _kTextPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Plus button
+                  _HpButton(
+                    icon: Icons.add,
+                    onTap: () {
+                      final newHp = (token.currentHp + 1).clamp(0, token.maxHp);
+                      cb.onEditToken(token.id, currentHp: newHp);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Shows a medieval-styled dialog for editing a token's combat metadata.
+  ///
+  /// Fields: name, maxHp, currentHp, condition toggles, and a delete button.
+  /// On save, calls [DmCallbacks.onEditToken] with all changed values.
+  void _showTokenEditDialog(MapToken token) {
+    final nameCtrl = TextEditingController(text: token.name);
+    final maxHpCtrl =
+        TextEditingController(text: token.maxHp > 0 ? '${token.maxHp}' : '');
+    final currentHpCtrl = TextEditingController(
+        text: token.maxHp > 0 ? '${token.currentHp}' : '');
+    final selectedConditions = Set<String>.from(token.conditions);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: _kPanelBg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: _kBorderGold),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: token.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Edit ${token.label}',
+                  style: const TextStyle(
+                    color: _kTextPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Name field
+                  _goldTextField(nameCtrl, 'Name', 'e.g. Goblin Archer'),
+                  const SizedBox(height: 12),
+                  // HP fields
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _goldTextField(
+                          maxHpCtrl,
+                          'Max HP',
+                          '0',
+                          isNumeric: true,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _goldTextField(
+                          currentHpCtrl,
+                          'Current HP',
+                          '0',
+                          isNumeric: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Conditions
+                  const _GoldLabel('Conditions'),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final entry
+                          in MapToken.conditionColors.entries)
+                        GestureDetector(
+                          onTap: () {
+                            setDialogState(() {
+                              if (selectedConditions.contains(entry.key)) {
+                                selectedConditions.remove(entry.key);
+                              } else {
+                                selectedConditions.add(entry.key);
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: selectedConditions.contains(entry.key)
+                                  ? Color(entry.value).withValues(alpha: 0.3)
+                                  : _kSurface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selectedConditions.contains(entry.key)
+                                    ? Color(entry.value)
+                                    : _kBorderGold,
+                              ),
+                            ),
+                            child: Text(
+                              entry.key,
+                              style: TextStyle(
+                                color: selectedConditions.contains(entry.key)
+                                    ? Color(entry.value)
+                                    : _kTextSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              // Delete
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  // Remove the token by setting HP to trigger awareness
+                  // We use the clear mechanism through the state
+                  cb.onEditToken(token.id,
+                      name: '', maxHp: 0, currentHp: 0, conditions: {});
+                },
+                child: const Text(
+                  'Reset',
+                  style: TextStyle(color: _kTextSecondary, fontSize: 13),
+                ),
+              ),
+              const Spacer(),
+              // Cancel
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: _kTextSecondary, fontSize: 13),
+                ),
+              ),
+              // Save
+              GestureDetector(
+                onTap: () {
+                  final maxHp = int.tryParse(maxHpCtrl.text) ?? 0;
+                  final currentHp =
+                      (int.tryParse(currentHpCtrl.text) ?? 0).clamp(0, maxHp > 0 ? maxHp : 9999);
+                  cb.onEditToken(
+                    token.id,
+                    name: nameCtrl.text.trim(),
+                    maxHp: maxHp,
+                    currentHp: currentHp,
+                    conditions: Set<String>.from(selectedConditions),
+                  );
+                  Navigator.pop(ctx);
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _kAccentGold,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Save',
+                    style: TextStyle(
+                      color: _kPanelBg,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Helper to build a gold-themed [TextField] for the edit dialog.
+  Widget _goldTextField(
+    TextEditingController controller,
+    String label,
+    String hint, {
+    bool isNumeric = false,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType:
+          isNumeric ? const TextInputType.numberWithOptions() : TextInputType.text,
+      style: const TextStyle(color: _kTextPrimary, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        labelStyle: const TextStyle(color: _kTextSecondary, fontSize: 12),
+        hintStyle: TextStyle(color: _kTextSecondary.withValues(alpha: 0.5)),
+        enabledBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: _kBorderGold),
+        ),
+        focusedBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(color: _kAccentGold),
+        ),
+        isDense: true,
+        contentPadding: const EdgeInsets.only(bottom: 6),
+      ),
+    );
+  }
+
+  // ─── Fog Tab ─────────────────────────────────────────────
+
+  /// Builds the Fog tab: shadow toggle, fog on/off, reveal/hide all,
+  /// brush mode, brush size, and room reveal.
+  Widget _buildFogTab() {
+    final hasShadowCells =
+        state.shadowRevealCells.isNotEmpty || state.shadowHideCells.isNotEmpty;
+    final shadowCellCount =
+        state.shadowRevealCells.length + state.shadowHideCells.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Shadow / Live toggle
+        _GoldToggle(
+          icon: state.shadowMode ? Icons.preview : Icons.flash_on,
+          label: state.shadowMode ? 'Shadow' : 'Live',
+          active: state.shadowMode,
+          onTap: cb.onToggleShadowMode,
+        ),
+        // Shadow commit/clear controls (when cells are staged)
+        if (state.shadowMode && hasShadowCells) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '$shadowCellCount cells staged',
+                  style: const TextStyle(
+                    color: _kTextSecondary,
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
+              // Apply (commit)
+              GestureDetector(
+                onTap: cb.onCommitShadow,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: const Color(0xFF4CAF50),
+                    ),
+                  ),
+                  child: const Icon(Icons.check, color: Color(0xFF4CAF50), size: 16),
+                ),
+              ),
+              const SizedBox(width: 6),
+              // Clear
+              GestureDetector(
+                onTap: cb.onClearShadow,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFC62828).withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: const Color(0xFFE53935),
+                    ),
+                  ),
+                  child: const Icon(Icons.close, color: Color(0xFFE53935), size: 16),
+                ),
+              ),
+            ],
+          ),
+        ],
+        const SizedBox(height: 8),
+        _GoldButton(
+          icon: Icons.cloud,
+          label: 'Fog Brush',
+          active: state.interactionMode == InteractionMode.fogReveal,
+          onTap: cb.onSetFogMode,
+        ),
+        const SizedBox(height: 8),
+        _GoldToggle(
+          icon: state.fogEnabled ? Icons.cloud : Icons.cloud_off,
+          label: 'Fog',
+          active: state.fogEnabled,
+          onTap: cb.onToggleFog,
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.visibility,
+                label: 'Reveal',
+                onTap: cb.onRevealAll,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.visibility_off,
+                label: 'Hide',
+                onTap: cb.onHideAll,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _GoldToggle(
+          icon: state.revealMode ? Icons.wb_sunny : Icons.dark_mode,
+          label: state.revealMode ? 'Reveal' : 'Hide',
+          active: state.revealMode,
+          onTap: cb.onToggleRevealMode,
+        ),
+        const SizedBox(height: 8),
+        // Brush size
+        const _GoldLabel('Brush Size'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            for (final entry in {0: '1', 1: '3', 2: '5'}.entries) ...[
+              if (entry.key > 0) const SizedBox(width: 4),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => cb.onSetBrushRadius(entry.key),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: state.brushRadius == entry.key
+                          ? _kSurfaceActive
+                          : _kSurface,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: state.brushRadius == entry.key
+                            ? _kAccentGold
+                            : _kBorderGold,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        entry.value,
+                        style: TextStyle(
+                          color: state.brushRadius == entry.key
+                              ? _kTextPrimary
+                              : _kTextSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Room reveal mode button
+        _GoldButton(
+          icon: Icons.meeting_room,
+          label: 'Room',
+          active: false, // roomReveal mode may not be in InteractionMode yet
+          onTap: cb.onSetRoomRevealMode,
+        ),
+      ],
+    );
+  }
+
+  // ─── Draw Tab ────────────────────────────────────────────
+
+  /// Builds the Draw tab: color palette, width presets, clear/undo buttons.
+  Widget _buildDrawTab() {
+    const colors = [
+      Color(0xFFE53935), // red
+      Color(0xFF43A047), // green
+      Color(0xFF1E88E5), // blue
+      Color(0xFFFDD835), // yellow
+      Color(0xFFFF8F00), // orange
+      Color(0xFFFFFFFF), // white
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GoldButton(
+          icon: Icons.brush,
+          label: 'Draw Mode',
+          active: state.interactionMode == InteractionMode.draw,
+          onTap: cb.onSetDrawMode,
+        ),
+        const SizedBox(height: 10),
+        // Color dots
+        const _GoldLabel('Color'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            for (final color in colors)
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => cb.onSetDrawColor(color),
+                  child: Center(
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: state.drawColor.toARGB32() == color.toARGB32()
+                            ? Border.all(color: _kAccentGold, width: 2.5)
+                            : Border.all(
+                                color: _kBorderGold,
+                                width: 1,
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        // Width presets
+        const _GoldLabel('Width'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            for (final entry in {2.0: 'S', 4.0: 'M', 8.0: 'L'}.entries) ...[
+              if (entry.key != 2.0) const SizedBox(width: 4),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => cb.onSetDrawWidth(entry.key),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: state.drawWidth == entry.key
+                          ? _kSurfaceActive
+                          : _kSurface,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: state.drawWidth == entry.key
+                            ? _kAccentGold
+                            : _kBorderGold,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        entry.value,
+                        style: TextStyle(
+                          color: state.drawWidth == entry.key
+                              ? _kTextPrimary
+                              : _kTextSecondary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 10),
+        // Clear / Undo
+        Row(
+          children: [
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.delete_outline,
+                label: 'Clear',
+                onTap: cb.onClearDrawings,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.undo,
+                label: 'Undo',
+                onTap: cb.onUndoStroke,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─── Measure Tab ─────────────────────────────────────────
+
+  /// Builds the Measure tab: hint text for drag-to-measure.
+  Widget _buildMeasureTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GoldButton(
+          icon: Icons.straighten,
+          label: 'Measure Mode',
+          active: state.interactionMode == InteractionMode.measure,
+          onTap: cb.onSetMeasureMode,
+        ),
+        const SizedBox(height: 16),
+        const Center(
+          child: Column(
+            children: [
+              Icon(Icons.straighten, color: _kAccentGoldDim, size: 32),
+              SizedBox(height: 8),
+              Text(
+                'Drag on map to measure',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _kTextSecondary,
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Camera Tab ──────────────────────────────────────────
+
+  /// Builds the Camera tab: zoom in/out/fit and rotate CW/CCW/reset.
+  Widget _buildCameraTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const _GoldLabel('Zoom'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: _GoldButton(icon: Icons.remove, label: '', onTap: cb.onZoomOut),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              flex: 2,
+              child: _GoldButton(
+                  icon: Icons.fit_screen, label: 'Fit', onTap: cb.onZoomToFit),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: _GoldButton(icon: Icons.add, label: '', onTap: cb.onZoomIn),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        const _GoldLabel('Rotation'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: _GoldButton(
+                  icon: Icons.rotate_left, label: '', onTap: cb.onRotateCCW),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              flex: 2,
+              child: _GoldButton(
+                icon: Icons.screen_rotation_alt,
+                label: '0\u00B0',
+                onTap: cb.onResetRotation,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: _GoldButton(
+                  icon: Icons.rotate_right, label: '', onTap: cb.onRotateCW),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ─── Settings Tab ────────────────────────────────────────
+
+  /// Builds the Settings tab: load map, grid/walls toggles, calibrate button.
+  Widget _buildSettingsTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GoldButton(
+          icon: Icons.folder_open,
+          label: 'Load Map',
+          onTap: cb.onLoadMap,
+        ),
+        const SizedBox(height: 10),
+        _GoldToggle(
+          icon: state.showGrid ? Icons.grid_on : Icons.grid_off,
+          label: 'Grid',
+          active: state.showGrid,
+          onTap: cb.onToggleGrid,
+        ),
+        const SizedBox(height: 6),
+        _GoldToggle(
+          icon: Icons.line_style,
+          label: 'Walls',
+          active: state.showWalls,
+          onTap: cb.onToggleWalls,
+        ),
+        const SizedBox(height: 10),
+        const _GoldLabel('Calibrate'),
+        const SizedBox(height: 4),
+        _GoldButton(
+          icon: Icons.straighten,
+          label: state.calibratedBaseZoom != null
+              ? '${state.tvWidthInches!.round()}" calibrated'
+              : 'Set TV size',
+          onTap: () => _showCalibrationDialog(context),
+        ),
+      ],
+    );
+  }
+
+  /// Shows a dialog for entering the physical TV width to calibrate
+  /// grid scale (1 grid square = 1 inch on the physical table).
   void _showCalibrationDialog(BuildContext context) {
     final controller = TextEditingController(
       text: state.tvWidthInches?.toString() ?? '',
@@ -531,8 +1347,15 @@ class _DmControlPanelState extends State<DmControlPanel> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
-        title: const Text('Calibrate Grid'),
+        backgroundColor: _kPanelBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: _kBorderGold),
+        ),
+        title: const Text(
+          'Calibrate Grid',
+          style: TextStyle(color: _kTextPrimary),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -541,23 +1364,34 @@ class _DmControlPanelState extends State<DmControlPanel> {
               'Enter your TV screen width in inches\n'
               'so grid squares match 1" miniature bases.',
               style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
+                color: _kTextSecondary.withValues(alpha: 0.8),
                 fontSize: 13,
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(fontFamily: 'monospace', fontSize: 18),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 18,
+                color: _kTextPrimary,
+              ),
               decoration: InputDecoration(
                 hintText: 'e.g. 43',
                 suffixText: 'inches',
+                suffixStyle: const TextStyle(color: _kTextSecondary),
                 hintStyle: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.3),
+                  color: _kTextSecondary.withValues(alpha: 0.4),
                 ),
-                border: OutlineInputBorder(
+                enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: _kBorderGold),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: _kAccentGold),
                 ),
               ),
               autofocus: true,
@@ -570,8 +1404,10 @@ class _DmControlPanelState extends State<DmControlPanel> {
                   ActionChip(
                     label: Text('$size"'),
                     onPressed: () => controller.text = '$size',
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
-                    labelStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                    backgroundColor: _kSurface,
+                    labelStyle:
+                        const TextStyle(color: _kTextSecondary, fontSize: 12),
+                    side: const BorderSide(color: _kBorderGold),
                   ),
               ],
             ),
@@ -584,20 +1420,41 @@ class _DmControlPanelState extends State<DmControlPanel> {
                 cb.onResetCalibration();
                 Navigator.pop(ctx);
               },
-              child: const Text('Reset'),
+              child: const Text(
+                'Reset',
+                style: TextStyle(color: _kTextSecondary),
+              ),
             ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: _kTextSecondary),
+            ),
           ),
-          FilledButton(
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               final inches = double.tryParse(controller.text.trim());
               if (inches == null || inches <= 0) return;
               cb.onCalibrate(inches);
               Navigator.pop(ctx);
             },
-            child: const Text('Calibrate'),
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: _kAccentGold,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text(
+                'Calibrate',
+                style: TextStyle(
+                  color: _kPanelBg,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -605,36 +1462,30 @@ class _DmControlPanelState extends State<DmControlPanel> {
   }
 }
 
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
+// ─── Shared themed widgets ──────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white38,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-}
-
-class _PanelButton extends StatelessWidget {
+/// Gold-bordered button with optional active highlight.
+///
+/// Used throughout the DM panel for action buttons. When [active] is
+/// true, draws a gold border and lighter background.
+class _GoldButton extends StatelessWidget {
+  /// Icon displayed on the left side of the button.
   final IconData icon;
+
+  /// Text label shown next to the icon.
   final String label;
+
+  /// Callback invoked when the button is tapped.
   final VoidCallback onTap;
 
-  const _PanelButton({
+  /// Whether the button is in an active/highlighted state.
+  final bool active;
+
+  const _GoldButton({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.active = false,
   });
 
   @override
@@ -642,18 +1493,35 @@ class _PanelButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: active ? _kSurfaceActive : _kSurface,
           borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: active ? _kAccentGold : _kBorderGold,
+          ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment:
+              label.isEmpty ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
-            Icon(icon, color: Colors.white54, size: 16),
+            Icon(icon,
+                color: active ? _kAccentGold : _kAccentGoldDim, size: 16),
             if (label.isNotEmpty) ...[
               const SizedBox(width: 6),
-              Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: active ? _kTextPrimary : _kTextSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ],
         ),
@@ -662,13 +1530,24 @@ class _PanelButton extends StatelessWidget {
   }
 }
 
-class _ModeButton extends StatelessWidget {
+/// Gold-themed toggle switch with a status dot indicator.
+///
+/// Displays an icon, label, and a colored dot on the right side
+/// (gold when active, dim when inactive).
+class _GoldToggle extends StatelessWidget {
+  /// Icon displayed on the left.
   final IconData icon;
+
+  /// Text label.
   final String label;
+
+  /// Whether the toggle is in its "on" state.
   final bool active;
+
+  /// Callback invoked when tapped.
   final VoidCallback onTap;
 
-  const _ModeButton({
+  const _GoldToggle({
     required this.icon,
     required this.label,
     required this.active,
@@ -680,68 +1559,23 @@ class _ModeButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: active
-              ? Colors.white.withValues(alpha: 0.2)
-              : Colors.white.withValues(alpha: 0.05),
+          color: active ? _kSurfaceActive : _kSurface,
           borderRadius: BorderRadius.circular(6),
-          border: active
-              ? Border.all(color: Colors.white.withValues(alpha: 0.3))
-              : null,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: active ? Colors.white : Colors.white38, size: 16),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                color: active ? Colors.white : Colors.white38,
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PanelToggle extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _PanelToggle({
-    required this.icon,
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        decoration: BoxDecoration(
-          color: active
-              ? Colors.white.withValues(alpha: 0.15)
-              : Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: active ? _kAccentGold : _kBorderGold,
+          ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: active ? Colors.white70 : Colors.white30, size: 16),
+            Icon(icon,
+                color: active ? _kAccentGold : _kAccentGoldDim, size: 16),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
-                color: active ? Colors.white70 : Colors.white30,
+                color: active ? _kTextPrimary : _kTextSecondary,
                 fontSize: 12,
               ),
             ),
@@ -751,11 +1585,63 @@ class _PanelToggle extends StatelessWidget {
               height: 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: active ? Colors.greenAccent : Colors.white12,
+                color: active ? _kAccentGold : _kBorderGold,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Gold-colored section label used to separate groups within a tab.
+class _GoldLabel extends StatelessWidget {
+  /// The label text.
+  final String text;
+
+  const _GoldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        color: _kAccentGoldDim,
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 0.5,
+      ),
+    );
+  }
+}
+
+/// Small square button for HP increment/decrement in the Combat tab.
+class _HpButton extends StatelessWidget {
+  /// The icon to display (typically [Icons.add] or [Icons.remove]).
+  final IconData icon;
+
+  /// Callback invoked when tapped.
+  final VoidCallback onTap;
+
+  const _HpButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 28,
+        decoration: BoxDecoration(
+          color: _kSurface,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: _kBorderGold),
+        ),
+        child: Icon(icon, color: _kAccentGoldDim, size: 16),
       ),
     );
   }

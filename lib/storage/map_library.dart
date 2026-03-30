@@ -23,40 +23,71 @@ class MapLibrary {
       .toList();
 
   Future<void> init() async {
+    debugPrint('MapLibrary: opening Hive boxes');
     _mapIndexBox = await Hive.openBox<String>('mapIndex');
     _sessionsBox = await Hive.openBox<String>('sessions');
     _filesBox = await Hive.openBox<List<int>>('mapFiles');
     _thumbsBox = await Hive.openBox<List<int>>('thumbnails');
-    debugPrint('MapLibrary: ${_mapIndexBox.length} maps in library');
+    debugPrint('MapLibrary: ${_mapIndexBox.length} maps, ${_sessionsBox.length} sessions, ${_filesBox.length} files in Hive');
     // TODO: one-time migration from old dart:io storage (maps/index.json).
     // For now, the TV can re-upload maps. Old files stay on disk but are ignored.
   }
 
   // --- Map operations ---
 
-  Future<MapLibraryEntry> addMap(Uint8List rawBytes, String displayName) async {
+  /// Adds a map file (`.dd2vtt` or PDF) to the library.
+  ///
+  /// For UVTT maps, [rawBytes] is the JSON file content which is parsed
+  /// to extract grid dimensions and portal count. For PDF maps, set
+  /// [isPdf] to `true` and optionally provide [pdfGridCols] / [pdfGridRows]
+  /// (defaults to 20x15 if not specified).
+  ///
+  /// Returns the created [MapLibraryEntry] with a fresh UUID.
+  ///
+  /// See also:
+  /// * [loadMapBytes], to read the stored bytes back.
+  /// * [MapLibraryEntry.isPdf], which flags PDF entries.
+  Future<MapLibraryEntry> addMap(Uint8List rawBytes, String displayName, {
+    bool isPdf = false,
+    int? pdfGridCols,
+    int? pdfGridRows,
+  }) async {
     final id = _uuid.v4();
 
     // Store raw bytes
     await _filesBox.put(id, rawBytes);
 
-    // Parse to extract metadata
-    final jsonString = utf8.decode(rawBytes);
-    final map = UvttParser.parse(jsonString);
+    int gridCols, gridRows, portalCount;
+
+    if (isPdf) {
+      gridCols = pdfGridCols ?? 20;
+      gridRows = pdfGridRows ?? 15;
+      portalCount = 0;
+    } else {
+      // Parse UVTT to extract metadata
+      final jsonString = utf8.decode(rawBytes);
+      final map = UvttParser.parse(jsonString);
+      gridCols = map.resolution.mapSize.dx.toInt();
+      gridRows = map.resolution.mapSize.dy.toInt();
+      portalCount = map.portals.length;
+    }
 
     final entry = MapLibraryEntry(
       id: id,
       displayName: displayName,
       fileSizeBytes: rawBytes.length,
-      gridCols: map.resolution.mapSize.dx.toInt(),
-      gridRows: map.resolution.mapSize.dy.toInt(),
-      portalCount: map.portals.length,
+      gridCols: gridCols,
+      gridRows: gridRows,
+      portalCount: portalCount,
       addedAt: DateTime.now(),
+      isPdf: isPdf,
+      pdfGridCols: pdfGridCols,
+      pdfGridRows: pdfGridRows,
     );
 
     // Store entry in index
     await _mapIndexBox.put(id, jsonEncode(entry.toJson()));
-    debugPrint('MapLibrary: added "$displayName" ($id)');
+    debugPrint('MapLibrary: added "$displayName" ($id)${isPdf ? ' [PDF]' : ''}');
     return entry;
   }
 

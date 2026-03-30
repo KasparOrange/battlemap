@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'ui/tv_shell.dart';
 import 'ui/vtt_companion_screen.dart';
@@ -8,7 +9,7 @@ import 'ui/dev_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
-  runApp(const BattlemapApp());
+  runApp(Phoenix(child: const BattlemapApp()));
 }
 
 class BattlemapApp extends StatelessWidget {

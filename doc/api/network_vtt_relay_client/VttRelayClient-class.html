@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="API docs for the VttRelayClient class from the vtt_relay_client library, for the Dart programming language.">
+  <title>VttRelayClient class - vtt_relay_client library - Dart API</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="../static-assets/github.css?v1">
+  <link rel="stylesheet" href="../static-assets/styles.css?v1">
+  <link rel="icon" href="../static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="../" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li><a href="../index.html">battlemap</a></li>
+    <li><a href="../network_vtt_relay_client/">network&#47;vtt_relay_client.dart</a></li>
+    <li class="self-crumb">VttRelayClient class</li>
+  </ol>
+  <div class="self-name">VttRelayClient</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <button class="toggle" id="theme-button" title="Toggle between light and dark mode" aria-label="Light and dark mode toggle">
+    <span id="dark-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      dark_mode
+    </span>
+    <span id="light-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      light_mode
+    </span>
+  </button>
+</header>
+<main>
+<div
+    id="dartdoc-main-content"
+    class="main-content"
+    data-above-sidebar="network_vtt_relay_client&#47;network_vtt_relay_client-library-sidebar.html"
+    data-below-sidebar="network_vtt_relay_client&#47;VttRelayClient-class-sidebar.html">
+    <div>
+<h1><span class="kind-class">VttRelayClient</span> class 
+ 
+</h1></div>
+
+    
+<section class="desc markdown">
+  <p>Unified WebSocket client that connects to the VPS relay server.</p>
+<p>Works on both web (Safari) and native (APK) platforms via the
+<code>web_socket_channel</code> package. Each client registers with a <a href="../network_vtt_relay_client/VttRelayClient/role.html">role</a>
+("table" or "companion") and the relay pairs one table with one
+companion, forwarding JSON messages between them.</p>
+<p>Key features:</p>
+<ul>
+<li><strong>Automatic reconnection</strong> with exponential backoff (1 s, 3 s, 10 s,
+30 s, 60 s) after disconnects or send failures.</li>
+<li><strong>Heartbeat</strong> — sends a <code>ping</code> every 15 seconds and forces a reconnect
+if no data arrives within 30 seconds.</li>
+<li><strong>Chunked map transfer</strong> — large binary map files are base64-encoded,
+split into 500 KB chunks, and sent as a sequence of <code>vtt.mapStart</code>,
+<code>vtt.mapChunk</code>, and <code>vtt.mapEnd</code> messages.</li>
+<li><strong>Connection state stream</strong> — listeners can observe
+<a href="../network_vtt_relay_client/RelayConnectionState.html">RelayConnectionState</a> transitions via <a href="../network_vtt_relay_client/VttRelayClient/stateStream.html">stateStream</a>.</li>
+</ul>
+<p>See also:</p>
+<ul>
+<li><a href="../network_relay_config/RelayConfig-class.html">RelayConfig</a>, which defines the relay server address.</li>
+<li><a href="../ui_tv_shell/TvShell-class.html">TvShell</a>, the table-side consumer.</li>
+<li><a href="../ui_vtt_companion_screen/VttCompanionScreen-class.html">VttCompanionScreen</a>, the companion-side consumer.</li>
+</ul>
+</section>
+
+
+
+    
+  <section class="summary offset-anchor" id="constructors">
+    <h2>Constructors</h2>
+    <dl class="constructor-summary-list">
+        <dt id="VttRelayClient.new" class="callable">
+          <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/VttRelayClient.html">VttRelayClient</a></span><span class="signature">({<span class="parameter" id="-param-role"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">role</span>, </span><span class="parameter" id="-param-host"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">host</span> = <span class="default-value">RelayConfig.host</span>, </span><span class="parameter" id="-param-port"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">port</span> = <span class="default-value">RelayConfig.port</span></span>})</span>
+        </dt>
+        <dd>
+          Creates a relay client for the given <code>role</code>.
+        </dd>
+    </dl>
+  </section>
+    
+  <section
+      class="summary offset-anchor"
+      id="instance-properties">
+    <h2>Properties</h2>
+    <dl class="properties">
+        <dt id="connectionState" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/connectionState.html">connectionState</a></span>
+  <span class="signature">&#8594; <a href="../network_vtt_relay_client/RelayConnectionState.html">RelayConnectionState</a></span>
+  
+
+</dt>
+<dd>
+  The current <a href="../network_vtt_relay_client/RelayConnectionState.html">RelayConnectionState</a> of this client.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="hashCode" class="property inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/hashCode.html">hashCode</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd class="inherited">
+  The hash code for this object.
+  <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="host" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/host.html">host</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  Hostname or IP of the VPS relay server.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="lastMapDisplayName" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/lastMapDisplayName.html">lastMapDisplayName</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span>
+  
+
+</dt>
+<dd>
+  Display name extracted from the most recent <code>vtt.mapStart</code> message.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onCameraSync" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onCameraSync.html">onCameraSync</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">y</span>, </span><span class="parameter" id="param-zoom"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">zoom</span>, </span><span class="parameter" id="param-angle"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">angle</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when camera state is received as part of a <code>vtt.fullState</code>
+(companion side only).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onCommand" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onCommand.html">onCommand</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">msg</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a command message is received (table side only).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onLibraryListing" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onLibraryListing.html">onLibraryListing</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-listing"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">listing</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a <code>lib.listing</code> message arrives (companion side).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onMapDownloadUrl" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onMapDownloadUrl.html">onMapDownloadUrl</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-url"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">url</span>, </span><span class="parameter" id="param-displayName"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">displayName</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when the TV instructs the companion to download a map via HTTP.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onMapLoaded" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onMapLoaded.html">onMapLoaded</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-bytes"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a></span> <span class="parameter-name">bytes</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a chunked map transfer completes (either side).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onPatchProgress" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onPatchProgress.html">onPatchProgress</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-progress"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">progress</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when Shorebird patch download progress/completion is received.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onPatchStatus" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onPatchStatus.html">onPatchStatus</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-status"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">status</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when Shorebird patch status is received (companion side).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onStateSync" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onStateSync.html">onStateSync</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">msg</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a <code>vtt.fullState</code> message is received (companion side only).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onTransferProgress" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onTransferProgress.html">onTransferProgress</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-progress"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">progress</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called as map transfer progress changes.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onTvError" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onTvError.html">onTvError</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a <code>tv.error</code> message arrives (companion side).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onTvLog" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onTvLog.html">onTvLog</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a <code>tv.log</code> message arrives (companion side).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onUpdateProgress" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onUpdateProgress.html">onUpdateProgress</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-progress"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">progress</span>, </span><span class="parameter" id="param-status"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">status</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when <code>update.progress</code> arrives (companion side).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onUpdateVersionInfo" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onUpdateVersionInfo.html">onUpdateVersionInfo</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-info"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">info</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when <code>update.versionInfo</code> arrives (companion side).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="port" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/port.html">port</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd>
+  Port of the VPS relay server.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="role" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/role.html">role</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  Role this client registers as — either <code>"table"</code> or <code>"companion"</code>.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="runtimeType" class="property inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/runtimeType.html">runtimeType</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Type-class.html">Type</a></span>
+  
+
+</dt>
+<dd class="inherited">
+  A representation of the runtime type of the object.
+  <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="stateStream" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/stateStream.html">stateStream</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Stream-class.html">Stream</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../network_vtt_relay_client/RelayConnectionState.html">RelayConnectionState</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  A broadcast stream that emits whenever <a href="../network_vtt_relay_client/VttRelayClient/connectionState.html">connectionState</a> changes.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="transferProgress" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/transferProgress.html">transferProgress</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a>?</span>
+  
+
+</dt>
+<dd>
+  Current map transfer progress, or <code>null</code> if no transfer is active.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+    </dl>
+  </section>
+
+    
+  <section
+      class="summary offset-anchor"
+      id="instance-methods">
+    <h2>Methods</h2>
+    <dl class="callables">
+        <dt id="connect" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/connect.html">connect</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Opens a WebSocket connection to the relay and registers this client.
+  
+
+</dd>
+
+        <dt id="dispose" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/dispose.html">dispose</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Permanently closes the WebSocket connection and cancels all timers.
+  
+
+</dd>
+
+        <dt id="handleIncomingMessage" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/handleIncomingMessage.html">handleIncomingMessage</a></span><span class="signature">(<wbr><span class="parameter" id="handleIncomingMessage-param-raw"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">raw</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Public entry point for testing message dispatch.
+  
+
+</dd>
+
+        <dt id="noSuchMethod" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/noSuchMethod.html">noSuchMethod</a></span><span class="signature">(<wbr><span class="parameter" id="noSuchMethod-param-invocation"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Invocation-class.html">Invocation</a></span> <span class="parameter-name">invocation</span></span>)
+    <span class="returntype parameter">&#8594; dynamic</span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  Invoked when a nonexistent method or property is accessed.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="sendAddStroke" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendAddStroke.html">sendAddStroke</a></span><span class="signature">(<wbr><span class="parameter" id="sendAddStroke-param-strokeJson"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">strokeJson</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Commits a completed freehand drawing stroke on the TV.
+  
+
+</dd>
+
+        <dt id="sendAddToken" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendAddToken.html">sendAddToken</a></span><span class="signature">(<wbr><span class="parameter" id="sendAddToken-param-gridX"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridX</span>, </span><span class="parameter" id="sendAddToken-param-gridY"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridY</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Places a new token at grid position (<code>gridX</code>, <code>gridY</code>) on the TV.
+  
+
+</dd>
+
+        <dt id="sendBrushReveal" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendBrushReveal.html">sendBrushReveal</a></span><span class="signature">(<wbr><span class="parameter" id="sendBrushReveal-param-indices"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span> <span class="parameter-name">indices</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Reveals (or hides) multiple fog cells at once using the brush.
+  
+
+</dd>
+
+        <dt id="sendCalibrate" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendCalibrate.html">sendCalibrate</a></span><span class="signature">(<wbr><span class="parameter" id="sendCalibrate-param-tvWidthInches"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">tvWidthInches</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Calibrates the TV display so that grid squares match physical
+inches on the TV surface.
+  
+
+</dd>
+
+        <dt id="sendCheckUpdate" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendCheckUpdate.html">sendCheckUpdate</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Asks the TV to check for an available APK update on the VPS.
+  
+
+</dd>
+
+        <dt id="sendClearDrawings" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendClearDrawings.html">sendClearDrawings</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Clears all drawing strokes from the TV map.
+  
+
+</dd>
+
+        <dt id="sendClearMap" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendClearMap.html">sendClearMap</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Tells the TV to unload the current map.
+  
+
+</dd>
+
+        <dt id="sendClearTokens" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendClearTokens.html">sendClearTokens</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Removes all tokens from the TV map.
+  
+
+</dd>
+
+        <dt id="sendDeleteMap" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendDeleteMap.html">sendDeleteMap</a></span><span class="signature">(<wbr><span class="parameter" id="sendDeleteMap-param-mapId"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">mapId</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Deletes the map identified by <code>mapId</code> from the TV's local library.
+  
+
+</dd>
+
+        <dt id="sendDeleteSession" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendDeleteSession.html">sendDeleteSession</a></span><span class="signature">(<wbr><span class="parameter" id="sendDeleteSession-param-sessionId"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">sessionId</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Deletes the saved session identified by <code>sessionId</code> from the TV.
+  
+
+</dd>
+
+        <dt id="sendFullState" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendFullState.html">sendFullState</a></span><span class="signature">(<wbr><span class="parameter" id="sendFullState-param-stateJson"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">stateJson</span>, </span><span class="parameter" id="sendFullState-param-camera"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>&gt;</span></span> <span class="parameter-name">camera</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Broadcasts the TV's full game state to the companion.
+  
+
+</dd>
+
+        <dt id="sendGoToGame" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendGoToGame.html">sendGoToGame</a></span><span class="signature">(<wbr><span class="parameter" id="sendGoToGame-param-mapId"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">mapId</span>, {</span><span class="parameter" id="sendGoToGame-param-sessionId"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">sessionId</span>, </span><span class="parameter" id="sendGoToGame-param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">name</span></span>})
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Navigates the TV to the game view for <code>mapId</code>.
+  
+
+</dd>
+
+        <dt id="sendGoToLibrary" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendGoToLibrary.html">sendGoToLibrary</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Navigates the TV to the map library view.
+  
+
+</dd>
+
+        <dt id="sendGoToSettings" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendGoToSettings.html">sendGoToSettings</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Navigates the TV to the settings view.
+  
+
+</dd>
+
+        <dt id="sendHideAll" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendHideAll.html">sendHideAll</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Hides all fog-of-war cells on the current map.
+  
+
+</dd>
+
+        <dt id="sendMapChunked" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendMapChunked.html">sendMapChunked</a></span><span class="signature">(<wbr><span class="parameter" id="sendMapChunked-param-bytes"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a></span> <span class="parameter-name">bytes</span>, {</span><span class="parameter" id="sendMapChunked-param-displayName"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">displayName</span></span>})
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sends binary map data to the peer in base64-encoded chunks.
+  
+
+</dd>
+
+        <dt id="sendMoveToken" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendMoveToken.html">sendMoveToken</a></span><span class="signature">(<wbr><span class="parameter" id="sendMoveToken-param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, </span><span class="parameter" id="sendMoveToken-param-gridX"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridX</span>, </span><span class="parameter" id="sendMoveToken-param-gridY"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridY</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Moves the token identified by <code>id</code> to grid position (<code>gridX</code>, <code>gridY</code>).
+  
+
+</dd>
+
+        <dt id="sendNewSession" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendNewSession.html">sendNewSession</a></span><span class="signature">(<wbr><span class="parameter" id="sendNewSession-param-mapId"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">mapId</span>, {</span><span class="parameter" id="sendNewSession-param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">name</span></span>})
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Creates a brand-new session for <code>mapId</code> on the TV.
+  
+
+</dd>
+
+        <dt id="sendPatchCheck" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendPatchCheck.html">sendPatchCheck</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Check for a Shorebird OTA patch.
+  
+
+</dd>
+
+        <dt id="sendPatchDownload" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendPatchDownload.html">sendPatchDownload</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Download the available Shorebird patch.
+  
+
+</dd>
+
+        <dt id="sendPatchRestart" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendPatchRestart.html">sendPatchRestart</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Restart the TV app to apply the downloaded patch.
+  
+
+</dd>
+
+        <dt id="sendRaw" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRaw.html">sendRaw</a></span><span class="signature">(<wbr><span class="parameter" id="sendRaw-param-data"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">data</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sends a pre-encoded JSON string directly over the WebSocket.
+  
+
+</dd>
+
+        <dt id="sendRemoveToken" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRemoveToken.html">sendRemoveToken</a></span><span class="signature">(<wbr><span class="parameter" id="sendRemoveToken-param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Removes the token identified by <code>id</code> from the TV map.
+  
+
+</dd>
+
+        <dt id="sendRenameSession" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRenameSession.html">sendRenameSession</a></span><span class="signature">(<wbr><span class="parameter" id="sendRenameSession-param-sessionId"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">sessionId</span>, </span><span class="parameter" id="sendRenameSession-param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">name</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Renames the session identified by <code>sessionId</code> to <code>name</code> on the TV.
+  
+
+</dd>
+
+        <dt id="sendRequestList" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRequestList.html">sendRequestList</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Requests the TV to send back a <code>lib.listing</code> with all maps and sessions.
+  
+
+</dd>
+
+        <dt id="sendResetCalibration" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendResetCalibration.html">sendResetCalibration</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Resets the TV calibration, reverting to default zoom behaviour.
+  
+
+</dd>
+
+        <dt id="sendResetRotation" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendResetRotation.html">sendResetRotation</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Resets the TV camera rotation to 0 degrees.
+  
+
+</dd>
+
+        <dt id="sendRevealAll" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRevealAll.html">sendRevealAll</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Reveals all fog-of-war cells on the current map.
+  
+
+</dd>
+
+        <dt id="sendRotateCCW" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRotateCCW.html">sendRotateCCW</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Rotates the TV camera 90 degrees counter-clockwise.
+  
+
+</dd>
+
+        <dt id="sendRotateCW" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRotateCW.html">sendRotateCW</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Rotates the TV camera 90 degrees clockwise.
+  
+
+</dd>
+
+        <dt id="sendSetBrushRadius" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetBrushRadius.html">sendSetBrushRadius</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetBrushRadius-param-radius"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">radius</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the fog brush radius to <code>radius</code> grid cells.
+  
+
+</dd>
+
+        <dt id="sendSetDrawColor" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetDrawColor.html">sendSetDrawColor</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetDrawColor-param-colorValue"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">colorValue</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the drawing color on the TV.
+  
+
+</dd>
+
+        <dt id="sendSetDrawWidth" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetDrawWidth.html">sendSetDrawWidth</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetDrawWidth-param-width"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">width</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the drawing stroke width on the TV.
+  
+
+</dd>
+
+        <dt id="sendSetInteractionMode" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetInteractionMode.html">sendSetInteractionMode</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetInteractionMode-param-mode"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">mode</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Switches the TV's active interaction mode.
+  
+
+</dd>
+
+        <dt id="sendStartUpdate" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendStartUpdate.html">sendStartUpdate</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Tells the TV to download and install the latest APK update.
+  
+
+</dd>
+
+        <dt id="sendStrokeEnd" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendStrokeEnd.html">sendStrokeEnd</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Signals that the current live stroke has ended.
+  
+
+</dd>
+
+        <dt id="sendStrokeUpdate" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendStrokeUpdate.html">sendStrokeUpdate</a></span><span class="signature">(<wbr><span class="parameter" id="sendStrokeUpdate-param-strokeJson"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">strokeJson</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sends a live stroke preview update while the user is still drawing.
+  
+
+</dd>
+
+        <dt id="sendToggleFog" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendToggleFog.html">sendToggleFog</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles the fog-of-war layer visibility on the TV.
+  
+
+</dd>
+
+        <dt id="sendToggleGrid" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendToggleGrid.html">sendToggleGrid</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles the grid overlay visibility on the TV.
+  
+
+</dd>
+
+        <dt id="sendTogglePortal" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendTogglePortal.html">sendTogglePortal</a></span><span class="signature">(<wbr><span class="parameter" id="sendTogglePortal-param-index"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">index</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles the open/closed state of the portal (door) at <code>index</code>.
+  
+
+</dd>
+
+        <dt id="sendToggleReveal" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendToggleReveal.html">sendToggleReveal</a></span><span class="signature">(<wbr><span class="parameter" id="sendToggleReveal-param-index"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">index</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles the fog-of-war reveal state for a single cell at <code>index</code>.
+  
+
+</dd>
+
+        <dt id="sendToggleRevealMode" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendToggleRevealMode.html">sendToggleRevealMode</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles the brush between reveal and hide mode.
+  
+
+</dd>
+
+        <dt id="sendToggleWalls" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendToggleWalls.html">sendToggleWalls</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles the wall debug overlay visibility on the TV.
+  
+
+</dd>
+
+        <dt id="sendUndoStroke" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendUndoStroke.html">sendUndoStroke</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Undoes the most recent drawing stroke on the TV map.
+  
+
+</dd>
+
+        <dt id="sendZoomIn" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendZoomIn.html">sendZoomIn</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Zooms the TV camera in by one step.
+  
+
+</dd>
+
+        <dt id="sendZoomOut" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendZoomOut.html">sendZoomOut</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Zooms the TV camera out by one step.
+  
+
+</dd>
+
+        <dt id="sendZoomToFit" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendZoomToFit.html">sendZoomToFit</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Resets the TV camera zoom so the entire map fits on screen.
+  
+
+</dd>
+
+        <dt id="toString" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/toString.html">toString</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  A string representation of this object.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+    </dl>
+  </section>
+    
+  <section
+      class="summary offset-anchor inherited"
+      id="operators">
+    <h2>Operators</h2>
+    <dl class="callables">
+        <dt id="operator ==" class="callable inherited">
+  <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/operator_equals.html">operator ==</a></span><span class="signature">(<wbr><span class="parameter" id="==-param-other"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Object-class.html">Object</a></span> <span class="parameter-name">other</span></span>)
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  </span>
+  
+
+</dt>
+<dd class="inherited">
+  The equality operator.
+  <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+    </dl>
+  </section>
+    
+    
+    
+
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li><a href="../index.html">battlemap</a></li>
+    <li><a href="../network_vtt_relay_client/">vtt_relay_client</a></li>
+    <li class="self-crumb">VttRelayClient class</li>
+</ol>
+
+    <h5>vtt_relay_client library</h5>
+    <div id="dartdoc-sidebar-left-content"></div>
+  </div>
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+  </div><!--/.sidebar-offcanvas-->
+</main>
+<footer>
+  <span class="no-break">
+    battlemap
+      1.0.8+9
+  </span>
+  
+</footer>
+
+
+<script src="../static-assets/highlight.pack.js?v1"></script>
+<script src="../static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+

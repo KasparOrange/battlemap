@@ -86,6 +86,16 @@ class Session {
   /// Name of the active [InteractionMode] (`'fogReveal'`, `'draw'`, or `'token'`).
   String interactionMode;
 
+  /// Whether this session is for a PDF map rather than a `.dd2vtt` map.
+  ///
+  /// When `true`, session resume should call [VttState.loadPdfAsMap]
+  /// instead of [VttState.loadMap], since PDF bytes need to be rendered
+  /// to an image before loading.
+  ///
+  /// See also:
+  /// * [MapLibraryEntry.isPdf], the corresponding flag on the map entry.
+  bool isPdfSession;
+
   // --- Camera snapshot ---
 
   /// Camera X position (world coordinates).
@@ -104,6 +114,7 @@ class Session {
   ///
   /// Most fields have sensible defaults matching a fresh game start:
   /// fog enabled, grid visible, no revealed cells, no tokens, camera at origin.
+  /// Set [isPdfSession] to `true` for sessions created from PDF maps.
   Session({
     required this.id,
     required this.mapId,
@@ -125,6 +136,7 @@ class Session {
     this.drawColorValue = 0xFFE53935,
     this.drawWidth = 3.0,
     this.interactionMode = 'fogReveal',
+    this.isPdfSession = false,
     this.cameraX = 0,
     this.cameraY = 0,
     this.cameraZoom = 1,
@@ -135,7 +147,8 @@ class Session {
   ///
   /// Timestamps are encoded as ISO 8601 strings. Token and stroke data
   /// are stored as raw JSON maps (already serialized by their respective
-  /// `toJson` methods).
+  /// `toJson` methods). The [isPdfSession] flag is always included for
+  /// forward compatibility.
   Map<String, dynamic> toJson() => {
         'id': id,
         'mapId': mapId,
@@ -157,6 +170,7 @@ class Session {
         'drawColorValue': drawColorValue,
         'drawWidth': drawWidth,
         'interactionMode': interactionMode,
+        'isPdfSession': isPdfSession,
         'cameraX': cameraX,
         'cameraY': cameraY,
         'cameraZoom': cameraZoom,
@@ -167,8 +181,8 @@ class Session {
   ///
   /// Expects keys matching [toJson] output. Fields added after the initial
   /// schema ([tokenData], [strokeData], [drawColorValue], [drawWidth],
-  /// [interactionMode]) fall back to defaults if absent, for backwards
-  /// compatibility with older saved sessions.
+  /// [interactionMode], [isPdfSession]) fall back to defaults if absent,
+  /// for backwards compatibility with older saved sessions.
   factory Session.fromJson(Map<String, dynamic> json) => Session(
         id: json['id'] as String,
         mapId: json['mapId'] as String,
@@ -198,6 +212,7 @@ class Session {
         drawColorValue: json['drawColorValue'] as int? ?? 0xFFE53935,
         drawWidth: (json['drawWidth'] as num?)?.toDouble() ?? 3.0,
         interactionMode: json['interactionMode'] as String? ?? 'fogReveal',
+        isPdfSession: json['isPdfSession'] as bool? ?? false,
         cameraX: (json['cameraX'] as num).toDouble(),
         cameraY: (json['cameraY'] as num).toDouble(),
         cameraZoom: (json['cameraZoom'] as num).toDouble(),

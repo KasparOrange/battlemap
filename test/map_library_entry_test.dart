@@ -66,6 +66,9 @@ void main() {
       expect(json.containsKey('gridRows'), true);
       expect(json.containsKey('portalCount'), true);
       expect(json.containsKey('addedAt'), true);
+      expect(json.containsKey('isPdf'), true);
+      expect(json.containsKey('pdfGridCols'), true);
+      expect(json.containsKey('pdfGridRows'), true);
       expect(json.containsKey('thumbnailPath'), true);
     });
 
@@ -82,6 +85,73 @@ void main() {
 
       final json = entry.toJson();
       expect(json['addedAt'], '2026-03-21T15:30:00.000Z');
+    });
+
+    test('PDF entry round-trips with isPdf and grid config', () {
+      final original = MapLibraryEntry(
+        id: 'pdf-001',
+        displayName: 'Dungeon Map.pdf',
+        fileSizeBytes: 524288,
+        gridCols: 30,
+        gridRows: 20,
+        portalCount: 0,
+        addedAt: DateTime.utc(2026, 3, 27, 10, 0, 0),
+        isPdf: true,
+        pdfGridCols: 30,
+        pdfGridRows: 20,
+      );
+
+      final json = original.toJson();
+      final restored = MapLibraryEntry.fromJson(json);
+
+      expect(restored.isPdf, true);
+      expect(restored.pdfGridCols, 30);
+      expect(restored.pdfGridRows, 20);
+      expect(restored.portalCount, 0);
+      expect(restored.gridCols, 30);
+      expect(restored.gridRows, 20);
+    });
+
+    test('non-PDF entry defaults isPdf to false with null grid config', () {
+      final original = MapLibraryEntry(
+        id: 'uvtt-001',
+        displayName: 'Cave Map',
+        fileSizeBytes: 2048,
+        gridCols: 24,
+        gridRows: 16,
+        portalCount: 3,
+        addedAt: DateTime.utc(2026, 3, 27),
+      );
+
+      final json = original.toJson();
+      final restored = MapLibraryEntry.fromJson(json);
+
+      expect(restored.isPdf, false);
+      expect(restored.pdfGridCols, isNull);
+      expect(restored.pdfGridRows, isNull);
+    });
+
+    test('fromJson backwards compatible with old JSON missing PDF fields', () {
+      final oldJson = {
+        'id': 'legacy-map',
+        'displayName': 'Old Map',
+        'fileSizeBytes': 1024,
+        'gridCols': 10,
+        'gridRows': 10,
+        'portalCount': 2,
+        'addedAt': '2026-01-01T00:00:00.000Z',
+        'thumbnailPath': null,
+        'vpsUrl': null,
+        // No isPdf, pdfGridCols, pdfGridRows
+      };
+
+      final restored = MapLibraryEntry.fromJson(oldJson);
+
+      expect(restored.isPdf, false);
+      expect(restored.pdfGridCols, isNull);
+      expect(restored.pdfGridRows, isNull);
+      expect(restored.gridCols, 10);
+      expect(restored.gridRows, 10);
     });
   });
 }

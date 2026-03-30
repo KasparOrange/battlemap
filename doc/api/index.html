@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="battlemap API docs, for the Dart programming language.">
+  <title>battlemap - Dart API docs</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="static-assets/github.css?v1">
+  <link rel="stylesheet" href="static-assets/styles.css?v1">
+  <link rel="icon" href="static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li class="self-crumb">battlemap package</li>
+  </ol>
+  <div class="self-name">battlemap</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <button class="toggle" id="theme-button" title="Toggle between light and dark mode" aria-label="Light and dark mode toggle">
+    <span id="dark-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      dark_mode
+    </span>
+    <span id="light-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      light_mode
+    </span>
+  </button>
+</header>
+<main>
+  <div id="dartdoc-main-content" class="main-content">
+      
+<section class="desc markdown">
+  <h1 id="battlemap">Battlemap</h1>
+<p>A Flutter app that turns a TV into a D&amp;D digital battlemap, controlled from a phone.</p>
+<h2 id="how-it-works">How It Works</h2>
+<p>The same APK runs in two modes:</p>
+<ul>
+<li><strong>TV Mode</strong> -- the TV (a Xiaomi TV Box sideloaded via ADB) displays the
+battlemap fullscreen. It has no touch, no keyboard, no mouse. It connects to a
+VPS WebSocket relay and waits for a companion phone to pair.</li>
+<li><strong>Companion Mode</strong> -- the DM's phone (web build in Safari or APK) connects to
+the same relay. All map loading, fog reveal, door toggling, token placement,
+drawing, and camera control happens here.</li>
+</ul>
+<p>The phone sends commands; the TV renders. Both communicate through a
+lightweight Python WebSocket relay running on a VPS.</p>
+<h2 id="architecture">Architecture</h2>
+<pre class="language-dart"><code>+------------------+         +------------------+         +------------------+
+|   Phone (DM)     |         |   VPS Relay      |         |   TV (Display)   |
+|                  |   WS    |                  |   WS    |                  |
+| VttCompanionScreen+--------&gt;  vtt_relay.py    +--------&gt;  TvShell          |
+| VttRelayClient   |&lt;--------+ (WebSocket hub)  |&lt;--------+ VttRelayClient   |
+| VttGame (mirror) |         |                  |         | VttGame          |
+| DmControlPanel   |         +------------------+         | MapLibrary       |
++------------------+                                      +------------------+
+</code></pre>
+<h3 id="key-components">Key Components</h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>File</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="game_vtt_game/VttGame-class.html">VttGame</a></td>
+<td><code>lib/game/vtt_game.dart</code></td>
+<td>Flame engine game -- renders map image, grid, fog of war, walls, portals, tokens, and drawing strokes. Routes single-finger input to the active tool; two-finger gestures control the camera.</td>
+</tr>
+<tr>
+<td><a href="state_vtt_state/VttState-class.html">VttState</a></td>
+<td><code>lib/state/vtt_state.dart</code></td>
+<td>Central game state (ChangeNotifier) -- fog cells, portal states, tokens, strokes, calibration, interaction mode. Serializes to JSON for relay sync.</td>
+</tr>
+<tr>
+<td><a href="ui_tv_shell/TvShell-class.html">TvShell</a></td>
+<td><code>lib/ui/tv_shell.dart</code></td>
+<td>TV entry point -- manages relay connection, map library, sessions, and view navigation. All interaction arrives via relay commands from the phone.</td>
+</tr>
+<tr>
+<td><a href="ui_vtt_companion_screen/VttCompanionScreen-class.html">VttCompanionScreen</a></td>
+<td><code>lib/ui/vtt_companion_screen.dart</code></td>
+<td>Phone DM controller -- file picker, DM control panel, local VttGame mirror. Sends commands to TV through the relay.</td>
+</tr>
+<tr>
+<td><a href="network_vtt_relay_client/VttRelayClient-class.html">VttRelayClient</a></td>
+<td><code>lib/network/vtt_relay_client.dart</code></td>
+<td>WebSocket client (web_socket_channel) -- works on both web and native. Handles registration, pairing, command/state forwarding, and chunked map transfers.</td>
+</tr>
+<tr>
+<td><a href="storage_map_library/MapLibrary-class.html">MapLibrary</a></td>
+<td><code>lib/storage/map_library.dart</code></td>
+<td>Persistent on-device storage for .dd2vtt map files and saved sessions. Native-only (stubbed on web).</td>
+</tr>
+</tbody>
+</table>
+<h3 id="data-model">Data Model</h3>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="model_uvtt_map/UvttMap-class.html">UvttMap</a></td>
+<td><code>lib/model/uvtt_map.dart</code></td>
+<td>Parsed Universal VTT map -- resolution, walls, portals, lights, environment, and the embedded map image.</td>
+</tr>
+<tr>
+<td><a href="model_uvtt_parser/UvttParser-class.html">UvttParser</a></td>
+<td><code>lib/model/uvtt_parser.dart</code></td>
+<td>Decodes <code>.dd2vtt</code> / <code>.uvtt</code> JSON files into <a href="model_uvtt_map/UvttMap-class.html">UvttMap</a> instances.</td>
+</tr>
+<tr>
+<td><a href="model_map_library_entry/MapLibraryEntry-class.html">MapLibraryEntry</a></td>
+<td><code>lib/model/map_library_entry.dart</code></td>
+<td>Metadata for a map stored in the TV's local library (grid size, file size, thumbnail path).</td>
+</tr>
+<tr>
+<td><a href="model_session/Session-class.html">Session</a></td>
+<td><code>lib/model/session.dart</code></td>
+<td>A saved gameplay session -- references a map and captures the full DM state snapshot (fog, portals, tokens, camera).</td>
+</tr>
+<tr>
+<td><a href="model_map_token/MapToken-class.html">MapToken</a></td>
+<td><code>lib/model/map_token.dart</code></td>
+<td>A single token on the grid (position, color, label). JSON-serializable.</td>
+</tr>
+<tr>
+<td><a href="model_draw_stroke/DrawStroke-class.html">DrawStroke</a></td>
+<td><code>lib/model/draw_stroke.dart</code></td>
+<td>A freehand drawing stroke (list of points, color, width). JSON-serializable.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="building-and-running">Building and Running</h2>
+<h3 id="prerequisites">Prerequisites</h3>
+<ul>
+<li>Flutter SDK (stable channel)</li>
+<li>Android SDK (for APK builds)</li>
+<li>Python 3 (for the VPS relay server)</li>
+</ul>
+<h3 id="development-web">Development (web)</h3>
+<pre class="language-bash"><code class="language-bash">flutter run -d web-server --web-port=4242 --web-hostname=0.0.0.0
+</code></pre>
+<p>Open <code>http://&lt;host&gt;:4242</code> in a browser to test.</p>
+<h3 id="production-apk">Production (APK)</h3>
+<pre class="language-bash"><code class="language-bash"># Build the release APK
+flutter build apk --release
+
+# Sideload onto the TV box
+adb install -r build/app/outputs/flutter-apk/app-release.apk
+</code></pre>
+<p>Bump the <code>version</code> field in <code>pubspec.yaml</code> before each release (increment the
+<code>+N</code> version code so Android recognises the upgrade).</p>
+<h3 id="vps-relay">VPS Relay</h3>
+<pre class="language-bash"><code class="language-bash">python3 tools/vtt_relay.py
+</code></pre>
+<p>The relay listens for WebSocket connections from both the TV and the companion
+phone, forwarding messages between them.</p>
+<h2 id="documentation">Documentation</h2>
+<p>Run <code>dart doc</code> to generate full API documentation from the source:</p>
+<pre class="language-bash"><code class="language-bash">dart doc
+# Output in doc/api/
+</code></pre>
+<p>See the <code>docs/</code> directory for additional design notes (if present).</p>
+</section>
+
+
+      <section class="summary">
+          <h2>Libraries</h2>
+        <dl>
+          <dt id="companion_screen">
+  <span class="name"><a href="companion_screen/">companion_screen</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="battlemap_game">
+  <span class="name"><a href="game_battlemap_game/">game/battlemap_game</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="fog_of_war_component">
+  <span class="name"><a href="game_components_fog_of_war_component/">game/components/fog_of_war_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="grid_component">
+  <span class="name"><a href="game_components_grid_component/">game/components/grid_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="grid_overlay_component">
+  <span class="name"><a href="game_components_grid_overlay_component/">game/components/grid_overlay_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="live_stroke_component">
+  <span class="name"><a href="game_components_live_stroke_component/">game/components/live_stroke_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="map_image_component">
+  <span class="name"><a href="game_components_map_image_component/">game/components/map_image_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="pdf_background_component">
+  <span class="name"><a href="game_components_pdf_background_component/">game/components/pdf_background_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="portal_component">
+  <span class="name"><a href="game_components_portal_component/">game/components/portal_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="strokes_component">
+  <span class="name"><a href="game_components_strokes_component/">game/components/strokes_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="token_component">
+  <span class="name"><a href="game_components_token_component/">game/components/token_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="token_layer">
+  <span class="name"><a href="game_components_token_layer/">game/components/token_layer</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="wall_component">
+  <span class="name"><a href="game_components_wall_component/">game/components/wall_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="vtt_game">
+  <span class="name"><a href="game_vtt_game/">game/vtt_game</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="game_state">
+  <span class="name"><a href="game_state/">game_state</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="main">
+  <span class="name"><a href="main/">main</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="draw_stroke">
+  <span class="name"><a href="model_draw_stroke/">model/draw_stroke</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="map_library_entry">
+  <span class="name"><a href="model_map_library_entry/">model/map_library_entry</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="map_token">
+  <span class="name"><a href="model_map_token/">model/map_token</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="session">
+  <span class="name"><a href="model_session/">model/session</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="uvtt_map">
+  <span class="name"><a href="model_uvtt_map/">model/uvtt_map</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="uvtt_parser">
+  <span class="name"><a href="model_uvtt_parser/">model/uvtt_parser</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="client">
+  <span class="name"><a href="network_client/">network/client</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="client_stub">
+  <span class="name"><a href="network_client_stub/">network/client_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="http_download">
+  <span class="name"><a href="network_http_download/">network/http_download</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="http_download_stub">
+  <span class="name"><a href="network_http_download_stub/">network/http_download_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="http_upload">
+  <span class="name"><a href="network_http_upload/">network/http_upload</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="http_upload_stub">
+  <span class="name"><a href="network_http_upload_stub/">network/http_upload_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="relay_config">
+  <span class="name"><a href="network_relay_config/">network/relay_config</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="remote_log">
+  <span class="name"><a href="network_remote_log/">network/remote_log</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="remote_log_stub">
+  <span class="name"><a href="network_remote_log_stub/">network/remote_log_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="server">
+  <span class="name"><a href="network_server/">network/server</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="server_stub">
+  <span class="name"><a href="network_server_stub/">network/server_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="vtt_client">
+  <span class="name"><a href="network_vtt_client/">network/vtt_client</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="vtt_client_stub">
+  <span class="name"><a href="network_vtt_client_stub/">network/vtt_client_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="vtt_relay_client">
+  <span class="name"><a href="network_vtt_relay_client/">network/vtt_relay_client</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="vtt_server">
+  <span class="name"><a href="network_vtt_server/">network/vtt_server</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="vtt_server_stub">
+  <span class="name"><a href="network_vtt_server_stub/">network/vtt_server_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="pdf_helper">
+  <span class="name"><a href="pdf_helper/">pdf_helper</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="vtt_state">
+  <span class="name"><a href="state_vtt_state/">state/vtt_state</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="map_library">
+  <span class="name"><a href="storage_map_library/">storage/map_library</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="table_screen">
+  <span class="name"><a href="table_screen/">table_screen</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="dev_log">
+  <span class="name"><a href="ui_dev_log/">ui/dev_log</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="dev_screen">
+  <span class="name"><a href="ui_dev_screen/">ui/dev_screen</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="dm_control_panel">
+  <span class="name"><a href="ui_dm_control_panel/">ui/dm_control_panel</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="tv_shell">
+  <span class="name"><a href="ui_tv_shell/">ui/tv_shell</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="vtt_companion_screen">
+  <span class="name"><a href="ui_vtt_companion_screen/">ui/vtt_companion_screen</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="vtt_screen">
+  <span class="name"><a href="ui_vtt_screen/">ui/vtt_screen</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="shorebird_helper">
+  <span class="name"><a href="update_shorebird_helper/">update/shorebird_helper</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="shorebird_helper_stub">
+  <span class="name"><a href="update_shorebird_helper_stub/">update/shorebird_helper_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="update_service">
+  <span class="name"><a href="update_update_service/">update/update_service</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="update_service_stub">
+  <span class="name"><a href="update_update_service_stub/">update/update_service_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+        </dl>
+      </section>
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li class="self-crumb">battlemap package</li>
+</ol>
+
+    <h5 class="hidden-xs"><span class="package-name">battlemap</span> <span class="package-kind">package</span></h5>
+    <ol>
+      <li class="section-title">Libraries</li>
+      <li><a href="companion_screen/">companion_screen</a></li>
+      <li><a href="game_battlemap_game/">game/battlemap_game</a></li>
+      <li><a href="game_components_fog_of_war_component/">game/components/fog_of_war_component</a></li>
+      <li><a href="game_components_grid_component/">game/components/grid_component</a></li>
+      <li><a href="game_components_grid_overlay_component/">game/components/grid_overlay_component</a></li>
+      <li><a href="game_components_live_stroke_component/">game/components/live_stroke_component</a></li>
+      <li><a href="game_components_map_image_component/">game/components/map_image_component</a></li>
+      <li><a href="game_components_pdf_background_component/">game/components/pdf_background_component</a></li>
+      <li><a href="game_components_portal_component/">game/components/portal_component</a></li>
+      <li><a href="game_components_strokes_component/">game/components/strokes_component</a></li>
+      <li><a href="game_components_token_component/">game/components/token_component</a></li>
+      <li><a href="game_components_token_layer/">game/components/token_layer</a></li>
+      <li><a href="game_components_wall_component/">game/components/wall_component</a></li>
+      <li><a href="game_vtt_game/">game/vtt_game</a></li>
+      <li><a href="game_state/">game_state</a></li>
+      <li><a href="main/">main</a></li>
+      <li><a href="model_draw_stroke/">model/draw_stroke</a></li>
+      <li><a href="model_map_library_entry/">model/map_library_entry</a></li>
+      <li><a href="model_map_token/">model/map_token</a></li>
+      <li><a href="model_session/">model/session</a></li>
+      <li><a href="model_uvtt_map/">model/uvtt_map</a></li>
+      <li><a href="model_uvtt_parser/">model/uvtt_parser</a></li>
+      <li><a href="network_client/">network/client</a></li>
+      <li><a href="network_client_stub/">network/client_stub</a></li>
+      <li><a href="network_http_download/">network/http_download</a></li>
+      <li><a href="network_http_download_stub/">network/http_download_stub</a></li>
+      <li><a href="network_http_upload/">network/http_upload</a></li>
+      <li><a href="network_http_upload_stub/">network/http_upload_stub</a></li>
+      <li><a href="network_relay_config/">network/relay_config</a></li>
+      <li><a href="network_remote_log/">network/remote_log</a></li>
+      <li><a href="network_remote_log_stub/">network/remote_log_stub</a></li>
+      <li><a href="network_server/">network/server</a></li>
+      <li><a href="network_server_stub/">network/server_stub</a></li>
+      <li><a href="network_vtt_client/">network/vtt_client</a></li>
+      <li><a href="network_vtt_client_stub/">network/vtt_client_stub</a></li>
+      <li><a href="network_vtt_relay_client/">network/vtt_relay_client</a></li>
+      <li><a href="network_vtt_server/">network/vtt_server</a></li>
+      <li><a href="network_vtt_server_stub/">network/vtt_server_stub</a></li>
+      <li><a href="pdf_helper/">pdf_helper</a></li>
+      <li><a href="state_vtt_state/">state/vtt_state</a></li>
+      <li><a href="storage_map_library/">storage/map_library</a></li>
+      <li><a href="table_screen/">table_screen</a></li>
+      <li><a href="ui_dev_log/">ui/dev_log</a></li>
+      <li><a href="ui_dev_screen/">ui/dev_screen</a></li>
+      <li><a href="ui_dm_control_panel/">ui/dm_control_panel</a></li>
+      <li><a href="ui_tv_shell/">ui/tv_shell</a></li>
+      <li><a href="ui_vtt_companion_screen/">ui/vtt_companion_screen</a></li>
+      <li><a href="ui_vtt_screen/">ui/vtt_screen</a></li>
+      <li><a href="update_shorebird_helper/">update/shorebird_helper</a></li>
+      <li><a href="update_shorebird_helper_stub/">update/shorebird_helper_stub</a></li>
+      <li><a href="update_update_service/">update/update_service</a></li>
+      <li><a href="update_update_service_stub/">update/update_service_stub</a></li>
+</ol>
+
+  </div>
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+  </div>
+</main>
+<footer>
+  <span class="no-break">
+    battlemap
+      1.0.8+9
+  </span>
+  
+</footer>
+
+
+<script src="static-assets/highlight.pack.js?v1"></script>
+<script src="static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+

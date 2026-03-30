@@ -1,17 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flame/game.dart' hide Route, Matrix4, Vector2, Vector3, Vector4;
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:uuid/uuid.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../game/vtt_game.dart';
 import '../model/draw_stroke.dart';
 import '../model/map_library_entry.dart';
+import '../model/map_token.dart';
 import '../model/session.dart';
 import '../network/http_download_stub.dart'
     if (dart.library.io) '../network/http_download.dart';
@@ -19,6 +23,8 @@ import '../network/relay_config.dart';
 import '../network/remote_log_stub.dart'
     if (dart.library.io) '../network/remote_log.dart';
 import '../network/vtt_relay_client.dart';
+import '../pdf_helper.dart';
+import '../model/aoe_template.dart';
 import '../state/vtt_state.dart';
 import '../storage/map_library.dart';
 import '../update/update_service_stub.dart'
@@ -89,6 +95,7 @@ class _TvShellState extends State<TvShell> {
   String? _activeSessionId;
   String _activeSessionName = 'Session';
   DateTime? _sessionCreatedAt;
+  bool _isPdfSession = false;
 
   // Update state
   double? _updateProgress;
@@ -119,6 +126,7 @@ class _TvShellState extends State<TvShell> {
   void initState() {
     super.initState();
     _state.isInteractive = false; // TV has no touch
+    WakelockPlus.enable(); // Keep TV screen on
     RemoteLog.sendDeviceInfo();
     _library.init().then((_) {
       _log('Library loaded: ${_library.entries.length} maps');
@@ -129,6 +137,7 @@ class _TvShellState extends State<TvShell> {
 
   @override
   void dispose() {
+    WakelockPlus.disable();
     _state.removeListener(_onStateChanged);
     _broadcastTimer?.cancel();
     _autoSaveTimer?.cancel();
@@ -170,6 +179,28 @@ class _TvShellState extends State<TvShell> {
     _sendLibraryListing();
     // Send current view + game state
     _broadcastFullState();
+    // If TV is in game view, tell companion where to get the map
+    if (_currentView == TvView.game && _state.map != null) {
+      final entry = _activeMapId != null ? _library.getEntry(_activeMapId!) : null;
+      if (entry?.isPdf == true && _state.map?.imageBytes != null) {
+        // PDF: send rendered image via chunks (companion can't render PDFs)
+        _log('Reconnect: sending rendered PDF image to companion');
+        _relay.sendMapChunked(_state.map!.imageBytes);
+      } else if (entry?.vpsUrl != null) {
+        _log('Reconnect: telling companion to download map from ${entry!.vpsUrl}');
+        _relay.sendRaw(jsonEncode({
+          'type': 'vtt.downloadMap',
+          'url': entry.vpsUrl,
+          'displayName': entry.displayName,
+        }));
+      } else if (_state.rawMapBytes != null) {
+        _log('Reconnect: sending raw map bytes via chunks');
+        _relay.sendMapChunked(_state.rawMapBytes!);
+      } else if (_state.map?.imageBytes != null) {
+        _log('Reconnect: sending image bytes via chunks');
+        _relay.sendMapChunked(_state.map!.imageBytes);
+      }
+    }
   }
 
   void _broadcastFullState() {
@@ -227,6 +258,173 @@ class _TvShellState extends State<TvShell> {
     }
   }
 
+  // ─── PDF download + render ─────────────────────────────
+
+  /// Downloads a PDF from the VPS, saves it to the library, renders the
+  /// first page to an image, and starts a new session.
+  ///
+  /// Called when the companion sends a `vtt.pdfUploaded` command after
+  /// uploading a PDF file to the VPS. The TV handles all rendering since
+  /// pdfrx requires native platform support (not available on web).
+  ///
+  /// The [url] is the VPS HTTP download URL. [displayName] is shown in the
+  /// library. [gridCols] and [gridRows] are the user-configured grid
+  /// dimensions from the companion's grid config dialog.
+  ///
+  /// See also:
+  /// - [PdfHelper.renderPdfPage], which does the actual PDF-to-PNG conversion.
+  /// - [VttState.loadPdfAsMap], which creates a synthetic [UvttMap] from the image.
+  Future<void> _downloadAndLoadPdf(
+    String url,
+    String displayName,
+    int gridCols,
+    int gridRows,
+  ) async {
+    try {
+      _log('Downloading PDF from VPS: $url');
+      setState(() => _transferProgress = 0.0);
+
+      final pdfBytes = await httpDownload(url, onProgress: (p) {
+        setState(() => _transferProgress = p);
+      });
+      setState(() => _transferProgress = null);
+
+      if (pdfBytes == null) {
+        _sendError('Failed to download PDF from $url');
+        return;
+      }
+      _log('PDF download complete: ${pdfBytes.length} bytes');
+
+      // Save PDF to library with isPdf flag
+      final entry = await _library.addMap(
+        pdfBytes,
+        displayName,
+        isPdf: true,
+        pdfGridCols: gridCols,
+        pdfGridRows: gridRows,
+      );
+      entry.vpsUrl = url;
+      await _library.updateEntry(entry);
+      _log('Saved PDF to library: ${entry.id} (vpsUrl=$url)');
+      _sendLibraryListing();
+
+      // Render first page to image bytes
+      final rendered = await PdfHelper.renderPdfPage(pdfBytes);
+      if (rendered == null) {
+        _sendError('Failed to render PDF page');
+        return;
+      }
+
+      final imageBytes = rendered['imageBytes'] as Uint8List;
+      final width = rendered['width'] as int;
+      final height = rendered['height'] as int;
+      _log('PDF rendered: ${width}x$height (${(imageBytes.length / 1024).round()} KB)');
+
+      // Load as map using the synthetic UvttMap path
+      _state.loadPdfAsMap(
+        imageBytes,
+        gridCols: gridCols,
+        gridRows: gridRows,
+        imageWidth: width.toDouble(),
+        imageHeight: height.toDouble(),
+      );
+      _ensureGame();
+      _game!.zoomToFit();
+
+      _activeMapId = entry.id;
+      _activeSessionId = const Uuid().v4();
+      _activeSessionName = 'Session 1';
+      _sessionCreatedAt = DateTime.now();
+
+      _setView(TvView.game);
+      _state.addListener(_onStateChanged);
+
+      // Initial save (mark as PDF session)
+      await _saveCurrentSession(isPdfSession: true);
+
+      // Send the rendered image to the companion so it can display the map.
+      // The companion can't render PDFs on web, so we send the image bytes.
+      if (_state.map?.imageBytes != null) {
+        _log('Sending rendered PDF image to companion (${(_state.map!.imageBytes.length / 1024).round()} KB)');
+        _relay.sendMapChunked(_state.map!.imageBytes);
+      }
+      _broadcastFullState();
+      _log('PDF session started: $_activeSessionId');
+    } catch (e, stack) {
+      _sendError('PDF processing failed: $e');
+      _log('Stack: ${stack.toString().split('\n').take(5).join(' | ')}');
+      setState(() => _transferProgress = null);
+    }
+  }
+
+  // ─── Image download from VPS ─────────────────────────────
+
+  Future<void> _downloadAndLoadImage(
+    String url, String displayName, int gridCols, int gridRows,
+  ) async {
+    try {
+      _log('Downloading image from VPS: $url');
+      setState(() => _transferProgress = 0.0);
+
+      final imageBytes = await httpDownload(url, onProgress: (p) {
+        setState(() => _transferProgress = p);
+      });
+      setState(() => _transferProgress = null);
+
+      if (imageBytes == null) {
+        _sendError('Failed to download image from $url');
+        return;
+      }
+      _log('Image download complete: ${imageBytes.length} bytes');
+
+      // Save to library as a "PDF" type (image with user grid config, no UVTT metadata)
+      final entry = await _library.addMap(
+        imageBytes, displayName,
+        isPdf: true, pdfGridCols: gridCols, pdfGridRows: gridRows,
+      );
+      entry.vpsUrl = url;
+      await _library.updateEntry(entry);
+      _sendLibraryListing();
+
+      // Decode image to get dimensions
+      final codec = await ui.instantiateImageCodec(imageBytes);
+      final frame = await codec.getNextFrame();
+      final width = frame.image.width;
+      final height = frame.image.height;
+      frame.image.dispose();
+      _log('Image decoded: ${width}x$height');
+
+      // Load as map — imageBytes are already PNG/JPG, loadPdfAsMap handles it
+      _state.loadPdfAsMap(
+        imageBytes,
+        gridCols: gridCols, gridRows: gridRows,
+        imageWidth: width.toDouble(), imageHeight: height.toDouble(),
+      );
+      _ensureGame();
+      _game!.zoomToFit();
+
+      _activeMapId = entry.id;
+      _activeSessionId = const Uuid().v4();
+      _activeSessionName = 'Session 1';
+      _sessionCreatedAt = DateTime.now();
+      _isPdfSession = true;
+
+      _setView(TvView.game);
+      _state.addListener(_onStateChanged);
+      await _saveCurrentSession();
+      // Send rendered image to companion
+      if (_state.map?.imageBytes != null) {
+        _relay.sendMapChunked(_state.map!.imageBytes);
+      }
+      _broadcastFullState();
+      _log('Image map loaded: ${entry.id}');
+    } catch (e, stack) {
+      _log('ERROR loading image: $e');
+      _log('Stack: ${stack.toString().split('\n').take(3).join(' | ')}');
+      setState(() => _transferProgress = null);
+    }
+  }
+
   // ─── Map received via chunked transfer (fallback) ───────
 
   Future<void> _onMapReceived(Uint8List bytes) async {
@@ -246,13 +444,49 @@ class _TvShellState extends State<TvShell> {
 
   // ─── Session management ─────────────────────────────────
 
+  /// Starts a new game session for the given [mapId].
+  ///
+  /// Loads the map bytes from the library, parses and displays it, creates
+  /// a new session ID, and switches to game view. For PDF maps, renders the
+  /// first page to an image before loading.
+  ///
+  /// If [sendMapToCompanion] is `true`, sends a download URL or chunked
+  /// transfer so the companion can display the map locally.
+  ///
+  /// See also:
+  /// - [_resumeSession] for restoring a previously saved session.
+  /// - [_downloadAndLoadPdf] for the initial PDF upload flow.
   Future<void> _startNewSession(String mapId, String name,
       {bool sendMapToCompanion = true}) async {
     try {
       _log('Starting new session: mapId=$mapId, name="$name", sendMap=$sendMapToCompanion');
+      final entry = _library.getEntry(mapId);
       final bytes = await _library.loadMapBytes(mapId);
       _log('Map loaded from disk: ${bytes.length} bytes');
-      _state.loadMap(bytes);
+
+      // Check if this is a PDF map — render page to image first
+      if (entry?.isPdf == true) {
+        final rendered = await PdfHelper.renderPdfPage(bytes);
+        if (rendered == null) {
+          _sendError('Failed to render PDF page for map $mapId');
+          return;
+        }
+        final imageBytes = rendered['imageBytes'] as Uint8List;
+        final width = rendered['width'] as int;
+        final height = rendered['height'] as int;
+        final gridCols = entry!.pdfGridCols ?? 20;
+        final gridRows = entry.pdfGridRows ?? 15;
+        _log('PDF rendered: ${width}x$height, grid ${gridCols}x$gridRows');
+        _state.loadPdfAsMap(
+          imageBytes,
+          gridCols: gridCols,
+          gridRows: gridRows,
+          imageWidth: width.toDouble(),
+          imageHeight: height.toDouble(),
+        );
+      } else {
+        _state.loadMap(bytes);
+      }
       _ensureGame();
       _game!.zoomToFit();
 
@@ -265,12 +499,15 @@ class _TvShellState extends State<TvShell> {
       _state.addListener(_onStateChanged);
 
       // Initial save
-      await _saveCurrentSession();
+      await _saveCurrentSession(isPdfSession: entry?.isPdf == true);
 
       // Tell companion where to download the map (if they don't already have it)
       if (sendMapToCompanion) {
-        final entry = _library.getEntry(mapId);
-        if (entry?.vpsUrl != null) {
+        if (entry?.isPdf == true && _state.map?.imageBytes != null) {
+          // PDF: send rendered image via chunks (companion can't render PDFs)
+          _log('Sending rendered PDF image to companion (${(_state.map!.imageBytes.length / 1024).round()} KB)');
+          _relay.sendMapChunked(_state.map!.imageBytes);
+        } else if (entry?.vpsUrl != null) {
           _log('Telling companion to download map from ${entry!.vpsUrl}');
           _relay.sendRaw(jsonEncode({
             'type': 'vtt.downloadMap',
@@ -291,6 +528,18 @@ class _TvShellState extends State<TvShell> {
     }
   }
 
+  /// Resumes a previously saved session.
+  ///
+  /// Loads the session from disk, restores all state (fog, portals, tokens,
+  /// drawings, camera), and switches to game view. For PDF sessions, renders
+  /// the PDF page before loading.
+  ///
+  /// Sends the map to the companion via download URL or chunked transfer so
+  /// it can display the map locally.
+  ///
+  /// See also:
+  /// - [_startNewSession] for creating fresh sessions.
+  /// - [_saveCurrentSession] for the auto-save mechanism.
   Future<void> _resumeSession(String sessionId) async {
     try {
       _log('Resuming session: $sessionId');
@@ -300,9 +549,34 @@ class _TvShellState extends State<TvShell> {
         return;
       }
 
+      final entry = _library.getEntry(session.mapId);
       final bytes = await _library.loadMapBytes(session.mapId);
       _log('Map loaded from disk: ${bytes.length} bytes');
-      _state.loadMap(bytes);
+
+      // Check if this is a PDF session — render page to image first
+      final isPdf = session.isPdfSession || (entry?.isPdf == true);
+      if (isPdf) {
+        final rendered = await PdfHelper.renderPdfPage(bytes);
+        if (rendered == null) {
+          _sendError('Failed to render PDF page for session $sessionId');
+          return;
+        }
+        final imageBytes = rendered['imageBytes'] as Uint8List;
+        final width = rendered['width'] as int;
+        final height = rendered['height'] as int;
+        final gridCols = entry?.pdfGridCols ?? 20;
+        final gridRows = entry?.pdfGridRows ?? 15;
+        _log('PDF rendered: ${width}x$height, grid ${gridCols}x$gridRows');
+        _state.loadPdfAsMap(
+          imageBytes,
+          gridCols: gridCols,
+          gridRows: gridRows,
+          imageWidth: width.toDouble(),
+          imageHeight: height.toDouble(),
+        );
+      } else {
+        _state.loadMap(bytes);
+      }
       _ensureGame();
 
       _state.revealedCells = Set<int>.from(session.revealedCells);
@@ -315,10 +589,26 @@ class _TvShellState extends State<TvShell> {
       _state.tvWidthInches = session.tvWidthInches;
       _state.calibratedBaseZoom = session.calibratedBaseZoom;
 
+      // Restore tokens and drawings
+      _state.tokens = session.tokenData
+          .map((t) => MapToken.fromJson(t))
+          .toList();
+      _state.strokes = session.strokeData
+          .map((s) => DrawStroke.fromJson(s))
+          .toList();
+      _state.drawColor = Color(session.drawColorValue);
+      _state.drawWidth = session.drawWidth;
+      final modeName = session.interactionMode;
+      _state.interactionMode = InteractionMode.values.firstWhere(
+        (m) => m.name == modeName,
+        orElse: () => InteractionMode.fogReveal,
+      );
+
       _activeMapId = session.mapId;
       _activeSessionId = session.id;
       _activeSessionName = session.name;
       _sessionCreatedAt = session.createdAt;
+      _isPdfSession = isPdf;
 
       _setView(TvView.game);
       _state.addListener(_onStateChanged);
@@ -327,17 +617,27 @@ class _TvShellState extends State<TvShell> {
           session.cameraX, session.cameraY, session.cameraZoom, session.cameraAngle);
 
       // Send map to companion so it can display it
-      final entry = _library.getEntry(session.mapId);
-      if (entry?.vpsUrl != null) {
+      _log('Send map: isPdf=$isPdf, hasMap=${_state.map != null}, hasImageBytes=${_state.map?.imageBytes != null}, imageLen=${_state.map?.imageBytes?.length}');
+      if (isPdf && _state.map?.imageBytes != null) {
+        // PDF: send rendered image via chunks (companion can't render PDFs)
+        _log('Sending rendered PDF image to companion (${(_state.map!.imageBytes.length / 1024).round()} KB)');
+        _relay.sendMapChunked(_state.map!.imageBytes);
+      } else if (entry?.vpsUrl != null) {
+        // UVTT: tell companion to download from VPS
         _log('Telling companion to download map from ${entry!.vpsUrl}');
         _relay.sendRaw(jsonEncode({
           'type': 'vtt.downloadMap',
           'url': entry.vpsUrl,
           'displayName': entry.displayName,
         }));
-      } else {
-        _log('No VPS URL, sending map via chunks');
-        _relay.sendMapChunked(bytes);
+      } else if (_state.rawMapBytes != null) {
+        // Fallback: send raw bytes via chunks
+        _log('No VPS URL, sending raw map bytes via chunks');
+        _relay.sendMapChunked(_state.rawMapBytes!);
+      } else if (_state.map?.imageBytes != null) {
+        // Last resort: send image bytes
+        _log('No VPS URL or raw bytes, sending image bytes via chunks');
+        _relay.sendMapChunked(_state.map!.imageBytes);
       }
       _broadcastFullState();
       _log('Session resumed: ${session.name}');
@@ -364,8 +664,17 @@ class _TvShellState extends State<TvShell> {
     });
   }
 
-  Future<void> _saveCurrentSession() async {
+  /// Saves the current session state to disk.
+  ///
+  /// If [isPdfSession] is provided, it updates [_isPdfSession] and includes
+  /// it in the serialized session so that future resumes know to render the
+  /// PDF page before loading.
+  ///
+  /// Called both from the initial session creation and from the 2-second
+  /// auto-save timer.
+  Future<void> _saveCurrentSession({bool? isPdfSession}) async {
     if (_activeSessionId == null || _activeMapId == null) return;
+    if (isPdfSession != null) _isPdfSession = isPdfSession;
     final camera = _game?.getCameraState() ?? {'x': 0.0, 'y': 0.0, 'zoom': 1.0, 'angle': 0.0};
     final session = Session(
       id: _activeSessionId!,
@@ -382,10 +691,16 @@ class _TvShellState extends State<TvShell> {
       revealMode: _state.revealMode,
       tvWidthInches: _state.tvWidthInches,
       calibratedBaseZoom: _state.calibratedBaseZoom,
+      tokenData: _state.tokens.map((t) => t.toJson()).toList(),
+      strokeData: _state.strokes.map((s) => s.toJson()).toList(),
+      drawColorValue: _state.drawColor.toARGB32(),
+      drawWidth: _state.drawWidth,
+      interactionMode: _state.interactionMode.name,
       cameraX: (camera['x'] as num).toDouble(),
       cameraY: (camera['y'] as num).toDouble(),
       cameraZoom: (camera['zoom'] as num).toDouble(),
       cameraAngle: (camera['angle'] as num).toDouble(),
+      isPdfSession: _isPdfSession,
     );
     await _library.saveSession(session);
     RemoteLog.sendEvent('sessionSaved', {
@@ -407,6 +722,7 @@ class _TvShellState extends State<TvShell> {
       'activeSessionId': _activeSessionId,
       'hasLoadedMap': _state.map != null,
       'hasGame': _game != null,
+      'isPdfSession': _isPdfSession,
       'revealedCells': _state.revealedCells.length,
       'openPortals': _state.openPortals.length,
       'fogEnabled': _state.fogEnabled,
@@ -482,15 +798,17 @@ class _TvShellState extends State<TvShell> {
   // automatically on app launch. The "restart" command applies them.
 
   void _handlePatchRestart() {
-    _log('Restarting app to apply Shorebird patch...');
+    _log('Restarting app (Phoenix rebirth) to apply Shorebird patch...');
     _relay.sendRaw(jsonEncode({
       'type': 'patch.progress',
       'status': 'Restarting...',
       'progress': 1.0,
     }));
-    // Save current session before restart
+    // Save current session, then rebirth the Dart VM (applies Shorebird patch)
     _saveCurrentSession().then((_) {
-      SystemNavigator.pop();
+      if (mounted) {
+        Phoenix.rebirth(context);
+      }
     });
   }
 
@@ -530,7 +848,8 @@ class _TvShellState extends State<TvShell> {
           type == 'vtt.toggleWalls' || type == 'vtt.toggleRevealMode' ||
           type == 'vtt.togglePortal' || type == 'vtt.revealAll' ||
           type == 'vtt.hideAll' || type == 'vtt.calibrate' ||
-          type == 'vtt.resetCalibration' || type == 'vtt.clearMap') {
+          type == 'vtt.resetCalibration' || type == 'vtt.clearMap' ||
+          type == 'vtt.pdfUploaded' || type == 'vtt.imageUploaded') {
         RemoteLog.sendEvent('cmd', {'type': type, 'msg': 'Command: $type'});
       }
 
@@ -636,6 +955,24 @@ class _TvShellState extends State<TvShell> {
             msg['displayName'] as String? ?? 'Uploaded map',
           );
 
+        // PDF uploaded to VPS — TV downloads, renders, and loads as map
+        case 'vtt.pdfUploaded':
+          _downloadAndLoadPdf(
+            msg['url'] as String,
+            msg['displayName'] as String? ?? 'PDF map',
+            msg['gridCols'] as int? ?? 20,
+            msg['gridRows'] as int? ?? 15,
+          );
+
+        // Image uploaded to VPS — TV downloads and loads directly as map
+        case 'vtt.imageUploaded':
+          _downloadAndLoadImage(
+            msg['url'] as String,
+            msg['displayName'] as String? ?? 'Image map',
+            msg['gridCols'] as int? ?? 20,
+            msg['gridRows'] as int? ?? 15,
+          );
+
         // Diagnostics — respond with TV state
         case 'diag.status':
           _sendDiagStatus();
@@ -664,6 +1001,14 @@ class _TvShellState extends State<TvShell> {
           _state.moveToken(msg['id'] as String, msg['gridX'] as int, msg['gridY'] as int);
         case 'vtt.removeToken':
           _state.removeToken(msg['id'] as String);
+        case 'vtt.editToken':
+          _state.editToken(
+            msg['id'] as String,
+            name: msg['name'] as String?,
+            maxHp: msg['maxHp'] as int?,
+            currentHp: msg['currentHp'] as int?,
+            conditions: (msg['conditions'] as List?)?.cast<String>().toSet(),
+          );
         case 'vtt.clearTokens':
           _state.clearTokens();
 
@@ -715,16 +1060,22 @@ class _TvShellState extends State<TvShell> {
           _state.toggleRevealMode();
         case 'vtt.zoomIn':
           _game?.zoomIn();
+          _broadcastFullState();
         case 'vtt.zoomOut':
           _game?.zoomOut();
+          _broadcastFullState();
         case 'vtt.zoomToFit':
           _game?.zoomToFit();
+          _broadcastFullState();
         case 'vtt.rotateCW':
           _game?.rotateCW();
+          _broadcastFullState();
         case 'vtt.rotateCCW':
           _game?.rotateCCW();
+          _broadcastFullState();
         case 'vtt.resetRotation':
           _game?.resetRotation();
+          _broadcastFullState();
         case 'vtt.calibrate':
           final screenWidth = MediaQueryData.fromView(
             WidgetsBinding.instance.platformDispatcher.views.first,
@@ -735,6 +1086,31 @@ class _TvShellState extends State<TvShell> {
           );
         case 'vtt.resetCalibration':
           _state.resetCalibration();
+
+        // Undo / Redo
+        case 'vtt.undo':
+          _state.undo();
+        case 'vtt.redo':
+          _state.redo();
+
+        // Shadow mode
+        case 'vtt.toggleShadowMode':
+          _state.toggleShadowMode();
+        case 'vtt.commitShadow':
+          _state.commitShadow();
+        case 'vtt.clearShadow':
+          _state.clearShadow();
+
+        // Room reveal
+        case 'vtt.roomReveal':
+          final cells = (msg['cells'] as List).cast<int>().toSet();
+          _state.revealRoom(cells);
+
+        // AoE templates
+        case 'vtt.setAoe':
+          _state.setAoe(AoeTemplate.fromJson(msg));
+        case 'vtt.clearAoe':
+          _state.clearAoe();
       }
     } catch (e) {
       _sendError('Command dispatch error: $e');
@@ -745,40 +1121,78 @@ class _TvShellState extends State<TvShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF111111),
-      body: Stack(
-        children: [
-          // Main view
-          _buildCurrentView(),
+    return PopScope(
+      canPop: _currentView == TvView.waiting,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _navigateBack();
+        }
+      },
+      child: Focus(
+        autofocus: true,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            _log('Key: ${event.logicalKey.keyLabel}');
+            if (event.logicalKey == LogicalKeyboardKey.goBack ||
+                event.logicalKey == LogicalKeyboardKey.escape ||
+                event.logicalKey == LogicalKeyboardKey.browserBack) {
+              _navigateBack();
+              return KeyEventResult.handled;
+            }
+          }
+          return KeyEventResult.ignored;
+        },
+        child: Scaffold(
+          backgroundColor: const Color(0xFF111111),
+          body: Stack(
+            children: [
+              // Main view
+              _buildCurrentView(),
 
-          // Back button (always visible)
-          Positioned(
-            top: 16,
-            left: 16,
-            child: IconButton(
-              autofocus: true,
-              icon: const Icon(Icons.arrow_back, color: Colors.white38),
-              onPressed: () => Navigator.pop(context),
-              focusColor: Colors.white.withValues(alpha: 0.2),
-            ),
+              // Back button (always visible)
+              Positioned(
+                top: 16,
+                left: 16,
+                child: IconButton(
+                  autofocus: true,
+                  icon: const Icon(Icons.arrow_back, color: Colors.white38),
+                  onPressed: _navigateBack,
+                  focusColor: Colors.white.withValues(alpha: 0.2),
+                ),
+              ),
+
+              // Relay status (top-right, always visible)
+              Positioned(
+                top: 16,
+                right: 16,
+                child: _buildRelayStatus(),
+              ),
+
+              // Transfer progress (centered overlay)
+              if (_transferProgress != null) _buildTransferOverlay(),
+
+              // Update progress (centered overlay)
+              if (_updateProgress != null) _buildUpdateOverlay(),
+            ],
           ),
-
-          // Relay status (top-right, always visible)
-          Positioned(
-            top: 16,
-            right: 16,
-            child: _buildRelayStatus(),
-          ),
-
-          // Transfer progress (centered overlay)
-          if (_transferProgress != null) _buildTransferOverlay(),
-
-          // Update progress (centered overlay)
-          if (_updateProgress != null) _buildUpdateOverlay(),
-        ],
+        ),
       ),
     );
+  }
+
+  void _navigateBack() {
+    _log('navigateBack from ${_currentView.name}');
+    if (_currentView == TvView.game) {
+      _state.removeListener(_onStateChanged);
+      _setView(TvView.library);
+      _broadcastFullState();
+      _sendLibraryListing();
+    } else if (_currentView == TvView.waiting) {
+      Navigator.pop(context);
+    } else {
+      _setView(TvView.waiting);
+      _broadcastFullState();
+    }
   }
 
   Widget _buildCurrentView() {
@@ -841,7 +1255,7 @@ class _TvShellState extends State<TvShell> {
             Icon(Icons.library_books, color: Colors.white12, size: 64),
             SizedBox(height: 16),
             Text(
-              'Map Library is empty\nUpload a map from your phone',
+              'Map Library is empty\nUpload a map or PDF from your phone',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.white38, fontSize: 18),
             ),
@@ -885,18 +1299,20 @@ class _TvShellState extends State<TvShell> {
   }
 
   Widget _buildMapCard(MapLibraryEntry entry) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
+    return _FocusableCard(
+      onSelect: () {
+        // Start new session with this map (TV remote fallback)
+        _startNewSession(entry.id, 'Session');
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.map, color: Colors.white24, size: 32),
+          Icon(
+            entry.isPdf ? Icons.picture_as_pdf : Icons.map,
+            color: entry.isPdf ? Colors.redAccent.withValues(alpha: 0.5) : Colors.white24,
+            size: 32,
+          ),
           const SizedBox(height: 8),
           Text(
             entry.displayName,
@@ -910,8 +1326,11 @@ class _TvShellState extends State<TvShell> {
           ),
           const SizedBox(height: 4),
           Text(
-            '${entry.gridCols}x${entry.gridRows} grid  •  '
-            '${(entry.fileSizeBytes / 1024 / 1024).toStringAsFixed(1)} MB',
+            entry.isPdf
+                ? '${entry.gridCols}x${entry.gridRows} grid  •  PDF  •  '
+                  '${(entry.fileSizeBytes / 1024 / 1024).toStringAsFixed(1)} MB'
+                : '${entry.gridCols}x${entry.gridRows} grid  •  '
+                  '${(entry.fileSizeBytes / 1024 / 1024).toStringAsFixed(1)} MB',
             style: const TextStyle(
               color: Colors.white30,
               fontSize: 11,
@@ -1048,6 +1467,59 @@ class _TvShellState extends State<TvShell> {
               style: const TextStyle(color: Colors.white38, fontSize: 16),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A card widget that responds to D-pad focus and Select/Enter key.
+/// Used in the TV library grid for remote control fallback.
+class _FocusableCard extends StatefulWidget {
+  final VoidCallback onSelect;
+  final Widget child;
+
+  const _FocusableCard({required this.onSelect, required this.child});
+
+  @override
+  State<_FocusableCard> createState() => _FocusableCardState();
+}
+
+class _FocusableCardState extends State<_FocusableCard> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      onFocusChange: (focused) => setState(() => _focused = focused),
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent &&
+            (event.logicalKey == LogicalKeyboardKey.select ||
+             event.logicalKey == LogicalKeyboardKey.enter ||
+             event.logicalKey == LogicalKeyboardKey.gameButtonA)) {
+          widget.onSelect();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      },
+      child: GestureDetector(
+        onTap: widget.onSelect,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _focused
+                ? Colors.white.withValues(alpha: 0.15)
+                : Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _focused
+                  ? Colors.greenAccent.withValues(alpha: 0.6)
+                  : Colors.white.withValues(alpha: 0.1),
+              width: _focused ? 2.0 : 1.0,
+            ),
+          ),
+          child: widget.child,
         ),
       ),
     );

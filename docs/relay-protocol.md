@@ -46,10 +46,16 @@ relay sends ping every 20s. client sends ping every 15s. zombie detection at 30-
 
 ## map transfer
 
-### upload (phone → VPS → TV)
+### upload UVTT (phone → VPS → TV)
 1. phone HTTP PUTs file to `http://VPS:4242/upload/<filename>`
 2. phone sends: `{"type": "vtt.mapUploaded", "url": "http://...", "displayName": "..."}`
 3. TV HTTP GETs the file from the URL
+
+### upload PDF (phone → VPS → TV)
+1. phone shows grid config dialog (PDFs have no embedded grid metadata)
+2. phone HTTP PUTs file to `http://VPS:4242/upload/<filename>`
+3. phone sends: `{"type": "vtt.pdfUploaded", "url": "http://...", "displayName": "...", "gridCols": 20, "gridRows": 15}`
+4. TV HTTP GETs the PDF, renders first page to PNG via pdfrx, loads as map
 
 ### download (TV → phone, for session resume)
 ```

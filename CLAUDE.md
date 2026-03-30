@@ -74,6 +74,28 @@ Target TV device: **Xiaomi TV Box S 3rd Gen** (~$60-70)
 - Dispose textures when not in use (2 GB RAM)
 - All control elements must be **focusable** for TV remote fallback (see policy above)
 
+### Quality and Testing Policy
+
+**IMPORTANT: One feature at a time, fully tested before the next.**
+
+- Build one feature, test it end-to-end on real devices (phone + TV), then move to the next
+- Do NOT implement 3-4 features in parallel agents touching the same state — this creates integration bugs
+- New features default to OFF (opt-in, not opt-out) to avoid breaking existing functionality
+- Every new feature needs: unit tests + manual integration test on real devices
+- When something breaks, fix it before adding more features
+- Use `tools/diag.py` to query TV state remotely before/after changes
+
+### IO and Feedback Policy
+
+**IMPORTANT: No IO operation without a loading indicator.**
+
+- Every network request, file read, map load, or session save must show visible feedback
+- Use progress bars for large transfers (map upload/download)
+- Use snackbars for quick operations ("Loading session...", "Map saved")
+- Use overlay spinners for blocking operations (PDF rendering)
+- Never let the user tap something and see nothing happen — always show feedback immediately
+- Debounce repeated taps on action buttons (prevent double-loading sessions)
+
 ### Documentation Policy
 
 **IMPORTANT: All code documentation must be kept up to date at all times.**

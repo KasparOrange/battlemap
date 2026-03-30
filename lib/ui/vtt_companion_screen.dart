@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flame/game.dart' hide Route, Matrix4, Vector2, Vector3, Vector4;
@@ -11,6 +12,7 @@ import '../network/http_upload_stub.dart'
 import '../network/relay_config.dart';
 
 import '../game/vtt_game.dart';
+import '../model/aoe_template.dart';
 import '../model/map_library_entry.dart';
 import '../model/session.dart';
 import '../network/vtt_relay_client.dart';
@@ -84,6 +86,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   // Session loading progress
   String? _loadingSessionId;
 
+  // Debounce: prevents double-tap on session/map loading
+  bool _isLoading = false;
+  Timer? _loadingTimeout;
+
   bool get _isNetworked => !widget.localMode;
 
   @override
@@ -97,6 +103,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
 
   @override
   void dispose() {
+    _loadingTimeout?.cancel();
     _state.removeListener(_onStateChanged);
     _relaySub?.cancel();
     _relay?.dispose();
@@ -105,6 +112,42 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   }
 
   void _onStateChanged() => setState(() {});
+
+  /// Shows a floating [SnackBar] with the given [msg].
+  ///
+  /// Optionally accepts a background [color] (defaults to `Colors.white24`).
+  void _showSnack(String msg, {Color? color}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: color ?? Colors.white24,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  /// Marks a loading action as started and arms a 30-second timeout.
+  ///
+  /// Returns `false` if another action is already in progress (double-tap
+  /// guard). The caller should abort when `false` is returned.
+  bool _beginLoading() {
+    if (_isLoading) return false;
+    _isLoading = true;
+    _loadingTimeout?.cancel();
+    _loadingTimeout = Timer(const Duration(seconds: 30), () {
+      _isLoading = false;
+    });
+    return true;
+  }
+
+  /// Clears the loading guard so the next action can proceed.
+  void _endLoading() {
+    _isLoading = false;
+    _loadingTimeout?.cancel();
+  }
 
   void _connectRelay() {
     _relay = VttRelayClient(role: 'companion');
@@ -119,12 +162,19 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       // Extract TV view state
       final view = msg['tvView'] as String?;
       if (!mounted) return;
-      if (view != null && view != _tvView) {
-        // Clear loading state when TV switches to game view
-        if (view == 'game') {
-          _loadingSessionId = null;
+      if (view != null) {
+        if (view == 'game' && _state.map == null) {
+          // TV is in game view but we don't have the map yet.
+          // Show library so user can see sessions and progress.
+          _loadingSessionId ??= msg['activeSessionId'] as String?;
+          setState(() => _tvView = 'library');
+        } else {
+          if (view == 'game') {
+            _loadingSessionId = null;
+            _endLoading();
+          }
+          setState(() => _tvView = view);
         }
-        setState(() => _tvView = view);
       }
       setState(() {
         _activeMapId = msg['activeMapId'] as String?;
@@ -136,7 +186,31 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     };
     _relay!.onMapLoaded = (bytes) {
       DevLog.add('Companion: map received via chunks (${(bytes.length / 1024).round()} KB)');
-      _state.loadMap(bytes);
+      try {
+        _state.loadMap(bytes); // Try UVTT first
+      } catch (_) {
+        // Not valid UVTT — treat as raw image (rendered PDF or image map).
+        // Use grid info from the TV's last fullState if available.
+        final gridCols = _state.map?.resolution.mapSize.dx.toInt() ?? 20;
+        final gridRows = _state.map?.resolution.mapSize.dy.toInt() ?? 15;
+        DevLog.add('Companion: not UVTT, loading as image (${gridCols}x$gridRows grid)');
+        // Decode image to get dimensions
+        ui.instantiateImageCodec(bytes).then((codec) async {
+          final frame = await codec.getNextFrame();
+          final w = frame.image.width.toDouble();
+          final h = frame.image.height.toDouble();
+          frame.image.dispose();
+          _state.loadPdfAsMap(bytes,
+            gridCols: gridCols, gridRows: gridRows,
+            imageWidth: w, imageHeight: h,
+          );
+          _onMapReady();
+        }).catchError((e) {
+          DevLog.add('Companion: image decode failed: $e');
+        });
+        return; // _onMapReady called in the then() above
+      }
+      _onMapReady();
     };
     _relay!.onMapDownloadUrl = (url, name) {
       DevLog.add('Companion: downloading map "$name" from VPS');
@@ -202,6 +276,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.onTokenAdded = (token) => _relay!.sendAddToken(token.gridX, token.gridY);
     _state.onTokenRemoved = (id) => _relay!.sendRemoveToken(id);
     _state.onTokenMoved = (id, x, y) => _relay!.sendMoveToken(id, x, y);
+    _state.onTokenEdited = (id, name, maxHp, currentHp, conditions) =>
+        _relay!.sendEditToken(id,
+            name: name, maxHp: maxHp, currentHp: currentHp, conditions: conditions);
     _state.onStrokeAdded = (stroke) => _relay!.sendAddStroke(stroke.toJson());
     _state.onDrawingsCleared = () => _relay!.sendClearDrawings();
     _state.onLiveStrokeChanged = (stroke) => _relay!.sendStrokeUpdate(stroke?.toJson());
@@ -219,6 +296,15 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _relay!.connect();
   }
 
+  /// Called when the map has been loaded (via chunks or HTTP download).
+  /// Switches from library to game view if the TV is already in game mode.
+  void _onMapReady() {
+    if (!mounted) return;
+    _loadingSessionId = null;
+    // If TV is in game view, switch companion to game view now
+    setState(() => _tvView = 'game');
+  }
+
   Future<void> _downloadMapFromVps(String url) async {
     try {
       if (mounted) setState(() => _transferProgress = 0.0);
@@ -230,6 +316,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       if (bytes != null) {
         DevLog.add('Companion: map downloaded (${(bytes.length / 1024).round()} KB)');
         _state.loadMap(bytes);
+        _onMapReady();
       } else {
         DevLog.add('Companion: map download failed');
       }
@@ -239,20 +326,84 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     }
   }
 
+  /// Opens a file picker for `.dd2vtt`, `.uvtt`, or `.pdf` files and uploads
+  /// the selected file to the VPS.
+  ///
+  /// For UVTT files: loads locally for immediate preview and sends a
+  /// `vtt.mapUploaded` command so the TV downloads and processes the map.
+  ///
+  /// For PDF files: shows a grid configuration dialog first (since PDFs lack
+  /// embedded grid metadata), then uploads and sends a `vtt.pdfUploaded`
+  /// command. The TV handles PDF rendering (pdfrx is not available on web).
+  ///
+  /// See also:
+  /// - [_showPdfGridDialog], which collects grid dimensions for PDF maps.
+  /// - [TvShell._downloadAndLoadPdf], the TV-side handler for PDF uploads.
   Future<void> _pickAndUploadMap() async {
+    // Use FileType.any because Safari doesn't recognize .dd2vtt/.uvtt extensions
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['dd2vtt', 'uvtt'],
+      type: FileType.any,
       withData: true,
     );
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty) {
+      DevLog.add('Companion: file picker cancelled');
+      return;
+    }
     final file = result.files.first;
     final bytes = file.bytes;
-    if (bytes == null) return;
+    if (bytes == null || bytes.isEmpty) {
+      DevLog.add('Companion: file picker returned no data for "${file.name}" (${file.size} bytes on disk)');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read file. Try downloading it to your phone first, then pick from local storage.'),
+            backgroundColor: Colors.redAccent,
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+      return;
+    }
 
-    DevLog.add('Companion: uploading map "${file.name}" (${(bytes.length / 1024).round()} KB)');
-    // Load locally for immediate preview
-    _state.loadMap(bytes);
+    final nameLower = file.name.toLowerCase();
+    final isPdf = nameLower.endsWith('.pdf');
+    final isImage = nameLower.endsWith('.png') || nameLower.endsWith('.jpg') ||
+        nameLower.endsWith('.jpeg') || nameLower.endsWith('.webp');
+    final isVtt = nameLower.endsWith('.dd2vtt') || nameLower.endsWith('.uvtt');
+    final needsGridConfig = isPdf || isImage;
+
+    if (!isPdf && !isImage && !isVtt) {
+      DevLog.add('Companion: unsupported file type: ${file.name}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unsupported file. Use .dd2vtt, .uvtt, .pdf, .png, .jpg, or .webp files.'),
+            backgroundColor: Colors.orangeAccent,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
+    // For PDFs and images, show grid config dialog (no embedded grid metadata)
+    ({int cols, int rows})? gridConfig;
+    if (needsGridConfig) {
+      gridConfig = await _showPdfGridDialog();
+      if (gridConfig == null) return; // user cancelled
+    }
+
+    if (!_beginLoading()) return;
+    _showSnack('Uploading map...');
+
+    DevLog.add('Companion: uploading ${isPdf ? "PDF" : isImage ? "image" : "map"} '
+        '"${file.name}" (${(bytes.length / 1024).round()} KB)');
+
+    // For UVTT files, load locally for immediate preview.
+    // For PDFs/images, don't load locally — the TV handles rendering.
+    if (isVtt) {
+      _state.loadMap(bytes);
+    }
 
     if (_isNetworked && _relay != null) {
       // Upload to VPS via HTTP, then tell TV to download
@@ -266,19 +417,165 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         if (resp != null) {
           final downloadUrl = 'http://${RelayConfig.host}:4242${resp['url']}';
           DevLog.add('Companion: upload done, telling TV to download');
-          _relay!.sendRaw(jsonEncode({
-            'type': 'vtt.mapUploaded',
-            'url': downloadUrl,
-            'displayName': file.name,
-          }));
+          _showSnack('Map uploaded');
+          if (needsGridConfig) {
+            // PDF or image: send with grid config
+            _relay!.sendRaw(jsonEncode({
+              'type': isPdf ? 'vtt.pdfUploaded' : 'vtt.imageUploaded',
+              'url': downloadUrl,
+              'displayName': file.name,
+              'gridCols': gridConfig!.cols,
+              'gridRows': gridConfig.rows,
+            }));
+          } else {
+            // UVTT: send mapUploaded
+            _relay!.sendRaw(jsonEncode({
+              'type': 'vtt.mapUploaded',
+              'url': downloadUrl,
+              'displayName': file.name,
+            }));
+          }
         } else {
           DevLog.add('Companion: HTTP upload failed');
+          _showSnack('Upload failed', color: Colors.redAccent);
+          _endLoading();
         }
       } catch (e) {
         DevLog.add('Companion: upload error: $e');
+        _showSnack('Upload failed', color: Colors.redAccent);
+        _endLoading();
       }
       if (mounted) setState(() => _transferProgress = null);
     }
+  }
+
+  /// Shows a dialog for configuring grid dimensions when uploading a PDF map.
+  ///
+  /// PDFs have no embedded grid metadata (unlike `.dd2vtt` files), so the DM
+  /// must specify how many grid columns and rows the map should have. Provides
+  /// preset buttons for common sizes (20x15, 30x20, 40x30) and text fields
+  /// for custom values.
+  ///
+  /// Returns `({int cols, int rows})` if the user confirms, or `null` if
+  /// they cancel.
+  ///
+  /// See also:
+  /// - [_pickAndUploadMap], which calls this for PDF files.
+  Future<({int cols, int rows})?> _showPdfGridDialog() async {
+    final colsController = TextEditingController(text: '20');
+    final rowsController = TextEditingController(text: '15');
+
+    return showDialog<({int cols, int rows})>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          void setPreset(int cols, int rows) {
+            setDialogState(() {
+              colsController.text = cols.toString();
+              rowsController.text = rows.toString();
+            });
+          }
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A1A2E),
+            title: const Text('PDF Grid Configuration'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'PDFs have no grid data. Set the number of grid squares:',
+                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                // Preset buttons
+                Row(
+                  children: [
+                    _gridPresetButton('20x15', () => setPreset(20, 15)),
+                    const SizedBox(width: 8),
+                    _gridPresetButton('30x20', () => setPreset(30, 20)),
+                    const SizedBox(width: 8),
+                    _gridPresetButton('40x30', () => setPreset(40, 30)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Custom input
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: colsController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Columns',
+                          labelStyle: TextStyle(color: Colors.white38),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white24),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.greenAccent),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Text('x', style: TextStyle(color: Colors.white38, fontSize: 16)),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: rowsController,
+                        keyboardType: TextInputType.number,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: const InputDecoration(
+                          labelText: 'Rows',
+                          labelStyle: TextStyle(color: Colors.white38),
+                          enabledBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.white24),
+                          ),
+                          focusedBorder: UnderlineInputBorder(
+                            borderSide: BorderSide(color: Colors.greenAccent),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  final cols = int.tryParse(colsController.text) ?? 20;
+                  final rows = int.tryParse(rowsController.text) ?? 15;
+                  Navigator.pop(ctx, (cols: cols.clamp(1, 200), rows: rows.clamp(1, 200)));
+                },
+                child: const Text('Upload'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// Builds a small preset button for the grid config dialog.
+  Widget _gridPresetButton(String label, VoidCallback onTap) {
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white54,
+        side: const BorderSide(color: Colors.white24),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      child: Text(label, style: const TextStyle(fontSize: 12)),
+    );
   }
 
   DmCallbacks _buildCallbacks() {
@@ -309,6 +606,33 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         onClearDrawings: c.sendClearDrawings,
         onUndoStroke: c.sendUndoStroke,
         onClearTokens: c.sendClearTokens,
+        onEditToken: (id, {name, maxHp, currentHp, conditions}) =>
+            c.sendEditToken(id,
+                name: name ?? '',
+                maxHp: maxHp ?? 0,
+                currentHp: currentHp ?? 0,
+                conditions: conditions?.toList() ?? []),
+        onSetMeasureMode: () => c.sendSetInteractionMode('measure'),
+        // Undo / Redo
+        onUndo: c.sendUndo,
+        onRedo: c.sendRedo,
+        // Shadow mode
+        onToggleShadowMode: c.sendToggleShadowMode,
+        onCommitShadow: () {
+          c.sendCommitShadow();
+          _showSnack('Fog changes applied');
+        },
+        onClearShadow: () {
+          c.sendClearShadow();
+          _showSnack('Shadow cleared');
+        },
+        // Room reveal
+        onSetRoomRevealMode: c.sendSetRoomRevealMode,
+        onRoomReveal: (cells) => c.sendRoomReveal(cells),
+        // AoE
+        onSetAoeMode: c.sendSetAoeMode,
+        onSetAoe: (t) => c.sendSetAoe(t.toJson()),
+        onClearAoe: c.sendClearAoe,
       );
     }
     return DmCallbacks(
@@ -345,6 +669,24 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onClearDrawings: _state.clearDrawings,
       onUndoStroke: _state.undoStroke,
       onClearTokens: _state.clearTokens,
+      onEditToken: (id, {name, maxHp, currentHp, conditions}) =>
+          _state.editToken(id,
+              name: name, maxHp: maxHp, currentHp: currentHp, conditions: conditions),
+      onSetMeasureMode: () => _state.setInteractionMode(InteractionMode.measure),
+      // Undo / Redo
+      onUndo: _state.undo,
+      onRedo: _state.redo,
+      // Shadow mode
+      onToggleShadowMode: _state.toggleShadowMode,
+      onCommitShadow: _state.commitShadow,
+      onClearShadow: _state.clearShadow,
+      // Room reveal
+      onSetRoomRevealMode: () => _state.setInteractionMode(InteractionMode.roomReveal),
+      onRoomReveal: (cells) => _state.revealRoom(cells.toSet()),
+      // AoE
+      onSetAoeMode: () => _state.setInteractionMode(InteractionMode.aoe),
+      onSetAoe: (t) => _state.setAoe(t),
+      onClearAoe: _state.clearAoe,
     );
   }
 
@@ -440,7 +782,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.upload_file),
-                  label: const Text('Upload Map'),
+                  label: const Text('Upload Map / PDF'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white.withValues(alpha: 0.1),
                     foregroundColor: Colors.white,
@@ -495,7 +837,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
               child: _maps.isEmpty
                   ? const Center(
                       child: Text(
-                        'No maps yet\nUpload a .dd2vtt file to get started',
+                        'No maps yet\nUpload a .dd2vtt or .pdf file to get started',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white24, fontSize: 14),
                       ),
@@ -530,6 +872,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
           // Map header — tap to start new session
           GestureDetector(
             onTap: () {
+              if (!_beginLoading()) return;
+              _showSnack('Loading session...');
               _relay?.sendNewSession(entry.id,
                   name: 'Session ${mapSessions.length + 1}');
             },
@@ -537,7 +881,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
               child: Row(
                 children: [
-                  const Icon(Icons.map, color: Colors.white24, size: 24),
+                  Icon(
+                    entry.isPdf ? Icons.picture_as_pdf : Icons.map,
+                    color: entry.isPdf ? Colors.redAccent.withValues(alpha: 0.5) : Colors.white24,
+                    size: 24,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -554,9 +902,12 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          '${entry.gridCols}x${entry.gridRows}  •  '
-                          '${entry.portalCount} doors  •  '
-                          '${(entry.fileSizeBytes / 1024 / 1024).toStringAsFixed(1)} MB',
+                          entry.isPdf
+                              ? '${entry.gridCols}x${entry.gridRows}  •  PDF  •  '
+                                '${(entry.fileSizeBytes / 1024 / 1024).toStringAsFixed(1)} MB'
+                              : '${entry.gridCols}x${entry.gridRows}  •  '
+                                '${entry.portalCount} doors  •  '
+                                '${(entry.fileSizeBytes / 1024 / 1024).toStringAsFixed(1)} MB',
                           style: const TextStyle(
                             color: Colors.white30,
                             fontSize: 11,
@@ -571,6 +922,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                         color: Colors.greenAccent, size: 24),
                     tooltip: 'New Session',
                     onPressed: () {
+                      if (!_beginLoading()) return;
+                      _showSnack('Loading session...');
                       _relay?.sendNewSession(entry.id,
                           name: 'Session ${mapSessions.length + 1}');
                     },
@@ -609,6 +962,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
 
     return GestureDetector(
       onTap: () {
+        if (!_beginLoading()) return;
+        _showSnack('Loading session...');
         if (mounted) setState(() => _loadingSessionId = session.id);
         _relay?.sendGoToGame(session.mapId, sessionId: session.id);
       },
@@ -657,7 +1012,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
-                    onTap: () => _relay?.sendDeleteSession(session.id),
+                    onTap: () {
+                      _relay?.sendDeleteSession(session.id);
+                      _showSnack('Session deleted');
+                    },
                     child: const Icon(Icons.close, color: Colors.white24, size: 16),
                   ),
                 ],
@@ -688,6 +1046,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
             onPressed: () {
               Navigator.pop(ctx);
               _relay?.sendDeleteMap(entry.id);
+              _showSnack('Map deleted');
             },
             child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
           ),
@@ -808,21 +1167,6 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
               child: _buildConnectionDot(),
             ),
 
-          // Transfer progress
-          if (_transferProgress != null)
-            Positioned(
-              top: 16,
-              left: 80,
-              right: 80,
-              child: LinearProgressIndicator(
-                value: _transferProgress,
-                backgroundColor: Colors.white12,
-                color: Colors.greenAccent,
-                minHeight: 3,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-
           // DM Control Panel
           Positioned(
             bottom: 16,
@@ -866,7 +1210,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                   Icon(Icons.map, color: Colors.white12, size: 64),
                   SizedBox(height: 16),
                   Text(
-                    'Tap the gear icon to load a .dd2vtt map',
+                    'Tap the gear icon to load a .dd2vtt or .pdf map',
                     style: TextStyle(color: Colors.white24, fontSize: 16),
                   ),
                 ],

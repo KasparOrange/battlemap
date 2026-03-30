@@ -22,6 +22,14 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
     ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
   final Paint _layerPaint = Paint();
 
+  /// Slate-blue tint drawn over fog cells staged for reveal in shadow mode.
+  final Paint _shadowRevealPaint = Paint()
+    ..color = const Color(0x4D7B68EE); // slate blue 30%
+
+  /// Red tint drawn over revealed cells staged for hiding in shadow mode.
+  final Paint _shadowHidePaint = Paint()
+    ..color = const Color(0x33E53935); // red 20%
+
   FogOfWarComponent({
     required this.state,
     required this.pixelsPerGrid,
@@ -34,6 +42,7 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
   void render(Canvas canvas) {
     final bounds = Rect.fromLTWH(0, 0, size.x, size.y);
 
+    // Draw fog + cut revealed cells
     canvas.saveLayer(bounds, _layerPaint);
     canvas.drawRect(bounds, _fogPaint);
 
@@ -42,6 +51,20 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
     }
 
     canvas.restore();
+
+    // Draw shadow reveal cells (purple tint over fog)
+    for (final index in state.shadowRevealCells) {
+      if (!state.revealedCells.contains(index)) {
+        canvas.drawRect(_cellRect(index), _shadowRevealPaint);
+      }
+    }
+
+    // Draw shadow hide cells (red tint over revealed areas)
+    for (final index in state.shadowHideCells) {
+      if (state.revealedCells.contains(index)) {
+        canvas.drawRect(_cellRect(index), _shadowHidePaint);
+      }
+    }
   }
 
   @override

@@ -172,7 +172,7 @@ void main() {
         'cameraY': 0,
         'cameraZoom': 1,
         'cameraAngle': 0,
-        // No tokenData, strokeData, drawColorValue, drawWidth, interactionMode
+        // No tokenData, strokeData, drawColorValue, drawWidth, interactionMode, isPdfSession
       };
 
       final restored = Session.fromJson(oldJson);
@@ -182,6 +182,53 @@ void main() {
       expect(restored.drawColorValue, 0xFFE53935);
       expect(restored.drawWidth, 3.0);
       expect(restored.interactionMode, 'fogReveal');
+      expect(restored.isPdfSession, false);
+    });
+
+    test('isPdfSession round-trips correctly when true', () {
+      final original = Session(
+        id: 'pdf-session-001',
+        mapId: 'pdf-map-001',
+        name: 'PDF Dungeon Session',
+        createdAt: DateTime.utc(2026, 3, 27),
+        lastModifiedAt: DateTime.utc(2026, 3, 27),
+        isPdfSession: true,
+      );
+
+      final json = original.toJson();
+      final restored = Session.fromJson(json);
+
+      expect(restored.isPdfSession, true);
+      expect(json['isPdfSession'], true);
+    });
+
+    test('isPdfSession defaults to false for non-PDF sessions', () {
+      final original = Session(
+        id: 'uvtt-session-001',
+        mapId: 'uvtt-map-001',
+        name: 'UVTT Session',
+        createdAt: DateTime.utc(2026, 3, 27),
+        lastModifiedAt: DateTime.utc(2026, 3, 27),
+      );
+
+      final json = original.toJson();
+      final restored = Session.fromJson(json);
+
+      expect(restored.isPdfSession, false);
+      expect(json['isPdfSession'], false);
+    });
+
+    test('toJson includes isPdfSession key', () {
+      final session = Session(
+        id: 'test-id',
+        mapId: 'test-map',
+        name: 'Test',
+        createdAt: DateTime.utc(2026, 1, 1),
+        lastModifiedAt: DateTime.utc(2026, 1, 1),
+      );
+
+      final json = session.toJson();
+      expect(json.containsKey('isPdfSession'), true);
     });
   });
 }

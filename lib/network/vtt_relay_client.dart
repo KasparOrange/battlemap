@@ -545,10 +545,19 @@ class VttRelayClient {
 
   /// Switches the TV's active interaction mode.
   ///
-  /// [mode] must be one of `"fogReveal"`, `"draw"`, or `"token"`,
-  /// matching [InteractionMode.name].
+  /// [mode] must be one of `"fogReveal"`, `"draw"`, `"token"`, or
+  /// `"measure"`, matching [InteractionMode.name].
   void sendSetInteractionMode(String mode) =>
       _send({'type': 'vtt.setMode', 'mode': mode});
+
+  /// Convenience method to switch to measure mode on the TV.
+  void sendSetMeasureMode() => sendSetInteractionMode('measure');
+
+  /// Convenience method to switch to room reveal mode on the TV.
+  void sendSetRoomRevealMode() => sendSetInteractionMode('roomReveal');
+
+  /// Convenience method to switch to AoE template mode on the TV.
+  void sendSetAoeMode() => sendSetInteractionMode('aoe');
 
   // --- Token commands (companion → table via relay) ---
 
@@ -563,6 +572,13 @@ class VttRelayClient {
   /// Removes the token identified by [id] from the TV map.
   void sendRemoveToken(String id) =>
       _send({'type': 'vtt.removeToken', 'id': id});
+
+  /// Edits combat metadata on an existing token on the TV.
+  ///
+  /// [id] is the [MapToken.id]. [name], [maxHp], [currentHp], and
+  /// [conditions] replace the token's current values.
+  void sendEditToken(String id, {required String name, required int maxHp, required int currentHp, required List<String> conditions}) =>
+      _send({'type': 'vtt.editToken', 'id': id, 'name': name, 'maxHp': maxHp, 'currentHp': currentHp, 'conditions': conditions});
 
   /// Removes all tokens from the TV map.
   void sendClearTokens() => _send({'type': 'vtt.clearTokens'});
@@ -600,6 +616,44 @@ class VttRelayClient {
   /// Sets the drawing stroke width on the TV.
   void sendSetDrawWidth(double width) =>
       _send({'type': 'vtt.setDrawWidth', 'width': width});
+
+  // --- Undo / Redo (companion → table via relay) ---
+
+  /// Tells the TV to undo the most recent action.
+  void sendUndo() => _send({'type': 'vtt.undo'});
+
+  /// Tells the TV to redo the most recently undone action.
+  void sendRedo() => _send({'type': 'vtt.redo'});
+
+  // --- Shadow mode (companion → table via relay) ---
+
+  /// Toggles the TV's fog shadow mode on/off.
+  void sendToggleShadowMode() => _send({'type': 'vtt.toggleShadowMode'});
+
+  /// Commits pending shadow fog cells on the TV.
+  void sendCommitShadow() => _send({'type': 'vtt.commitShadow'});
+
+  /// Clears pending shadow fog cells on the TV without committing.
+  void sendClearShadow() => _send({'type': 'vtt.clearShadow'});
+
+  // --- Room reveal (companion → table via relay) ---
+
+  /// Reveals a connected room (set of cells) on the TV at once.
+  ///
+  /// [cells] is a list of flat cell indices forming the room.
+  void sendRoomReveal(List<int> cells) =>
+      _send({'type': 'vtt.roomReveal', 'cells': cells});
+
+  // --- AoE templates (companion → table via relay) ---
+
+  /// Places an area-of-effect template on the TV map.
+  ///
+  /// [aoeJson] is the serialized [AoeTemplate] (shape, origin, radius, angle).
+  void sendSetAoe(Map<String, dynamic> aoeJson) =>
+      _send({'type': 'vtt.setAoe', ...aoeJson});
+
+  /// Removes the active area-of-effect template from the TV map.
+  void sendClearAoe() => _send({'type': 'vtt.clearAoe'});
 
   // --- Navigation commands (companion → table) ---
 

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="API docs for the downloadAndInstall function from the update_service library, for the Dart programming language.">
+  <title>downloadAndInstall function - update_service library - Dart API</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="../static-assets/github.css?v1">
+  <link rel="stylesheet" href="../static-assets/styles.css?v1">
+  <link rel="icon" href="../static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="../" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li><a href="../index.html">battlemap</a></li>
+    <li><a href="../update_update_service/">update&#47;update_service.dart</a></li>
+    <li class="self-crumb">downloadAndInstall function</li>
+  </ol>
+  <div class="self-name">downloadAndInstall</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <button class="toggle" id="theme-button" title="Toggle between light and dark mode" aria-label="Light and dark mode toggle">
+    <span id="dark-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      dark_mode
+    </span>
+    <span id="light-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      light_mode
+    </span>
+  </button>
+</header>
+<main>
+  <div
+      id="dartdoc-main-content"
+      class="main-content"
+      data-above-sidebar="update_update_service&#47;update_update_service-library-sidebar.html"
+      data-below-sidebar="">
+      <div>
+<h1><span class="kind-function">downloadAndInstall</span> function 
+ 
+</h1></div>
+
+    <section class="multi-line-signature">
+        
+<span class="returntype"><a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+<span class="name ">downloadAndInstall</span>(<wbr>{<ol class="parameter-list"> <li><span class="parameter" id="downloadAndInstall-param-onProgress"><span class="type-annotation">void</span> <span class="parameter-name">onProgress</span>(<ol class="parameter-list single-line"> <li><span class="parameter" id="param-progress"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">progress</span></span></li>
+</ol>)?, </span></li>
+<li><span class="parameter" id="downloadAndInstall-param-onStatus"><span class="type-annotation">void</span> <span class="parameter-name">onStatus</span>(<ol class="parameter-list single-line"> <li><span class="parameter" id="param-status"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">status</span></span></li>
+</ol>)?, </span></li>
+</ol>})
+
+        
+
+    </section>
+    
+<section class="desc markdown">
+  <p>Download APK from VPS and trigger install via platform channel.</p>
+</section>
+
+
+    
+<section class="summary source-code" id="source">
+  <h2><span>Implementation</span></h2>
+  <pre class="language-dart"><code class="language-dart">Future&lt;void&gt; downloadAndInstall({
+  void Function(double progress)? onProgress,
+  void Function(String status)? onStatus,
+}) async {
+  try {
+    onStatus?.call(&#39;Downloading APK...&#39;);
+    final url = &#39;http:&#47;&#47;${RelayConfig.host}:4242&#47;battlemap.apk&#39;;
+
+    final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
+    final request = await client.getUrl(Uri.parse(url));
+    final response = await request.close();
+
+    if (response.statusCode != 200) {
+      client.close();
+      onStatus?.call(&#39;Download failed: HTTP ${response.statusCode}&#39;);
+      return;
+    }
+
+    final totalBytes = response.contentLength;
+    final cacheDir = await getTemporaryDirectory();
+    final apkFile = File(&#39;${cacheDir.path}&#47;battlemap_update.apk&#39;);
+
+    &#47;&#47; Delete old file if exists
+    if (await apkFile.exists()) {
+      await apkFile.delete();
+    }
+
+    final sink = apkFile.openWrite();
+    int received = 0;
+
+    await for (final chunk in response) {
+      sink.add(chunk);
+      received += chunk.length;
+      if (totalBytes &gt; 0) {
+        onProgress?.call(received &#47; totalBytes);
+      }
+    }
+
+    await sink.flush();
+    await sink.close();
+    client.close();
+
+    &#47;&#47; Verify APK is a valid ZIP file (APK magic bytes: PK\x03\x04)
+    final fileBytes = await apkFile.readAsBytes();
+    if (fileBytes.length &lt; 4 ||
+        fileBytes[0] != 0x50 || fileBytes[1] != 0x4B ||
+        fileBytes[2] != 0x03 || fileBytes[3] != 0x04) {
+      onStatus?.call(&#39;Download failed: file is not a valid APK&#39;);
+      debugPrint(&#39;UpdateService: APK integrity check failed — invalid magic bytes&#39;);
+      return;
+    }
+
+    &#47;&#47; Sanity check: APK should be at least 1 MB
+    if (fileBytes.length &lt; 1024 * 1024) {
+      onStatus?.call(&#39;Download failed: file too small (${(fileBytes.length &#47; 1024).round()} KB)&#39;);
+      debugPrint(&#39;UpdateService: APK too small: ${fileBytes.length} bytes&#39;);
+      return;
+    }
+
+    onStatus?.call(&#39;Installing...&#39;);
+    debugPrint(&#39;UpdateService: APK downloaded to ${apkFile.path} &#39;
+        &#39;(${(received &#47; 1024 &#47; 1024).toStringAsFixed(1)} MB)&#39;);
+
+    &#47;&#47; Record current build number before install
+    final preInstallInfo = await PackageInfo.fromPlatform();
+    final preInstallBuild = preInstallInfo.buildNumber;
+
+    &#47;&#47; Call platform channel to trigger install intent
+    const channel = MethodChannel(&#39;com.battlemap&#47;update&#39;);
+    await channel.invokeMethod(&#39;installApk&#39;, {&#39;filePath&#39;: apkFile.path});
+
+    onStatus?.call(&#39;Install dialog opened&#39;);
+
+    &#47;&#47; Poll for install verification (every 3s for 60s)
+    _verifyInstall(preInstallBuild, onStatus);
+  } catch (e) {
+    debugPrint(&#39;UpdateService: download&#47;install failed: $e&#39;);
+    final errorMsg = e.toString();
+    if (errorMsg.contains(&#39;SocketException&#39;) || errorMsg.contains(&#39;Connection&#39;)) {
+      onStatus?.call(&#39;Download failed: network error&#39;);
+    } else if (errorMsg.contains(&#39;FileSystemException&#39;)) {
+      onStatus?.call(&#39;Download failed: storage error&#39;);
+    } else {
+      onStatus?.call(&#39;Error: $e&#39;);
+    }
+  }
+}</code></pre>
+</section>
+
+
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li><a href="../index.html">battlemap</a></li>
+    <li><a href="../update_update_service/">update_service</a></li>
+    <li class="self-crumb">downloadAndInstall function</li>
+</ol>
+
+    <h5>update_service library</h5>
+    <div id="dartdoc-sidebar-left-content"></div>
+  </div><!--/.sidebar-offcanvas-left-->
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+  </div><!--/.sidebar-offcanvas-->
+</main>
+<footer>
+  <span class="no-break">
+    battlemap
+      1.0.8+9
+  </span>
+  
+</footer>
+
+
+<script src="../static-assets/highlight.pack.js?v1"></script>
+<script src="../static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+

@@ -65,8 +65,10 @@ class _DevScreenState extends State<DevScreen> {
               child: Row(
                 children: [
                   IconButton(
+                    autofocus: true,
                     icon: const Icon(Icons.arrow_back, color: Colors.white54),
                     onPressed: () => Navigator.pop(context),
+                    focusColor: Colors.white.withValues(alpha: 0.2),
                   ),
                   const SizedBox(width: 4),
                   const Text(

@@ -5,19 +5,24 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart' show setEquals;
 import 'package:flutter/material.dart';
 
+import '../model/aoe_template.dart';
 import '../model/draw_stroke.dart';
 import '../model/uvtt_map.dart';
 import '../state/vtt_state.dart';
+import 'components/aoe_template_component.dart';
 import 'components/fog_of_war_component.dart';
 import 'components/grid_overlay_component.dart';
 import 'components/live_stroke_component.dart';
 import 'components/map_image_component.dart';
 import 'components/portal_component.dart';
 import 'components/strokes_component.dart';
+import 'components/measure_component.dart';
 import 'components/token_layer.dart';
 import 'components/wall_component.dart';
+import 'wall_grid.dart';
 
 /// Flame game for VTT table display.
 /// Renders the map image with grid overlay, handles camera pan/zoom.
@@ -34,6 +39,14 @@ class VttGame extends FlameGame with ScaleDetector {
   StrokesComponent? _strokes;
   LiveStrokeComponent? _liveStroke;
   TokenLayer? _tokenLayer;
+  MeasureComponent? _measure;
+  AoeTemplateComponent? _aoeComponent;
+
+  /// Discretized wall grid for flood-fill room reveal.
+  WallGrid? _wallGrid;
+
+  /// Tracks previous open portals to detect changes and recompute wall grid.
+  Set<int>? _lastOpenPortals;
 
   double? _lastCalibratedZoom;
 
@@ -82,6 +95,12 @@ class VttGame extends FlameGame with ScaleDetector {
 
     // Sync tokens
     _tokenLayer?.sync();
+
+    // Recompute wall grid when portals change (open/close affects flood fill)
+    if (state.map != null && !setEquals(state.openPortals, _lastOpenPortals)) {
+      _lastOpenPortals = Set.from(state.openPortals);
+      _wallGrid = WallGrid.fromMap(state.map!, state.openPortals);
+    }
 
     // Enforce calibrated zoom
     if (state.calibratedBaseZoom != null) {
@@ -182,6 +201,26 @@ class VttGame extends FlameGame with ScaleDetector {
     _fogOfWar!.isVisible = state.fogEnabled;
     world.add(_fogOfWar!);
 
+    // AoE template overlay (priority 15)
+    _aoeComponent = AoeTemplateComponent(
+      state: state,
+      pixelsPerGrid: map.resolution.pixelsPerGrid,
+      mapSize: mapSizeVec,
+    );
+    world.add(_aoeComponent!);
+
+    // Measure tool overlay (priority 20 — always on top)
+    _measure = MeasureComponent(
+      state: state,
+      pixelsPerGrid: map.resolution.pixelsPerGrid.toDouble(),
+      mapSize: mapSizeVec,
+    );
+    world.add(_measure!);
+
+    // Build wall grid for room-reveal flood fill
+    _wallGrid = WallGrid.fromMap(map, state.openPortals);
+    _lastOpenPortals = Set.from(state.openPortals);
+
     // Sync tokens from state
     _tokenLayer!.sync();
 
@@ -220,6 +259,12 @@ class VttGame extends FlameGame with ScaleDetector {
     _portalComponents.clear();
     _fogOfWar?.removeFromParent();
     _fogOfWar = null;
+    _aoeComponent?.removeFromParent();
+    _aoeComponent = null;
+    _measure?.removeFromParent();
+    _measure = null;
+    _wallGrid = null;
+    _lastOpenPortals = null;
   }
 
   // --- Public camera controls (called from DM panel) ---
@@ -320,11 +365,10 @@ class VttGame extends FlameGame with ScaleDetector {
     }
 
     if (_isMultiTouch) {
-      // Camera zoom
+      // Camera zoom + pan (multi-finger gesture)
       final minZoom = state.calibratedBaseZoom ?? 0.1;
       final newZoom = _initialZoom * info.scale.global.x;
       camera.viewfinder.zoom = newZoom.clamp(minZoom, 10.0);
-      // Camera pan
       camera.viewfinder.position -= info.delta.global / camera.viewfinder.zoom;
     } else if (state.isInteractive) {
       // Single-finger tool drag — mark as dragged if moved enough
@@ -361,6 +405,32 @@ class VttGame extends FlameGame with ScaleDetector {
         break; // No-op
       case InteractionMode.token:
         _tokenTapAt(worldPos);
+      case InteractionMode.measure:
+        // Tap clears previous measurement and starts fresh
+        _measure?.clear();
+        _measureStart(worldPos);
+      case InteractionMode.roomReveal:
+        if (_tryTogglePortal(worldPos)) return;
+        if (_wallGrid != null) {
+          final ppg = _getPixelsPerGrid();
+          final cellX = (worldPos.x / ppg).floor();
+          final cellY = (worldPos.y / ppg).floor();
+          if (cellX >= 0 && cellX < _getGridCols() && cellY >= 0 && cellY < _getGridRows()) {
+            final startIdx = cellY * _getGridCols() + cellX;
+            final roomCells = _wallGrid!.floodFill(startIdx);
+            state.revealRoom(roomCells);
+          }
+        }
+      case InteractionMode.aoe:
+        // AoE: tap sets origin
+        final ppg = _getPixelsPerGrid();
+        final gridX = worldPos.x / ppg;
+        final gridY = worldPos.y / ppg;
+        state.setAoe(AoeTemplate(
+          shape: AoeShape.circle,
+          originX: gridX, originY: gridY,
+          radius: 4, // default 20ft
+        ));
     }
   }
 
@@ -377,6 +447,14 @@ class VttGame extends FlameGame with ScaleDetector {
       case InteractionMode.token:
         _tokenDragStart(worldPos);
         break;
+      case InteractionMode.measure:
+        _measureStart(worldPos);
+        break;
+      case InteractionMode.roomReveal:
+        break; // Room reveal is tap-only
+      case InteractionMode.aoe:
+        _aoeStart(worldPos);
+        break;
     }
   }
 
@@ -390,6 +468,14 @@ class VttGame extends FlameGame with ScaleDetector {
         break;
       case InteractionMode.token:
         _tokenDragUpdate(worldPos);
+        break;
+      case InteractionMode.measure:
+        _measureUpdate(worldPos);
+        break;
+      case InteractionMode.roomReveal:
+        break;
+      case InteractionMode.aoe:
+        _aoeUpdate(worldPos);
         break;
     }
   }
@@ -405,7 +491,43 @@ class VttGame extends FlameGame with ScaleDetector {
       case InteractionMode.token:
         _draggingTokenId = null;
         break;
+      case InteractionMode.measure:
+        // Keep measurement visible until next interaction
+        break;
+      case InteractionMode.roomReveal:
+        break;
+      case InteractionMode.aoe:
+        break; // Keep template visible
     }
+  }
+
+  // ===== AoE tool =====
+
+  Vector2? _aoeOrigin;
+
+  void _aoeStart(Vector2 worldPos) {
+    final ppg = _getPixelsPerGrid();
+    _aoeOrigin = worldPos;
+    state.setAoe(AoeTemplate(
+      shape: AoeShape.circle,
+      originX: worldPos.x / ppg, originY: worldPos.y / ppg,
+      radius: 4,
+    ));
+  }
+
+  void _aoeUpdate(Vector2 worldPos) {
+    if (_aoeOrigin == null) return;
+    final ppg = _getPixelsPerGrid();
+    final ox = _aoeOrigin!.x / ppg;
+    final oy = _aoeOrigin!.y / ppg;
+    final dx = worldPos.x / ppg - ox;
+    final dy = worldPos.y / ppg - oy;
+    state.setAoe(AoeTemplate(
+      shape: AoeShape.circle,
+      originX: ox, originY: oy,
+      radius: sqrt(dx * dx + dy * dy),
+      angle: atan2(dy, dx),
+    ));
   }
 
   // ===== Fog reveal tool =====
@@ -549,5 +671,19 @@ class VttGame extends FlameGame with ScaleDetector {
     if (t.gridX != newGridX || t.gridY != newGridY) {
       state.moveToken(_draggingTokenId!, newGridX, newGridY);
     }
+  }
+
+  // ===== Measure tool =====
+
+  /// Begins a new measurement at the given world position.
+  ///
+  /// Clears any previous measurement and sets both start and end to [worldPos].
+  void _measureStart(Vector2 worldPos) {
+    _measure?.setStart(worldPos.toOffset());
+  }
+
+  /// Updates the endpoint of the current measurement as the user drags.
+  void _measureUpdate(Vector2 worldPos) {
+    _measure?.setEnd(worldPos.toOffset());
   }
 }

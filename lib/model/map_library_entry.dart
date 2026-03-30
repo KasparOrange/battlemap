@@ -1,9 +1,13 @@
 /// Metadata for a map stored in the TV's local [MapLibrary].
 ///
-/// Each entry corresponds to a `.dd2vtt` file on disk, identified by a
-/// UUID [id] that doubles as the filename stem. The entry tracks grid
-/// dimensions, file size, and an optional [thumbnailPath] for the
-/// library browser UI.
+/// Each entry corresponds to a `.dd2vtt` file or a PDF file on disk,
+/// identified by a UUID [id] that doubles as the filename stem. The entry
+/// tracks grid dimensions, file size, and an optional [thumbnailPath] for
+/// the library browser UI.
+///
+/// For PDF maps, [isPdf] is `true` and [pdfGridCols] / [pdfGridRows]
+/// store the user-configured grid dimensions (since PDFs have no embedded
+/// grid metadata like UVTT files do).
 ///
 /// Entries are JSON-serializable so the TV can send its library listing
 /// to the companion phone over the WebSocket relay.
@@ -33,6 +37,24 @@ class MapLibraryEntry {
   /// Timestamp when this map was added to the library.
   final DateTime addedAt;
 
+  /// Whether this entry is a PDF map rather than a `.dd2vtt` file.
+  ///
+  /// PDF maps have no embedded grid metadata, so the grid dimensions are
+  /// user-configured via [pdfGridCols] and [pdfGridRows].
+  final bool isPdf;
+
+  /// User-configured grid columns for PDF maps, or `null` for UVTT maps.
+  ///
+  /// Only meaningful when [isPdf] is `true`. Defaults to 20 if not specified
+  /// when adding a PDF to the library.
+  final int? pdfGridCols;
+
+  /// User-configured grid rows for PDF maps, or `null` for UVTT maps.
+  ///
+  /// Only meaningful when [isPdf] is `true`. Defaults to 15 if not specified
+  /// when adding a PDF to the library.
+  final int? pdfGridRows;
+
   /// Absolute path to a thumbnail image on disk, or `null` if not yet generated.
   String? thumbnailPath;
 
@@ -43,6 +65,9 @@ class MapLibraryEntry {
   String? vpsUrl;
 
   /// Creates a [MapLibraryEntry] with the required metadata fields.
+  ///
+  /// For PDF maps, set [isPdf] to `true` and provide [pdfGridCols] and
+  /// [pdfGridRows] with the user-configured grid dimensions.
   MapLibraryEntry({
     required this.id,
     required this.displayName,
@@ -51,13 +76,18 @@ class MapLibraryEntry {
     required this.gridRows,
     required this.portalCount,
     required this.addedAt,
+    this.isPdf = false,
+    this.pdfGridCols,
+    this.pdfGridRows,
     this.thumbnailPath,
     this.vpsUrl,
   });
 
   /// Serializes this entry to a JSON-compatible map.
   ///
-  /// [addedAt] is encoded as an ISO 8601 string.
+  /// [addedAt] is encoded as an ISO 8601 string. PDF-specific fields
+  /// ([isPdf], [pdfGridCols], [pdfGridRows]) are always included for
+  /// forward compatibility.
   Map<String, dynamic> toJson() => {
         'id': id,
         'displayName': displayName,
@@ -66,6 +96,9 @@ class MapLibraryEntry {
         'gridRows': gridRows,
         'portalCount': portalCount,
         'addedAt': addedAt.toIso8601String(),
+        'isPdf': isPdf,
+        'pdfGridCols': pdfGridCols,
+        'pdfGridRows': pdfGridRows,
         'thumbnailPath': thumbnailPath,
         'vpsUrl': vpsUrl,
       };
@@ -73,7 +106,9 @@ class MapLibraryEntry {
   /// Deserializes a [MapLibraryEntry] from a JSON map.
   ///
   /// Expects keys matching [toJson] output. The [addedAt] field is
-  /// parsed from an ISO 8601 string.
+  /// parsed from an ISO 8601 string. PDF-specific fields default to
+  /// `false` / `null` if absent, for backwards compatibility with
+  /// entries created before PDF support was added.
   factory MapLibraryEntry.fromJson(Map<String, dynamic> json) =>
       MapLibraryEntry(
         id: json['id'] as String,
@@ -83,6 +118,9 @@ class MapLibraryEntry {
         gridRows: json['gridRows'] as int,
         portalCount: json['portalCount'] as int,
         addedAt: DateTime.parse(json['addedAt'] as String),
+        isPdf: json['isPdf'] as bool? ?? false,
+        pdfGridCols: json['pdfGridCols'] as int?,
+        pdfGridRows: json['pdfGridRows'] as int?,
         thumbnailPath: json['thumbnailPath'] as String?,
         vpsUrl: json['vpsUrl'] as String?,
       );

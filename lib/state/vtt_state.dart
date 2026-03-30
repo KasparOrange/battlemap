@@ -4,8 +4,10 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../model/aoe_template.dart';
 import '../model/draw_stroke.dart';
 import '../model/map_token.dart';
+import '../model/undo_action.dart';
 import '../model/uvtt_map.dart';
 import '../model/uvtt_parser.dart';
 
@@ -28,6 +30,16 @@ enum InteractionMode {
 
   /// Token mode: tap an empty cell to place a token, drag to reposition.
   token,
+
+  /// Measure mode: drag to draw a distance measurement line between two points.
+  measure,
+
+  /// AoE template mode: tap to place origin, drag to set direction/size.
+  aoe,
+
+  /// Room reveal mode: tap a cell to flood-fill reveal all connected cells
+  /// bounded by walls and closed portals.
+  roomReveal,
 }
 
 /// DM-controlled runtime state for the VTT table display.
@@ -171,6 +183,51 @@ class VttState extends ChangeNotifier {
   /// Current line width for new strokes, in world pixels.
   double drawWidth = 3.0;
 
+  // --- Undo / Redo ---
+
+  /// Stack of actions that can be undone, most recent last.
+  ///
+  /// Capped at [_maxUndoSize] entries. Cleared when the map is unloaded.
+  final List<UndoAction> _undoStack = [];
+
+  /// Stack of actions that were undone and can be redone.
+  ///
+  /// Cleared whenever a new action is pushed (any new mutation
+  /// invalidates the redo history).
+  final List<UndoAction> _redoStack = [];
+
+  /// Maximum number of undo actions retained.
+  static const int _maxUndoSize = 50;
+
+  /// Whether there are actions that can be undone.
+  bool get canUndo => _undoStack.isNotEmpty;
+
+  /// Whether there are undone actions that can be redone.
+  bool get canRedo => _redoStack.isNotEmpty;
+
+  // --- Shadow mode ---
+
+  /// Whether shadow (preview) mode is active for fog painting.
+  ///
+  /// When `true`, brush strokes accumulate in [shadowRevealCells] and
+  /// [shadowHideCells] instead of modifying [revealedCells] directly.
+  /// The DM can preview the result before committing with [commitShadow].
+  ///
+  /// Defaults to `true` -- shadow mode is the safer default for fog work.
+  bool shadowMode = false;
+
+  /// Cells staged for reveal in shadow mode (not yet committed).
+  ///
+  /// These cells will be added to [revealedCells] when [commitShadow]
+  /// is called. Rendered as a translucent preview by the fog component.
+  Set<int> shadowRevealCells = {};
+
+  /// Cells staged for hiding in shadow mode (not yet committed).
+  ///
+  /// These cells will be removed from [revealedCells] when [commitShadow]
+  /// is called. Rendered as a translucent preview by the fog component.
+  Set<int> shadowHideCells = {};
+
   // --- Relay forwarding callbacks ---
 
   /// Called when the fog brush paints cells, so the relay can forward
@@ -197,6 +254,12 @@ class VttState extends ChangeNotifier {
   ///
   /// Parameters are the [MapToken.id] and the new grid coordinates.
   void Function(String id, int x, int y)? onTokenMoved;
+
+  /// Called when a token's combat metadata is edited locally, for relay forwarding.
+  ///
+  /// Parameters are the [MapToken.id], updated [name], [maxHp], [currentHp],
+  /// and the list of active [conditions].
+  void Function(String id, String name, int maxHp, int currentHp, List<String> conditions)? onTokenEdited;
 
   /// Called when a completed stroke is added, for relay forwarding.
   void Function(DrawStroke stroke)? onStrokeAdded;
@@ -235,6 +298,218 @@ class VttState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Loads a PDF page as a map with user-specified grid dimensions.
+  ///
+  /// Creates a synthetic [UvttMap] from a rendered PDF page image, with
+  /// empty portals, walls, and line-of-sight data. This allows PDF maps
+  /// to reuse the same rendering pipeline as `.dd2vtt` maps.
+  ///
+  /// The [imageBytes] are the PNG-encoded rendered page from pdfrx.
+  /// [gridCols] and [gridRows] define the grid overlay dimensions.
+  /// [imageWidth] and [imageHeight] are the pixel dimensions of the
+  /// rendered page image.
+  ///
+  /// Sets [rawMapBytes] to `null` since PDF bytes are stored separately
+  /// in the [MapLibrary].
+  ///
+  /// See also:
+  /// * [loadMap], which loads a `.dd2vtt` map from raw file bytes.
+  /// * [MapLibraryEntry.isPdf], which flags entries as PDF maps.
+  void loadPdfAsMap(Uint8List imageBytes, {
+    required int gridCols,
+    required int gridRows,
+    required double imageWidth,
+    required double imageHeight,
+  }) {
+    final pixelsPerGrid = imageWidth / gridCols;
+
+    map = UvttMap(
+      format: 0,
+      resolution: UvttResolution(
+        mapOrigin: const Offset(0, 0),
+        mapSize: Offset(gridCols.toDouble(), gridRows.toDouble()),
+        pixelsPerGrid: pixelsPerGrid.round(),
+      ),
+      lineOfSight: [],
+      objectsLineOfSight: [],
+      portals: [],
+      lights: [],
+      environment: UvttEnvironment(
+        bakedLighting: false,
+        ambientLight: const Color(0xFF000000),
+      ),
+      imageBytes: imageBytes,
+    );
+    rawMapBytes = null; // PDF bytes stored separately in library
+    openPortals.clear();
+    revealedCells.clear();
+    debugPrint('Loaded PDF as map: ${gridCols}x$gridRows grid, '
+        '${pixelsPerGrid.round()}ppg');
+    notifyListeners();
+  }
+
+  // ===== Undo / Redo =====
+
+  /// Pushes an [action] onto the undo stack and clears the redo stack.
+  ///
+  /// If the undo stack exceeds [_maxUndoSize], the oldest entry is removed.
+  void _pushUndo(UndoAction action) {
+    _undoStack.add(action);
+    _redoStack.clear();
+    if (_undoStack.length > _maxUndoSize) _undoStack.removeAt(0);
+  }
+
+  /// Undoes the most recent action by popping it from the undo stack,
+  /// reversing its effect, and pushing it onto the redo stack.
+  ///
+  /// Does nothing if the undo stack is empty.
+  ///
+  /// See also:
+  /// * [redo], which re-applies the most recently undone action.
+  /// * [UndoAction], for the set of reversible action types.
+  void undo() {
+    if (_undoStack.isEmpty) return;
+    final action = _undoStack.removeLast();
+    _reverseAction(action);
+    _redoStack.add(action);
+    notifyListeners();
+  }
+
+  /// Re-applies the most recently undone action by popping it from the
+  /// redo stack, applying its effect, and pushing it onto the undo stack.
+  ///
+  /// Does nothing if the redo stack is empty.
+  ///
+  /// See also:
+  /// * [undo], which reverses the most recent action.
+  void redo() {
+    if (_redoStack.isEmpty) return;
+    final action = _redoStack.removeLast();
+    _applyAction(action);
+    _undoStack.add(action);
+    notifyListeners();
+  }
+
+  /// Reverses a single [action] (used by [undo]).
+  void _reverseAction(UndoAction action) {
+    switch (action) {
+      case FogAction():
+        if (action.wasReveal) {
+          revealedCells.removeAll(action.cellsChanged);
+        } else {
+          revealedCells.addAll(action.cellsChanged);
+        }
+      case PortalAction():
+        if (action.wasOpen) {
+          openPortals.add(action.index);
+        } else {
+          openPortals.remove(action.index);
+        }
+      case TokenAddAction():
+        tokens.removeWhere((t) => t.id == action.token.id);
+      case TokenRemoveAction():
+        tokens.add(action.token);
+      case TokenMoveAction():
+        final token = tokens.firstWhere((t) => t.id == action.id);
+        token.gridX = action.fromX;
+        token.gridY = action.fromY;
+      case StrokeAddAction():
+        if (strokes.isNotEmpty && identical(strokes.last, action.stroke)) {
+          strokes.removeLast();
+        } else {
+          strokes.remove(action.stroke);
+        }
+      case StrokeClearAction():
+        strokes.addAll(action.strokes);
+      case ShadowCommitAction():
+        revealedCells.removeAll(action.revealed);
+        revealedCells.addAll(action.hidden);
+    }
+  }
+
+  /// Re-applies a single [action] (used by [redo]).
+  void _applyAction(UndoAction action) {
+    switch (action) {
+      case FogAction():
+        if (action.wasReveal) {
+          revealedCells.addAll(action.cellsChanged);
+        } else {
+          revealedCells.removeAll(action.cellsChanged);
+        }
+      case PortalAction():
+        if (action.wasOpen) {
+          openPortals.remove(action.index);
+        } else {
+          openPortals.add(action.index);
+        }
+      case TokenAddAction():
+        tokens.add(action.token);
+      case TokenRemoveAction():
+        tokens.removeWhere((t) => t.id == action.token.id);
+      case TokenMoveAction():
+        final token = tokens.firstWhere((t) => t.id == action.id);
+        token.gridX = action.toX;
+        token.gridY = action.toY;
+      case StrokeAddAction():
+        strokes.add(action.stroke);
+      case StrokeClearAction():
+        strokes.clear();
+      case ShadowCommitAction():
+        revealedCells.addAll(action.revealed);
+        revealedCells.removeAll(action.hidden);
+    }
+  }
+
+  // ===== Shadow mode =====
+
+  /// Toggles [shadowMode] on or off and clears any pending shadow cells.
+  ///
+  /// See also:
+  /// * [commitShadow], which merges shadow cells into [revealedCells].
+  /// * [clearShadow], which discards pending shadow cells.
+  void toggleShadowMode() {
+    shadowMode = !shadowMode;
+    clearShadow();
+  }
+
+  /// Discards all pending shadow reveal/hide cells without committing.
+  void clearShadow() {
+    shadowRevealCells.clear();
+    shadowHideCells.clear();
+    notifyListeners();
+  }
+
+  /// Commits pending shadow cells into [revealedCells].
+  ///
+  /// Cells in [shadowRevealCells] are added to [revealedCells], and cells
+  /// in [shadowHideCells] are removed. A [ShadowCommitAction] is pushed
+  /// onto the undo stack recording only the cells that actually changed.
+  ///
+  /// Both shadow sets are cleared after committing.
+  ///
+  /// See also:
+  /// * [toggleShadowMode], which enables/disables shadow mode.
+  /// * [clearShadow], which discards without committing.
+  void commitShadow() {
+    final revealed = <int>{};
+    final hidden = <int>{};
+
+    for (final cell in shadowRevealCells) {
+      if (revealedCells.add(cell)) revealed.add(cell);
+    }
+    for (final cell in shadowHideCells) {
+      if (revealedCells.remove(cell)) hidden.add(cell);
+    }
+
+    if (revealed.isNotEmpty || hidden.isNotEmpty) {
+      _pushUndo(ShadowCommitAction(revealed, hidden));
+    }
+
+    shadowRevealCells.clear();
+    shadowHideCells.clear();
+    notifyListeners();
+  }
+
   // ===== Display toggles =====
 
   /// Toggles grid overlay visibility on/off.
@@ -247,55 +522,170 @@ class VttState extends ChangeNotifier {
 
   /// Toggles a single fog cell between revealed and hidden.
   ///
+  /// In [shadowMode], toggles the cell within the shadow sets instead
+  /// of modifying [revealedCells] directly.
+  ///
   /// The [index] is computed as `row * gridCols + col`.
   void toggleReveal(int index) {
-    if (revealedCells.contains(index)) {
+    if (shadowMode) {
+      // In shadow mode, toggle between shadow sets
+      if (shadowRevealCells.contains(index)) {
+        shadowRevealCells.remove(index);
+      } else if (shadowHideCells.contains(index)) {
+        shadowHideCells.remove(index);
+      } else if (revealedCells.contains(index)) {
+        shadowHideCells.add(index);
+      } else {
+        shadowRevealCells.add(index);
+      }
+      notifyListeners();
+      return;
+    }
+    final wasRevealed = revealedCells.contains(index);
+    if (wasRevealed) {
       revealedCells.remove(index);
     } else {
       revealedCells.add(index);
     }
+    _pushUndo(FogAction({index}, !wasRevealed));
     notifyListeners();
   }
 
   /// Batch reveal or hide fog cells (used by brush drag painting).
   ///
-  /// If [revealMode] is `true`, the given [indices] are added to
-  /// [revealedCells]. If `false`, they are removed. Only notifies
-  /// listeners if at least one cell actually changed state.
+  /// In [shadowMode], cells are routed to [shadowRevealCells] or
+  /// [shadowHideCells] instead of modifying [revealedCells] directly.
+  ///
+  /// In live mode, if [revealMode] is `true`, the given [indices] are
+  /// added to [revealedCells]. If `false`, they are removed. Only
+  /// notifies listeners if at least one cell actually changed state.
+  /// Pushes a [FogAction] for undo when cells change.
   void applyBrushReveal(List<int> indices) {
-    bool changed = false;
+    if (shadowMode) {
+      bool changed = false;
+      for (final index in indices) {
+        if (revealMode) {
+          if (shadowRevealCells.add(index)) changed = true;
+          shadowHideCells.remove(index);
+        } else {
+          if (shadowHideCells.add(index)) changed = true;
+          shadowRevealCells.remove(index);
+        }
+      }
+      if (changed) notifyListeners();
+      return;
+    }
+    // Live mode: modify revealedCells directly and push undo
+    final cellsChanged = <int>{};
     for (final index in indices) {
       if (revealMode) {
-        if (revealedCells.add(index)) changed = true;
+        if (revealedCells.add(index)) cellsChanged.add(index);
       } else {
-        if (revealedCells.remove(index)) changed = true;
+        if (revealedCells.remove(index)) cellsChanged.add(index);
       }
     }
-    if (changed) notifyListeners();
+    if (cellsChanged.isNotEmpty) {
+      _pushUndo(FogAction(cellsChanged, revealMode));
+      notifyListeners();
+    }
   }
 
   /// Reveals all fog cells on the map.
   ///
+  /// In [shadowMode], fills [shadowRevealCells] with all cells and clears
+  /// [shadowHideCells]. In live mode, computes the diff (cells not already
+  /// revealed) and pushes a [FogAction] for undo.
+  ///
   /// [totalCells] should be `gridCols * gridRows`.
   void revealAll(int totalCells) {
-    revealedCells = Set.from(List.generate(totalCells, (i) => i));
+    if (shadowMode) {
+      shadowRevealCells = Set.from(List.generate(totalCells, (i) => i));
+      shadowHideCells.clear();
+      notifyListeners();
+      return;
+    }
+    final allCells = Set<int>.from(List.generate(totalCells, (i) => i));
+    final newlyRevealed = allCells.difference(revealedCells);
+    if (newlyRevealed.isNotEmpty) {
+      _pushUndo(FogAction(newlyRevealed, true));
+    }
+    revealedCells = allCells;
     notifyListeners();
   }
 
   /// Hides all fog cells (restores full fog coverage).
+  ///
+  /// In [shadowMode], fills [shadowHideCells] with all currently revealed
+  /// cells and clears [shadowRevealCells]. In live mode, saves the
+  /// currently revealed cells and pushes a [FogAction] for undo.
   void hideAll() {
+    if (shadowMode) {
+      shadowHideCells = Set<int>.from(revealedCells);
+      shadowRevealCells.clear();
+      notifyListeners();
+      return;
+    }
+    final previouslyRevealed = Set<int>.from(revealedCells);
+    if (previouslyRevealed.isNotEmpty) {
+      _pushUndo(FogAction(previouslyRevealed, false));
+    }
     revealedCells.clear();
     notifyListeners();
+  }
+
+  /// Reveals or hides a set of cells (used by room-reveal flood fill).
+  ///
+  /// In [shadowMode], routes cells to [shadowRevealCells] or
+  /// [shadowHideCells]. In live mode, modifies [revealedCells] directly
+  /// and pushes a [FogAction] for undo.
+  ///
+  /// The behavior depends on [revealMode]:
+  /// * `true` -- the [cells] are revealed (fog is cleared).
+  /// * `false` -- the [cells] are hidden (fog is restored).
+  ///
+  /// See also:
+  /// * [WallGrid.floodFill], which computes the cell set.
+  /// * [InteractionMode.roomReveal], the mode that triggers this.
+  void revealRoom(Set<int> cells) {
+    if (shadowMode) {
+      if (revealMode) {
+        shadowRevealCells.addAll(cells);
+        shadowHideCells.removeAll(cells);
+      } else {
+        shadowHideCells.addAll(cells);
+        shadowRevealCells.removeAll(cells);
+      }
+      notifyListeners();
+      return;
+    }
+    // Live mode
+    final changed = <int>{};
+    for (final cell in cells) {
+      if (revealMode) {
+        if (revealedCells.add(cell)) changed.add(cell);
+      } else {
+        if (revealedCells.remove(cell)) changed.add(cell);
+      }
+    }
+    if (changed.isNotEmpty) {
+      _pushUndo(FogAction(changed, revealMode));
+      notifyListeners();
+    }
   }
 
   // ===== Portals =====
 
   /// Toggles a portal (door/gate) between open and closed.
   ///
+  /// Pushes a [PortalAction] onto the undo stack recording the portal's
+  /// state before the toggle.
+  ///
   /// The [index] corresponds to the portal's position in
   /// [UvttMap.portals].
   void togglePortal(int index) {
-    if (openPortals.contains(index)) {
+    final wasOpen = openPortals.contains(index);
+    _pushUndo(PortalAction(index, wasOpen));
+    if (wasOpen) {
       openPortals.remove(index);
     } else {
       openPortals.add(index);
@@ -360,8 +750,8 @@ class VttState extends ChangeNotifier {
   /// Creates a new token at the given grid position and adds it to [tokens].
   ///
   /// The token is assigned the next color from [MapToken.tokenColors]
-  /// (cycling) and a sequential numeric label. Fires [onTokenAdded] for
-  /// relay forwarding.
+  /// (cycling) and a sequential numeric label. Pushes a [TokenAddAction]
+  /// onto the undo stack. Fires [onTokenAdded] for relay forwarding.
   void addToken(int gridX, int gridY) {
     final color =
         MapToken.tokenColors[_nextColorIndex % MapToken.tokenColors.length];
@@ -374,18 +764,23 @@ class VttState extends ChangeNotifier {
       gridY: gridY,
     );
     tokens.add(token);
+    _pushUndo(TokenAddAction(token));
     notifyListeners();
     onTokenAdded?.call(token);
   }
 
   /// Moves an existing token to a new grid position.
   ///
-  /// Finds the token by [id] and updates its [MapToken.gridX] and
+  /// Saves the old position and pushes a [TokenMoveAction] onto the undo
+  /// stack. Finds the token by [id] and updates its [MapToken.gridX] and
   /// [MapToken.gridY]. Fires [onTokenMoved] for relay forwarding.
   ///
   /// Throws [StateError] if no token with the given [id] exists.
   void moveToken(String id, int newGridX, int newGridY) {
     final token = tokens.firstWhere((t) => t.id == id);
+    final oldX = token.gridX;
+    final oldY = token.gridY;
+    _pushUndo(TokenMoveAction(id, oldX, oldY, newGridX, newGridY));
     token.gridX = newGridX;
     token.gridY = newGridY;
     notifyListeners();
@@ -394,12 +789,38 @@ class VttState extends ChangeNotifier {
 
   /// Removes a token by [id].
   ///
-  /// Silently does nothing if no token with that [id] exists. Fires
-  /// [onTokenRemoved] for relay forwarding.
+  /// Saves a reference to the token and pushes a [TokenRemoveAction]
+  /// onto the undo stack before removing it. Silently does nothing if
+  /// no token with that [id] exists. Fires [onTokenRemoved] for relay
+  /// forwarding.
   void removeToken(String id) {
-    tokens.removeWhere((t) => t.id == id);
+    final index = tokens.indexWhere((t) => t.id == id);
+    if (index == -1) return;
+    final token = tokens[index];
+    _pushUndo(TokenRemoveAction(token));
+    tokens.removeAt(index);
     notifyListeners();
     onTokenRemoved?.call(id);
+  }
+
+  /// Edits combat metadata on an existing token.
+  ///
+  /// Only the provided fields are updated; `null` parameters are left
+  /// unchanged. Fires [onTokenEdited] for relay forwarding.
+  ///
+  /// Throws [StateError] if no token with the given [id] exists.
+  ///
+  /// See also:
+  /// * [MapToken.name], [MapToken.maxHp], [MapToken.currentHp],
+  ///   [MapToken.conditions] for the fields being edited.
+  void editToken(String id, {String? name, int? maxHp, int? currentHp, Set<String>? conditions}) {
+    final token = tokens.firstWhere((t) => t.id == id);
+    if (name != null) token.name = name;
+    if (maxHp != null) token.maxHp = maxHp;
+    if (currentHp != null) token.currentHp = currentHp;
+    if (conditions != null) token.conditions = conditions;
+    notifyListeners();
+    onTokenEdited?.call(id, token.name, token.maxHp, token.currentHp, token.conditions.toList());
   }
 
   /// Removes all tokens from the map.
@@ -412,9 +833,11 @@ class VttState extends ChangeNotifier {
 
   /// Adds a completed [stroke] to the drawing layer.
   ///
+  /// Pushes a [StrokeAddAction] onto the undo stack.
   /// Fires [onStrokeAdded] for relay forwarding.
   void addStroke(DrawStroke stroke) {
     strokes.add(stroke);
+    _pushUndo(StrokeAddAction(stroke));
     notifyListeners();
     onStrokeAdded?.call(stroke);
   }
@@ -431,8 +854,13 @@ class VttState extends ChangeNotifier {
 
   /// Removes all drawing strokes from the map.
   ///
-  /// Fires [onDrawingsCleared] for relay forwarding.
+  /// Saves a snapshot of all current strokes and pushes a [StrokeClearAction]
+  /// onto the undo stack before clearing. Fires [onDrawingsCleared] for
+  /// relay forwarding.
   void clearDrawings() {
+    if (strokes.isNotEmpty) {
+      _pushUndo(StrokeClearAction(List.from(strokes)));
+    }
     strokes.clear();
     notifyListeners();
     onDrawingsCleared?.call();
@@ -473,7 +901,8 @@ class VttState extends ChangeNotifier {
   /// Unloads the current map and resets all map-related state.
   ///
   /// Clears revealed cells, open portals, fog settings, calibration,
-  /// and wall debug view. Does not clear tokens or drawings.
+  /// wall debug view, shadow cells, and the undo/redo stacks.
+  /// Does not clear tokens or drawings.
   void clearMap() {
     map = null;
     rawMapBytes = null;
@@ -482,6 +911,27 @@ class VttState extends ChangeNotifier {
     fogEnabled = true;
     showWalls = false;
     calibratedBaseZoom = null;
+    shadowRevealCells.clear();
+    shadowHideCells.clear();
+    _undoStack.clear();
+    _redoStack.clear();
+    notifyListeners();
+  }
+
+  // ===== AoE Templates =====
+
+  /// The currently active AoE template displayed on the map, or null.
+  AoeTemplate? activeAoe;
+
+  /// Sets the active AoE template and notifies listeners.
+  void setAoe(AoeTemplate? template) {
+    activeAoe = template;
+    notifyListeners();
+  }
+
+  /// Clears the active AoE template.
+  void clearAoe() {
+    activeAoe = null;
     notifyListeners();
   }
 
@@ -512,6 +962,9 @@ class VttState extends ChangeNotifier {
         'strokes': strokes.map((s) => s.toJson()).toList(),
         'drawColor': drawColor.toARGB32(),
         'drawWidth': drawWidth,
+        'shadowMode': shadowMode,
+        'shadowRevealCells': shadowRevealCells.toList(),
+        'shadowHideCells': shadowHideCells.toList(),
       };
 
   /// Applies a full state snapshot received from the relay (TV to phone sync).
@@ -552,6 +1005,17 @@ class VttState extends ChangeNotifier {
         [];
     drawColor = Color(json['drawColor'] as int? ?? 0xFFE53935);
     drawWidth = (json['drawWidth'] as num?)?.toDouble() ?? 3.0;
+
+    // Shadow mode fields — backwards compatible
+    shadowMode = json['shadowMode'] as bool? ?? true;
+    shadowRevealCells = json['shadowRevealCells'] != null
+        ? Set<int>.from(
+            (json['shadowRevealCells'] as List).map((e) => e as int))
+        : {};
+    shadowHideCells = json['shadowHideCells'] != null
+        ? Set<int>.from(
+            (json['shadowHideCells'] as List).map((e) => e as int))
+        : {};
 
     notifyListeners(); // single notification
   }
