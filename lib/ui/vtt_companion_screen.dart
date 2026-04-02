@@ -19,6 +19,7 @@ import '../network/vtt_relay_client.dart';
 import '../state/vtt_state.dart';
 import 'dev_log.dart';
 import 'dm_control_panel.dart';
+import 'session_settings_dialog.dart';
 
 /// Companion Mode screen — the DM's phone-based control surface.
 ///
@@ -68,6 +69,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   RelayConnectionState _relayState = RelayConnectionState.disconnected;
   StreamSubscription<RelayConnectionState>? _relaySub;
   double? _transferProgress;
+  bool _tvRendering = false;
+  String _tvRenderingLabel = '';
 
   // TV view state (received from TV via fullState)
   String _tvView = 'waiting';
@@ -147,6 +150,18 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   void _endLoading() {
     _isLoading = false;
     _loadingTimeout?.cancel();
+  }
+
+  /// Shows the session settings dialog, then creates a new session
+  /// with the chosen settings.
+  ///
+  /// If the user cancels the dialog, no session is created.
+  Future<void> _startNewSessionWithSettings(String mapId, String name) async {
+    final settings = await showSessionSettingsDialog(context);
+    if (settings == null) return; // cancelled
+    if (!_beginLoading()) return;
+    _showSnack('Loading session...');
+    _relay?.sendNewSession(mapId, name: name, settings: settings.toJson());
   }
 
   void _connectRelay() {
@@ -259,6 +274,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       }
     };
     _relay!.onTvLog = (msg) => DevLog.add('[TV] $msg');
+    _relay!.onTvRendering = (active, label) {
+      if (mounted) setState(() { _tvRendering = active; _tvRenderingLabel = label; });
+    };
     _relay!.onTvError = (msg) {
       DevLog.add('TV ERROR: $msg');
       if (mounted) {
@@ -633,6 +651,13 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         onSetAoeMode: c.sendSetAoeMode,
         onSetAoe: (t) => c.sendSetAoe(t.toJson()),
         onClearAoe: c.sendClearAoe,
+        // Ruler
+        onToggleRuler: c.sendToggleRuler,
+        onRotateRuler: c.sendRotateRuler,
+        onSetScaleFactor: (f) => c.sendSetScaleFactor(f),
+        // Session settings
+        onUpdateSessionSettings: (settings) =>
+            c.sendUpdateSessionSettings(settings.toJson()),
       );
     }
     return DmCallbacks(
@@ -687,21 +712,70 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onSetAoeMode: () => _state.setInteractionMode(InteractionMode.aoe),
       onSetAoe: (t) => _state.setAoe(t),
       onClearAoe: _state.clearAoe,
+      // Ruler
+      onToggleRuler: _state.toggleRuler,
+      onRotateRuler: _state.rotateRulerCW,
+      onSetScaleFactor: _state.setScaleFactor,
+      // Session settings
+      onUpdateSessionSettings: (settings) {
+        _state.sessionSettings = settings;
+        _state.notifyListeners();
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // In networked mode, show adaptive UI based on TV view
+    Widget body;
     if (_isNetworked && _tvView == 'library') {
-      return _buildLibraryUI();
-    }
-    if (_isNetworked && _tvView == 'waiting') {
-      return _buildWaitingUI();
+      body = _buildLibraryUI();
+    } else if (_isNetworked && _tvView == 'waiting') {
+      body = _buildWaitingUI();
+    } else {
+      body = _buildGameUI();
     }
 
-    // Game view (or local mode)
-    return _buildGameUI();
+    // Overlay rendering spinner when TV is doing heavy work
+    if (_tvRendering) {
+      body = Stack(
+        children: [
+          body,
+          Center(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xEE1a1512),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFF5a4a30)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(
+                      color: Color(0xFFd4a76a),
+                      strokeWidth: 3,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    _tvRenderingLabel,
+                    style: const TextStyle(
+                      color: Color(0xFFd4a76a),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return body;
   }
 
   // ─── Waiting UI ─────────────────────────────────────────
@@ -871,12 +945,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         children: [
           // Map header — tap to start new session
           GestureDetector(
-            onTap: () {
-              if (!_beginLoading()) return;
-              _showSnack('Loading session...');
-              _relay?.sendNewSession(entry.id,
-                  name: 'Session ${mapSessions.length + 1}');
-            },
+            onTap: () => _startNewSessionWithSettings(
+                entry.id, 'Session ${mapSessions.length + 1}'),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
               child: Row(
@@ -921,12 +991,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                     icon: const Icon(Icons.play_circle_outline,
                         color: Colors.greenAccent, size: 24),
                     tooltip: 'New Session',
-                    onPressed: () {
-                      if (!_beginLoading()) return;
-                      _showSnack('Loading session...');
-                      _relay?.sendNewSession(entry.id,
-                          name: 'Session ${mapSessions.length + 1}');
-                    },
+                    onPressed: () => _startNewSessionWithSettings(
+                        entry.id, 'Session ${mapSessions.length + 1}'),
                   ),
                   // Delete button
                   IconButton(

@@ -1,3 +1,193 @@
+/// Feature toggles controlling which tools and visual layers are enabled
+/// during a game session.
+///
+/// A [SessionSettings] instance lives inside each [Session] and determines
+/// what the DM sees in the control panel and what renders on the TV.
+/// Templates ([penAndPaper], [digital]) provide convenient presets.
+///
+/// Toggle categories:
+/// - **Map** -- Fog of War, Shadow Mode, Drawing Tools, Door Toggles
+/// - **Tools** -- Tokens, Measure, Ruler
+/// - **Combat** -- HP Bars, Conditions, AoE Templates, Initiative Tracker
+/// - **Atmosphere** -- Ambient Sound, Weather Effects, Light Animations
+///
+/// See also:
+/// * [Session], which owns a [settings] field.
+/// * [DmControlPanel], which reads these flags to show/hide tabs.
+class SessionSettings {
+  // ── Pen & Paper features (map visuals + DM tools) ───────────────
+
+  /// Whether fog of war is available for this session.
+  bool fogOfWar;
+
+  /// Whether shadow (preview) painting mode is available.
+  bool shadowMode;
+
+  /// Whether freehand drawing tools are available.
+  bool drawingTools;
+
+  /// Whether digital token placement is enabled.
+  ///
+  /// Typically `false` in pen-and-paper mode (physical miniatures are used).
+  bool tokens;
+
+  /// Whether the distance measurement tool is available.
+  bool measureTool;
+
+  /// Whether the L-shaped ruler overlay is available.
+  bool ruler;
+
+  /// Whether door/portal toggles are shown in the DM panel.
+  bool doorToggles;
+
+  // ── Digital features (game mechanics) ───────────────────────────
+
+  /// Whether HP bars are rendered on tokens.
+  bool hpBars;
+
+  /// Whether condition indicators (colored dots) are rendered on tokens.
+  bool conditions;
+
+  /// Whether area-of-effect template tools are available.
+  bool aoeTemplates;
+
+  /// Whether the initiative tracker is available (future feature).
+  bool initiativeTracker;
+
+  // ── Atmosphere (future features) ────────────────────────────────
+
+  /// Whether ambient sound effects are enabled (future feature).
+  bool ambientSound;
+
+  /// Whether weather overlay effects are enabled (future feature).
+  bool weatherEffects;
+
+  /// Whether animated lighting effects are enabled (future feature).
+  bool lightAnimations;
+
+  /// Creates a [SessionSettings] with the given toggles.
+  ///
+  /// All parameters default to the Pen & Paper preset values.
+  SessionSettings({
+    this.fogOfWar = true,
+    this.shadowMode = false,
+    this.drawingTools = true,
+    this.tokens = false,
+    this.measureTool = true,
+    this.ruler = false,
+    this.doorToggles = true,
+    this.hpBars = false,
+    this.conditions = false,
+    this.aoeTemplates = false,
+    this.initiativeTracker = false,
+    this.ambientSound = false,
+    this.weatherEffects = false,
+    this.lightAnimations = false,
+  });
+
+  /// Creates the "Pen & Paper" preset.
+  ///
+  /// Designed for physical miniatures on a TV table: fog, drawing,
+  /// measurement, and doors are on; tokens and digital combat features
+  /// are off.
+  factory SessionSettings.penAndPaper() => SessionSettings(
+        fogOfWar: true,
+        shadowMode: false,
+        drawingTools: true,
+        tokens: false,
+        measureTool: true,
+        ruler: false,
+        doorToggles: true,
+        hpBars: false,
+        conditions: false,
+        aoeTemplates: false,
+        initiativeTracker: false,
+        ambientSound: false,
+        weatherEffects: false,
+        lightAnimations: false,
+      );
+
+  /// Creates the "Digital" preset.
+  ///
+  /// All interactive tools are on including tokens, HP bars, conditions,
+  /// and AoE templates -- intended for fully digital play.
+  factory SessionSettings.digital() => SessionSettings(
+        fogOfWar: true,
+        shadowMode: false,
+        drawingTools: true,
+        tokens: true,
+        measureTool: true,
+        ruler: false,
+        doorToggles: true,
+        hpBars: true,
+        conditions: true,
+        aoeTemplates: true,
+        initiativeTracker: false,
+        ambientSound: false,
+        weatherEffects: false,
+        lightAnimations: false,
+      );
+
+  /// Serializes these settings to a JSON-compatible map.
+  Map<String, dynamic> toJson() => {
+        'fogOfWar': fogOfWar,
+        'shadowMode': shadowMode,
+        'drawingTools': drawingTools,
+        'tokens': tokens,
+        'measureTool': measureTool,
+        'ruler': ruler,
+        'doorToggles': doorToggles,
+        'hpBars': hpBars,
+        'conditions': conditions,
+        'aoeTemplates': aoeTemplates,
+        'initiativeTracker': initiativeTracker,
+        'ambientSound': ambientSound,
+        'weatherEffects': weatherEffects,
+        'lightAnimations': lightAnimations,
+      };
+
+  /// Deserializes a [SessionSettings] from a JSON map.
+  ///
+  /// All fields fall back to their Pen & Paper defaults if absent,
+  /// for backwards compatibility with sessions saved before settings
+  /// were introduced.
+  factory SessionSettings.fromJson(Map<String, dynamic> json) =>
+      SessionSettings(
+        fogOfWar: json['fogOfWar'] as bool? ?? true,
+        shadowMode: json['shadowMode'] as bool? ?? false,
+        drawingTools: json['drawingTools'] as bool? ?? true,
+        tokens: json['tokens'] as bool? ?? false,
+        measureTool: json['measureTool'] as bool? ?? true,
+        ruler: json['ruler'] as bool? ?? false,
+        doorToggles: json['doorToggles'] as bool? ?? true,
+        hpBars: json['hpBars'] as bool? ?? false,
+        conditions: json['conditions'] as bool? ?? false,
+        aoeTemplates: json['aoeTemplates'] as bool? ?? false,
+        initiativeTracker: json['initiativeTracker'] as bool? ?? false,
+        ambientSound: json['ambientSound'] as bool? ?? false,
+        weatherEffects: json['weatherEffects'] as bool? ?? false,
+        lightAnimations: json['lightAnimations'] as bool? ?? false,
+      );
+
+  /// Creates a deep copy of these settings.
+  SessionSettings copy() => SessionSettings(
+        fogOfWar: fogOfWar,
+        shadowMode: shadowMode,
+        drawingTools: drawingTools,
+        tokens: tokens,
+        measureTool: measureTool,
+        ruler: ruler,
+        doorToggles: doorToggles,
+        hpBars: hpBars,
+        conditions: conditions,
+        aoeTemplates: aoeTemplates,
+        initiativeTracker: initiativeTracker,
+        ambientSound: ambientSound,
+        weatherEffects: weatherEffects,
+        lightAnimations: lightAnimations,
+      );
+}
+
 /// A saved gameplay session that references a map and stores all DM state.
 ///
 /// A session captures a complete snapshot of the game at a point in time:
@@ -96,6 +286,29 @@ class Session {
   /// * [MapLibraryEntry.isPdf], the corresponding flag on the map entry.
   bool isPdfSession;
 
+  /// Whether the L-shaped ruler overlay is visible.
+  bool rulerVisible;
+
+  /// Ruler corner X position in grid coordinates.
+  double rulerX;
+
+  /// Ruler corner Y position in grid coordinates.
+  double rulerY;
+
+  /// Ruler rotation in degrees (0, 90, 180, or 270).
+  int rulerRotation;
+
+  /// Scale slider factor for fine-tune zoom adjustment (0.5 to 2.0).
+  double scaleSliderFactor;
+
+  /// Feature toggles controlling which tools and visual layers are enabled.
+  ///
+  /// Defaults to [SessionSettings.penAndPaper] if not provided.
+  ///
+  /// See also:
+  /// * [SessionSettings], the model class with all toggle fields.
+  SessionSettings settings;
+
   // --- Camera snapshot ---
 
   /// Camera X position (world coordinates).
@@ -137,11 +350,17 @@ class Session {
     this.drawWidth = 3.0,
     this.interactionMode = 'fogReveal',
     this.isPdfSession = false,
+    this.rulerVisible = false,
+    this.rulerX = 0,
+    this.rulerY = 0,
+    this.rulerRotation = 0,
+    this.scaleSliderFactor = 1.0,
+    SessionSettings? settings,
     this.cameraX = 0,
     this.cameraY = 0,
     this.cameraZoom = 1,
     this.cameraAngle = 0,
-  });
+  }) : settings = settings ?? SessionSettings.penAndPaper();
 
   /// Serializes this session to a JSON-compatible map.
   ///
@@ -171,6 +390,12 @@ class Session {
         'drawWidth': drawWidth,
         'interactionMode': interactionMode,
         'isPdfSession': isPdfSession,
+        'rulerVisible': rulerVisible,
+        'rulerX': rulerX,
+        'rulerY': rulerY,
+        'rulerRotation': rulerRotation,
+        'scaleSliderFactor': scaleSliderFactor,
+        'settings': settings.toJson(),
         'cameraX': cameraX,
         'cameraY': cameraY,
         'cameraZoom': cameraZoom,
@@ -213,6 +438,14 @@ class Session {
         drawWidth: (json['drawWidth'] as num?)?.toDouble() ?? 3.0,
         interactionMode: json['interactionMode'] as String? ?? 'fogReveal',
         isPdfSession: json['isPdfSession'] as bool? ?? false,
+        rulerVisible: json['rulerVisible'] as bool? ?? false,
+        rulerX: (json['rulerX'] as num?)?.toDouble() ?? 0,
+        rulerY: (json['rulerY'] as num?)?.toDouble() ?? 0,
+        rulerRotation: json['rulerRotation'] as int? ?? 0,
+        scaleSliderFactor: (json['scaleSliderFactor'] as num?)?.toDouble() ?? 1.0,
+        settings: json['settings'] != null
+            ? SessionSettings.fromJson(json['settings'] as Map<String, dynamic>)
+            : null,
         cameraX: (json['cameraX'] as num).toDouble(),
         cameraY: (json['cameraY'] as num).toDouble(),
         cameraZoom: (json['cameraZoom'] as num).toDouble(),

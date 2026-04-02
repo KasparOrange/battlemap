@@ -20,6 +20,7 @@ import 'components/map_image_component.dart';
 import 'components/portal_component.dart';
 import 'components/strokes_component.dart';
 import 'components/measure_component.dart';
+import 'components/ruler_component.dart';
 import 'components/token_layer.dart';
 import 'components/wall_component.dart';
 import 'wall_grid.dart';
@@ -41,6 +42,7 @@ class VttGame extends FlameGame with ScaleDetector {
   TokenLayer? _tokenLayer;
   MeasureComponent? _measure;
   AoeTemplateComponent? _aoeComponent;
+  RulerComponent? _ruler;
 
   /// Discretized wall grid for flood-fill room reveal.
   WallGrid? _wallGrid;
@@ -102,13 +104,13 @@ class VttGame extends FlameGame with ScaleDetector {
       _wallGrid = WallGrid.fromMap(state.map!, state.openPortals);
     }
 
-    // Enforce calibrated zoom
+    // Enforce calibrated zoom (with scale slider factor applied)
     if (state.calibratedBaseZoom != null) {
-      if (state.calibratedBaseZoom != _lastCalibratedZoom) {
-        camera.viewfinder.zoom = state.calibratedBaseZoom!;
+      final effectiveZoom = state.calibratedBaseZoom! * state.scaleSliderFactor;
+      if (state.calibratedBaseZoom != _lastCalibratedZoom ||
+          camera.viewfinder.zoom < effectiveZoom) {
+        camera.viewfinder.zoom = effectiveZoom;
         _lastCalibratedZoom = state.calibratedBaseZoom;
-      } else if (camera.viewfinder.zoom < state.calibratedBaseZoom!) {
-        camera.viewfinder.zoom = state.calibratedBaseZoom!;
       }
     } else {
       _lastCalibratedZoom = null;
@@ -217,6 +219,14 @@ class VttGame extends FlameGame with ScaleDetector {
     );
     world.add(_measure!);
 
+    // Ruler overlay (priority 25 — above everything)
+    _ruler = RulerComponent(
+      state: state,
+      pixelsPerGrid: map.resolution.pixelsPerGrid.toDouble(),
+      mapSize: mapSizeVec,
+    );
+    world.add(_ruler!);
+
     // Build wall grid for room-reveal flood fill
     _wallGrid = WallGrid.fromMap(map, state.openPortals);
     _lastOpenPortals = Set.from(state.openPortals);
@@ -263,6 +273,8 @@ class VttGame extends FlameGame with ScaleDetector {
     _aoeComponent = null;
     _measure?.removeFromParent();
     _measure = null;
+    _ruler?.removeFromParent();
+    _ruler = null;
     _wallGrid = null;
     _lastOpenPortals = null;
   }
@@ -270,12 +282,12 @@ class VttGame extends FlameGame with ScaleDetector {
   // --- Public camera controls (called from DM panel) ---
 
   void zoomIn() {
-    final minZoom = state.calibratedBaseZoom ?? 0.1;
+    final minZoom = (state.calibratedBaseZoom ?? 0.1) * state.scaleSliderFactor;
     camera.viewfinder.zoom = (camera.viewfinder.zoom * 1.3).clamp(minZoom, 10.0);
   }
 
   void zoomOut() {
-    final minZoom = state.calibratedBaseZoom ?? 0.1;
+    final minZoom = (state.calibratedBaseZoom ?? 0.1) * state.scaleSliderFactor;
     camera.viewfinder.zoom = (camera.viewfinder.zoom / 1.3).clamp(minZoom, 10.0);
   }
 
@@ -366,7 +378,7 @@ class VttGame extends FlameGame with ScaleDetector {
 
     if (_isMultiTouch) {
       // Camera zoom + pan (multi-finger gesture)
-      final minZoom = state.calibratedBaseZoom ?? 0.1;
+      final minZoom = (state.calibratedBaseZoom ?? 0.1) * state.scaleSliderFactor;
       final newZoom = _initialZoom * info.scale.global.x;
       camera.viewfinder.zoom = newZoom.clamp(minZoom, 10.0);
       camera.viewfinder.position -= info.delta.global / camera.viewfinder.zoom;

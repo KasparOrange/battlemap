@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import '../model/aoe_template.dart';
 import '../model/draw_stroke.dart';
 import '../model/map_token.dart';
+import '../model/session.dart';
 import '../model/undo_action.dart';
 import '../model/uvtt_map.dart';
 import '../model/uvtt_parser.dart';
@@ -204,6 +205,42 @@ class VttState extends ChangeNotifier {
 
   /// Whether there are undone actions that can be redone.
   bool get canRedo => _redoStack.isNotEmpty;
+
+  // --- Ruler overlay ---
+
+  /// Whether the physical L-shaped ruler overlay is visible on the map.
+  bool rulerVisible = false;
+
+  /// Ruler corner X position in grid coordinates.
+  double rulerX = 0;
+
+  /// Ruler corner Y position in grid coordinates.
+  double rulerY = 0;
+
+  /// Ruler rotation in degrees (0, 90, 180, or 270).
+  int rulerRotation = 0;
+
+  /// Fine-tune zoom multiplier for scale calibration (0.5 to 2.0).
+  ///
+  /// Applied on top of [calibratedBaseZoom] to allow the DM to fine-tune
+  /// the physical grid size without re-calibrating.
+  double scaleSliderFactor = 1.0;
+
+  // --- Session settings ---
+
+  /// Feature toggles controlling which tools and visual layers are enabled.
+  ///
+  /// Set when a session is created or resumed. The DM panel reads these
+  /// flags to show/hide tabs and controls. The TV reads them to decide
+  /// which visual layers to render.
+  ///
+  /// Defaults to the Pen & Paper preset. Synced to the companion via
+  /// [toJson] / [applyRemoteState].
+  ///
+  /// See also:
+  /// * [SessionSettings], the model class with all toggle fields.
+  /// * [Session.settings], where these are persisted.
+  SessionSettings sessionSettings = SessionSettings.penAndPaper();
 
   // --- Shadow mode ---
 
@@ -935,6 +972,36 @@ class VttState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ===== Ruler overlay =====
+
+  /// Toggles the ruler overlay visibility.
+  void toggleRuler() {
+    rulerVisible = !rulerVisible;
+    notifyListeners();
+  }
+
+  /// Sets the ruler corner position in grid coordinates.
+  void setRulerPosition(double x, double y) {
+    rulerX = x;
+    rulerY = y;
+    notifyListeners();
+  }
+
+  /// Rotates the ruler 90 degrees clockwise, cycling 0 -> 90 -> 180 -> 270 -> 0.
+  void rotateRulerCW() {
+    rulerRotation = (rulerRotation + 90) % 360;
+    notifyListeners();
+  }
+
+  /// Sets the scale slider factor, clamped to [0.5, 2.0].
+  ///
+  /// This multiplier is applied on top of [calibratedBaseZoom] to allow
+  /// the DM to fine-tune the physical grid size.
+  void setScaleFactor(double factor) {
+    scaleSliderFactor = factor.clamp(0.5, 2.0);
+    notifyListeners();
+  }
+
   // ===== Serialization =====
 
   /// Serializes the full state to a JSON-compatible map for relay broadcast.
@@ -965,6 +1032,12 @@ class VttState extends ChangeNotifier {
         'shadowMode': shadowMode,
         'shadowRevealCells': shadowRevealCells.toList(),
         'shadowHideCells': shadowHideCells.toList(),
+        'rulerVisible': rulerVisible,
+        'rulerX': rulerX,
+        'rulerY': rulerY,
+        'rulerRotation': rulerRotation,
+        'scaleSliderFactor': scaleSliderFactor,
+        'sessionSettings': sessionSettings.toJson(),
       };
 
   /// Applies a full state snapshot received from the relay (TV to phone sync).
@@ -1016,6 +1089,18 @@ class VttState extends ChangeNotifier {
         ? Set<int>.from(
             (json['shadowHideCells'] as List).map((e) => e as int))
         : {};
+
+    // Ruler overlay fields — backwards compatible
+    rulerVisible = json['rulerVisible'] as bool? ?? false;
+    rulerX = (json['rulerX'] as num?)?.toDouble() ?? 0;
+    rulerY = (json['rulerY'] as num?)?.toDouble() ?? 0;
+    rulerRotation = json['rulerRotation'] as int? ?? 0;
+    scaleSliderFactor = (json['scaleSliderFactor'] as num?)?.toDouble() ?? 1.0;
+
+    // Session settings — backwards compatible
+    sessionSettings = json['sessionSettings'] != null
+        ? SessionSettings.fromJson(json['sessionSettings'] as Map<String, dynamic>)
+        : SessionSettings.penAndPaper();
 
     notifyListeners(); // single notification
   }

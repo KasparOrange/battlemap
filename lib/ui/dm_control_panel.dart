@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../model/aoe_template.dart';
 import '../model/map_token.dart';
+import '../model/session.dart';
 import '../state/vtt_state.dart';
+import 'session_settings_dialog.dart';
 
 // ─── Medieval warm color palette ────────────────────────────────────
 
@@ -171,6 +173,22 @@ class DmCallbacks {
   /// Removes the active area-of-effect template.
   final VoidCallback onClearAoe;
 
+  // ── Ruler overlay ──────────────────────────────────────────────────
+
+  /// Toggles the L-shaped ruler overlay visibility.
+  final VoidCallback onToggleRuler;
+
+  /// Rotates the ruler 90 degrees clockwise.
+  final VoidCallback onRotateRuler;
+
+  /// Sets the scale slider factor for fine-tune zoom adjustment.
+  final void Function(double factor) onSetScaleFactor;
+
+  /// Sends updated [SessionSettings] to the TV for the active session.
+  ///
+  /// Called when the DM saves changes in the session settings dialog.
+  final void Function(SessionSettings settings) onUpdateSessionSettings;
+
   /// Creates a [DmCallbacks] with all required action handlers.
   const DmCallbacks({
     required this.onLoadMap,
@@ -209,6 +227,10 @@ class DmCallbacks {
     required this.onSetAoeMode,
     required this.onSetAoe,
     required this.onClearAoe,
+    required this.onToggleRuler,
+    required this.onRotateRuler,
+    required this.onSetScaleFactor,
+    required this.onUpdateSessionSettings,
   });
 }
 
@@ -268,15 +290,35 @@ class _DmControlPanelState extends State<DmControlPanel> {
   VttState get state => widget.state;
   DmCallbacks get cb => widget.callbacks;
 
-  /// Tab definitions: icon and tooltip label.
-  static const _tabs = [
-    (Icons.shield, 'Combat'),
-    (Icons.cloud, 'Fog'),
-    (Icons.brush, 'Draw'),
-    (Icons.straighten, 'Measure'),
-    (Icons.videocam, 'Camera'),
-    (Icons.tune, 'Settings'),
+  /// All possible tab definitions: icon, tooltip label, and tab ID.
+  static const _allTabs = [
+    (Icons.shield, 'Combat', 'combat'),
+    (Icons.cloud, 'Fog', 'fog'),
+    (Icons.brush, 'Draw', 'draw'),
+    (Icons.straighten, 'Measure', 'measure'),
+    (Icons.videocam, 'Camera', 'camera'),
+    (Icons.tune, 'Settings', 'settings'),
   ];
+
+  /// Returns the list of tabs visible given current [SessionSettings].
+  ///
+  /// Hides tabs when all their features are disabled:
+  /// - Combat tab hidden when tokens + hpBars + conditions + aoeTemplates all off
+  /// - Draw tab hidden when drawingTools off
+  /// - Measure tab hidden when measureTool off
+  /// - Fog, Camera, Settings are always shown
+  List<(IconData, String, String)> get _visibleTabs {
+    final s = state.sessionSettings;
+    final hasCombat = s.tokens || s.hpBars || s.conditions || s.aoeTemplates;
+    return [
+      if (hasCombat) _allTabs[0], // Combat
+      _allTabs[1],                // Fog (always)
+      if (s.drawingTools) _allTabs[2], // Draw
+      if (s.measureTool) _allTabs[3],  // Measure
+      _allTabs[4],                // Camera (always)
+      _allTabs[5],                // Settings (always)
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -370,6 +412,22 @@ class _DmControlPanelState extends State<DmControlPanel> {
               ),
             ),
           ),
+          // Session settings gear button
+          GestureDetector(
+            onTap: () async {
+              final updated = await showSessionSettingsDialog(
+                context,
+                initial: state.sessionSettings,
+              );
+              if (updated != null) {
+                cb.onUpdateSessionSettings(updated);
+              }
+            },
+            child: const Padding(
+              padding: EdgeInsets.all(4),
+              child: Icon(Icons.settings, color: _kAccentGoldDim, size: 18),
+            ),
+          ),
           GestureDetector(
             onTap: () => setState(() => _expanded = false),
             child: const Padding(
@@ -384,17 +442,20 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   /// Builds the 6-icon horizontal tab bar.
   Widget _buildTabBar() {
+    final tabs = _visibleTabs;
+    // Clamp _activeTab to valid range
+    if (_activeTab >= tabs.length) _activeTab = 0;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          for (int i = 0; i < _tabs.length; i++)
+          for (int i = 0; i < tabs.length; i++)
             Expanded(
               child: GestureDetector(
                 onTap: () {
                   setState(() => _activeTab = i);
                   // Auto-activate measure mode when switching to Measure tab
-                  if (i == 3) cb.onSetMeasureMode();
+                  if (tabs[i].$3 == 'measure') cb.onSetMeasureMode();
                 },
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -407,7 +468,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                         : null,
                   ),
                   child: Icon(
-                    _tabs[i].$1,
+                    tabs[i].$1,
                     color: _activeTab == i ? _kAccentGold : _kAccentGoldDim,
                     size: 20,
                   ),
@@ -419,20 +480,24 @@ class _DmControlPanelState extends State<DmControlPanel> {
     );
   }
 
-  /// Dispatches to the correct tab content builder.
+  /// Dispatches to the correct tab content builder based on the active
+  /// visible tab's ID string.
   Widget _buildTabContent() {
-    switch (_activeTab) {
-      case 0:
+    final tabs = _visibleTabs;
+    if (_activeTab >= tabs.length) return const SizedBox.shrink();
+    final tabId = tabs[_activeTab].$3;
+    switch (tabId) {
+      case 'combat':
         return _buildCombatTab();
-      case 1:
+      case 'fog':
         return _buildFogTab();
-      case 2:
+      case 'draw':
         return _buildDrawTab();
-      case 3:
+      case 'measure':
         return _buildMeasureTab();
-      case 4:
+      case 'camera':
         return _buildCameraTab();
-      case 5:
+      case 'settings':
         return _buildSettingsTab();
       default:
         return const SizedBox.shrink();
@@ -1333,6 +1398,47 @@ class _DmControlPanelState extends State<DmControlPanel> {
               ? '${state.tvWidthInches!.round()}" calibrated'
               : 'Set TV size',
           onTap: () => _showCalibrationDialog(context),
+        ),
+        const SizedBox(height: 12),
+        const Divider(color: _kBorderGold, height: 1),
+        const SizedBox(height: 10),
+        const _GoldLabel('Ruler'),
+        const SizedBox(height: 4),
+        _GoldToggle(
+          icon: Icons.square_foot,
+          label: 'Ruler overlay',
+          active: state.rulerVisible,
+          onTap: cb.onToggleRuler,
+        ),
+        const SizedBox(height: 6),
+        _GoldButton(
+          icon: Icons.rotate_right,
+          label: 'Rotate ruler',
+          onTap: cb.onRotateRuler,
+        ),
+        const SizedBox(height: 10),
+        const _GoldLabel('Scale'),
+        const SizedBox(height: 4),
+        Text(
+          'Scale: ${state.scaleSliderFactor.toStringAsFixed(2)}x',
+          style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+        ),
+        const SizedBox(height: 2),
+        SliderTheme(
+          data: SliderThemeData(
+            activeTrackColor: _kAccentGold,
+            inactiveTrackColor: _kAccentGoldDim.withValues(alpha: 0.4),
+            thumbColor: _kAccentGold,
+            overlayColor: _kAccentGold.withValues(alpha: 0.2),
+            trackHeight: 3,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+          ),
+          child: Slider(
+            value: state.scaleSliderFactor,
+            min: 0.5,
+            max: 2.0,
+            onChanged: (v) => cb.onSetScaleFactor(v),
+          ),
         ),
       ],
     );

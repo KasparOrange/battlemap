@@ -1,83 +1,102 @@
 # feature ideas
 
-ideas for future development, roughly sorted by gameplay impact.
+## play modes
 
-## high impact, moderate effort
+the app supports two composable play modes, selected via session settings. individual features can be toggled on/off — the modes are just presets.
 
-### pdf map support
-load PDFs as an alternative to .dd2vtt files. many DMs only have PDF battlemaps. the app already has a PDF renderer (`pdfrx`). needs configurable grid overlay since PDFs have no embedded grid metadata. DM sets grid columns/rows at upload time.
+### pen & paper mode (default)
 
-**status:** in progress
+the TV is a living, breathing map surface. all game mechanics (HP, initiative, conditions) happen at the real table with dice, paper, and pencils. the app's job is to make the MAP amazing and give the DM tools to create atmosphere.
 
-### measure tool
-tap two points on the map, see the distance in feet (5ft per grid square). essential for D&D combat — "can my character reach that goblin?" renders as a line between two grid positions with a distance label. could also show movement range as a highlighted area.
+players place real miniatures on the TV. the DM controls the spectacle from the phone.
 
-### area-of-effect templates
-drop circle, cone, or line overlays on the map for spell effects. "fireball is a 20ft radius sphere." DM places the template origin, selects shape and size, players see the affected area on the TV. huge visual impact at the table.
+### digital mode
 
-shapes needed:
-- circle (radius in feet) — fireball, moonbeam, spirit guardians
-- cone (length + angle) — burning hands, cone of cold
-- line (length + width) — lightning bolt, wall of fire
-- square (side length) — cloud of kill, darkness
+full virtual tabletop. everything from pen & paper PLUS digital game mechanics — HP tracking, initiative order, conditions, dice rolling, automated combat.
 
-### room reveal (flood-fill fog)
-tap inside a room to reveal all fog cells at once, bounded by walls. replaces tedious cell-by-cell painting. uses flood-fill algorithm starting from the tap point, stopping at wall boundaries from the .dd2vtt line-of-sight data.
+## session settings
 
-## high impact, low effort
+a dialog that opens when creating a new session and can be reopened during play. tabbed layout:
 
-### token names and HP
-tap a token to edit its name (e.g., "Goblin 3") and HP (e.g., 15/15). show a small HP bar under each token on the map. essential for combat tracking.
+- **template tab** — pick "Pen & Paper" or "Digital" preset (populates the toggles)
+- **map tab** — grid config, calibration, ruler
+- **features tab** — individual feature toggles grouped by category
+- **atmosphere tab** — animations, sound, weather, lighting
 
-### condition markers
-small colored icons on tokens: poisoned (green), stunned (yellow), concentrating (blue), prone (red), etc. toggle from a token context menu. visible on both TV and phone.
+all settings saved per session and restored on resume.
 
-### initiative tracker
-turn order widget on the companion phone. add combatants, roll initiative, track whose turn it is. highlight the active token on the map. can be a simple sorted list with tap-to-advance.
+---
 
-## medium impact, medium effort
+## pen & paper features
 
-### session thumbnails
-capture a screenshot of the game canvas as a PNG thumbnail for the library browser. generated lazily when viewing the session list. makes the library look polished instead of plain text cards.
+these make the map visually stunning and give the DM atmosphere tools. no game mechanics.
 
-### multiple maps per session
-switch between dungeon floors or areas without losing token/fog state per floor. each floor has its own map, fog, and token state. DM navigates between floors from the phone.
+### done
+- [x] fog of war with brush reveal/hide
+- [x] shadow/dry-edit fog mode (preview before commit)
+- [x] room reveal (flood-fill bounded by walls)
+- [x] door/portal toggling
+- [x] freehand drawing on the map
+- [x] measure tool (D&D distance)
+- [x] L-ruler with scale calibration slider
+- [x] PDF and image map support
+- [x] undo/redo (50 actions)
 
-### undo stack
-undo for all actions — not just drawing strokes, but also fog reveals, token moves, door toggles. a proper undo/redo stack with keyboard shortcut support. essential for "oops I revealed the wrong room."
+### next up
+- [ ] **torch/light animations** — flickering glow around light sources. .dd2vtt files include light position, range, intensity, and color. render as animated radial gradient with subtle flicker.
+- [ ] **water animation** — subtle shimmer/flow on water areas. could use a noise shader or animated UV offset.
+- [ ] **weather particles** — rain, snow, embers, floating dust motes. particle system overlay controlled from atmosphere tab. adjustable intensity.
+- [ ] **location-triggered effects** — DM taps a spot on the map → visual effect plays: explosion, magic circle appearing, smoke cloud, fire burst. library of preset effects.
+- [ ] **global effects** — screen shake (earthquake), flash (lightning), fade to black (scene transition), pulse glow. triggered from DM panel.
+- [ ] **ambient soundscapes** — layered audio from TV speakers. base atmosphere (dungeon echo, forest, tavern) + triggered SFX (door slam, sword clash, thunder). controlled from phone.
+- [ ] **day/night cycle** — gradually dim the map, shift lighting color temperature. DM controls time-of-day slider.
+- [ ] **animated fog edges** — fog rolls in/out with particle wisps instead of hard cell edges. soft gradient fog boundary.
+- [ ] **door animations** — doors visually swing open/shut instead of instant toggle.
+- [ ] **narrative text overlay** — DM pushes text that fades in on the TV: "You enter the throne room..." dramatic reveal moments.
+- [ ] **timer/countdown** — visible countdown on the TV for timed puzzles or dramatic tension. DM sets duration from phone.
+- [ ] **miniature spotlight** — dramatic light cone on a specific grid area. useful for "a beam of moonlight falls on the altar."
 
-### grid configuration after load
-re-configure the grid (columns, rows, offset, rotation) after a map is loaded. useful when the grid doesn't align perfectly with the map image. drag handles to adjust grid position and size.
+### planned
+- [ ] **grid configuration after load** — re-adjust grid offset, rotation, scale after loading. drag handles. essential for PDF maps that don't align.
+- [ ] **session thumbnails** — capture game canvas as PNG for library browser.
+- [ ] **multiple maps per session** — switch between dungeon floors without losing state per floor.
+- [ ] **map annotations (DM only)** — invisible sticky notes on the map. "trap here", "DC 15 lock". only visible on the phone.
 
-### token sizes
-support for large (2x2), huge (3x3), and gargantuan (4x4) creature tokens. D&D monsters come in different sizes. currently all tokens are 1x1 grid squares.
+---
 
-## fun but lower priority
+## digital mode features
 
-### ambient sound
-play background music or sound effects from the TV speakers, controlled from the phone. atmosphere presets: dungeon, forest, tavern, combat. could use a simple audio player with a few bundled tracks or URL-based streaming.
+these add game mechanics on top of the pen & paper visuals.
 
-### animated tokens
-sprite sheet support for creature tokens. idle animations, attack animations, death animations. would make the table much more immersive but requires art assets.
+### done
+- [x] token placement (tap to place, drag to move)
+- [x] token names and HP bars
+- [x] condition markers (10 D&D conditions)
+- [x] AoE templates (circle, cone, line, square)
 
-### visual effects
-GPU-powered effects on the Flame canvas:
-- glow on light sources (from .dd2vtt light data)
-- dynamic fog edges (soft gradient instead of hard cell boundaries)
-- bloom on bright elements
-- particle effects for spells
+### next up
+- [ ] **initiative tracker** — turn order widget on phone. add combatants, roll initiative, tap to advance. highlight active token on TV with a glow ring.
+- [ ] **token sizes** — large (2x2), huge (3x3), gargantuan (4x4). a dragon should fill 4 squares.
+- [ ] **custom token images** — upload PNG portraits for creature tokens instead of colored circles.
+- [ ] **line-of-sight** — show what a token can see based on wall data. dim areas outside LOS.
 
-### line-of-sight from token
-show what a specific token can "see" based on wall data. useful for stealth encounters. toggle per-token visibility from the companion.
+### planned
+- [ ] **digital dice** — 3D animated dice roll on the TV. tap to roll from phone.
+- [ ] **automated damage** — select token, enter damage, HP auto-updates, death save prompts.
+- [ ] **condition duration tracking** — conditions auto-expire after N rounds.
+- [ ] **spell slot tracking** — track used/remaining spell slots per caster token.
+- [ ] **character sheets** — basic stat block stored per token (AC, saves, speeds).
+- [ ] **combat log** — scrolling text log of actions on the companion phone.
 
-### weather effects
-rain, snow, fog particles overlaid on the map. purely visual atmosphere. controlled from a DM panel dropdown.
+---
 
-### custom token images
-upload small images (PNG) to use as token art instead of colored circles. show creature portraits on the map. stored in the library alongside maps.
+## shared features (both modes)
 
-### map annotations
-sticky notes on the map — DM-only or visible to all. useful for "trap here" or "door is locked (DC 15)". text labels anchored to grid positions.
-
-### combat log
-scrolling text log of actions: "Goblin 3 took 8 damage (12 → 4 HP)", "Fog revealed in room 2". shown on the companion phone. useful for tracking what happened.
+- [x] VPS WebSocket relay (phone controls TV)
+- [x] map library with persistent storage (Hive)
+- [x] session save/restore (auto-save, resume)
+- [x] in-app updates (Shorebird OTA + APK fallback)
+- [x] structured logging + developer screen
+- [x] medieval-themed DM control panel
+- [x] TV remote fallback (D-pad navigation)
+- [ ] **session settings dialog** — template picker + feature toggles

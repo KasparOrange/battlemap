@@ -128,6 +128,9 @@ class VttRelayClient {
   /// snackbar on the companion UI.
   void Function(String msg)? onTvError;
 
+  /// Called when the TV starts/stops a heavy rendering operation.
+  void Function(bool active, String label)? onTvRendering;
+
   /// Called when Shorebird patch status is received (companion side).
   void Function(Map<String, dynamic> status)? onPatchStatus;
 
@@ -350,6 +353,12 @@ class VttRelayClient {
 
         case 'tv.log':
           onTvLog?.call(msg['msg'] as String? ?? '');
+
+        case 'tv.rendering':
+          onTvRendering?.call(
+            msg['active'] as bool? ?? false,
+            msg['label'] as String? ?? '',
+          );
 
         case 'patch.status':
           onPatchStatus?.call(msg);
@@ -655,6 +664,22 @@ class VttRelayClient {
   /// Removes the active area-of-effect template from the TV map.
   void sendClearAoe() => _send({'type': 'vtt.clearAoe'});
 
+  // --- Ruler overlay (companion → table via relay) ---
+
+  /// Toggles the L-shaped ruler overlay visibility on the TV.
+  void sendToggleRuler() => _send({'type': 'vtt.toggleRuler'});
+
+  /// Sets the ruler corner position to grid coordinates ([x], [y]).
+  void sendSetRulerPosition(double x, double y) =>
+      _send({'type': 'vtt.setRulerPosition', 'x': x, 'y': y});
+
+  /// Rotates the ruler 90 degrees clockwise on the TV.
+  void sendRotateRuler() => _send({'type': 'vtt.rotateRuler'});
+
+  /// Sets the scale slider factor on the TV for fine-tune zoom adjustment.
+  void sendSetScaleFactor(double factor) =>
+      _send({'type': 'vtt.setScaleFactor', 'factor': factor});
+
   // --- Navigation commands (companion → table) ---
 
   /// Navigates the TV to the map library view.
@@ -677,12 +702,23 @@ class VttRelayClient {
   /// Creates a brand-new session for [mapId] on the TV.
   ///
   /// The session is given the optional [name] (defaults to "Session" on
-  /// the TV side if omitted).
-  void sendNewSession(String mapId, {String? name}) {
+  /// the TV side if omitted). If [settings] is provided, it is included
+  /// as a JSON map so the TV initializes the session with those
+  /// [SessionSettings].
+  void sendNewSession(String mapId, {String? name, Map<String, dynamic>? settings}) {
     final msg = <String, dynamic>{'type': 'nav.newSession', 'mapId': mapId};
     if (name != null) msg['name'] = name;
+    if (settings != null) msg['settings'] = settings;
     _send(msg);
   }
+
+  /// Sends updated [SessionSettings] to the TV for the active session.
+  ///
+  /// [settings] is the serialized [SessionSettings.toJson] map. The TV
+  /// applies these to the running session and broadcasts the change in
+  /// the next `vtt.fullState`.
+  void sendUpdateSessionSettings(Map<String, dynamic> settings) =>
+      _send({'type': 'vtt.updateSessionSettings', 'settings': settings});
 
   // --- Library commands (companion → table) ---
 

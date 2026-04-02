@@ -1591,4 +1591,90 @@ void main() {
       expect(restored.interactionMode, InteractionMode.roomReveal);
     });
   });
+
+  group('Ruler overlay', () {
+    test('toggleRuler() flips visibility', () {
+      final state = VttState();
+      expect(state.rulerVisible, false);
+      state.toggleRuler();
+      expect(state.rulerVisible, true);
+      state.toggleRuler();
+      expect(state.rulerVisible, false);
+    });
+
+    test('rotateRulerCW() cycles 0 -> 90 -> 180 -> 270 -> 0', () {
+      final state = VttState();
+      expect(state.rulerRotation, 0);
+      state.rotateRulerCW();
+      expect(state.rulerRotation, 90);
+      state.rotateRulerCW();
+      expect(state.rulerRotation, 180);
+      state.rotateRulerCW();
+      expect(state.rulerRotation, 270);
+      state.rotateRulerCW();
+      expect(state.rulerRotation, 0);
+    });
+
+    test('setScaleFactor() clamps to 0.5-2.0', () {
+      final state = VttState();
+      state.setScaleFactor(1.5);
+      expect(state.scaleSliderFactor, 1.5);
+      state.setScaleFactor(0.1);
+      expect(state.scaleSliderFactor, 0.5);
+      state.setScaleFactor(5.0);
+      expect(state.scaleSliderFactor, 2.0);
+    });
+
+    test('setRulerPosition() sets coordinates', () {
+      final state = VttState();
+      state.setRulerPosition(3.5, 7.2);
+      expect(state.rulerX, 3.5);
+      expect(state.rulerY, 7.2);
+    });
+
+    test('toJson / applyRemoteState round-trip includes ruler fields', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes());
+      state.rulerVisible = true;
+      state.rulerX = 2.5;
+      state.rulerY = 4.0;
+      state.rulerRotation = 180;
+      state.scaleSliderFactor = 1.75;
+
+      final json = state.toJson();
+      expect(json['rulerVisible'], true);
+      expect(json['rulerX'], 2.5);
+      expect(json['rulerY'], 4.0);
+      expect(json['rulerRotation'], 180);
+      expect(json['scaleSliderFactor'], 1.75);
+
+      final restored = VttState();
+      restored.applyRemoteState(json);
+      expect(restored.rulerVisible, true);
+      expect(restored.rulerX, 2.5);
+      expect(restored.rulerY, 4.0);
+      expect(restored.rulerRotation, 180);
+      expect(restored.scaleSliderFactor, 1.75);
+    });
+
+    test('applyRemoteState with missing ruler fields uses defaults', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes());
+      final json = state.toJson();
+      // Simulate an old state message without ruler fields
+      json.remove('rulerVisible');
+      json.remove('rulerX');
+      json.remove('rulerY');
+      json.remove('rulerRotation');
+      json.remove('scaleSliderFactor');
+
+      final restored = VttState();
+      restored.applyRemoteState(json);
+      expect(restored.rulerVisible, false);
+      expect(restored.rulerX, 0);
+      expect(restored.rulerY, 0);
+      expect(restored.rulerRotation, 0);
+      expect(restored.scaleSliderFactor, 1.0);
+    });
+  });
 }

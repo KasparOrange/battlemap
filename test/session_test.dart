@@ -230,5 +230,187 @@ void main() {
       final json = session.toJson();
       expect(json.containsKey('isPdfSession'), true);
     });
+
+    test('settings field round-trips correctly', () {
+      final original = Session(
+        id: 'settings-session',
+        mapId: 'map-001',
+        name: 'Settings Test',
+        createdAt: DateTime.utc(2026, 4, 1),
+        lastModifiedAt: DateTime.utc(2026, 4, 1),
+        settings: SessionSettings.digital(),
+      );
+
+      final json = original.toJson();
+      final restored = Session.fromJson(json);
+
+      expect(restored.settings.fogOfWar, true);
+      expect(restored.settings.tokens, true);
+      expect(restored.settings.hpBars, true);
+      expect(restored.settings.conditions, true);
+      expect(restored.settings.aoeTemplates, true);
+      expect(restored.settings.drawingTools, true);
+      expect(restored.settings.measureTool, true);
+      expect(restored.settings.doorToggles, true);
+    });
+
+    test('settings defaults to penAndPaper when absent', () {
+      final oldJson = {
+        'id': 'old-no-settings',
+        'mapId': 'map-002',
+        'name': 'Old No Settings',
+        'createdAt': '2026-01-01T00:00:00.000Z',
+        'lastModifiedAt': '2026-01-01T00:00:00.000Z',
+        'thumbnailPath': null,
+        'revealedCells': <int>[],
+        'openPortals': <int>[],
+        'showGrid': true,
+        'fogEnabled': true,
+        'showWalls': false,
+        'brushRadius': 1,
+        'revealMode': true,
+        'tvWidthInches': null,
+        'calibratedBaseZoom': null,
+        'cameraX': 0,
+        'cameraY': 0,
+        'cameraZoom': 1,
+        'cameraAngle': 0,
+        // No 'settings' key
+      };
+
+      final restored = Session.fromJson(oldJson);
+
+      expect(restored.settings.fogOfWar, true);
+      expect(restored.settings.tokens, false);
+      expect(restored.settings.hpBars, false);
+      expect(restored.settings.conditions, false);
+      expect(restored.settings.aoeTemplates, false);
+      expect(restored.settings.drawingTools, true);
+    });
+  });
+
+  group('SessionSettings', () {
+    test('toJson/fromJson round-trip', () {
+      final original = SessionSettings(
+        fogOfWar: true,
+        shadowMode: true,
+        drawingTools: false,
+        tokens: true,
+        measureTool: false,
+        ruler: true,
+        doorToggles: false,
+        hpBars: true,
+        conditions: true,
+        aoeTemplates: false,
+        initiativeTracker: true,
+        ambientSound: true,
+        weatherEffects: false,
+        lightAnimations: true,
+      );
+
+      final json = original.toJson();
+      final restored = SessionSettings.fromJson(json);
+
+      expect(restored.fogOfWar, original.fogOfWar);
+      expect(restored.shadowMode, original.shadowMode);
+      expect(restored.drawingTools, original.drawingTools);
+      expect(restored.tokens, original.tokens);
+      expect(restored.measureTool, original.measureTool);
+      expect(restored.ruler, original.ruler);
+      expect(restored.doorToggles, original.doorToggles);
+      expect(restored.hpBars, original.hpBars);
+      expect(restored.conditions, original.conditions);
+      expect(restored.aoeTemplates, original.aoeTemplates);
+      expect(restored.initiativeTracker, original.initiativeTracker);
+      expect(restored.ambientSound, original.ambientSound);
+      expect(restored.weatherEffects, original.weatherEffects);
+      expect(restored.lightAnimations, original.lightAnimations);
+    });
+
+    test('penAndPaper preset has correct values', () {
+      final pp = SessionSettings.penAndPaper();
+
+      expect(pp.fogOfWar, true);
+      expect(pp.shadowMode, false);
+      expect(pp.drawingTools, true);
+      expect(pp.tokens, false);
+      expect(pp.measureTool, true);
+      expect(pp.ruler, false);
+      expect(pp.doorToggles, true);
+      expect(pp.hpBars, false);
+      expect(pp.conditions, false);
+      expect(pp.aoeTemplates, false);
+      expect(pp.initiativeTracker, false);
+      expect(pp.ambientSound, false);
+      expect(pp.weatherEffects, false);
+      expect(pp.lightAnimations, false);
+    });
+
+    test('digital preset has correct values', () {
+      final dg = SessionSettings.digital();
+
+      expect(dg.fogOfWar, true);
+      expect(dg.shadowMode, false);
+      expect(dg.drawingTools, true);
+      expect(dg.tokens, true);
+      expect(dg.measureTool, true);
+      expect(dg.ruler, false);
+      expect(dg.doorToggles, true);
+      expect(dg.hpBars, true);
+      expect(dg.conditions, true);
+      expect(dg.aoeTemplates, true);
+      expect(dg.initiativeTracker, false);
+      expect(dg.ambientSound, false);
+      expect(dg.weatherEffects, false);
+      expect(dg.lightAnimations, false);
+    });
+
+    test('backwards compatibility - fromJson with empty map', () {
+      final restored = SessionSettings.fromJson({});
+
+      // Should default to penAndPaper values
+      expect(restored.fogOfWar, true);
+      expect(restored.shadowMode, false);
+      expect(restored.drawingTools, true);
+      expect(restored.tokens, false);
+      expect(restored.measureTool, true);
+      expect(restored.ruler, false);
+      expect(restored.doorToggles, true);
+      expect(restored.hpBars, false);
+      expect(restored.conditions, false);
+      expect(restored.aoeTemplates, false);
+    });
+
+    test('copy creates independent instance', () {
+      final original = SessionSettings.digital();
+      final copy = original.copy();
+
+      copy.tokens = false;
+      copy.hpBars = false;
+
+      expect(original.tokens, true);
+      expect(original.hpBars, true);
+      expect(copy.tokens, false);
+      expect(copy.hpBars, false);
+    });
+
+    test('toJson produces expected keys', () {
+      final json = SessionSettings().toJson();
+
+      expect(json.containsKey('fogOfWar'), true);
+      expect(json.containsKey('shadowMode'), true);
+      expect(json.containsKey('drawingTools'), true);
+      expect(json.containsKey('tokens'), true);
+      expect(json.containsKey('measureTool'), true);
+      expect(json.containsKey('ruler'), true);
+      expect(json.containsKey('doorToggles'), true);
+      expect(json.containsKey('hpBars'), true);
+      expect(json.containsKey('conditions'), true);
+      expect(json.containsKey('aoeTemplates'), true);
+      expect(json.containsKey('initiativeTracker'), true);
+      expect(json.containsKey('ambientSound'), true);
+      expect(json.containsKey('weatherEffects'), true);
+      expect(json.containsKey('lightAnimations'), true);
+    });
   });
 }

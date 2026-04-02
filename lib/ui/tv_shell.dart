@@ -97,6 +97,10 @@ class _TvShellState extends State<TvShell> {
   DateTime? _sessionCreatedAt;
   bool _isPdfSession = false;
 
+  // Rendering spinner (for PDF render, map decode, etc.)
+  bool _isRendering = false;
+  String _renderingLabel = '';
+
   // Update state
   double? _updateProgress;
   String _updateStatus = '';
@@ -457,7 +461,7 @@ class _TvShellState extends State<TvShell> {
   /// - [_resumeSession] for restoring a previously saved session.
   /// - [_downloadAndLoadPdf] for the initial PDF upload flow.
   Future<void> _startNewSession(String mapId, String name,
-      {bool sendMapToCompanion = true}) async {
+      {bool sendMapToCompanion = true, SessionSettings? settings}) async {
     try {
       _log('Starting new session: mapId=$mapId, name="$name", sendMap=$sendMapToCompanion');
       final entry = _library.getEntry(mapId);
@@ -466,7 +470,11 @@ class _TvShellState extends State<TvShell> {
 
       // Check if this is a PDF map — render page to image first
       if (entry?.isPdf == true) {
+        setState(() { _isRendering = true; _renderingLabel = 'Rendering PDF...'; });
+        _relay.sendRaw(jsonEncode({'type': 'tv.rendering', 'active': true, 'label': 'Rendering PDF...'}));
         final rendered = await PdfHelper.renderPdfPage(bytes);
+        setState(() { _isRendering = false; });
+        _relay.sendRaw(jsonEncode({'type': 'tv.rendering', 'active': false}));
         if (rendered == null) {
           _sendError('Failed to render PDF page for map $mapId');
           return;
@@ -497,6 +505,11 @@ class _TvShellState extends State<TvShell> {
 
       _setView(TvView.game);
       _state.addListener(_onStateChanged);
+
+      // Apply session settings if provided
+      if (settings != null) {
+        _state.sessionSettings = settings;
+      }
 
       // Initial save
       await _saveCurrentSession(isPdfSession: entry?.isPdf == true);
@@ -556,7 +569,11 @@ class _TvShellState extends State<TvShell> {
       // Check if this is a PDF session — render page to image first
       final isPdf = session.isPdfSession || (entry?.isPdf == true);
       if (isPdf) {
+        setState(() { _isRendering = true; _renderingLabel = 'Rendering PDF...'; });
+        _relay.sendRaw(jsonEncode({'type': 'tv.rendering', 'active': true, 'label': 'Rendering PDF...'}));
         final rendered = await PdfHelper.renderPdfPage(bytes);
+        setState(() { _isRendering = false; });
+        _relay.sendRaw(jsonEncode({'type': 'tv.rendering', 'active': false}));
         if (rendered == null) {
           _sendError('Failed to render PDF page for session $sessionId');
           return;
@@ -598,6 +615,12 @@ class _TvShellState extends State<TvShell> {
           .toList();
       _state.drawColor = Color(session.drawColorValue);
       _state.drawWidth = session.drawWidth;
+      _state.rulerVisible = session.rulerVisible;
+      _state.rulerX = session.rulerX;
+      _state.rulerY = session.rulerY;
+      _state.rulerRotation = session.rulerRotation;
+      _state.scaleSliderFactor = session.scaleSliderFactor;
+      _state.sessionSettings = session.settings.copy();
       final modeName = session.interactionMode;
       _state.interactionMode = InteractionMode.values.firstWhere(
         (m) => m.name == modeName,
@@ -696,11 +719,17 @@ class _TvShellState extends State<TvShell> {
       drawColorValue: _state.drawColor.toARGB32(),
       drawWidth: _state.drawWidth,
       interactionMode: _state.interactionMode.name,
+      rulerVisible: _state.rulerVisible,
+      rulerX: _state.rulerX,
+      rulerY: _state.rulerY,
+      rulerRotation: _state.rulerRotation,
+      scaleSliderFactor: _state.scaleSliderFactor,
       cameraX: (camera['x'] as num).toDouble(),
       cameraY: (camera['y'] as num).toDouble(),
       cameraZoom: (camera['zoom'] as num).toDouble(),
       cameraAngle: (camera['angle'] as num).toDouble(),
       isPdfSession: _isPdfSession,
+      settings: _state.sessionSettings.copy(),
     );
     await _library.saveSession(session);
     RemoteLog.sendEvent('sessionSaved', {
@@ -849,7 +878,8 @@ class _TvShellState extends State<TvShell> {
           type == 'vtt.togglePortal' || type == 'vtt.revealAll' ||
           type == 'vtt.hideAll' || type == 'vtt.calibrate' ||
           type == 'vtt.resetCalibration' || type == 'vtt.clearMap' ||
-          type == 'vtt.pdfUploaded' || type == 'vtt.imageUploaded') {
+          type == 'vtt.pdfUploaded' || type == 'vtt.imageUploaded' ||
+          type == 'vtt.updateSessionSettings') {
         RemoteLog.sendEvent('cmd', {'type': type, 'msg': 'Command: $type'});
       }
 
@@ -885,7 +915,11 @@ class _TvShellState extends State<TvShell> {
             return;
           }
           final name = msg['name'] as String? ?? 'Session';
-          _startNewSession(mapId, name);
+          final settingsJson = msg['settings'] as Map<String, dynamic>?;
+          final settings = settingsJson != null
+              ? SessionSettings.fromJson(settingsJson)
+              : null;
+          _startNewSession(mapId, name, settings: settings);
 
         // Library
         case 'lib.requestList':
@@ -1111,6 +1145,29 @@ class _TvShellState extends State<TvShell> {
           _state.setAoe(AoeTemplate.fromJson(msg));
         case 'vtt.clearAoe':
           _state.clearAoe();
+
+        // Ruler overlay
+        case 'vtt.toggleRuler':
+          _state.toggleRuler();
+        case 'vtt.setRulerPosition':
+          _state.setRulerPosition(
+            (msg['x'] as num).toDouble(),
+            (msg['y'] as num).toDouble(),
+          );
+        case 'vtt.rotateRuler':
+          _state.rotateRulerCW();
+        case 'vtt.setScaleFactor':
+          _state.setScaleFactor((msg['factor'] as num).toDouble());
+
+        // Session settings
+        case 'vtt.updateSessionSettings':
+          final settingsJson = msg['settings'] as Map<String, dynamic>?;
+          if (settingsJson != null) {
+            _state.sessionSettings = SessionSettings.fromJson(settingsJson);
+            _state.notifyListeners();
+            _broadcastFullState();
+            _log('Session settings updated');
+          }
       }
     } catch (e) {
       _sendError('Command dispatch error: $e');
@@ -1167,6 +1224,9 @@ class _TvShellState extends State<TvShell> {
                 right: 16,
                 child: _buildRelayStatus(),
               ),
+
+              // Rendering spinner (hourglass for PDF render, map decode)
+              if (_isRendering) _buildRenderingOverlay(),
 
               // Transfer progress (centered overlay)
               if (_transferProgress != null) _buildTransferOverlay(),
@@ -1398,6 +1458,40 @@ class _TvShellState extends State<TvShell> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRenderingOverlay() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: const Color(0xEE1a1512),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF5a4a30)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 48,
+              height: 48,
+              child: CircularProgressIndicator(
+                color: Color(0xFFd4a76a),
+                strokeWidth: 3,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _renderingLabel,
+              style: const TextStyle(
+                color: Color(0xFFd4a76a),
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
