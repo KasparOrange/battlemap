@@ -54,7 +54,7 @@ class SessionSettings {
   /// Whether the initiative tracker is available (future feature).
   bool initiativeTracker;
 
-  // ── Atmosphere (future features) ────────────────────────────────
+  // ── Atmosphere ────────────────────────────────────────────────────
 
   /// Whether ambient sound effects are enabled (future feature).
   bool ambientSound;
@@ -64,6 +64,21 @@ class SessionSettings {
 
   /// Whether animated lighting effects are enabled (future feature).
   bool lightAnimations;
+
+  /// Fog rendering mode: `'standard'`, `'soft'`, `'cloud'`, or `'atmospheric'`.
+  ///
+  /// Controls how the fog-of-war layer is drawn on the map:
+  /// - `standard` -- sharp-edged cells with slight blur (default).
+  /// - `soft` -- same as standard but with a much wider blur radius.
+  /// - `cloud` -- organic cloud-shaped edges with animated bumps.
+  /// - `atmospheric` -- gradient opacity based on distance from revealed cells.
+  String fogMode;
+
+  /// Whether fog retraction is animated (cells fade out when revealed).
+  bool fogAnimation;
+
+  /// Whether global visual effects (flash, shake, fade, etc.) are enabled.
+  bool globalEffects;
 
   /// Creates a [SessionSettings] with the given toggles.
   ///
@@ -83,6 +98,9 @@ class SessionSettings {
     this.ambientSound = false,
     this.weatherEffects = false,
     this.lightAnimations = false,
+    this.fogMode = 'standard',
+    this.fogAnimation = true,
+    this.globalEffects = true,
   });
 
   /// Creates the "Pen & Paper" preset.
@@ -105,6 +123,9 @@ class SessionSettings {
         ambientSound: false,
         weatherEffects: false,
         lightAnimations: false,
+        fogMode: 'standard',
+        fogAnimation: true,
+        globalEffects: true,
       );
 
   /// Creates the "Digital" preset.
@@ -126,6 +147,9 @@ class SessionSettings {
         ambientSound: false,
         weatherEffects: false,
         lightAnimations: false,
+        fogMode: 'standard',
+        fogAnimation: true,
+        globalEffects: true,
       );
 
   /// Serializes these settings to a JSON-compatible map.
@@ -144,6 +168,9 @@ class SessionSettings {
         'ambientSound': ambientSound,
         'weatherEffects': weatherEffects,
         'lightAnimations': lightAnimations,
+        'fogMode': fogMode,
+        'fogAnimation': fogAnimation,
+        'globalEffects': globalEffects,
       };
 
   /// Deserializes a [SessionSettings] from a JSON map.
@@ -167,6 +194,9 @@ class SessionSettings {
         ambientSound: json['ambientSound'] as bool? ?? false,
         weatherEffects: json['weatherEffects'] as bool? ?? false,
         lightAnimations: json['lightAnimations'] as bool? ?? false,
+        fogMode: json['fogMode'] as String? ?? 'standard',
+        fogAnimation: json['fogAnimation'] as bool? ?? true,
+        globalEffects: json['globalEffects'] as bool? ?? true,
       );
 
   /// Creates a deep copy of these settings.
@@ -185,6 +215,9 @@ class SessionSettings {
         ambientSound: ambientSound,
         weatherEffects: weatherEffects,
         lightAnimations: lightAnimations,
+        fogMode: fogMode,
+        fogAnimation: fogAnimation,
+        globalEffects: globalEffects,
       );
 }
 

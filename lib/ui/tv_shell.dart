@@ -879,7 +879,8 @@ class _TvShellState extends State<TvShell> {
           type == 'vtt.hideAll' || type == 'vtt.calibrate' ||
           type == 'vtt.resetCalibration' || type == 'vtt.clearMap' ||
           type == 'vtt.pdfUploaded' || type == 'vtt.imageUploaded' ||
-          type == 'vtt.updateSessionSettings') {
+          type == 'vtt.updateSessionSettings' ||
+          type == 'vtt.triggerEffect') {
         RemoteLog.sendEvent('cmd', {'type': type, 'msg': 'Command: $type'});
       }
 
@@ -1168,6 +1169,10 @@ class _TvShellState extends State<TvShell> {
             _broadcastFullState();
             _log('Session settings updated');
           }
+
+        // Global visual effects
+        case 'vtt.triggerEffect':
+          _game?.triggerEffect(msg['effect'] as String);
       }
     } catch (e) {
       _sendError('Command dispatch error: $e');

@@ -14,6 +14,7 @@ import '../model/uvtt_map.dart';
 import '../state/vtt_state.dart';
 import 'components/aoe_template_component.dart';
 import 'components/fog_of_war_component.dart';
+import 'components/global_effects_component.dart';
 import 'components/grid_overlay_component.dart';
 import 'components/live_stroke_component.dart';
 import 'components/map_image_component.dart';
@@ -22,6 +23,7 @@ import 'components/strokes_component.dart';
 import 'components/measure_component.dart';
 import 'components/ruler_component.dart';
 import 'components/token_layer.dart';
+import 'components/torch_glow_component.dart';
 import 'components/wall_component.dart';
 import 'wall_grid.dart';
 
@@ -43,6 +45,8 @@ class VttGame extends FlameGame with ScaleDetector {
   MeasureComponent? _measure;
   AoeTemplateComponent? _aoeComponent;
   RulerComponent? _ruler;
+  TorchGlowComponent? _torchGlow;
+  GlobalEffectsComponent? _globalEffects;
 
   /// Discretized wall grid for flood-fill room reveal.
   WallGrid? _wallGrid;
@@ -192,6 +196,14 @@ class VttGame extends FlameGame with ScaleDetector {
       world.add(portal);
     }
 
+    // Torch glow (priority 8 — above portals, below fog)
+    _torchGlow = TorchGlowComponent(
+      state: state,
+      pixelsPerGrid: map.resolution.pixelsPerGrid.toDouble(),
+      mapSize: mapSizeVec,
+    );
+    world.add(_torchGlow!);
+
     // Fog of war (priority 10)
     _fogOfWar = FogOfWarComponent(
       state: state,
@@ -226,6 +238,14 @@ class VttGame extends FlameGame with ScaleDetector {
       mapSize: mapSizeVec,
     );
     world.add(_ruler!);
+
+    // Global effects overlay (priority 30 — above everything)
+    _globalEffects = GlobalEffectsComponent(
+      state: state,
+      game: this,
+      mapSize: mapSizeVec,
+    );
+    world.add(_globalEffects!);
 
     // Build wall grid for room-reveal flood fill
     _wallGrid = WallGrid.fromMap(map, state.openPortals);
@@ -275,6 +295,10 @@ class VttGame extends FlameGame with ScaleDetector {
     _measure = null;
     _ruler?.removeFromParent();
     _ruler = null;
+    _torchGlow?.removeFromParent();
+    _torchGlow = null;
+    _globalEffects?.removeFromParent();
+    _globalEffects = null;
     _wallGrid = null;
     _lastOpenPortals = null;
   }
@@ -322,6 +346,15 @@ class VttGame extends FlameGame with ScaleDetector {
     camera.viewfinder.zoom = zoom;
     camera.viewfinder.angle = angle;
   }
+
+  /// Triggers a global visual effect on the game canvas.
+  ///
+  /// Delegates to [GlobalEffectsComponent.triggerEffect]. Does nothing
+  /// if the global effects component has not been initialized.
+  ///
+  /// Supported effects: `'flash'`, `'shake'`, `'fade'`, `'pulse'`, `'danger'`.
+  void triggerEffect(String effect) =>
+      _globalEffects?.triggerEffect(effect);
 
   /// Get current camera state for broadcasting.
   Map<String, double> getCameraState() => {

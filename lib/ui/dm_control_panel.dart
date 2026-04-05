@@ -189,6 +189,12 @@ class DmCallbacks {
   /// Called when the DM saves changes in the session settings dialog.
   final void Function(SessionSettings settings) onUpdateSessionSettings;
 
+  /// Triggers a global visual effect on the TV.
+  ///
+  /// [effect] is one of `'flash'`, `'shake'`, `'fade'`, `'pulse'`, or
+  /// `'danger'`.
+  final void Function(String effect) onTriggerEffect;
+
   /// Creates a [DmCallbacks] with all required action handlers.
   const DmCallbacks({
     required this.onLoadMap,
@@ -231,6 +237,7 @@ class DmCallbacks {
     required this.onRotateRuler,
     required this.onSetScaleFactor,
     required this.onUpdateSessionSettings,
+    required this.onTriggerEffect,
   });
 }
 
@@ -1439,6 +1446,56 @@ class _DmControlPanelState extends State<DmControlPanel> {
             max: 2.0,
             onChanged: (v) => cb.onSetScaleFactor(v),
           ),
+        ),
+        const SizedBox(height: 12),
+        const Divider(color: _kBorderGold, height: 1),
+        const SizedBox(height: 10),
+        const _GoldLabel('Effects'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.flash_on,
+                label: 'Flash',
+                onTap: () => cb.onTriggerEffect('flash'),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.vibration,
+                label: 'Shake',
+                onTap: () => cb.onTriggerEffect('shake'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.brightness_2,
+                label: 'Fade',
+                onTap: () => cb.onTriggerEffect('fade'),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.all_out,
+                label: 'Pulse',
+                onTap: () => cb.onTriggerEffect('pulse'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        _GoldButton(
+          icon: Icons.warning,
+          label: 'Danger',
+          onTap: () => cb.onTriggerEffect('danger'),
         ),
       ],
     );

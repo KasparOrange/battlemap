@@ -84,7 +84,10 @@ class _SessionSettingsDialogState extends State<_SessionSettingsDialog> {
         _settings.hpBars == template.hpBars &&
         _settings.conditions == template.conditions &&
         _settings.aoeTemplates == template.aoeTemplates &&
-        _settings.initiativeTracker == template.initiativeTracker;
+        _settings.initiativeTracker == template.initiativeTracker &&
+        _settings.fogMode == template.fogMode &&
+        _settings.fogAnimation == template.fogAnimation &&
+        _settings.globalEffects == template.globalEffects;
   }
 
   void _applyPenAndPaper() {
@@ -192,11 +195,22 @@ class _SessionSettingsDialogState extends State<_SessionSettingsDialog> {
 
                     const SizedBox(height: 12),
 
+                    // ── Map Rendering ──────────────────────────────
+                    _buildSectionHeader('Map Rendering'),
+                    _buildFogModeSelector(),
+                    _buildToggle('Fog Animation', Icons.animation, _settings.fogAnimation,
+                        (v) => setState(() { _settings.fogAnimation = v; })),
+
+                    const SizedBox(height: 12),
+
                     // ── Atmosphere ────────────────────────────────
                     _buildSectionHeader('Atmosphere'),
+                    _buildToggle('Light Animations', Icons.lightbulb, _settings.lightAnimations,
+                        (v) => setState(() { _settings.lightAnimations = v; })),
+                    _buildToggle('Global Effects', Icons.auto_awesome, _settings.globalEffects,
+                        (v) => setState(() { _settings.globalEffects = v; })),
                     _buildFutureToggle('Ambient Sound', Icons.music_note),
                     _buildFutureToggle('Weather Effects', Icons.thunderstorm),
-                    _buildFutureToggle('Light Animations', Icons.lightbulb),
 
                     const SizedBox(height: 12),
                   ],
@@ -242,6 +256,77 @@ class _SessionSettingsDialogState extends State<_SessionSettingsDialog> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Builds a row of four fog mode radio buttons.
+  Widget _buildFogModeSelector() {
+    const modes = [
+      ('standard', 'Standard'),
+      ('soft', 'Soft'),
+      ('cloud', 'Cloud'),
+      ('atmospheric', 'Atmos'),
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.cloud, color: _kAccentGoldDim, size: 18),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Fog Mode',
+                  style: TextStyle(color: _kTextPrimary, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              for (int i = 0; i < modes.length; i++) ...[
+                if (i > 0) const SizedBox(width: 4),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() {
+                      _settings.fogMode = modes[i].$1;
+                    }),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: _settings.fogMode == modes[i].$1
+                            ? _kSurfaceActive
+                            : _kSurface,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: _settings.fogMode == modes[i].$1
+                              ? _kAccentGold
+                              : _kBorderGold,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          modes[i].$2,
+                          style: TextStyle(
+                            color: _settings.fogMode == modes[i].$1
+                                ? _kTextPrimary
+                                : _kTextSecondary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }

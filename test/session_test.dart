@@ -306,6 +306,9 @@ void main() {
         ambientSound: true,
         weatherEffects: false,
         lightAnimations: true,
+        fogMode: 'soft',
+        fogAnimation: false,
+        globalEffects: false,
       );
 
       final json = original.toJson();
@@ -325,6 +328,9 @@ void main() {
       expect(restored.ambientSound, original.ambientSound);
       expect(restored.weatherEffects, original.weatherEffects);
       expect(restored.lightAnimations, original.lightAnimations);
+      expect(restored.fogMode, original.fogMode);
+      expect(restored.fogAnimation, original.fogAnimation);
+      expect(restored.globalEffects, original.globalEffects);
     });
 
     test('penAndPaper preset has correct values', () {
@@ -411,6 +417,58 @@ void main() {
       expect(json.containsKey('ambientSound'), true);
       expect(json.containsKey('weatherEffects'), true);
       expect(json.containsKey('lightAnimations'), true);
+      expect(json.containsKey('fogMode'), true);
+      expect(json.containsKey('fogAnimation'), true);
+      expect(json.containsKey('globalEffects'), true);
+    });
+
+    test('fog mode serialization round-trip', () {
+      final original = SessionSettings(
+        fogMode: 'cloud',
+        fogAnimation: false,
+        globalEffects: false,
+      );
+
+      final json = original.toJson();
+      final restored = SessionSettings.fromJson(json);
+
+      expect(restored.fogMode, 'cloud');
+      expect(restored.fogAnimation, false);
+      expect(restored.globalEffects, false);
+    });
+
+    test('fog mode defaults for backwards compatibility', () {
+      final restored = SessionSettings.fromJson({});
+
+      expect(restored.fogMode, 'standard');
+      expect(restored.fogAnimation, true);
+      expect(restored.globalEffects, true);
+    });
+
+    test('all four fog modes round-trip correctly', () {
+      for (final mode in ['standard', 'soft', 'cloud', 'atmospheric']) {
+        final settings = SessionSettings(fogMode: mode);
+        final json = settings.toJson();
+        final restored = SessionSettings.fromJson(json);
+        expect(restored.fogMode, mode);
+      }
+    });
+
+    test('copy preserves fog mode fields', () {
+      final original = SessionSettings(
+        fogMode: 'atmospheric',
+        fogAnimation: false,
+        globalEffects: false,
+      );
+      final copy = original.copy();
+
+      expect(copy.fogMode, 'atmospheric');
+      expect(copy.fogAnimation, false);
+      expect(copy.globalEffects, false);
+
+      // Verify independence
+      copy.fogMode = 'standard';
+      expect(original.fogMode, 'atmospheric');
     });
   });
 }

@@ -658,6 +658,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         // Session settings
         onUpdateSessionSettings: (settings) =>
             c.sendUpdateSessionSettings(settings.toJson()),
+        // Global effects
+        onTriggerEffect: (effect) => c.sendTriggerEffect(effect),
       );
     }
     return DmCallbacks(
@@ -721,6 +723,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         _state.sessionSettings = settings;
         _state.notifyListeners();
       },
+      // Global effects
+      onTriggerEffect: (effect) => _game.triggerEffect(effect),
     );
   }
 

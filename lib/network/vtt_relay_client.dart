@@ -720,6 +720,14 @@ class VttRelayClient {
   void sendUpdateSessionSettings(Map<String, dynamic> settings) =>
       _send({'type': 'vtt.updateSessionSettings', 'settings': settings});
 
+  /// Triggers a global visual effect on the TV.
+  ///
+  /// [effect] is one of `'flash'`, `'shake'`, `'fade'`, `'pulse'`, or
+  /// `'danger'`. The TV's [GlobalEffectsComponent] renders the effect
+  /// as a dramatic overlay or camera shake.
+  void sendTriggerEffect(String effect) =>
+      _send({'type': 'vtt.triggerEffect', 'effect': effect});
+
   // --- Library commands (companion → table) ---
 
   /// Requests the TV to send back a `lib.listing` with all maps and sessions.
