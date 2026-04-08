@@ -97,14 +97,6 @@ class _CompanionScreenState extends State<CompanionScreen> {
 
   // --- Command dispatch (network or local) ---
 
-  void _addToken(int gridX, int gridY) {
-    if (_isNetworked) {
-      _client?.addToken(gridX, gridY);
-    } else {
-      game.addToken(gridX, gridY);
-    }
-  }
-
   void _addStroke(DrawStroke stroke) {
     if (_isNetworked) {
       _client?.addStroke(stroke);

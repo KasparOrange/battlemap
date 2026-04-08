@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -993,12 +992,25 @@ class VttState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Sets the scale slider factor, clamped to [0.5, 2.0].
+  /// Sets the scale slider factor, clamped to the range `[0.5, 2.0]`.
   ///
   /// This multiplier is applied on top of [calibratedBaseZoom] to allow
   /// the DM to fine-tune the physical grid size.
   void setScaleFactor(double factor) {
     scaleSliderFactor = factor.clamp(0.5, 2.0);
+    notifyListeners();
+  }
+
+  /// Replaces the active [sessionSettings] and notifies listeners.
+  ///
+  /// Use this from controllers (TV shell, companion screen, dispatch) instead
+  /// of assigning [sessionSettings] directly so that the change reaches all
+  /// listening Flame components and Flutter widgets in a single, atomic update.
+  ///
+  /// See also:
+  /// * [SessionSettings], the model class with all toggle fields.
+  void setSessionSettings(SessionSettings settings) {
+    sessionSettings = settings;
     notifyListeners();
   }
 

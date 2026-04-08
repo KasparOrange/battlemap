@@ -6,8 +6,8 @@ import 'package:battlemap/main.dart' as app;
 
 /// Integration tests for the Battlemap app.
 ///
-/// Run against web: flutter test integration_test --platform chrome
-/// Run against device: flutter test integration_test -d <device_id>
+/// Run against web: `flutter test integration_test --platform chrome`
+/// Run against device: `flutter test integration_test -d [device_id]`
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 

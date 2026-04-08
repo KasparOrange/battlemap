@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:js_interop';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:web/web.dart' as web;
 
 /// Download bytes via HTTP GET (web implementation).
@@ -39,6 +39,7 @@ Future<Uint8List?> httpDownloadWeb(String url, {
     xhr.send();
     return await completer.future;
   } catch (e) {
+    debugPrint('httpDownloadWeb: $url failed: $e');
     return null;
   }
 }
@@ -74,9 +75,11 @@ Future<Map<String, dynamic>?> httpUpload(
             final body = xhr.responseText;
             completer.complete(jsonDecode(body) as Map<String, dynamic>);
           } catch (e) {
+            debugPrint('httpUpload: response decode failed: $e');
             completer.complete(null);
           }
         } else {
+          debugPrint('httpUpload: $url returned status ${xhr.status}');
           completer.complete(null);
         }
       }.toJS,
@@ -104,6 +107,7 @@ Future<Map<String, dynamic>?> httpUpload(
 
     return await completer.future;
   } catch (e) {
+    debugPrint('httpUpload: $url failed: $e');
     return null;
   }
 }

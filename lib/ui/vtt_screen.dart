@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:flame/game.dart' hide Route, Matrix4, Vector2, Vector3, Vector4;
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 
 import '../game/vtt_game.dart';
 import '../network/relay_config.dart';

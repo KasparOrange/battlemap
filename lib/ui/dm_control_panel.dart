@@ -63,7 +63,7 @@ class DmCallbacks {
   /// Toggles the fog brush between reveal and hide mode.
   final VoidCallback onToggleRevealMode;
 
-  /// Sets the fog brush radius to [radius] grid cells (0, 1, or 2).
+  /// Sets the fog brush radius to `radius` grid cells (0, 1, or 2).
   final void Function(int radius) onSetBrushRadius;
 
   /// Zooms the camera in by one step.
@@ -86,7 +86,7 @@ class DmCallbacks {
 
   /// Calibrates the grid so squares match 1-inch miniature bases.
   ///
-  /// [tvWidthInches] is the physical width of the TV screen in inches.
+  /// `tvWidthInches` is the physical width of the TV screen in inches.
   final void Function(double tvWidthInches) onCalibrate;
 
   /// Resets calibration to the default zoom behaviour.
@@ -127,8 +127,8 @@ class DmCallbacks {
 
   /// Edits combat metadata on an existing token.
   ///
-  /// [id] identifies the token. Named parameters [name], [maxHp],
-  /// [currentHp], and [conditions] are applied if non-null.
+  /// `id` identifies the token. Named parameters `name`, `maxHp`,
+  /// `currentHp`, and `conditions` are applied if non-null.
   final void Function(String id,
       {String? name,
       int? maxHp,
@@ -191,7 +191,7 @@ class DmCallbacks {
 
   /// Triggers a global visual effect on the TV.
   ///
-  /// [effect] is one of `'flash'`, `'shake'`, `'fade'`, `'pulse'`, or
+  /// `effect` is one of `'flash'`, `'shake'`, `'fade'`, `'pulse'`, or
   /// `'danger'`.
   final void Function(String effect) onTriggerEffect;
 
@@ -966,7 +966,11 @@ class _DmControlPanelState extends State<DmControlPanel> {
           );
         },
       ),
-    );
+    ).whenComplete(() {
+      nameCtrl.dispose();
+      maxHpCtrl.dispose();
+      currentHpCtrl.dispose();
+    });
   }
 
   /// Helper to build a gold-themed [TextField] for the edit dialog.
@@ -1621,7 +1625,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
           ),
         ],
       ),
-    );
+    ).whenComplete(controller.dispose);
   }
 }
 

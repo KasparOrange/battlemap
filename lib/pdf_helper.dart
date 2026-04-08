@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
@@ -19,7 +18,8 @@ import 'game_state.dart';
 ///
 /// See also:
 /// - [VttState.loadPdfAsMap], which consumes the rendered PNG bytes.
-/// - [TvShell._downloadAndLoadPdf], which orchestrates the PDF upload flow.
+/// - `TvShell._downloadAndLoadPdf` (in `lib/ui/tv_shell.dart`), which
+///   orchestrates the PDF upload flow.
 class PdfHelper {
   PdfDocument? _document;
   Uint8List? _bytes;
@@ -42,8 +42,10 @@ class PdfHelper {
   /// this method opens and closes its own [PdfDocument].
   ///
   /// See also:
-  /// - [TvShell._downloadAndLoadPdf], which calls this to process uploaded PDFs.
-  /// - [TvShell._startNewSession], which calls this for PDF map sessions.
+  /// - `TvShell._downloadAndLoadPdf` (in `lib/ui/tv_shell.dart`), which
+  ///   calls this to process uploaded PDFs.
+  /// - `TvShell._startNewSession` (same file), which calls this for PDF
+  ///   map sessions.
   static Future<Map<String, dynamic>?> renderPdfPage(
     Uint8List pdfBytes, {
     int pageIndex = 0,

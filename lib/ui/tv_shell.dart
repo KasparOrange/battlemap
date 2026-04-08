@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flame/game.dart' hide Route, Matrix4, Vector2, Vector3, Vector4;
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
@@ -112,18 +110,27 @@ class _TvShellState extends State<TvShell> {
   // Auto-save
   Timer? _autoSaveTimer;
 
+  /// Logs an info-level message under the `tv` tag.
+  ///
+  /// The message goes to:
+  /// 1. The local debug console via [debugPrint] (stripped in release).
+  /// 2. The VPS log server via [RemoteLog.info].
+  /// 3. The companion phone via the relay (best-effort; ignored if the
+  ///    relay sink is broken so logging never crashes the app).
   void _log(String msg) {
     debugPrint('TvShell: $msg');
-    RemoteLog.send(msg);
+    RemoteLog.info('tv', msg);
     // Also send through relay so we can see it in logs even if RemoteLog is broken
     try {
       _relay.sendRaw(jsonEncode({'type': 'tv.log', 'msg': msg}));
-    } catch (_) {}
+    } catch (_) {
+      // Self-protective: never let the logger throw.
+    }
   }
 
   void _setView(TvView view) {
     setState(() => _currentView = view);
-    RemoteLog.sendEvent('viewChange', {'msg': 'View: ${view.name}', 'view': view.name});
+    RemoteLog.info('nav', 'View: ${view.name}', {'view': view.name});
   }
 
   @override
@@ -165,7 +172,7 @@ class _TvShellState extends State<TvShell> {
       setState(() => _relayState = s);
 
       if (s == RelayConnectionState.paired) {
-        RemoteLog.sendEvent('relay', {'msg': 'Companion paired', 'state': 'paired'});
+        RemoteLog.info('relay', 'Companion paired', {'state': 'paired'});
         // Auto-navigate to library when companion connects
         if (_currentView == TvView.waiting) {
           _setView(TvView.library);
@@ -236,12 +243,12 @@ class _TvShellState extends State<TvShell> {
   Future<void> _downloadMapFromVps(String url, String displayName) async {
     try {
       _log('Downloading map from VPS: $url');
-      setState(() => _transferProgress = 0.0);
+      _safeSetTransferProgress(0.0);
 
       final bytes = await httpDownload(url, onProgress: (p) {
-        setState(() => _transferProgress = p);
+        _safeSetTransferProgress(p);
       });
-      setState(() => _transferProgress = null);
+      _safeSetTransferProgress(null);
 
       if (bytes == null) {
         _log('ERROR: failed to download map from $url');
@@ -258,8 +265,19 @@ class _TvShellState extends State<TvShell> {
     } catch (e, stack) {
       _log('ERROR downloading map: $e');
       _log('Stack: ${stack.toString().split('\n').take(3).join(' | ')}');
-      setState(() => _transferProgress = null);
+      _safeSetTransferProgress(null);
     }
+  }
+
+  /// Updates [_transferProgress] inside `setState` only if this state is
+  /// still mounted.
+  ///
+  /// Used by async download/upload paths so that progress callbacks fired
+  /// after the widget unmounts (e.g. during a Phoenix restart) don't throw
+  /// or rebuild a disposed tree.
+  void _safeSetTransferProgress(double? value) {
+    if (!mounted) return;
+    setState(() => _transferProgress = value);
   }
 
   // ─── PDF download + render ─────────────────────────────
@@ -286,12 +304,12 @@ class _TvShellState extends State<TvShell> {
   ) async {
     try {
       _log('Downloading PDF from VPS: $url');
-      setState(() => _transferProgress = 0.0);
+      _safeSetTransferProgress(0.0);
 
       final pdfBytes = await httpDownload(url, onProgress: (p) {
-        setState(() => _transferProgress = p);
+        _safeSetTransferProgress(p);
       });
-      setState(() => _transferProgress = null);
+      _safeSetTransferProgress(null);
 
       if (pdfBytes == null) {
         _sendError('Failed to download PDF from $url');
@@ -357,7 +375,7 @@ class _TvShellState extends State<TvShell> {
     } catch (e, stack) {
       _sendError('PDF processing failed: $e');
       _log('Stack: ${stack.toString().split('\n').take(5).join(' | ')}');
-      setState(() => _transferProgress = null);
+      _safeSetTransferProgress(null);
     }
   }
 
@@ -368,12 +386,12 @@ class _TvShellState extends State<TvShell> {
   ) async {
     try {
       _log('Downloading image from VPS: $url');
-      setState(() => _transferProgress = 0.0);
+      _safeSetTransferProgress(0.0);
 
       final imageBytes = await httpDownload(url, onProgress: (p) {
-        setState(() => _transferProgress = p);
+        _safeSetTransferProgress(p);
       });
-      setState(() => _transferProgress = null);
+      _safeSetTransferProgress(null);
 
       if (imageBytes == null) {
         _sendError('Failed to download image from $url');
@@ -433,11 +451,11 @@ class _TvShellState extends State<TvShell> {
 
   Future<void> _onMapReceived(Uint8List bytes) async {
     final name = _relay.lastMapDisplayName ?? 'Uploaded map';
-    RemoteLog.sendEvent('mapReceived', {
-      'msg': 'Map received: "$name" (${(bytes.length / 1024 / 1024).toStringAsFixed(1)} MB)',
-      'name': name,
-      'sizeBytes': bytes.length,
-    });
+    RemoteLog.info(
+      'library',
+      'Map received: "$name" (${(bytes.length / 1024 / 1024).toStringAsFixed(1)} MB)',
+      {'name': name, 'sizeBytes': bytes.length},
+    );
 
     final entry = await _library.addMap(bytes, name);
     _log('Saved to library: ${entry.id}');
@@ -473,6 +491,7 @@ class _TvShellState extends State<TvShell> {
         setState(() { _isRendering = true; _renderingLabel = 'Rendering PDF...'; });
         _relay.sendRaw(jsonEncode({'type': 'tv.rendering', 'active': true, 'label': 'Rendering PDF...'}));
         final rendered = await PdfHelper.renderPdfPage(bytes);
+        if (!mounted) return;
         setState(() { _isRendering = false; });
         _relay.sendRaw(jsonEncode({'type': 'tv.rendering', 'active': false}));
         if (rendered == null) {
@@ -537,7 +556,7 @@ class _TvShellState extends State<TvShell> {
     } catch (e, stack) {
       _log('ERROR in _startNewSession: $e');
       _log('Stack: ${stack.toString().split('\n').take(5).join(' | ')}');
-      RemoteLog.sendEvent('error', {'msg': 'startNewSession failed: $e', 'mapId': mapId});
+      RemoteLog.error('session', 'startNewSession failed', {'error': '$e', 'mapId': mapId});
     }
   }
 
@@ -572,6 +591,7 @@ class _TvShellState extends State<TvShell> {
         setState(() { _isRendering = true; _renderingLabel = 'Rendering PDF...'; });
         _relay.sendRaw(jsonEncode({'type': 'tv.rendering', 'active': true, 'label': 'Rendering PDF...'}));
         final rendered = await PdfHelper.renderPdfPage(bytes);
+        if (!mounted) return;
         setState(() { _isRendering = false; });
         _relay.sendRaw(jsonEncode({'type': 'tv.rendering', 'active': false}));
         if (rendered == null) {
@@ -640,11 +660,12 @@ class _TvShellState extends State<TvShell> {
           session.cameraX, session.cameraY, session.cameraZoom, session.cameraAngle);
 
       // Send map to companion so it can display it
-      _log('Send map: isPdf=$isPdf, hasMap=${_state.map != null}, hasImageBytes=${_state.map?.imageBytes != null}, imageLen=${_state.map?.imageBytes?.length}');
-      if (isPdf && _state.map?.imageBytes != null) {
+      final mapImageBytes = _state.map?.imageBytes;
+      _log('Send map: isPdf=$isPdf, hasMap=${_state.map != null}, imageLen=${mapImageBytes?.length ?? 0}');
+      if (isPdf && mapImageBytes != null) {
         // PDF: send rendered image via chunks (companion can't render PDFs)
-        _log('Sending rendered PDF image to companion (${(_state.map!.imageBytes.length / 1024).round()} KB)');
-        _relay.sendMapChunked(_state.map!.imageBytes);
+        _log('Sending rendered PDF image to companion (${(mapImageBytes.length / 1024).round()} KB)');
+        _relay.sendMapChunked(mapImageBytes);
       } else if (entry?.vpsUrl != null) {
         // UVTT: tell companion to download from VPS
         _log('Telling companion to download map from ${entry!.vpsUrl}');
@@ -657,24 +678,22 @@ class _TvShellState extends State<TvShell> {
         // Fallback: send raw bytes via chunks
         _log('No VPS URL, sending raw map bytes via chunks');
         _relay.sendMapChunked(_state.rawMapBytes!);
-      } else if (_state.map?.imageBytes != null) {
+      } else if (mapImageBytes != null) {
         // Last resort: send image bytes
         _log('No VPS URL or raw bytes, sending image bytes via chunks');
-        _relay.sendMapChunked(_state.map!.imageBytes);
+        _relay.sendMapChunked(mapImageBytes);
       }
       _broadcastFullState();
       _log('Session resumed: ${session.name}');
     } catch (e, stack) {
       _log('ERROR in _resumeSession: $e');
       _log('Stack: ${stack.toString().split('\n').take(5).join(' | ')}');
-      RemoteLog.sendEvent('error', {'msg': 'resumeSession failed: $e', 'sessionId': sessionId});
+      RemoteLog.error('session', 'resumeSession failed', {'error': '$e', 'sessionId': sessionId});
     }
   }
 
   void _ensureGame() {
-    if (_game == null) {
-      _game = VttGame(state: _state);
-    }
+    _game ??= VttGame(state: _state);
   }
 
   // ─── Auto-save ──────────────────────────────────────────
@@ -732,11 +751,11 @@ class _TvShellState extends State<TvShell> {
       settings: _state.sessionSettings.copy(),
     );
     await _library.saveSession(session);
-    RemoteLog.sendEvent('sessionSaved', {
-      'msg': 'Saved session "${session.name}" (${session.revealedCells.length} cells)',
-      'session': session.name,
-      'cells': session.revealedCells.length,
-    });
+    RemoteLog.debug(
+      'session',
+      'Saved session "${session.name}" (${session.revealedCells.length} cells)',
+      {'session': session.name, 'cells': session.revealedCells.length},
+    );
   }
 
   // ─── Diagnostics ─────────────────────────────────────────
@@ -760,7 +779,7 @@ class _TvShellState extends State<TvShell> {
     };
     _relay.sendRaw(jsonEncode(status));
     // Also log it
-    RemoteLog.sendEvent('diagStatus', {'msg': 'Diag status sent', ...status});
+    RemoteLog.debug('diag', 'Diag status sent', status);
   }
 
   // ─── Update ─────────────────────────────────────────────
@@ -797,6 +816,7 @@ class _TvShellState extends State<TvShell> {
 
     await downloadAndInstall(
       onProgress: (p) {
+        if (!mounted) return;
         setState(() => _updateProgress = p);
         _relay.sendRaw(jsonEncode({
           'type': 'update.progress',
@@ -806,6 +826,7 @@ class _TvShellState extends State<TvShell> {
       },
       onStatus: (status) {
         _log('Update status: $status');
+        if (!mounted) return;
         setState(() => _updateStatus = status);
         _relay.sendRaw(jsonEncode({
           'type': 'update.progress',
@@ -815,6 +836,7 @@ class _TvShellState extends State<TvShell> {
       },
     );
 
+    if (!mounted) return;
     setState(() {
       _updateProgress = null;
       _updateStatus = '';
@@ -861,9 +883,15 @@ class _TvShellState extends State<TvShell> {
 
   // ─── Error reporting ────────────────────────────────────
 
+  /// Reports an error to both the companion phone and the VPS log server.
+  ///
+  /// Sends a `tv.error` relay message so the companion can surface it in
+  /// the dev log, and writes an [LogLevel.error] entry tagged `tv` to the
+  /// remote log server. Also echoes locally via [_log].
   void _sendError(String msg) {
     _relay.sendRaw(jsonEncode({'type': 'tv.error', 'msg': msg}));
-    _log('ERROR: $msg');
+    debugPrint('TvShell ERROR: $msg');
+    RemoteLog.error('tv', msg);
   }
 
   // ─── Command dispatch ───────────────────────────────────
@@ -881,7 +909,7 @@ class _TvShellState extends State<TvShell> {
           type == 'vtt.pdfUploaded' || type == 'vtt.imageUploaded' ||
           type == 'vtt.updateSessionSettings' ||
           type == 'vtt.triggerEffect') {
-        RemoteLog.sendEvent('cmd', {'type': type, 'msg': 'Command: $type'});
+        RemoteLog.debug('cmd', 'Command: $type', {'type': type});
       }
 
       switch (type) {
@@ -1164,8 +1192,7 @@ class _TvShellState extends State<TvShell> {
         case 'vtt.updateSessionSettings':
           final settingsJson = msg['settings'] as Map<String, dynamic>?;
           if (settingsJson != null) {
-            _state.sessionSettings = SessionSettings.fromJson(settingsJson);
-            _state.notifyListeners();
+            _state.setSessionSettings(SessionSettings.fromJson(settingsJson));
             _broadcastFullState();
             _log('Session settings updated');
           }

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
@@ -12,7 +11,6 @@ import '../network/http_upload_stub.dart'
 import '../network/relay_config.dart';
 
 import '../game/vtt_game.dart';
-import '../model/aoe_template.dart';
 import '../model/map_library_entry.dart';
 import '../model/session.dart';
 import '../network/vtt_relay_client.dart';
@@ -74,8 +72,6 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
 
   // TV view state (received from TV via fullState)
   String _tvView = 'waiting';
-  String? _activeMapId;
-  String? _activeSessionId;
 
   // Library data (received from TV)
   List<MapLibraryEntry> _maps = [];
@@ -191,10 +187,6 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
           setState(() => _tvView = view);
         }
       }
-      setState(() {
-        _activeMapId = msg['activeMapId'] as String?;
-        _activeSessionId = msg['activeSessionId'] as String?;
-      });
     };
     _relay!.onCameraSync = (x, y, zoom, angle) {
       _game.syncCamera(x, y, zoom, angle);
@@ -203,9 +195,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       DevLog.add('Companion: map received via chunks (${(bytes.length / 1024).round()} KB)');
       try {
         _state.loadMap(bytes); // Try UVTT first
-      } catch (_) {
+      } catch (e) {
         // Not valid UVTT — treat as raw image (rendered PDF or image map).
         // Use grid info from the TV's last fullState if available.
+        DevLog.add('Companion: not UVTT (parse: $e), trying as image');
         final gridCols = _state.map?.resolution.mapSize.dx.toInt() ?? 20;
         final gridRows = _state.map?.resolution.mapSize.dy.toInt() ?? 15;
         DevLog.add('Companion: not UVTT, loading as image (${gridCols}x$gridRows grid)');
@@ -482,10 +475,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   Future<({int cols, int rows})?> _showPdfGridDialog() async {
     final colsController = TextEditingController(text: '20');
     final rowsController = TextEditingController(text: '15');
-
-    return showDialog<({int cols, int rows})>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
+    try {
+      return await showDialog<({int cols, int rows})>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
           void setPreset(int cols, int rows) {
             setDialogState(() {
@@ -579,6 +572,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         },
       ),
     );
+    } finally {
+      colsController.dispose();
+      rowsController.dispose();
+    }
   }
 
   /// Builds a small preset button for the grid config dialog.
@@ -719,10 +716,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onRotateRuler: _state.rotateRulerCW,
       onSetScaleFactor: _state.setScaleFactor,
       // Session settings
-      onUpdateSessionSettings: (settings) {
-        _state.sessionSettings = settings;
-        _state.notifyListeners();
-      },
+      onUpdateSessionSettings: _state.setSessionSettings,
       // Global effects
       onTriggerEffect: (effect) => _game.triggerEffect(effect),
     );

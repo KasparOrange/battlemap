@@ -77,13 +77,13 @@ class VttRelayClient {
   /// Called when camera state is received as part of a `vtt.fullState`
   /// (companion side only).
   ///
-  /// Parameters are the camera's world-space [x], [y], [zoom] level, and
-  /// rotation [angle] in radians.
+  /// Parameters are the camera's world-space `x`, `y`, `zoom` level, and
+  /// rotation `angle` in radians.
   void Function(double x, double y, double zoom, double angle)? onCameraSync;
 
   /// Called when a chunked map transfer completes (either side).
   ///
-  /// The [bytes] contain the raw `.dd2vtt` / `.uvtt` file data
+  /// The `bytes` argument contains the raw `.dd2vtt` / `.uvtt` file data
   /// reassembled from the base64 chunks.
   void Function(Uint8List bytes)? onMapLoaded;
 
@@ -554,8 +554,9 @@ class VttRelayClient {
 
   /// Switches the TV's active interaction mode.
   ///
-  /// [mode] must be one of `"fogReveal"`, `"draw"`, `"token"`, or
-  /// `"measure"`, matching [InteractionMode.name].
+  /// `mode` must be one of `"fogReveal"`, `"draw"`, `"token"`, or
+  /// `"measure"`, matching `InteractionMode.name` from
+  /// `lib/state/vtt_state.dart`.
   void sendSetInteractionMode(String mode) =>
       _send({'type': 'vtt.setMode', 'mode': mode});
 

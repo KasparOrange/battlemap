@@ -98,14 +98,13 @@ class BattlemapGame extends FlameGame {
 
   void handleLongPressAtScene(Offset scenePos) {
     final (gx, gy) = _toGrid(scenePos);
-    try {
-      final token = gameState.tokens.firstWhere(
-        (t) => t.gridX == gx && t.gridY == gy,
-      );
-      gameState.removeToken(token.id);
-    } catch (_) {
-      // No token at position
+    for (final token in gameState.tokens) {
+      if (token.gridX == gx && token.gridY == gy) {
+        gameState.removeToken(token.id);
+        return;
+      }
     }
+    // No token at position; nothing to remove.
   }
 
   void handleDragStartAtScene(Offset scenePos) {

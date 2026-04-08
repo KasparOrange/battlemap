@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:battlemap/model/aoe_template.dart';
 import 'package:battlemap/model/draw_stroke.dart';
 import 'package:battlemap/model/map_token.dart';
-import 'package:battlemap/model/undo_action.dart';
 import 'package:battlemap/state/vtt_state.dart';
 
 /// Create minimal valid UVTT JSON bytes for testing.
@@ -1039,6 +1038,154 @@ void main() {
       state.addListener(() => count++);
       state.redo();
       expect(count, 0);
+    });
+  });
+
+  group('undo/redo: mixed action types interleaved', () {
+    /// Builds a state ready for mixed token / fog / portal / stroke actions.
+    VttState newState() {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+      // Provide fake portals so togglePortal has something to flip.
+      state.loadMap(_makeMinimalUvttBytes(
+        gridCols: 6,
+        gridRows: 6,
+        portals: [
+          {
+            'position': {'x': 0.5, 'y': 0.5},
+            'bounds': [
+              {'x': 0, 'y': 0},
+              {'x': 1, 'y': 0},
+            ],
+            'rotation': 0,
+            'closed': true,
+            'freestanding': false,
+          },
+        ],
+      ));
+      // loadMap initialises openPortals from the file (closed -> not in set),
+      // so the first togglePortal(0) opens it.
+      state.openPortals.clear();
+      return state;
+    }
+
+    test('undo unwinds a fog -> token -> stroke -> portal sequence', () {
+      final state = newState();
+      // 1. reveal a fog cell
+      state.applyBrushReveal([5]);
+      // 2. add a token
+      state.addToken(2, 2);
+      final tokenId = state.tokens.first.id;
+      // 3. add a stroke
+      final stroke = DrawStroke(
+        points: const [Offset(0, 0), Offset(1, 1)],
+        color: const Color(0xFFFFFFFF),
+        width: 2.0,
+      );
+      state.addStroke(stroke);
+      // 4. open a portal
+      state.togglePortal(0);
+
+      expect(state.revealedCells, contains(5));
+      expect(state.tokens.length, 1);
+      expect(state.strokes.length, 1);
+      expect(state.openPortals.contains(0), isTrue);
+
+      // Undo in reverse order: portal -> stroke -> token -> fog
+      state.undo();
+      expect(state.openPortals.contains(0), isFalse);
+      expect(state.tokens.length, 1);
+      expect(state.strokes.length, 1);
+      expect(state.revealedCells, contains(5));
+
+      state.undo();
+      expect(state.strokes.length, 0);
+      expect(state.tokens.length, 1);
+
+      state.undo();
+      expect(state.tokens.length, 0);
+      // ID is gone too.
+      expect(state.tokens.any((t) => t.id == tokenId), isFalse);
+      expect(state.revealedCells, contains(5));
+
+      state.undo();
+      expect(state.revealedCells.contains(5), isFalse);
+      expect(state.canUndo, isFalse);
+    });
+
+    test('redo replays the same mixed sequence forward', () {
+      final state = newState();
+      state.applyBrushReveal([7]);
+      state.addToken(1, 1);
+      state.togglePortal(0);
+
+      // Unwind everything.
+      state.undo();
+      state.undo();
+      state.undo();
+      expect(state.canUndo, isFalse);
+      expect(state.canRedo, isTrue);
+      expect(state.revealedCells.contains(7), isFalse);
+      expect(state.tokens, isEmpty);
+      expect(state.openPortals.contains(0), isFalse);
+
+      // Redo all three in order.
+      state.redo();
+      expect(state.revealedCells.contains(7), isTrue);
+      state.redo();
+      expect(state.tokens.length, 1);
+      state.redo();
+      expect(state.openPortals.contains(0), isTrue);
+      expect(state.canRedo, isFalse);
+    });
+
+    test('a new action mid-undo discards the redo tail', () {
+      final state = newState();
+      state.applyBrushReveal([1]);
+      state.addToken(0, 0);
+      state.applyBrushReveal([2]);
+      // canRedo is false here.
+      state.undo(); // undoes the [2] reveal
+      state.undo(); // undoes the token
+      expect(state.canRedo, isTrue);
+
+      // Now do something new instead of redoing.
+      state.togglePortal(0);
+      expect(state.canRedo, isFalse,
+          reason: 'new action must clear the redo stack');
+      // Undo should walk back through: portal, then [1] reveal.
+      state.undo();
+      expect(state.openPortals.contains(0), isFalse);
+      state.undo();
+      expect(state.revealedCells.contains(1), isFalse);
+      expect(state.canUndo, isFalse);
+    });
+
+    test('partial redo then new action drops only the unrediscovered tail', () {
+      final state = newState();
+      state.applyBrushReveal([1]);
+      state.applyBrushReveal([2]);
+      state.applyBrushReveal([3]);
+      state.undo();
+      state.undo();
+      // canRedo: 2 entries pending (the [2] and [3] reveals).
+      state.redo(); // re-applies the [2] reveal
+      expect(state.revealedCells.contains(2), isTrue);
+      expect(state.revealedCells.contains(3), isFalse);
+      expect(state.canRedo, isTrue);
+
+      // New action — this should clear the remaining redo (the [3] reveal).
+      state.addToken(4, 4);
+      expect(state.canRedo, isFalse);
+      // Undo walks back: token, [2], [1] — three steps.
+      state.undo();
+      expect(state.tokens, isEmpty);
+      state.undo();
+      expect(state.revealedCells.contains(2), isFalse);
+      state.undo();
+      expect(state.revealedCells.contains(1), isFalse);
+      expect(state.canUndo, isFalse);
     });
   });
 

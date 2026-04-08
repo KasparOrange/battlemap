@@ -12,8 +12,8 @@
 /// - **Atmosphere** -- Ambient Sound, Weather Effects, Light Animations
 ///
 /// See also:
-/// * [Session], which owns a [settings] field.
-/// * [DmControlPanel], which reads these flags to show/hide tabs.
+/// * [Session], which owns a [Session.settings] field.
+/// * `DmControlPanel`, which reads these flags to show/hide tabs.
 class SessionSettings {
   // ── Pen & Paper features (map visuals + DM tools) ───────────────
 

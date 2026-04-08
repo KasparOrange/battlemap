@@ -14,17 +14,31 @@ void main() {
     client.dispose();
   });
 
-  /// Helper that sends a message and returns whatever onCommand received.
-  Map<String, dynamic>? _dispatch(Map<String, dynamic> msg) {
+  /// Sends a message and returns whatever onCommand received, or `null` if
+  /// the relay client handled the message internally instead of forwarding.
+  Map<String, dynamic>? tryDispatch(Map<String, dynamic> msg) {
     Map<String, dynamic>? received;
     client.onCommand = (m) => received = m;
     client.handleIncomingMessage(jsonEncode(msg));
     return received;
   }
 
+  /// Helper for the common positive case: sends a message and asserts that
+  /// onCommand was invoked, returning the non-null payload.
+  ///
+  /// Use [tryDispatch] for negative tests where the message should NOT
+  /// reach onCommand (e.g. it has an explicit case handler instead).
+  Map<String, dynamic> dispatch(Map<String, dynamic> msg) {
+    final received = tryDispatch(msg);
+    if (received == null) {
+      fail('Expected onCommand to be invoked for ${msg['type']}, but it was not');
+    }
+    return received;
+  }
+
   group('vtt.editToken routes to onCommand', () {
     test('vtt.editToken with all fields', () {
-      final received = _dispatch({
+      final received = dispatch({
         'type': 'vtt.editToken',
         'id': 'token_1',
         'name': 'Goblin',
@@ -34,105 +48,105 @@ void main() {
       });
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.editToken');
-      expect(received!['id'], 'token_1');
-      expect(received!['name'], 'Goblin');
-      expect(received!['maxHp'], 20);
-      expect(received!['currentHp'], 15);
-      expect(received!['conditions'], ['poisoned', 'prone']);
+      expect(received['type'], 'vtt.editToken');
+      expect(received['id'], 'token_1');
+      expect(received['name'], 'Goblin');
+      expect(received['maxHp'], 20);
+      expect(received['currentHp'], 15);
+      expect(received['conditions'], ['poisoned', 'prone']);
     });
   });
 
   group('vtt.setMode routes to onCommand', () {
     test('vtt.setMode with measure', () {
-      final received = _dispatch({
+      final received = dispatch({
         'type': 'vtt.setMode',
         'mode': 'measure',
       });
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.setMode');
-      expect(received!['mode'], 'measure');
+      expect(received['type'], 'vtt.setMode');
+      expect(received['mode'], 'measure');
     });
 
     test('vtt.setMode with roomReveal', () {
-      final received = _dispatch({
+      final received = dispatch({
         'type': 'vtt.setMode',
         'mode': 'roomReveal',
       });
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.setMode');
-      expect(received!['mode'], 'roomReveal');
+      expect(received['type'], 'vtt.setMode');
+      expect(received['mode'], 'roomReveal');
     });
 
     test('vtt.setMode with aoe', () {
-      final received = _dispatch({
+      final received = dispatch({
         'type': 'vtt.setMode',
         'mode': 'aoe',
       });
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.setMode');
-      expect(received!['mode'], 'aoe');
+      expect(received['type'], 'vtt.setMode');
+      expect(received['mode'], 'aoe');
     });
   });
 
   group('vtt.undo and vtt.redo route to onCommand', () {
     test('vtt.undo', () {
-      final received = _dispatch({'type': 'vtt.undo'});
+      final received = dispatch({'type': 'vtt.undo'});
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.undo');
+      expect(received['type'], 'vtt.undo');
     });
 
     test('vtt.redo', () {
-      final received = _dispatch({'type': 'vtt.redo'});
+      final received = dispatch({'type': 'vtt.redo'});
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.redo');
+      expect(received['type'], 'vtt.redo');
     });
   });
 
   group('shadow mode commands route to onCommand', () {
     test('vtt.toggleShadowMode', () {
-      final received = _dispatch({'type': 'vtt.toggleShadowMode'});
+      final received = dispatch({'type': 'vtt.toggleShadowMode'});
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.toggleShadowMode');
+      expect(received['type'], 'vtt.toggleShadowMode');
     });
 
     test('vtt.commitShadow', () {
-      final received = _dispatch({'type': 'vtt.commitShadow'});
+      final received = dispatch({'type': 'vtt.commitShadow'});
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.commitShadow');
+      expect(received['type'], 'vtt.commitShadow');
     });
 
     test('vtt.clearShadow', () {
-      final received = _dispatch({'type': 'vtt.clearShadow'});
+      final received = dispatch({'type': 'vtt.clearShadow'});
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.clearShadow');
+      expect(received['type'], 'vtt.clearShadow');
     });
   });
 
   group('vtt.roomReveal routes to onCommand', () {
     test('vtt.roomReveal with cells', () {
-      final received = _dispatch({
+      final received = dispatch({
         'type': 'vtt.roomReveal',
         'cells': [0, 1, 2, 5, 6, 7],
       });
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.roomReveal');
-      expect(received!['cells'], [0, 1, 2, 5, 6, 7]);
+      expect(received['type'], 'vtt.roomReveal');
+      expect(received['cells'], [0, 1, 2, 5, 6, 7]);
     });
   });
 
   group('AoE commands route to onCommand', () {
     test('vtt.setAoe', () {
-      final received = _dispatch({
+      final received = dispatch({
         'type': 'vtt.setAoe',
         'shape': 'circle',
         'originX': 5.0,
@@ -142,32 +156,32 @@ void main() {
       });
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.setAoe');
-      expect(received!['shape'], 'circle');
-      expect(received!['originX'], 5.0);
+      expect(received['type'], 'vtt.setAoe');
+      expect(received['shape'], 'circle');
+      expect(received['originX'], 5.0);
     });
 
     test('vtt.clearAoe', () {
-      final received = _dispatch({'type': 'vtt.clearAoe'});
+      final received = dispatch({'type': 'vtt.clearAoe'});
 
       expect(received, isNotNull);
-      expect(received!['type'], 'vtt.clearAoe');
+      expect(received['type'], 'vtt.clearAoe');
     });
   });
 
   group('patch.restart routes to onCommand', () {
     test('patch.restart', () {
-      final received = _dispatch({'type': 'patch.restart'});
+      final received = dispatch({'type': 'patch.restart'});
 
       expect(received, isNotNull);
-      expect(received!['type'], 'patch.restart');
+      expect(received['type'], 'patch.restart');
     });
   });
 
   group('commands with explicit case handling do NOT route to onCommand', () {
     test('vtt.fullState on table role does not call onCommand', () {
       // vtt.fullState is handled with an explicit case, not default
-      final received = _dispatch({
+      final received = tryDispatch({
         'type': 'vtt.fullState',
         'showGrid': true,
         'fogEnabled': true,
@@ -183,7 +197,7 @@ void main() {
       Map<String, dynamic>? libraryReceived;
       client.onLibraryListing = (msg) => libraryReceived = msg;
 
-      final received = _dispatch({
+      final received = tryDispatch({
         'type': 'lib.listing',
         'maps': [],
         'sessions': [],
@@ -194,7 +208,7 @@ void main() {
     });
 
     test('vtt.mapStart does not route to onCommand', () {
-      final received = _dispatch({
+      final received = tryDispatch({
         'type': 'vtt.mapStart',
         'chunks': 1,
       });

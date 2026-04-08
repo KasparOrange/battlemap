@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -122,7 +121,8 @@ class MapLibrary {
     if (json == null) return null;
     try {
       return MapLibraryEntry.fromJson(jsonDecode(json) as Map<String, dynamic>);
-    } catch (_) {
+    } catch (e) {
+      debugPrint('MapLibrary: failed to parse entry $mapId: $e');
       return null;
     }
   }

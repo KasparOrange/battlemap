@@ -1,5 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 
 /// Download bytes via HTTP GET (native implementation using dart:io).
 /// Reports progress via callback.
@@ -32,6 +33,7 @@ Future<Uint8List?> httpDownload(
     client.close();
     return Uint8List.fromList(chunks.expand((c) => c).toList());
   } catch (e) {
+    debugPrint('httpDownload: $url failed: $e');
     return null;
   }
 }

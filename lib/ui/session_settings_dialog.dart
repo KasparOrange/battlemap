@@ -436,7 +436,7 @@ class _SessionSettingsDialogState extends State<_SessionSettingsDialog> {
             child: Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: _kAccentGold,
+              activeThumbColor: _kAccentGold,
               activeTrackColor: _kAccentGold.withValues(alpha: 0.4),
               inactiveThumbColor: _kAccentGoldDim,
               inactiveTrackColor: _kBorderGold.withValues(alpha: 0.4),

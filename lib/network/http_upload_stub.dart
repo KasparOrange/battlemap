@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 
 /// Download bytes via HTTP GET (native implementation).
 Future<Uint8List?> httpDownloadWeb(String url, {
@@ -32,7 +33,7 @@ Future<Map<String, dynamic>?> httpUpload(
     }
     client.close();
   } catch (e) {
-    // ignore, caller handles null
+    debugPrint('httpUpload (native): $url failed: $e');
   }
   return null;
 }
