@@ -64,8 +64,10 @@
     
 <section class="desc markdown">
   <p>Removes a token by <code>id</code>.</p>
-<p>Silently does nothing if no token with that <code>id</code> exists. Fires
-<a href="../../state_vtt_state/VttState/onTokenRemoved.html">onTokenRemoved</a> for relay forwarding.</p>
+<p>Saves a reference to the token and pushes a <a href="../../model_undo_action/TokenRemoveAction-class.html">TokenRemoveAction</a>
+onto the undo stack before removing it. Silently does nothing if
+no token with that <code>id</code> exists. Fires <a href="../../state_vtt_state/VttState/onTokenRemoved.html">onTokenRemoved</a> for relay
+forwarding.</p>
 </section>
 
 
@@ -73,7 +75,11 @@
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void removeToken(String id) {
-  tokens.removeWhere((t) =&gt; t.id == id);
+  final index = tokens.indexWhere((t) =&gt; t.id == id);
+  if (index == -1) return;
+  final token = tokens[index];
+  _pushUndo(TokenRemoveAction(token));
+  tokens.removeAt(index);
   notifyListeners();
   onTokenRemoved?.call(id);
 }</code></pre>
@@ -104,7 +110,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

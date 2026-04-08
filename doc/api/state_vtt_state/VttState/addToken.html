@@ -66,8 +66,8 @@
 <section class="desc markdown">
   <p>Creates a new token at the given grid position and adds it to <a href="../../state_vtt_state/VttState/tokens.html">tokens</a>.</p>
 <p>The token is assigned the next color from <a href="../../model_map_token/MapToken/tokenColors-constant.html">MapToken.tokenColors</a>
-(cycling) and a sequential numeric label. Fires <a href="../../state_vtt_state/VttState/onTokenAdded.html">onTokenAdded</a> for
-relay forwarding.</p>
+(cycling) and a sequential numeric label. Pushes a <a href="../../model_undo_action/TokenAddAction-class.html">TokenAddAction</a>
+onto the undo stack. Fires <a href="../../state_vtt_state/VttState/onTokenAdded.html">onTokenAdded</a> for relay forwarding.</p>
 </section>
 
 
@@ -86,6 +86,7 @@ relay forwarding.</p>
     gridY: gridY,
   );
   tokens.add(token);
+  _pushUndo(TokenAddAction(token));
   notifyListeners();
   onTokenAdded?.call(token);
 }</code></pre>
@@ -116,7 +117,7 @@ relay forwarding.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

@@ -55,42 +55,88 @@
     <section class="multi-line-signature">
       
 <span class="returntype"><a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../../model_map_library_entry/MapLibraryEntry-class.html">MapLibraryEntry</a></span>&gt;</span></span>
-<span class="name ">addMap</span>(<wbr><ol class="parameter-list single-line"> <li><span class="parameter" id="addMap-param-rawBytes"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a></span> <span class="parameter-name">rawBytes</span>, </span></li>
-<li><span class="parameter" id="addMap-param-displayName"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">displayName</span></span></li>
-</ol>)
+<span class="name ">addMap</span>(<wbr><ol class="parameter-list"> <li><span class="parameter" id="addMap-param-rawBytes"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a></span> <span class="parameter-name">rawBytes</span>, </span></li>
+<li><span class="parameter" id="addMap-param-displayName"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">displayName</span>, {</span></li>
+<li><span class="parameter" id="addMap-param-isPdf"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">isPdf</span> = <span class="default-value">false</span>, </span></li>
+<li><span class="parameter" id="addMap-param-isImage"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">isImage</span> = <span class="default-value">false</span>, </span></li>
+<li><span class="parameter" id="addMap-param-pdfGridCols"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">pdfGridCols</span>, </span></li>
+<li><span class="parameter" id="addMap-param-pdfGridRows"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">pdfGridRows</span>, </span></li>
+</ol>})
 
       
 
     </section>
     
+<section class="desc markdown">
+  <p>Adds a map file (<code>.dd2vtt</code>, PDF, or raster image) to the library.</p>
+<ul>
+<li>UVTT maps — leave <code>isPdf</code> and <code>isImage</code> both <code>false</code>. The
+<code>rawBytes</code> are parsed to extract grid dimensions and portal count.</li>
+<li>PDF maps — set <code>isPdf</code> to <code>true</code> and provide <code>pdfGridCols</code> /
+<code>pdfGridRows</code> for the user-configured grid (defaults 20x15).</li>
+<li>Image maps (PNG/JPG/WEBP) — set <code>isImage</code> to <code>true</code> and provide
+the same grid params. Image bytes are stored as-is and never go
+through PDF rendering.</li>
+</ul>
+<p><code>isPdf</code> and <code>isImage</code> are mutually exclusive; passing both is
+treated as PDF for the metadata calculation but the resulting entry
+will reflect both flags (which would be a programmer error).</p>
+<p>Returns the created <a href="../../model_map_library_entry/MapLibraryEntry-class.html">MapLibraryEntry</a> with a fresh UUID.</p>
+<p>See also:</p>
+<ul>
+<li><a href="../../storage_map_library/MapLibrary/loadMapBytes.html">loadMapBytes</a>, to read the stored bytes back.</li>
+<li><a href="../../model_map_library_entry/MapLibraryEntry/isPdf.html">MapLibraryEntry.isPdf</a> / <a href="../../model_map_library_entry/MapLibraryEntry/isImage.html">MapLibraryEntry.isImage</a>, the type flags.</li>
+</ul>
+</section>
 
 
     
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
-  <pre class="language-dart"><code class="language-dart">Future&lt;MapLibraryEntry&gt; addMap(Uint8List rawBytes, String displayName) async {
+  <pre class="language-dart"><code class="language-dart">Future&lt;MapLibraryEntry&gt; addMap(Uint8List rawBytes, String displayName, {
+  bool isPdf = false,
+  bool isImage = false,
+  int? pdfGridCols,
+  int? pdfGridRows,
+}) async {
   final id = _uuid.v4();
 
   &#47;&#47; Store raw bytes
   await _filesBox.put(id, rawBytes);
 
-  &#47;&#47; Parse to extract metadata
-  final jsonString = utf8.decode(rawBytes);
-  final map = UvttParser.parse(jsonString);
+  int gridCols, gridRows, portalCount;
+
+  if (isPdf || isImage) {
+    gridCols = pdfGridCols ?? 20;
+    gridRows = pdfGridRows ?? 15;
+    portalCount = 0;
+  } else {
+    &#47;&#47; Parse UVTT to extract metadata
+    final jsonString = utf8.decode(rawBytes);
+    final map = UvttParser.parse(jsonString);
+    gridCols = map.resolution.mapSize.dx.toInt();
+    gridRows = map.resolution.mapSize.dy.toInt();
+    portalCount = map.portals.length;
+  }
 
   final entry = MapLibraryEntry(
     id: id,
     displayName: displayName,
     fileSizeBytes: rawBytes.length,
-    gridCols: map.resolution.mapSize.dx.toInt(),
-    gridRows: map.resolution.mapSize.dy.toInt(),
-    portalCount: map.portals.length,
+    gridCols: gridCols,
+    gridRows: gridRows,
+    portalCount: portalCount,
     addedAt: DateTime.now(),
+    isPdf: isPdf,
+    isImage: isImage,
+    pdfGridCols: pdfGridCols,
+    pdfGridRows: pdfGridRows,
   );
 
   &#47;&#47; Store entry in index
   await _mapIndexBox.put(id, jsonEncode(entry.toJson()));
-  debugPrint(&#39;MapLibrary: added &quot;$displayName&quot; ($id)&#39;);
+  final tag = isPdf ? &#39; [PDF]&#39; : (isImage ? &#39; [IMAGE]&#39; : &#39;&#39;);
+  debugPrint(&#39;MapLibrary: added &quot;$displayName&quot; ($id)$tag&#39;);
   return entry;
 }</code></pre>
 </section>
@@ -120,7 +166,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

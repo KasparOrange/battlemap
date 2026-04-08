@@ -63,6 +63,9 @@
     
 <section class="desc markdown">
   <p>Hides all fog cells (restores full fog coverage).</p>
+<p>In <a href="../../state_vtt_state/VttState/shadowMode.html">shadowMode</a>, fills <a href="../../state_vtt_state/VttState/shadowHideCells.html">shadowHideCells</a> with all currently revealed
+cells and clears <a href="../../state_vtt_state/VttState/shadowRevealCells.html">shadowRevealCells</a>. In live mode, saves the
+currently revealed cells and pushes a <a href="../../model_undo_action/FogAction-class.html">FogAction</a> for undo.</p>
 </section>
 
 
@@ -70,6 +73,16 @@
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void hideAll() {
+  if (shadowMode) {
+    shadowHideCells = Set&lt;int&gt;.from(revealedCells);
+    shadowRevealCells.clear();
+    notifyListeners();
+    return;
+  }
+  final previouslyRevealed = Set&lt;int&gt;.from(revealedCells);
+  if (previouslyRevealed.isNotEmpty) {
+    _pushUndo(FogAction(previouslyRevealed, false));
+  }
   revealedCells.clear();
   notifyListeners();
 }</code></pre>
@@ -100,7 +113,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

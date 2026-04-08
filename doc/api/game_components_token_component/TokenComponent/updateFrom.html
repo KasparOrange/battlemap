@@ -62,6 +62,12 @@
 
     </section>
     
+<section class="desc markdown">
+  <p>Updates this component's visual state from a <a href="../../model_map_token/MapToken-class.html">MapToken</a>.</p>
+<p>Only repositions the component if the grid coordinates changed.
+All rendering fields (label, color, name, HP, conditions) are
+updated unconditionally.</p>
+</section>
 
 
     
@@ -70,6 +76,10 @@
   <pre class="language-dart"><code class="language-dart">void updateFrom(MapToken token) {
   label = token.label;
   color = token.color;
+  name = token.name;
+  maxHp = token.maxHp;
+  currentHp = token.currentHp;
+  conditions = List.of(token.conditions);
   if (gridX != token.gridX || gridY != token.gridY) {
     gridX = token.gridX;
     gridY = token.gridY;
@@ -106,7 +116,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

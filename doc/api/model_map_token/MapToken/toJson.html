@@ -63,7 +63,9 @@
     
 <section class="desc markdown">
   <p>Serializes this token to a JSON-compatible map.</p>
-<p>The <a href="../../model_map_token/MapToken/color.html">color</a> is encoded as an 8-character ARGB hex string.</p>
+<p>The <a href="../../model_map_token/MapToken/color.html">color</a> is encoded as an 8-character ARGB hex string. Combat
+metadata (<a href="../../model_map_token/MapToken/name.html">name</a>, <a href="../../model_map_token/MapToken/maxHp.html">maxHp</a>, <a href="../../model_map_token/MapToken/currentHp.html">currentHp</a>, <a href="../../model_map_token/MapToken/conditions.html">conditions</a>) is always
+included for forward compatibility.</p>
 </section>
 
 
@@ -76,6 +78,10 @@
       &#39;color&#39;: color.toARGB32().toRadixString(16).padLeft(8, &#39;0&#39;),
       &#39;gridX&#39;: gridX,
       &#39;gridY&#39;: gridY,
+      &#39;name&#39;: name,
+      &#39;maxHp&#39;: maxHp,
+      &#39;currentHp&#39;: currentHp,
+      &#39;conditions&#39;: conditions.toList(),
     };</code></pre>
 </section>
 
@@ -104,7 +110,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

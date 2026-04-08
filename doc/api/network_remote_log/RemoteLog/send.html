@@ -63,7 +63,8 @@
     </section>
     
 <section class="desc markdown">
-  <p>Send a simple log message.</p>
+  <p>Legacy entry point: sends an untagged <a href="../../network_remote_log/LogLevel.html">LogLevel.info</a> message.</p>
+<p>Prefer <a href="../../network_remote_log/RemoteLog/info.html">info</a> (or one of the other level helpers) for new call sites.</p>
 </section>
 
 
@@ -71,7 +72,11 @@
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">static void send(String msg) {
-  _queue.add({&#39;src&#39;: _source, &#39;msg&#39;: msg});
+  _queue.add({
+    &#39;src&#39;: _source,
+    &#39;level&#39;: LogLevel.info.name,
+    &#39;msg&#39;: msg,
+  });
   if (!_flushing) _flush();
 }</code></pre>
 </section>
@@ -101,7 +106,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

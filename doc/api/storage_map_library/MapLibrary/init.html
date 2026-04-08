@@ -67,11 +67,12 @@
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">Future&lt;void&gt; init() async {
+  debugPrint(&#39;MapLibrary: opening Hive boxes&#39;);
   _mapIndexBox = await Hive.openBox&lt;String&gt;(&#39;mapIndex&#39;);
   _sessionsBox = await Hive.openBox&lt;String&gt;(&#39;sessions&#39;);
   _filesBox = await Hive.openBox&lt;List&lt;int&gt;&gt;(&#39;mapFiles&#39;);
   _thumbsBox = await Hive.openBox&lt;List&lt;int&gt;&gt;(&#39;thumbnails&#39;);
-  debugPrint(&#39;MapLibrary: ${_mapIndexBox.length} maps in library&#39;);
+  debugPrint(&#39;MapLibrary: ${_mapIndexBox.length} maps, ${_sessionsBox.length} sessions, ${_filesBox.length} files in Hive&#39;);
   &#47;&#47; TODO: one-time migration from old dart:io storage (maps&#47;index.json).
   &#47;&#47; For now, the TV can re-upload maps. Old files stay on disk but are ignored.
 }</code></pre>
@@ -102,7 +103,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

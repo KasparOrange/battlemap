@@ -64,7 +64,10 @@
     </section>
     
 <section class="desc markdown">
-  <p>Send a structured event with extra data fields.</p>
+  <p>Legacy entry point: sends a structured event with extra data fields.</p>
+<p>The <code>event</code> becomes both the JSON <code>event</code> field and (if <code>data</code> does not
+already provide one) the <code>msg</code> field. Defaults to <a href="../../network_remote_log/LogLevel.html">LogLevel.info</a>.</p>
+<p>Prefer <a href="../../network_remote_log/RemoteLog/info.html">info</a>/<a href="../../network_remote_log/RemoteLog/warn.html">warn</a>/<a href="../../network_remote_log/RemoteLog/error.html">error</a> with an explicit tag for new call sites.</p>
 </section>
 
 
@@ -72,11 +75,13 @@
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">static void sendEvent(String event, Map&lt;String, dynamic&gt; data) {
-  final entry = &lt;String, dynamic&gt;{&#39;src&#39;: _source, &#39;event&#39;: event};
+  final entry = &lt;String, dynamic&gt;{
+    &#39;src&#39;: _source,
+    &#39;level&#39;: LogLevel.info.name,
+    &#39;event&#39;: event,
+  };
   entry.addAll(data);
-  if (!entry.containsKey(&#39;msg&#39;)) {
-    entry[&#39;msg&#39;] = event;
-  }
+  if (!entry.containsKey(&#39;msg&#39;)) entry[&#39;msg&#39;] = event;
   _queue.add(entry);
   if (!_flushing) _flush();
 }</code></pre>
@@ -107,7 +112,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

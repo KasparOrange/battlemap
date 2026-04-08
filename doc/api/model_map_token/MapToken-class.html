@@ -59,12 +59,17 @@
 occupies a single grid cell and is identified by a unique <a href="../model_map_token/MapToken/id.html">id</a>, a
 short <a href="../model_map_token/MapToken/label.html">label</a> (typically a number), and a <a href="../model_map_token/MapToken/color.html">color</a> chosen from
 <a href="../model_map_token/MapToken/tokenColors-constant.html">tokenColors</a>.</p>
+<p>Tokens carry optional combat metadata: <a href="../model_map_token/MapToken/name.html">name</a> (display name),
+<a href="../model_map_token/MapToken/maxHp.html">maxHp</a> / <a href="../model_map_token/MapToken/currentHp.html">currentHp</a> (hit points), and <a href="../model_map_token/MapToken/conditions.html">conditions</a> (status effects
+like "poisoned" or "stunned"). These fields default to empty/zero for
+backwards compatibility with older session data.</p>
 <p>Tokens are JSON-serializable for WebSocket relay sync between the
 companion phone and the TV.</p>
 <p>See also:</p>
 <ul>
 <li><a href="../state_vtt_state/VttState/addToken.html">VttState.addToken</a>, which creates and registers a new token.</li>
 <li><a href="../state_vtt_state/VttState/moveToken.html">VttState.moveToken</a>, which repositions an existing token.</li>
+<li><a href="../state_vtt_state/VttState/editToken.html">VttState.editToken</a>, which updates combat metadata.</li>
 </ul>
 </section>
 
@@ -75,7 +80,7 @@ companion phone and the TV.</p>
     <h2>Constructors</h2>
     <dl class="constructor-summary-list">
         <dt id="MapToken.new" class="callable">
-          <span class="name"><a href="../model_map_token/MapToken/MapToken.html">MapToken</a></span><span class="signature">({<span class="parameter" id="-param-id"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, </span><span class="parameter" id="-param-label"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">label</span>, </span><span class="parameter" id="-param-color"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a></span> <span class="parameter-name">color</span>, </span><span class="parameter" id="-param-gridX"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridX</span>, </span><span class="parameter" id="-param-gridY"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridY</span></span>})</span>
+          <span class="name"><a href="../model_map_token/MapToken/MapToken.html">MapToken</a></span><span class="signature">({<span class="parameter" id="-param-id"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, </span><span class="parameter" id="-param-label"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">label</span>, </span><span class="parameter" id="-param-color"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a></span> <span class="parameter-name">color</span>, </span><span class="parameter" id="-param-gridX"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridX</span>, </span><span class="parameter" id="-param-gridY"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridY</span>, </span><span class="parameter" id="-param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">name</span> = <span class="default-value">&#39;&#39;</span>, </span><span class="parameter" id="-param-maxHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">maxHp</span> = <span class="default-value">0</span>, </span><span class="parameter" id="-param-currentHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">currentHp</span> = <span class="default-value">0</span>, </span><span class="parameter" id="-param-conditions"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>&gt;</span>?</span> <span class="parameter-name">conditions</span></span>})</span>
         </dt>
         <dd>
           Creates a <a href="../model_map_token/MapToken-class.html">MapToken</a> at the given grid position.
@@ -103,6 +108,30 @@ companion phone and the TV.</p>
 </dt>
 <dd>
   Fill color of the token, drawn as a circle on the grid.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="conditions" class="property">
+  <span class="name"><a href="../model_map_token/MapToken/conditions.html">conditions</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  Active status conditions on this token (e.g. "poisoned", "stunned").
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="currentHp" class="property">
+  <span class="name"><a href="../model_map_token/MapToken/currentHp.html">currentHp</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd>
+  Current hit points for this token.
   <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
@@ -163,6 +192,30 @@ companion phone and the TV.</p>
 </dt>
 <dd>
   Display label shown on the token circle (e.g. "1", "2").
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="maxHp" class="property">
+  <span class="name"><a href="../model_map_token/MapToken/maxHp.html">maxHp</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd>
+  Maximum hit points for this token.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="name" class="property">
+  <span class="name"><a href="../model_map_token/MapToken/name.html">name</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  Display name for this token (e.g. "Goblin Archer").
   <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
@@ -257,6 +310,18 @@ companion phone and the TV.</p>
   <section class="summary offset-anchor" id="constants">
     <h2>Constants</h2>
     <dl class="properties">
+        <dt id="conditionColors" class="constant">
+    <span class="name "><a href="../model_map_token/MapToken/conditionColors-constant.html">conditionColors</a></span>
+  <span class="signature">&#8594; const <a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  Maps D&amp;D 5e condition names to ARGB color values for display.
+  
+
+</dd>
+
         <dt id="tokenColors" class="constant">
     <span class="name "><a href="../model_map_token/MapToken/tokenColors-constant.html">tokenColors</a></span>
   <span class="signature">&#8594; const <a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a></span>&gt;</span></span>
@@ -294,7 +359,7 @@ companion phone and the TV.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

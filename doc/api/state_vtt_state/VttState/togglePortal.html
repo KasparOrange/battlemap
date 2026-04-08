@@ -64,6 +64,8 @@
     
 <section class="desc markdown">
   <p>Toggles a portal (door/gate) between open and closed.</p>
+<p>Pushes a <a href="../../model_undo_action/PortalAction-class.html">PortalAction</a> onto the undo stack recording the portal's
+state before the toggle.</p>
 <p>The <code>index</code> corresponds to the portal's position in
 <a href="../../model_uvtt_map/UvttMap/portals.html">UvttMap.portals</a>.</p>
 </section>
@@ -73,7 +75,9 @@
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void togglePortal(int index) {
-  if (openPortals.contains(index)) {
+  final wasOpen = openPortals.contains(index);
+  _pushUndo(PortalAction(index, wasOpen));
+  if (wasOpen) {
     openPortals.remove(index);
   } else {
     openPortals.add(index);
@@ -107,7 +111,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

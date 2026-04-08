@@ -54,8 +54,21 @@
 
     
 <section class="desc markdown">
-  <p>Sends structured log messages to the VPS log server.
-Used by the TV app to report what it's doing.</p>
+  <p>Sends structured log messages to the VPS log server.</p>
+<p>Each entry is a JSON object with at minimum:</p>
+<pre class="language-json"><code class="language-json">{"src": "tv", "level": "info", "tag": "session", "msg": "Session resumed"}
+</code></pre>
+<p>Entries are batched in <code>_queue</code> and flushed asynchronously over HTTP POST
+to <code>_remoteUrl</code> (the VPS log server on port 4243). The log server appends
+each entry to <code>/tmp/battlemap.log</code> as JSONL.</p>
+<p>Use <a href="../network_remote_log/RemoteLog/debug.html">debug</a>, <a href="../network_remote_log/RemoteLog/info.html">info</a>, <a href="../network_remote_log/RemoteLog/warn.html">warn</a>, or <a href="../network_remote_log/RemoteLog/error.html">error</a> for tagged level-aware logging.
+The legacy <a href="../network_remote_log/RemoteLog/send.html">send</a> and <a href="../network_remote_log/RemoteLog/sendEvent.html">sendEvent</a> entry points remain for compatibility
+with older call sites and default to <a href="../network_remote_log/LogLevel.html">LogLevel.info</a> / no tag.</p>
+<p>See also:</p>
+<ul>
+<li><a href="../network_remote_log/LogLevel.html">LogLevel</a> for the level enum.</li>
+<li><code>tools/log_server.py</code> for the server-side handler.</li>
+</ul>
 </section>
 
 
@@ -165,6 +178,45 @@ Used by the TV app to report what it's doing.</p>
   <section class="summary offset-anchor" id="static-methods">
     <h2>Static Methods</h2>
     <dl class="callables">
+        <dt id="debug" class="callable">
+  <span class="name"><a href="../network_remote_log/RemoteLog/debug.html">debug</a></span><span class="signature">(<wbr><span class="parameter" id="debug-param-tag"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tag</span>, </span><span class="parameter" id="debug-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span>, [</span><span class="parameter" id="debug-param-extra"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">extra</span></span>])
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Logs a <a href="../network_remote_log/LogLevel.html">LogLevel.debug</a> entry under <code>tag</code>.
+  
+
+</dd>
+
+        <dt id="error" class="callable">
+  <span class="name"><a href="../network_remote_log/RemoteLog/error.html">error</a></span><span class="signature">(<wbr><span class="parameter" id="error-param-tag"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tag</span>, </span><span class="parameter" id="error-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span>, [</span><span class="parameter" id="error-param-extra"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">extra</span></span>])
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Logs a <a href="../network_remote_log/LogLevel.html">LogLevel.error</a> entry under <code>tag</code>.
+  
+
+</dd>
+
+        <dt id="info" class="callable">
+  <span class="name"><a href="../network_remote_log/RemoteLog/info.html">info</a></span><span class="signature">(<wbr><span class="parameter" id="info-param-tag"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tag</span>, </span><span class="parameter" id="info-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span>, [</span><span class="parameter" id="info-param-extra"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">extra</span></span>])
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Logs a <a href="../network_remote_log/LogLevel.html">LogLevel.info</a> entry under <code>tag</code>.
+  
+
+</dd>
+
         <dt id="send" class="callable">
   <span class="name"><a href="../network_remote_log/RemoteLog/send.html">send</a></span><span class="signature">(<wbr><span class="parameter" id="send-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span></span>)
     <span class="returntype parameter">&#8594; void</span>
@@ -173,7 +225,7 @@ Used by the TV app to report what it's doing.</p>
 
 </dt>
 <dd>
-  Send a simple log message.
+  Legacy entry point: sends an untagged <a href="../network_remote_log/LogLevel.html">LogLevel.info</a> message.
   
 
 </dd>
@@ -186,7 +238,7 @@ Used by the TV app to report what it's doing.</p>
 
 </dt>
 <dd>
-  Send device info (screen size, platform, app version).
+  Sends platform/version/screen info as a single <code>deviceInfo</code> event.
   
 
 </dd>
@@ -199,7 +251,7 @@ Used by the TV app to report what it's doing.</p>
 
 </dt>
 <dd>
-  Send a structured event with extra data fields.
+  Legacy entry point: sends a structured event with extra data fields.
   
 
 </dd>
@@ -212,7 +264,20 @@ Used by the TV app to report what it's doing.</p>
 
 </dt>
 <dd>
-  Set the source tag (e.g., 'tv' or 'companion').
+  Sets the source tag attached to all subsequent log entries.
+  
+
+</dd>
+
+        <dt id="warn" class="callable">
+  <span class="name"><a href="../network_remote_log/RemoteLog/warn.html">warn</a></span><span class="signature">(<wbr><span class="parameter" id="warn-param-tag"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tag</span>, </span><span class="parameter" id="warn-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span>, [</span><span class="parameter" id="warn-param-extra"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">extra</span></span>])
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Logs a <a href="../network_remote_log/LogLevel.html">LogLevel.warn</a> entry under <code>tag</code>.
   
 
 </dd>
@@ -244,7 +309,7 @@ Used by the TV app to report what it's doing.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

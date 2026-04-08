@@ -64,7 +64,8 @@
     
 <section class="desc markdown">
   <p>Adds a completed <code>stroke</code> to the drawing layer.</p>
-<p>Fires <a href="../../state_vtt_state/VttState/onStrokeAdded.html">onStrokeAdded</a> for relay forwarding.</p>
+<p>Pushes a <a href="../../model_undo_action/StrokeAddAction-class.html">StrokeAddAction</a> onto the undo stack.
+Fires <a href="../../state_vtt_state/VttState/onStrokeAdded.html">onStrokeAdded</a> for relay forwarding.</p>
 </section>
 
 
@@ -73,6 +74,7 @@
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void addStroke(DrawStroke stroke) {
   strokes.add(stroke);
+  _pushUndo(StrokeAddAction(stroke));
   notifyListeners();
   onStrokeAdded?.call(stroke);
 }</code></pre>
@@ -103,7 +105,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

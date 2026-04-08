@@ -471,4 +471,61 @@ void main() {
       expect(original.fogMode, 'atmospheric');
     });
   });
+
+  group('Session.isImageSession (1.1.2+)', () {
+    Session makeSession({
+      bool isPdfSession = false,
+      bool isImageSession = false,
+    }) =>
+        Session(
+          id: 'sid',
+          mapId: 'mid',
+          name: 'test',
+          createdAt: DateTime.parse('2026-04-08T12:00:00Z'),
+          lastModifiedAt: DateTime.parse('2026-04-08T13:00:00Z'),
+          isPdfSession: isPdfSession,
+          isImageSession: isImageSession,
+        );
+
+    test('defaults to false on a new session', () {
+      final session = Session(
+        id: 'x',
+        mapId: 'y',
+        name: 'fresh',
+        createdAt: DateTime.parse('2026-04-08T12:00:00Z'),
+        lastModifiedAt: DateTime.parse('2026-04-08T12:00:00Z'),
+      );
+      expect(session.isImageSession, isFalse);
+      expect(session.isPdfSession, isFalse);
+    });
+
+    test('round-trips through JSON when set', () {
+      final session = makeSession(isImageSession: true);
+      final restored = Session.fromJson(session.toJson());
+      expect(restored.isImageSession, isTrue);
+      expect(restored.isPdfSession, isFalse);
+    });
+
+    test('toJson always includes isImageSession key', () {
+      expect(makeSession().toJson().containsKey('isImageSession'), isTrue);
+    });
+
+    test('legacy session JSON without isImageSession defaults to false', () {
+      final session = makeSession();
+      final json = Map<String, dynamic>.from(session.toJson())
+        ..remove('isImageSession');
+      final restored = Session.fromJson(json);
+      expect(restored.isImageSession, isFalse);
+    });
+
+    test('legacy session with isPdfSession=true still resumes as PDF in schema', () {
+      // The schema layer trusts isPdfSession=true; the runtime sniff in
+      // _resumeSession is what rescues image bytes accidentally tagged as
+      // PDF (covered separately in file_signatures_test.dart).
+      final session = makeSession(isPdfSession: true);
+      final restored = Session.fromJson(session.toJson());
+      expect(restored.isPdfSession, isTrue);
+      expect(restored.isImageSession, isFalse);
+    });
+  });
 }

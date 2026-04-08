@@ -62,7 +62,12 @@
     </section>
     
 <section class="desc markdown">
-  <p>Sync token components to match current VttState.tokens.</p>
+  <p>Synchronizes token components to match current <a href="../../state_vtt_state/VttState/tokens.html">VttState.tokens</a>.</p>
+<p>Performs a diff between the Flame component children and the state's
+token list, then adds, removes, or updates components as needed.
+Each <a href="../../game_components_token_component/TokenComponent-class.html">TokenComponent</a> receives the full set of fields from its
+corresponding <a href="../../model_map_token/MapToken-class.html">MapToken</a>: label, color, position, name, HP, and
+conditions.</p>
 </section>
 
 
@@ -99,6 +104,10 @@
         gridX: token.gridX,
         gridY: token.gridY,
         cellSize: cellSize,
+        name: token.name,
+        maxHp: token.maxHp,
+        currentHp: token.currentHp,
+        conditions: List.of(token.conditions),
       ));
     }
   }
@@ -130,7 +139,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

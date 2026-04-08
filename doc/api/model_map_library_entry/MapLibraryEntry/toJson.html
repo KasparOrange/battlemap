@@ -63,7 +63,9 @@
     
 <section class="desc markdown">
   <p>Serializes this entry to a JSON-compatible map.</p>
-<p><a href="../../model_map_library_entry/MapLibraryEntry/addedAt.html">addedAt</a> is encoded as an ISO 8601 string.</p>
+<p><a href="../../model_map_library_entry/MapLibraryEntry/addedAt.html">addedAt</a> is encoded as an ISO 8601 string. PDF / image fields
+(<a href="../../model_map_library_entry/MapLibraryEntry/isPdf.html">isPdf</a>, <a href="../../model_map_library_entry/MapLibraryEntry/isImage.html">isImage</a>, <a href="../../model_map_library_entry/MapLibraryEntry/pdfGridCols.html">pdfGridCols</a>, <a href="../../model_map_library_entry/MapLibraryEntry/pdfGridRows.html">pdfGridRows</a>) are always
+included for forward compatibility.</p>
 </section>
 
 
@@ -78,6 +80,10 @@
       &#39;gridRows&#39;: gridRows,
       &#39;portalCount&#39;: portalCount,
       &#39;addedAt&#39;: addedAt.toIso8601String(),
+      &#39;isPdf&#39;: isPdf,
+      &#39;isImage&#39;: isImage,
+      &#39;pdfGridCols&#39;: pdfGridCols,
+      &#39;pdfGridRows&#39;: pdfGridRows,
       &#39;thumbnailPath&#39;: thumbnailPath,
       &#39;vpsUrl&#39;: vpsUrl,
     };</code></pre>
@@ -108,7 +114,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

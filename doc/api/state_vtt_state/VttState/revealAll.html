@@ -64,6 +64,9 @@
     
 <section class="desc markdown">
   <p>Reveals all fog cells on the map.</p>
+<p>In <a href="../../state_vtt_state/VttState/shadowMode.html">shadowMode</a>, fills <a href="../../state_vtt_state/VttState/shadowRevealCells.html">shadowRevealCells</a> with all cells and clears
+<a href="../../state_vtt_state/VttState/shadowHideCells.html">shadowHideCells</a>. In live mode, computes the diff (cells not already
+revealed) and pushes a <a href="../../model_undo_action/FogAction-class.html">FogAction</a> for undo.</p>
 <p><code>totalCells</code> should be <code>gridCols * gridRows</code>.</p>
 </section>
 
@@ -72,7 +75,18 @@
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void revealAll(int totalCells) {
-  revealedCells = Set.from(List.generate(totalCells, (i) =&gt; i));
+  if (shadowMode) {
+    shadowRevealCells = Set.from(List.generate(totalCells, (i) =&gt; i));
+    shadowHideCells.clear();
+    notifyListeners();
+    return;
+  }
+  final allCells = Set&lt;int&gt;.from(List.generate(totalCells, (i) =&gt; i));
+  final newlyRevealed = allCells.difference(revealedCells);
+  if (newlyRevealed.isNotEmpty) {
+    _pushUndo(FogAction(newlyRevealed, true));
+  }
+  revealedCells = allCells;
   notifyListeners();
 }</code></pre>
 </section>
@@ -102,7 +116,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

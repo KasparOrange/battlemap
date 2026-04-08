@@ -72,7 +72,8 @@
   if (json == null) return null;
   try {
     return MapLibraryEntry.fromJson(jsonDecode(json) as Map&lt;String, dynamic&gt;);
-  } catch (_) {
+  } catch (e) {
+    debugPrint(&#39;MapLibrary: failed to parse entry $mapId: $e&#39;);
     return null;
   }
 }</code></pre>
@@ -103,7 +104,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

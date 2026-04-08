@@ -60,8 +60,11 @@
     
 <section class="desc markdown">
   <p>Deserializes a <a href="../../model_map_library_entry/MapLibraryEntry-class.html">MapLibraryEntry</a> from a JSON map.</p>
-<p>Expects keys matching <a href="../../model_map_library_entry/MapLibraryEntry/toJson.html">toJson</a> output. The <a href="../../model_map_library_entry/MapLibraryEntry/addedAt.html">addedAt</a> field is
-parsed from an ISO 8601 string.</p>
+<p>Expects keys matching <a href="../../model_map_library_entry/MapLibraryEntry/toJson.html">toJson</a> output. The <a href="../../model_map_library_entry/MapLibraryEntry/addedAt.html">addedAt</a> field is parsed
+from an ISO 8601 string. The <a href="../../model_map_library_entry/MapLibraryEntry/isPdf.html">isPdf</a>, <a href="../../model_map_library_entry/MapLibraryEntry/isImage.html">isImage</a>, and <code>pdfGrid*</code>
+fields default to <code>false</code> / <code>null</code> if absent, for backwards
+compatibility with entries created before PDF or image support was
+added.</p>
 </section>
 
 
@@ -77,6 +80,10 @@ parsed from an ISO 8601 string.</p>
       gridRows: json[&#39;gridRows&#39;] as int,
       portalCount: json[&#39;portalCount&#39;] as int,
       addedAt: DateTime.parse(json[&#39;addedAt&#39;] as String),
+      isPdf: json[&#39;isPdf&#39;] as bool? ?? false,
+      isImage: json[&#39;isImage&#39;] as bool? ?? false,
+      pdfGridCols: json[&#39;pdfGridCols&#39;] as int?,
+      pdfGridRows: json[&#39;pdfGridRows&#39;] as int?,
       thumbnailPath: json[&#39;thumbnailPath&#39;] as String?,
       vpsUrl: json[&#39;vpsUrl&#39;] as String?,
     );</code></pre>
@@ -107,7 +114,7 @@ parsed from an ISO 8601 string.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

@@ -74,6 +74,14 @@
 <li><span class="parameter" id="-param-drawColorValue"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">drawColorValue</span> = <span class="default-value">0xFFE53935</span>, </span></li>
 <li><span class="parameter" id="-param-drawWidth"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">drawWidth</span> = <span class="default-value">3.0</span>, </span></li>
 <li><span class="parameter" id="-param-interactionMode"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">interactionMode</span> = <span class="default-value">&#39;fogReveal&#39;</span>, </span></li>
+<li><span class="parameter" id="-param-isPdfSession"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">isPdfSession</span> = <span class="default-value">false</span>, </span></li>
+<li><span class="parameter" id="-param-isImageSession"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">isImageSession</span> = <span class="default-value">false</span>, </span></li>
+<li><span class="parameter" id="-param-rulerVisible"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">rulerVisible</span> = <span class="default-value">false</span>, </span></li>
+<li><span class="parameter" id="-param-rulerX"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">rulerX</span> = <span class="default-value">0</span>, </span></li>
+<li><span class="parameter" id="-param-rulerY"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">rulerY</span> = <span class="default-value">0</span>, </span></li>
+<li><span class="parameter" id="-param-rulerRotation"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">rulerRotation</span> = <span class="default-value">0</span>, </span></li>
+<li><span class="parameter" id="-param-scaleSliderFactor"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">scaleSliderFactor</span> = <span class="default-value">1.0</span>, </span></li>
+<li><span class="parameter" id="-param-settings"><span class="type-annotation"><a href="../../model_session/SessionSettings-class.html">SessionSettings</a>?</span> <span class="parameter-name">settings</span>, </span></li>
 <li><span class="parameter" id="-param-cameraX"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">cameraX</span> = <span class="default-value">0</span>, </span></li>
 <li><span class="parameter" id="-param-cameraY"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">cameraY</span> = <span class="default-value">0</span>, </span></li>
 <li><span class="parameter" id="-param-cameraZoom"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">cameraZoom</span> = <span class="default-value">1</span>, </span></li>
@@ -84,7 +92,8 @@
 <section class="desc markdown">
   <p>Creates a <a href="../../model_session/Session-class.html">Session</a> with the given parameters.</p>
 <p>Most fields have sensible defaults matching a fresh game start:
-fog enabled, grid visible, no revealed cells, no tokens, camera at origin.</p>
+fog enabled, grid visible, no revealed cells, no tokens, camera at origin.
+Set <code>isPdfSession</code> to <code>true</code> for sessions created from PDF maps.</p>
 </section>
 
 
@@ -112,11 +121,19 @@ fog enabled, grid visible, no revealed cells, no tokens, camera at origin.</p>
   this.drawColorValue = 0xFFE53935,
   this.drawWidth = 3.0,
   this.interactionMode = &#39;fogReveal&#39;,
+  this.isPdfSession = false,
+  this.isImageSession = false,
+  this.rulerVisible = false,
+  this.rulerX = 0,
+  this.rulerY = 0,
+  this.rulerRotation = 0,
+  this.scaleSliderFactor = 1.0,
+  SessionSettings? settings,
   this.cameraX = 0,
   this.cameraY = 0,
   this.cameraZoom = 1,
   this.cameraAngle = 0,
-});</code></pre>
+}) : settings = settings ?? SessionSettings.penAndPaper();</code></pre>
 </section>
 
 
@@ -144,7 +161,7 @@ fog enabled, grid visible, no revealed cells, no tokens, camera at origin.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

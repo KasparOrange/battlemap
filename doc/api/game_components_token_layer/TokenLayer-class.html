@@ -56,6 +56,19 @@
 <section class="desc markdown">
   <p>Container for token components. Diffs against VttState to efficiently
 add, remove, and update individual token components.</p>
+<p>When <a href="../game_components_token_layer/TokenLayer/sync.html">sync</a> is called, it compares the current Flame children against
+<a href="../state_vtt_state/VttState/tokens.html">VttState.tokens</a> and performs the minimal set of operations:</p>
+<ul>
+<li>Removes components whose tokens no longer exist in state.</li>
+<li>Updates existing components whose tokens have changed position,
+name, HP, conditions, or appearance.</li>
+<li>Creates new components for tokens that appeared since the last sync.</li>
+</ul>
+<p>See also:</p>
+<ul>
+<li><a href="../game_components_token_component/TokenComponent-class.html">TokenComponent</a>, the Flame component for a single token.</li>
+<li><a href="../state_vtt_state/VttState/tokens.html">VttState.tokens</a>, the source of truth for token data.</li>
+</ul>
 </section>
 
 
@@ -94,7 +107,7 @@ add, remove, and update individual token components.</p>
           <span class="name"><a href="../game_components_token_layer/TokenLayer/TokenLayer.html">TokenLayer</a></span><span class="signature">({<span class="parameter" id="-param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span><span class="parameter" id="-param-cellSize"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">cellSize</span></span>})</span>
         </dt>
         <dd>
-          
+          Creates a <a href="../game_components_token_layer/TokenLayer-class.html">TokenLayer</a> with the given <code>state</code> and <code>cellSize</code>.
         </dd>
     </dl>
   </section>
@@ -111,7 +124,7 @@ add, remove, and update individual token components.</p>
 
 </dt>
 <dd>
-  
+  Size of one grid cell in world pixels (used to position tokens).
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -386,7 +399,7 @@ render context to all its children (recursively).
 
 </dt>
 <dd>
-  
+  The shared VTT state containing the authoritative token list.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -885,7 +898,7 @@ and their children.
 
 </dt>
 <dd>
-  Sync token components to match current VttState.tokens.
+  Synchronizes token components to match current <a href="../state_vtt_state/VttState/tokens.html">VttState.tokens</a>.
   
 
 </dd>
@@ -982,7 +995,7 @@ priority of the direct siblings, not the children or the ancestors.
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

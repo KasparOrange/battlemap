@@ -60,7 +60,10 @@
     
 <section class="desc markdown">
   <p>Deserializes a <a href="../../model_map_token/MapToken-class.html">MapToken</a> from a JSON map.</p>
-<p>Expects keys <code>id</code>, <code>label</code>, <code>color</code> (hex string), <code>gridX</code>, and <code>gridY</code>.</p>
+<p>Expects keys <code>id</code>, <code>label</code>, <code>color</code> (hex string), <code>gridX</code>, and <code>gridY</code>.
+Combat metadata fields (<code>name</code>, <code>maxHp</code>, <code>currentHp</code>, <code>conditions</code>) are
+optional and fall back to defaults if absent, for backwards compatibility
+with older session data.</p>
 </section>
 
 
@@ -73,6 +76,13 @@
       color: Color(int.parse(json[&#39;color&#39;] as String, radix: 16)),
       gridX: json[&#39;gridX&#39;] as int,
       gridY: json[&#39;gridY&#39;] as int,
+      name: json[&#39;name&#39;] as String? ?? &#39;&#39;,
+      maxHp: json[&#39;maxHp&#39;] as int? ?? 0,
+      currentHp: json[&#39;currentHp&#39;] as int? ?? 0,
+      conditions: (json[&#39;conditions&#39;] as List?)
+              ?.map((e) =&gt; e as String)
+              .toSet() ??
+          {},
     );</code></pre>
 </section>
 
@@ -101,7 +111,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

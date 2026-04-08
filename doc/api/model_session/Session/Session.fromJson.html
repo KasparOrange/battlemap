@@ -62,8 +62,8 @@
   <p>Deserializes a <a href="../../model_session/Session-class.html">Session</a> from a JSON map.</p>
 <p>Expects keys matching <a href="../../model_session/Session/toJson.html">toJson</a> output. Fields added after the initial
 schema (<a href="../../model_session/Session/tokenData.html">tokenData</a>, <a href="../../model_session/Session/strokeData.html">strokeData</a>, <a href="../../model_session/Session/drawColorValue.html">drawColorValue</a>, <a href="../../model_session/Session/drawWidth.html">drawWidth</a>,
-<a href="../../model_session/Session/interactionMode.html">interactionMode</a>) fall back to defaults if absent, for backwards
-compatibility with older saved sessions.</p>
+<a href="../../model_session/Session/interactionMode.html">interactionMode</a>, <a href="../../model_session/Session/isPdfSession.html">isPdfSession</a>) fall back to defaults if absent,
+for backwards compatibility with older saved sessions.</p>
 </section>
 
 
@@ -99,6 +99,16 @@ compatibility with older saved sessions.</p>
       drawColorValue: json[&#39;drawColorValue&#39;] as int? ?? 0xFFE53935,
       drawWidth: (json[&#39;drawWidth&#39;] as num?)?.toDouble() ?? 3.0,
       interactionMode: json[&#39;interactionMode&#39;] as String? ?? &#39;fogReveal&#39;,
+      isPdfSession: json[&#39;isPdfSession&#39;] as bool? ?? false,
+      isImageSession: json[&#39;isImageSession&#39;] as bool? ?? false,
+      rulerVisible: json[&#39;rulerVisible&#39;] as bool? ?? false,
+      rulerX: (json[&#39;rulerX&#39;] as num?)?.toDouble() ?? 0,
+      rulerY: (json[&#39;rulerY&#39;] as num?)?.toDouble() ?? 0,
+      rulerRotation: json[&#39;rulerRotation&#39;] as int? ?? 0,
+      scaleSliderFactor: (json[&#39;scaleSliderFactor&#39;] as num?)?.toDouble() ?? 1.0,
+      settings: json[&#39;settings&#39;] != null
+          ? SessionSettings.fromJson(json[&#39;settings&#39;] as Map&lt;String, dynamic&gt;)
+          : null,
       cameraX: (json[&#39;cameraX&#39;] as num).toDouble(),
       cameraY: (json[&#39;cameraY&#39;] as num).toDouble(),
       cameraZoom: (json[&#39;cameraZoom&#39;] as num).toDouble(),
@@ -131,7 +141,7 @@ compatibility with older saved sessions.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

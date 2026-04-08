@@ -92,6 +92,15 @@ strokes, draw settings, and the active interaction mode.</p>
       &#39;strokes&#39;: strokes.map((s) =&gt; s.toJson()).toList(),
       &#39;drawColor&#39;: drawColor.toARGB32(),
       &#39;drawWidth&#39;: drawWidth,
+      &#39;shadowMode&#39;: shadowMode,
+      &#39;shadowRevealCells&#39;: shadowRevealCells.toList(),
+      &#39;shadowHideCells&#39;: shadowHideCells.toList(),
+      &#39;rulerVisible&#39;: rulerVisible,
+      &#39;rulerX&#39;: rulerX,
+      &#39;rulerY&#39;: rulerY,
+      &#39;rulerRotation&#39;: rulerRotation,
+      &#39;scaleSliderFactor&#39;: scaleSliderFactor,
+      &#39;sessionSettings&#39;: sessionSettings.toJson(),
     };</code></pre>
 </section>
 
@@ -120,7 +129,7 @@ strokes, draw settings, and the active interaction mode.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

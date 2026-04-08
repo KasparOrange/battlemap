@@ -311,13 +311,26 @@ class Session {
 
   /// Whether this session is for a PDF map rather than a `.dd2vtt` map.
   ///
-  /// When `true`, session resume should call [VttState.loadPdfAsMap]
-  /// instead of [VttState.loadMap], since PDF bytes need to be rendered
-  /// to an image before loading.
+  /// When `true`, session resume must render the PDF bytes to a PNG via
+  /// `PdfHelper.renderPdfPage` before calling [VttState.loadPdfAsMap].
+  ///
+  /// Mutually exclusive with [isImageSession]: a session is either a PDF,
+  /// an image, or a UVTT map.
   ///
   /// See also:
   /// * [MapLibraryEntry.isPdf], the corresponding flag on the map entry.
   bool isPdfSession;
+
+  /// Whether this session is for a raster image map (PNG/JPG/WEBP).
+  ///
+  /// When `true`, session resume can pass the bytes straight to
+  /// [VttState.loadPdfAsMap] without going through PDF rendering.
+  /// Distinguishing this from [isPdfSession] is critical: rendering an
+  /// image as if it were a PDF fails and breaks resume.
+  ///
+  /// See also:
+  /// * [MapLibraryEntry.isImage], the corresponding flag on the map entry.
+  bool isImageSession;
 
   /// Whether the L-shaped ruler overlay is visible.
   bool rulerVisible;
@@ -383,6 +396,7 @@ class Session {
     this.drawWidth = 3.0,
     this.interactionMode = 'fogReveal',
     this.isPdfSession = false,
+    this.isImageSession = false,
     this.rulerVisible = false,
     this.rulerX = 0,
     this.rulerY = 0,
@@ -423,6 +437,7 @@ class Session {
         'drawWidth': drawWidth,
         'interactionMode': interactionMode,
         'isPdfSession': isPdfSession,
+        'isImageSession': isImageSession,
         'rulerVisible': rulerVisible,
         'rulerX': rulerX,
         'rulerY': rulerY,
@@ -471,6 +486,7 @@ class Session {
         drawWidth: (json['drawWidth'] as num?)?.toDouble() ?? 3.0,
         interactionMode: json['interactionMode'] as String? ?? 'fogReveal',
         isPdfSession: json['isPdfSession'] as bool? ?? false,
+        isImageSession: json['isImageSession'] as bool? ?? false,
         rulerVisible: json['rulerVisible'] as bool? ?? false,
         rulerX: (json['rulerX'] as num?)?.toDouble() ?? 0,
         rulerY: (json['rulerY'] as num?)?.toDouble() ?? 0,

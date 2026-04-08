@@ -65,7 +65,8 @@
   <p>Serializes this session to a JSON-compatible map.</p>
 <p>Timestamps are encoded as ISO 8601 strings. Token and stroke data
 are stored as raw JSON maps (already serialized by their respective
-<code>toJson</code> methods).</p>
+<code>toJson</code> methods). The <a href="../../model_session/Session/isPdfSession.html">isPdfSession</a> flag is always included for
+forward compatibility.</p>
 </section>
 
 
@@ -93,6 +94,14 @@ are stored as raw JSON maps (already serialized by their respective
       &#39;drawColorValue&#39;: drawColorValue,
       &#39;drawWidth&#39;: drawWidth,
       &#39;interactionMode&#39;: interactionMode,
+      &#39;isPdfSession&#39;: isPdfSession,
+      &#39;isImageSession&#39;: isImageSession,
+      &#39;rulerVisible&#39;: rulerVisible,
+      &#39;rulerX&#39;: rulerX,
+      &#39;rulerY&#39;: rulerY,
+      &#39;rulerRotation&#39;: rulerRotation,
+      &#39;scaleSliderFactor&#39;: scaleSliderFactor,
+      &#39;settings&#39;: settings.toJson(),
       &#39;cameraX&#39;: cameraX,
       &#39;cameraY&#39;: cameraY,
       &#39;cameraZoom&#39;: cameraZoom,
@@ -125,7 +134,7 @@ are stored as raw JSON maps (already serialized by their respective
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

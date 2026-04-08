@@ -54,7 +54,10 @@
 
     
 <section class="desc markdown">
-  <p>Helper to safely access WidgetsBinding (may be null before runApp).</p>
+  <p>Helper to safely access <a href="https://api.flutter.dev/flutter/widgets/WidgetsBinding-mixin.html">WidgetsBinding</a> before <a href="https://api.flutter.dev/flutter/widgets/runApp.html">runApp</a> has been called.</p>
+<p>Returns <code>null</code> (instead of throwing) when the binding has not yet been
+initialized, so <a href="../network_remote_log/RemoteLog/sendDeviceInfo.html">RemoteLog.sendDeviceInfo</a> can be called from very early
+app startup paths.</p>
 </section>
 
 
@@ -170,7 +173,7 @@
 
 </dt>
 <dd>
-  
+  The active <a href="https://api.flutter.dev/flutter/widgets/WidgetsBinding-mixin.html">WidgetsBinding</a>, or <code>null</code> if it has not been created yet.
   <div class="features"><span class="feature">no setter</span></div>
 
 </dd>
@@ -203,7 +206,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

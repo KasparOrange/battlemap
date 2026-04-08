@@ -154,4 +154,89 @@ void main() {
       expect(restored.gridRows, 10);
     });
   });
+
+  group('MapLibraryEntry isImage flag (1.1.2+)', () {
+    test('isImage defaults to false for new entries', () {
+      final entry = MapLibraryEntry(
+        id: 'x',
+        displayName: 'x',
+        fileSizeBytes: 0,
+        gridCols: 1,
+        gridRows: 1,
+        portalCount: 0,
+        addedAt: DateTime.utc(2026, 4, 8),
+      );
+      expect(entry.isImage, isFalse);
+      expect(entry.isPdf, isFalse);
+    });
+
+    test('image entry round-trips with isImage=true', () {
+      final original = MapLibraryEntry(
+        id: 'png-001',
+        displayName: 'Battle scene.png',
+        fileSizeBytes: 3000000,
+        gridCols: 20,
+        gridRows: 15,
+        portalCount: 0,
+        addedAt: DateTime.utc(2026, 4, 8),
+        isImage: true,
+        pdfGridCols: 20,
+        pdfGridRows: 15,
+      );
+      final restored = MapLibraryEntry.fromJson(original.toJson());
+      expect(restored.isImage, isTrue);
+      expect(restored.isPdf, isFalse);
+      expect(restored.pdfGridCols, 20);
+      expect(restored.pdfGridRows, 15);
+    });
+
+    test('toJson always includes isImage key (forward compat)', () {
+      final entry = MapLibraryEntry(
+        id: 'x',
+        displayName: 'x',
+        fileSizeBytes: 0,
+        gridCols: 1,
+        gridRows: 1,
+        portalCount: 0,
+        addedAt: DateTime.utc(2026, 4, 8),
+      );
+      expect(entry.toJson().containsKey('isImage'), isTrue);
+    });
+
+    test('legacy JSON without isImage field defaults to false', () {
+      final json = {
+        'id': 'old',
+        'displayName': 'Old',
+        'fileSizeBytes': 100,
+        'gridCols': 10,
+        'gridRows': 10,
+        'portalCount': 0,
+        'addedAt': '2026-01-01T00:00:00.000Z',
+        'isPdf': false,
+        // 'isImage' intentionally absent
+      };
+      final restored = MapLibraryEntry.fromJson(json);
+      expect(restored.isImage, isFalse);
+    });
+
+    test('legacy buggy entry (image saved with isPdf=true) is preserved verbatim', () {
+      // Pre-1.1.2 _downloadAndLoadImage saved PNG/JPG with isPdf=true.
+      // Schema-level deserialization keeps that flag as-is; the
+      // _resumeSession sniffer is what rescues these entries.
+      final json = {
+        'id': 'buggy-image',
+        'displayName': 'PNG image.png',
+        'fileSizeBytes': 3112582,
+        'gridCols': 20,
+        'gridRows': 15,
+        'portalCount': 0,
+        'addedAt': '2026-04-08T15:52:51.000Z',
+        'isPdf': true, // ← the bug
+        // 'isImage' missing
+      };
+      final restored = MapLibraryEntry.fromJson(json);
+      expect(restored.isPdf, isTrue);
+      expect(restored.isImage, isFalse);
+    });
+  });
 }

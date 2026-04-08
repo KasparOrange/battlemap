@@ -64,7 +64,8 @@
 <section class="desc markdown">
   <p>Unloads the current map and resets all map-related state.</p>
 <p>Clears revealed cells, open portals, fog settings, calibration,
-and wall debug view. Does not clear tokens or drawings.</p>
+wall debug view, shadow cells, and the undo/redo stacks.
+Does not clear tokens or drawings.</p>
 </section>
 
 
@@ -79,6 +80,10 @@ and wall debug view. Does not clear tokens or drawings.</p>
   fogEnabled = true;
   showWalls = false;
   calibratedBaseZoom = null;
+  shadowRevealCells.clear();
+  shadowHideCells.clear();
+  _undoStack.clear();
+  _redoStack.clear();
   notifyListeners();
 }</code></pre>
 </section>
@@ -108,7 +113,7 @@ and wall debug view. Does not clear tokens or drawings.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

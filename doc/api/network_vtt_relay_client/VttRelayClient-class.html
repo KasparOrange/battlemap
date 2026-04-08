@@ -280,6 +280,18 @@ split into 500 KB chunks, and sent as a sequence of <code>vtt.mapStart</code>,
 
 </dd>
 
+        <dt id="onTvRendering" class="property">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onTvRendering.html">onTvRendering</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-active"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">active</span>, </span><span class="parameter" id="param-label"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">label</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when the TV starts/stops a heavy rendering operation.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
         <dt id="onUpdateProgress" class="property">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onUpdateProgress.html">onUpdateProgress</a></span>
   <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-progress"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">progress</span>, </span><span class="parameter" id="param-status"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">status</span></span>)</span>?</span>
@@ -491,6 +503,19 @@ inches on the TV surface.
 
 </dd>
 
+        <dt id="sendClearAoe" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendClearAoe.html">sendClearAoe</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Removes the active area-of-effect template from the TV map.
+  
+
+</dd>
+
         <dt id="sendClearDrawings" class="callable">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendClearDrawings.html">sendClearDrawings</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -517,6 +542,19 @@ inches on the TV surface.
 
 </dd>
 
+        <dt id="sendClearShadow" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendClearShadow.html">sendClearShadow</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Clears pending shadow fog cells on the TV without committing.
+  
+
+</dd>
+
         <dt id="sendClearTokens" class="callable">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendClearTokens.html">sendClearTokens</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -526,6 +564,19 @@ inches on the TV surface.
 </dt>
 <dd>
   Removes all tokens from the TV map.
+  
+
+</dd>
+
+        <dt id="sendCommitShadow" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendCommitShadow.html">sendCommitShadow</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Commits pending shadow fog cells on the TV.
   
 
 </dd>
@@ -552,6 +603,19 @@ inches on the TV surface.
 </dt>
 <dd>
   Deletes the saved session identified by <code>sessionId</code> from the TV.
+  
+
+</dd>
+
+        <dt id="sendEditToken" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendEditToken.html">sendEditToken</a></span><span class="signature">(<wbr><span class="parameter" id="sendEditToken-param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, {</span><span class="parameter" id="sendEditToken-param-name"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">name</span>, </span><span class="parameter" id="sendEditToken-param-maxHp"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">maxHp</span>, </span><span class="parameter" id="sendEditToken-param-currentHp"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">currentHp</span>, </span><span class="parameter" id="sendEditToken-param-conditions"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>&gt;</span></span> <span class="parameter-name">conditions</span></span>})
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Edits combat metadata on an existing token on the TV.
   
 
 </dd>
@@ -648,7 +712,7 @@ inches on the TV surface.
 </dd>
 
         <dt id="sendNewSession" class="callable">
-  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendNewSession.html">sendNewSession</a></span><span class="signature">(<wbr><span class="parameter" id="sendNewSession-param-mapId"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">mapId</span>, {</span><span class="parameter" id="sendNewSession-param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">name</span></span>})
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendNewSession.html">sendNewSession</a></span><span class="signature">(<wbr><span class="parameter" id="sendNewSession-param-mapId"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">mapId</span>, {</span><span class="parameter" id="sendNewSession-param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">name</span>, </span><span class="parameter" id="sendNewSession-param-settings"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">settings</span></span>})
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -708,6 +772,19 @@ inches on the TV surface.
 </dt>
 <dd>
   Sends a pre-encoded JSON string directly over the WebSocket.
+  
+
+</dd>
+
+        <dt id="sendRedo" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRedo.html">sendRedo</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Tells the TV to redo the most recently undone action.
   
 
 </dd>
@@ -790,6 +867,19 @@ inches on the TV surface.
 
 </dd>
 
+        <dt id="sendRoomReveal" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRoomReveal.html">sendRoomReveal</a></span><span class="signature">(<wbr><span class="parameter" id="sendRoomReveal-param-cells"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span> <span class="parameter-name">cells</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Reveals a connected room (set of cells) on the TV at once.
+  
+
+</dd>
+
         <dt id="sendRotateCCW" class="callable">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRotateCCW.html">sendRotateCCW</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -812,6 +902,45 @@ inches on the TV surface.
 </dt>
 <dd>
   Rotates the TV camera 90 degrees clockwise.
+  
+
+</dd>
+
+        <dt id="sendRotateRuler" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendRotateRuler.html">sendRotateRuler</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Rotates the ruler 90 degrees clockwise on the TV.
+  
+
+</dd>
+
+        <dt id="sendSetAoe" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetAoe.html">sendSetAoe</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetAoe-param-aoeJson"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">aoeJson</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Places an area-of-effect template on the TV map.
+  
+
+</dd>
+
+        <dt id="sendSetAoeMode" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetAoeMode.html">sendSetAoeMode</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Convenience method to switch to AoE template mode on the TV.
   
 
 </dd>
@@ -864,6 +993,58 @@ inches on the TV surface.
 </dt>
 <dd>
   Switches the TV's active interaction mode.
+  
+
+</dd>
+
+        <dt id="sendSetMeasureMode" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetMeasureMode.html">sendSetMeasureMode</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Convenience method to switch to measure mode on the TV.
+  
+
+</dd>
+
+        <dt id="sendSetRoomRevealMode" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetRoomRevealMode.html">sendSetRoomRevealMode</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Convenience method to switch to room reveal mode on the TV.
+  
+
+</dd>
+
+        <dt id="sendSetRulerPosition" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetRulerPosition.html">sendSetRulerPosition</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetRulerPosition-param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="sendSetRulerPosition-param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">y</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the ruler corner position to grid coordinates (<code>x</code>, <code>y</code>).
+  
+
+</dd>
+
+        <dt id="sendSetScaleFactor" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetScaleFactor.html">sendSetScaleFactor</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetScaleFactor-param-factor"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">factor</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the scale slider factor on the TV for fine-tune zoom adjustment.
   
 
 </dd>
@@ -972,6 +1153,32 @@ inches on the TV surface.
 
 </dd>
 
+        <dt id="sendToggleRuler" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendToggleRuler.html">sendToggleRuler</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles the L-shaped ruler overlay visibility on the TV.
+  
+
+</dd>
+
+        <dt id="sendToggleShadowMode" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendToggleShadowMode.html">sendToggleShadowMode</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles the TV's fog shadow mode on/off.
+  
+
+</dd>
+
         <dt id="sendToggleWalls" class="callable">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendToggleWalls.html">sendToggleWalls</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -985,6 +1192,32 @@ inches on the TV surface.
 
 </dd>
 
+        <dt id="sendTriggerEffect" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendTriggerEffect.html">sendTriggerEffect</a></span><span class="signature">(<wbr><span class="parameter" id="sendTriggerEffect-param-effect"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">effect</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Triggers a global visual effect on the TV.
+  
+
+</dd>
+
+        <dt id="sendUndo" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendUndo.html">sendUndo</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Tells the TV to undo the most recent action.
+  
+
+</dd>
+
         <dt id="sendUndoStroke" class="callable">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendUndoStroke.html">sendUndoStroke</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -994,6 +1227,19 @@ inches on the TV surface.
 </dt>
 <dd>
   Undoes the most recent drawing stroke on the TV map.
+  
+
+</dd>
+
+        <dt id="sendUpdateSessionSettings" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendUpdateSessionSettings.html">sendUpdateSessionSettings</a></span><span class="signature">(<wbr><span class="parameter" id="sendUpdateSessionSettings-param-settings"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">settings</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sends updated <a href="../model_session/SessionSettings-class.html">SessionSettings</a> to the TV for the active session.
   
 
 </dd>
@@ -1100,7 +1346,7 @@ inches on the TV surface.
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

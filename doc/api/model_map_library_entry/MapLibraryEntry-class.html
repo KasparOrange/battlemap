@@ -55,10 +55,13 @@
     
 <section class="desc markdown">
   <p>Metadata for a map stored in the TV's local <a href="../storage_map_library/MapLibrary-class.html">MapLibrary</a>.</p>
-<p>Each entry corresponds to a <code>.dd2vtt</code> file on disk, identified by a
-UUID <a href="../model_map_library_entry/MapLibraryEntry/id.html">id</a> that doubles as the filename stem. The entry tracks grid
-dimensions, file size, and an optional <a href="../model_map_library_entry/MapLibraryEntry/thumbnailPath.html">thumbnailPath</a> for the
-library browser UI.</p>
+<p>Each entry corresponds to a <code>.dd2vtt</code> file or a PDF file on disk,
+identified by a UUID <a href="../model_map_library_entry/MapLibraryEntry/id.html">id</a> that doubles as the filename stem. The entry
+tracks grid dimensions, file size, and an optional <a href="../model_map_library_entry/MapLibraryEntry/thumbnailPath.html">thumbnailPath</a> for
+the library browser UI.</p>
+<p>For PDF maps, <a href="../model_map_library_entry/MapLibraryEntry/isPdf.html">isPdf</a> is <code>true</code> and <a href="../model_map_library_entry/MapLibraryEntry/pdfGridCols.html">pdfGridCols</a> / <a href="../model_map_library_entry/MapLibraryEntry/pdfGridRows.html">pdfGridRows</a>
+store the user-configured grid dimensions (since PDFs have no embedded
+grid metadata like UVTT files do).</p>
 <p>Entries are JSON-serializable so the TV can send its library listing
 to the companion phone over the WebSocket relay.</p>
 <p>See also:</p>
@@ -75,7 +78,7 @@ to the companion phone over the WebSocket relay.</p>
     <h2>Constructors</h2>
     <dl class="constructor-summary-list">
         <dt id="MapLibraryEntry.new" class="callable">
-          <span class="name"><a href="../model_map_library_entry/MapLibraryEntry/MapLibraryEntry.html">MapLibraryEntry</a></span><span class="signature">({<span class="parameter" id="-param-id"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, </span><span class="parameter" id="-param-displayName"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">displayName</span>, </span><span class="parameter" id="-param-fileSizeBytes"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">fileSizeBytes</span>, </span><span class="parameter" id="-param-gridCols"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridCols</span>, </span><span class="parameter" id="-param-gridRows"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridRows</span>, </span><span class="parameter" id="-param-portalCount"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">portalCount</span>, </span><span class="parameter" id="-param-addedAt"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/DateTime-class.html">DateTime</a></span> <span class="parameter-name">addedAt</span>, </span><span class="parameter" id="-param-thumbnailPath"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">thumbnailPath</span>, </span><span class="parameter" id="-param-vpsUrl"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">vpsUrl</span></span>})</span>
+          <span class="name"><a href="../model_map_library_entry/MapLibraryEntry/MapLibraryEntry.html">MapLibraryEntry</a></span><span class="signature">({<span class="parameter" id="-param-id"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, </span><span class="parameter" id="-param-displayName"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">displayName</span>, </span><span class="parameter" id="-param-fileSizeBytes"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">fileSizeBytes</span>, </span><span class="parameter" id="-param-gridCols"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridCols</span>, </span><span class="parameter" id="-param-gridRows"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridRows</span>, </span><span class="parameter" id="-param-portalCount"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">portalCount</span>, </span><span class="parameter" id="-param-addedAt"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/DateTime-class.html">DateTime</a></span> <span class="parameter-name">addedAt</span>, </span><span class="parameter" id="-param-isPdf"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">isPdf</span> = <span class="default-value">false</span>, </span><span class="parameter" id="-param-isImage"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">isImage</span> = <span class="default-value">false</span>, </span><span class="parameter" id="-param-pdfGridCols"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">pdfGridCols</span>, </span><span class="parameter" id="-param-pdfGridRows"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">pdfGridRows</span>, </span><span class="parameter" id="-param-thumbnailPath"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">thumbnailPath</span>, </span><span class="parameter" id="-param-vpsUrl"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">vpsUrl</span></span>})</span>
         </dt>
         <dd>
           Creates a <a href="../model_map_library_entry/MapLibraryEntry-class.html">MapLibraryEntry</a> with the required metadata fields.
@@ -175,6 +178,56 @@ to the companion phone over the WebSocket relay.</p>
 </dt>
 <dd>
   UUID identifying this map, also used as the filename stem on disk.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="isImage" class="property">
+  <span class="name"><a href="../model_map_library_entry/MapLibraryEntry/isImage.html">isImage</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether this entry is a raster image (PNG/JPG/WEBP) used as a map.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="isPdf" class="property">
+  <span class="name"><a href="../model_map_library_entry/MapLibraryEntry/isPdf.html">isPdf</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether this entry is a PDF map rather than a <code>.dd2vtt</code> file.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="pdfGridCols" class="property">
+  <span class="name"><a href="../model_map_library_entry/MapLibraryEntry/pdfGridCols.html">pdfGridCols</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span>
+  
+
+</dt>
+<dd>
+  User-configured grid columns for PDF or image maps, or <code>null</code> for
+UVTT maps.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="pdfGridRows" class="property">
+  <span class="name"><a href="../model_map_library_entry/MapLibraryEntry/pdfGridRows.html">pdfGridRows</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span>
+  
+
+</dt>
+<dd>
+  User-configured grid rows for PDF or image maps, or <code>null</code> for UVTT
+maps.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -325,7 +378,7 @@ to the companion phone over the WebSocket relay.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

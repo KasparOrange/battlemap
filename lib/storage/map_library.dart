@@ -34,20 +34,28 @@ class MapLibrary {
 
   // --- Map operations ---
 
-  /// Adds a map file (`.dd2vtt` or PDF) to the library.
+  /// Adds a map file (`.dd2vtt`, PDF, or raster image) to the library.
   ///
-  /// For UVTT maps, [rawBytes] is the JSON file content which is parsed
-  /// to extract grid dimensions and portal count. For PDF maps, set
-  /// [isPdf] to `true` and optionally provide [pdfGridCols] / [pdfGridRows]
-  /// (defaults to 20x15 if not specified).
+  /// * UVTT maps — leave [isPdf] and [isImage] both `false`. The
+  ///   [rawBytes] are parsed to extract grid dimensions and portal count.
+  /// * PDF maps — set [isPdf] to `true` and provide [pdfGridCols] /
+  ///   [pdfGridRows] for the user-configured grid (defaults 20x15).
+  /// * Image maps (PNG/JPG/WEBP) — set [isImage] to `true` and provide
+  ///   the same grid params. Image bytes are stored as-is and never go
+  ///   through PDF rendering.
+  ///
+  /// [isPdf] and [isImage] are mutually exclusive; passing both is
+  /// treated as PDF for the metadata calculation but the resulting entry
+  /// will reflect both flags (which would be a programmer error).
   ///
   /// Returns the created [MapLibraryEntry] with a fresh UUID.
   ///
   /// See also:
   /// * [loadMapBytes], to read the stored bytes back.
-  /// * [MapLibraryEntry.isPdf], which flags PDF entries.
+  /// * [MapLibraryEntry.isPdf] / [MapLibraryEntry.isImage], the type flags.
   Future<MapLibraryEntry> addMap(Uint8List rawBytes, String displayName, {
     bool isPdf = false,
+    bool isImage = false,
     int? pdfGridCols,
     int? pdfGridRows,
   }) async {
@@ -58,7 +66,7 @@ class MapLibrary {
 
     int gridCols, gridRows, portalCount;
 
-    if (isPdf) {
+    if (isPdf || isImage) {
       gridCols = pdfGridCols ?? 20;
       gridRows = pdfGridRows ?? 15;
       portalCount = 0;
@@ -80,13 +88,15 @@ class MapLibrary {
       portalCount: portalCount,
       addedAt: DateTime.now(),
       isPdf: isPdf,
+      isImage: isImage,
       pdfGridCols: pdfGridCols,
       pdfGridRows: pdfGridRows,
     );
 
     // Store entry in index
     await _mapIndexBox.put(id, jsonEncode(entry.toJson()));
-    debugPrint('MapLibrary: added "$displayName" ($id)${isPdf ? ' [PDF]' : ''}');
+    final tag = isPdf ? ' [PDF]' : (isImage ? ' [IMAGE]' : '');
+    debugPrint('MapLibrary: added "$displayName" ($id)$tag');
     return entry;
   }
 

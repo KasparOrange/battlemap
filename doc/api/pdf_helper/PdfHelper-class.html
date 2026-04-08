@@ -56,6 +56,18 @@
 <section class="desc markdown">
   <p>Handles PDF loading and rendering, isolated from GameState
 so that pdfrx import failures (e.g. on web) don't crash the app.</p>
+<p>Provides both instance methods for the legacy PDF viewer and a static
+<a href="../pdf_helper/PdfHelper/renderPdfPage.html">renderPdfPage</a> utility for the VTT PDF map flow, which renders a PDF
+page to PNG bytes for use as a battlemap background image.</p>
+<p>IMPORTANT: pdfrx uses <code>dart:ui</code> for rendering, which only works on native
+platforms (Android/iOS/desktop). The companion phone (web build) does not
+call these methods — it relies on the TV to render and send the result.</p>
+<p>See also:</p>
+<ul>
+<li><a href="../state_vtt_state/VttState/loadPdfAsMap.html">VttState.loadPdfAsMap</a>, which consumes the rendered PNG bytes.</li>
+<li><code>TvShell._downloadAndLoadPdf</code> (in <code>lib/ui/tv_shell.dart</code>), which
+orchestrates the PDF upload flow.</li>
+</ul>
 </section>
 
 
@@ -119,7 +131,7 @@ so that pdfrx import failures (e.g. on web) don't crash the app.</p>
 
 </dt>
 <dd>
-  
+  Clears the loaded PDF and resets <code>gameState</code> PDF fields.
   
 
 </dd>
@@ -132,7 +144,7 @@ so that pdfrx import failures (e.g. on web) don't crash the app.</p>
 
 </dt>
 <dd>
-  
+  Disposes the underlying <a href="https://pub.dev/documentation/pdfrx/1.3.5/pdfrx/PdfDocument-class.html">PdfDocument</a> and frees resources.
   
 
 </dd>
@@ -145,7 +157,7 @@ so that pdfrx import failures (e.g. on web) don't crash the app.</p>
 
 </dt>
 <dd>
-  
+  Loads a PDF for the legacy PDF viewer (non-VTT mode).
   
 
 </dd>
@@ -171,7 +183,7 @@ so that pdfrx import failures (e.g. on web) don't crash the app.</p>
 
 </dt>
 <dd>
-  
+  Switches to a different page in the loaded PDF.
   
 
 </dd>
@@ -214,6 +226,24 @@ so that pdfrx import failures (e.g. on web) don't crash the app.</p>
   </section>
     
     
+  <section class="summary offset-anchor" id="static-methods">
+    <h2>Static Methods</h2>
+    <dl class="callables">
+        <dt id="renderPdfPage" class="callable">
+  <span class="name"><a href="../pdf_helper/PdfHelper/renderPdfPage.html">renderPdfPage</a></span><span class="signature">(<wbr><span class="parameter" id="renderPdfPage-param-pdfBytes"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a></span> <span class="parameter-name">pdfBytes</span>, {</span><span class="parameter" id="renderPdfPage-param-pageIndex"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">pageIndex</span> = <span class="default-value">0</span></span>})
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span>&gt;</span></span>
+  </span>
+  
+
+</dt>
+<dd>
+  Renders a single PDF page to PNG image bytes for use as a map background.
+  
+
+</dd>
+
+    </dl>
+  </section>
     
 
   </div> <!-- /.main-content -->
@@ -239,7 +269,7 @@ so that pdfrx import failures (e.g. on web) don't crash the app.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

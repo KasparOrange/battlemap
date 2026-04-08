@@ -69,14 +69,13 @@
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void handleLongPressAtScene(Offset scenePos) {
   final (gx, gy) = _toGrid(scenePos);
-  try {
-    final token = gameState.tokens.firstWhere(
-      (t) =&gt; t.gridX == gx &amp;&amp; t.gridY == gy,
-    );
-    gameState.removeToken(token.id);
-  } catch (_) {
-    &#47;&#47; No token at position
+  for (final token in gameState.tokens) {
+    if (token.gridX == gx &amp;&amp; token.gridY == gy) {
+      gameState.removeToken(token.id);
+      return;
+    }
   }
+  &#47;&#47; No token at position; nothing to remove.
 }</code></pre>
 </section>
 
@@ -105,7 +104,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

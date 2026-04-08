@@ -40,19 +40,38 @@ class MapLibraryEntry {
   /// Whether this entry is a PDF map rather than a `.dd2vtt` file.
   ///
   /// PDF maps have no embedded grid metadata, so the grid dimensions are
-  /// user-configured via [pdfGridCols] and [pdfGridRows].
+  /// user-configured via [pdfGridCols] and [pdfGridRows]. PDFs are rendered
+  /// to PNG by [PdfHelper.renderPdfPage] before being displayed.
+  ///
+  /// Mutually exclusive with [isImage]: if both are `false` the entry is a
+  /// UVTT map; both should never be `true` at the same time.
   final bool isPdf;
 
-  /// User-configured grid columns for PDF maps, or `null` for UVTT maps.
+  /// Whether this entry is a raster image (PNG/JPG/WEBP) used as a map.
   ///
-  /// Only meaningful when [isPdf] is `true`. Defaults to 20 if not specified
-  /// when adding a PDF to the library.
+  /// Image maps share the user-configured grid fields ([pdfGridCols] /
+  /// [pdfGridRows]) with PDFs but do **not** need PDF rendering — the raw
+  /// bytes are passed straight to [VttState.loadPdfAsMap].
+  ///
+  /// Distinguishing image from PDF matters on session resume: a PDF entry
+  /// must be re-rendered through [PdfHelper.renderPdfPage], while an image
+  /// entry can be loaded directly from disk.
+  ///
+  /// Mutually exclusive with [isPdf].
+  final bool isImage;
+
+  /// User-configured grid columns for PDF or image maps, or `null` for
+  /// UVTT maps.
+  ///
+  /// Only meaningful when [isPdf] or [isImage] is `true`. Defaults to 20
+  /// if not specified when adding the entry to the library.
   final int? pdfGridCols;
 
-  /// User-configured grid rows for PDF maps, or `null` for UVTT maps.
+  /// User-configured grid rows for PDF or image maps, or `null` for UVTT
+  /// maps.
   ///
-  /// Only meaningful when [isPdf] is `true`. Defaults to 15 if not specified
-  /// when adding a PDF to the library.
+  /// Only meaningful when [isPdf] or [isImage] is `true`. Defaults to 15
+  /// if not specified when adding the entry to the library.
   final int? pdfGridRows;
 
   /// Absolute path to a thumbnail image on disk, or `null` if not yet generated.
@@ -66,8 +85,10 @@ class MapLibraryEntry {
 
   /// Creates a [MapLibraryEntry] with the required metadata fields.
   ///
-  /// For PDF maps, set [isPdf] to `true` and provide [pdfGridCols] and
-  /// [pdfGridRows] with the user-configured grid dimensions.
+  /// For PDF maps, set [isPdf] to `true`. For raster image maps, set
+  /// [isImage] to `true`. Both types should provide [pdfGridCols] and
+  /// [pdfGridRows] with the user-configured grid dimensions. UVTT maps
+  /// leave both flags `false`.
   MapLibraryEntry({
     required this.id,
     required this.displayName,
@@ -77,6 +98,7 @@ class MapLibraryEntry {
     required this.portalCount,
     required this.addedAt,
     this.isPdf = false,
+    this.isImage = false,
     this.pdfGridCols,
     this.pdfGridRows,
     this.thumbnailPath,
@@ -85,9 +107,9 @@ class MapLibraryEntry {
 
   /// Serializes this entry to a JSON-compatible map.
   ///
-  /// [addedAt] is encoded as an ISO 8601 string. PDF-specific fields
-  /// ([isPdf], [pdfGridCols], [pdfGridRows]) are always included for
-  /// forward compatibility.
+  /// [addedAt] is encoded as an ISO 8601 string. PDF / image fields
+  /// ([isPdf], [isImage], [pdfGridCols], [pdfGridRows]) are always
+  /// included for forward compatibility.
   Map<String, dynamic> toJson() => {
         'id': id,
         'displayName': displayName,
@@ -97,6 +119,7 @@ class MapLibraryEntry {
         'portalCount': portalCount,
         'addedAt': addedAt.toIso8601String(),
         'isPdf': isPdf,
+        'isImage': isImage,
         'pdfGridCols': pdfGridCols,
         'pdfGridRows': pdfGridRows,
         'thumbnailPath': thumbnailPath,
@@ -105,10 +128,11 @@ class MapLibraryEntry {
 
   /// Deserializes a [MapLibraryEntry] from a JSON map.
   ///
-  /// Expects keys matching [toJson] output. The [addedAt] field is
-  /// parsed from an ISO 8601 string. PDF-specific fields default to
-  /// `false` / `null` if absent, for backwards compatibility with
-  /// entries created before PDF support was added.
+  /// Expects keys matching [toJson] output. The [addedAt] field is parsed
+  /// from an ISO 8601 string. The [isPdf], [isImage], and `pdfGrid*`
+  /// fields default to `false` / `null` if absent, for backwards
+  /// compatibility with entries created before PDF or image support was
+  /// added.
   factory MapLibraryEntry.fromJson(Map<String, dynamic> json) =>
       MapLibraryEntry(
         id: json['id'] as String,
@@ -119,6 +143,7 @@ class MapLibraryEntry {
         portalCount: json['portalCount'] as int,
         addedAt: DateTime.parse(json['addedAt'] as String),
         isPdf: json['isPdf'] as bool? ?? false,
+        isImage: json['isImage'] as bool? ?? false,
         pdfGridCols: json['pdfGridCols'] as int?,
         pdfGridRows: json['pdfGridRows'] as int?,
         thumbnailPath: json['thumbnailPath'] as String?,

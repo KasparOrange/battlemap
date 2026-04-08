@@ -80,11 +80,10 @@ void onScaleUpdate(ScaleUpdateInfo info) {
   }
 
   if (_isMultiTouch) {
-    &#47;&#47; Camera zoom
-    final minZoom = state.calibratedBaseZoom ?? 0.1;
+    &#47;&#47; Camera zoom + pan (multi-finger gesture)
+    final minZoom = (state.calibratedBaseZoom ?? 0.1) * state.scaleSliderFactor;
     final newZoom = _initialZoom * info.scale.global.x;
     camera.viewfinder.zoom = newZoom.clamp(minZoom, 10.0);
-    &#47;&#47; Camera pan
     camera.viewfinder.position -= info.delta.global &#47; camera.viewfinder.zoom;
   } else if (state.isInteractive) {
     &#47;&#47; Single-finger tool drag — mark as dragged if moved enough
@@ -123,7 +122,7 @@ void onScaleUpdate(ScaleUpdateInfo info) {
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

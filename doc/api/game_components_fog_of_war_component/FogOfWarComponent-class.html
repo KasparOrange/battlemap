@@ -55,8 +55,22 @@
     
 <section class="desc markdown">
   <p>Renders fog of war as a dark overlay with cutouts for revealed cells.</p>
+<p>Supports four rendering modes controlled by <a href="../model_session/SessionSettings/fogMode.html">SessionSettings.fogMode</a>:</p>
+<ul>
+<li><code>'standard'</code> -- sharp-edged cells with a 4px blur (original behavior).</li>
+<li><code>'soft'</code> -- same as standard but with a 16px blur for much softer edges.</li>
+<li><code>'cloud'</code> -- organic cloud-shaped edges with animated bumps on boundaries.</li>
+<li><code>'atmospheric'</code> -- gradient opacity based on distance to revealed cells.</li>
+</ul>
+<p>When <a href="../model_session/SessionSettings/fogAnimation.html">SessionSettings.fogAnimation</a> is enabled, newly revealed cells
+animate with a 0.5-second fade-out instead of disappearing instantly.</p>
 <p>Uses saveLayer + BlendMode.dstOut for efficient GPU compositing.
-This is a pure visual component — all input handling is in VttGame.</p>
+This is a pure visual component -- all input handling is in VttGame.</p>
+<p>See also:</p>
+<ul>
+<li><a href="../state_vtt_state/VttState/revealedCells.html">VttState.revealedCells</a>, the set of revealed fog cell indices.</li>
+<li><a href="../state_vtt_state/VttState/shadowRevealCells.html">VttState.shadowRevealCells</a> / <a href="../state_vtt_state/VttState/shadowHideCells.html">VttState.shadowHideCells</a>, staged fog changes.</li>
+</ul>
 </section>
 
 
@@ -102,7 +116,7 @@ This is a pure visual component — all input handling is in VttGame.</p>
           <span class="name"><a href="../game_components_fog_of_war_component/FogOfWarComponent/FogOfWarComponent.html">FogOfWarComponent</a></span><span class="signature">({<span class="parameter" id="-param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span><span class="parameter" id="-param-pixelsPerGrid"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">pixelsPerGrid</span>, </span><span class="parameter" id="-param-gridCols"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridCols</span>, </span><span class="parameter" id="-param-gridRows"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridRows</span>, </span><span class="parameter" id="-param-mapSize"><span>required</span> <span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">mapSize</span></span>})</span>
         </dt>
         <dd>
-          
+          Creates a <a href="../game_components_fog_of_war_component/FogOfWarComponent-class.html">FogOfWarComponent</a> for the given map grid.
         </dd>
     </dl>
   </section>
@@ -342,7 +356,7 @@ text.
 
 </dt>
 <dd>
-  
+  Number of grid columns on the map.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -354,7 +368,7 @@ text.
 
 </dt>
 <dd>
-  
+  Number of grid rows on the map.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -569,7 +583,7 @@ For example, a nativeAngle of
 
 </dt>
 <dd>
-  
+  Number of image pixels per grid square.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -688,7 +702,7 @@ handling.
 
 </dt>
 <dd>
-  
+  The shared VTT game state.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -1520,17 +1534,17 @@ coordinates. This function is the inverse of <a href="https://pub.dev/documentat
 
 </dd>
 
-        <dt id="update" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/update.html">update</a></span><span class="signature">(<wbr><span class="parameter" id="update-param-dt"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">dt</span></span>)
+        <dt id="update" class="callable">
+  <span class="name"><a href="../game_components_fog_of_war_component/FogOfWarComponent/update.html">update</a></span><span class="signature">(<wbr><span class="parameter" id="update-param-dt"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">dt</span></span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
 
 </dt>
-<dd class="inherited">
+<dd>
   This method is called periodically by the game engine to request that your
 component updates itself.
-  <div class="features"><span class="feature">inherited</span></div>
+  <div class="features"><span class="feature">override</span></div>
 
 </dd>
 
@@ -1599,7 +1613,7 @@ priority of the direct siblings, not the children or the ancestors.
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

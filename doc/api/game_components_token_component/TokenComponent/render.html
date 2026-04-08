@@ -77,21 +77,31 @@ void render(Canvas canvas) {
   final center = Offset(cellSize &#47; 2, cellSize &#47; 2);
   final radius = cellSize * 0.4;
 
-  &#47;&#47; Shadow
+  &#47;&#47; --- Condition dots above everything ---
+  if (conditions.isNotEmpty) {
+    _renderConditionDots(canvas, center, radius);
+  }
+
+  &#47;&#47; --- Name label above the circle ---
+  if (name.isNotEmpty) {
+    _renderNameLabel(canvas, center, radius);
+  }
+
+  &#47;&#47; --- Shadow ---
   canvas.drawCircle(
     center + const Offset(1, 2),
     radius,
     Paint()..color = Colors.black38,
   );
 
-  &#47;&#47; Token circle
+  &#47;&#47; --- Token circle ---
   canvas.drawCircle(
     center,
     radius,
     Paint()..color = color,
   );
 
-  &#47;&#47; Border
+  &#47;&#47; --- Border ---
   canvas.drawCircle(
     center,
     radius,
@@ -101,23 +111,17 @@ void render(Canvas canvas) {
       ..strokeWidth = 2,
   );
 
-  &#47;&#47; Label
-  final textPainter = TextPainter(
-    text: TextSpan(
-      text: label,
-      style: const TextStyle(
-        color: Colors.white,
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    textDirection: TextDirection.ltr,
-  )..layout();
-
-  textPainter.paint(
+  &#47;&#47; --- Center label ---
+  final lp = _getLabelPainter();
+  lp.paint(
     canvas,
-    center - Offset(textPainter.width &#47; 2, textPainter.height &#47; 2),
+    center - Offset(lp.width &#47; 2, lp.height &#47; 2),
   );
+
+  &#47;&#47; --- HP bar below the circle ---
+  if (maxHp &gt; 0) {
+    _renderHpBar(canvas, center, radius);
+  }
 }</code></pre>
 </section>
 
@@ -146,7 +150,7 @@ void render(Canvas canvas) {
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

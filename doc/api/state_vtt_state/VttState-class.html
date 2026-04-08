@@ -124,6 +124,18 @@ with <a href="../state_vtt_state/VttState/toJson.html">toJson</a> and restored w
       id="instance-properties">
     <h2>Properties</h2>
     <dl class="properties">
+        <dt id="activeAoe" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/activeAoe.html">activeAoe</a></span>
+  <span class="signature">&#8596; <a href="../model_aoe_template/AoeTemplate-class.html">AoeTemplate</a>?</span>
+  
+
+</dt>
+<dd>
+  The currently active AoE template displayed on the map, or null.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
         <dt id="brushRadius" class="property">
   <span class="name"><a href="../state_vtt_state/VttState/brushRadius.html">brushRadius</a></span>
   <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
@@ -145,6 +157,30 @@ with <a href="../state_vtt_state/VttState/toJson.html">toJson</a> and restored w
 <dd>
   Computed base zoom level that maps one grid square to one physical inch.
   <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="canRedo" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/canRedo.html">canRedo</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether there are undone actions that can be redone.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
+        <dt id="canUndo" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/canUndo.html">canUndo</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether there are actions that can be undone.
+  <div class="features"><span class="feature">no setter</span></div>
 
 </dd>
 
@@ -330,6 +366,18 @@ the portal index to the peer.
 
 </dd>
 
+        <dt id="onTokenEdited" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onTokenEdited.html">onTokenEdited</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, </span><span class="parameter" id="param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">name</span>, </span><span class="parameter" id="param-maxHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">maxHp</span>, </span><span class="parameter" id="param-currentHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">currentHp</span>, </span><span class="parameter" id="param-conditions"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>&gt;</span></span> <span class="parameter-name">conditions</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when a token's combat metadata is edited locally, for relay forwarding.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
         <dt id="onTokenMoved" class="property">
   <span class="name"><a href="../state_vtt_state/VttState/onTokenMoved.html">onTokenMoved</a></span>
   <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, </span><span class="parameter" id="param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">y</span></span>)</span>?</span>
@@ -402,6 +450,54 @@ the portal index to the peer.
 
 </dd>
 
+        <dt id="rulerRotation" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/rulerRotation.html">rulerRotation</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd>
+  Ruler rotation in degrees (0, 90, 180, or 270).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="rulerVisible" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/rulerVisible.html">rulerVisible</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether the physical L-shaped ruler overlay is visible on the map.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="rulerX" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/rulerX.html">rulerX</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>
+  
+
+</dt>
+<dd>
+  Ruler corner X position in grid coordinates.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="rulerY" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/rulerY.html">rulerY</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>
+  
+
+</dt>
+<dd>
+  Ruler corner Y position in grid coordinates.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
         <dt id="runtimeType" class="property inherited">
   <span class="name"><a href="https://api.flutter.dev/flutter/dart-core/Object/runtimeType.html">runtimeType</a></span>
   <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Type-class.html">Type</a></span>
@@ -411,6 +507,66 @@ the portal index to the peer.
 <dd class="inherited">
   A representation of the runtime type of the object.
   <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="scaleSliderFactor" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/scaleSliderFactor.html">scaleSliderFactor</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>
+  
+
+</dt>
+<dd>
+  Fine-tune zoom multiplier for scale calibration (0.5 to 2.0).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="sessionSettings" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/sessionSettings.html">sessionSettings</a></span>
+  <span class="signature">&#8596; <a href="../model_session/SessionSettings-class.html">SessionSettings</a></span>
+  
+
+</dt>
+<dd>
+  Feature toggles controlling which tools and visual layers are enabled.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="shadowHideCells" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/shadowHideCells.html">shadowHideCells</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  Cells staged for hiding in shadow mode (not yet committed).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="shadowMode" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/shadowMode.html">shadowMode</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether shadow (preview) mode is active for fog painting.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="shadowRevealCells" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/shadowRevealCells.html">shadowRevealCells</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span>
+  
+
+</dt>
+<dd>
+  Cells staged for reveal in shadow mode (not yet committed).
+  <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
 
@@ -561,6 +717,19 @@ the portal index to the peer.
 
 </dd>
 
+        <dt id="clearAoe" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/clearAoe.html">clearAoe</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Clears the active AoE template.
+  
+
+</dd>
+
         <dt id="clearDrawings" class="callable">
   <span class="name"><a href="../state_vtt_state/VttState/clearDrawings.html">clearDrawings</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -587,6 +756,19 @@ the portal index to the peer.
 
 </dd>
 
+        <dt id="clearShadow" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/clearShadow.html">clearShadow</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Discards all pending shadow reveal/hide cells without committing.
+  
+
+</dd>
+
         <dt id="clearTokens" class="callable">
   <span class="name"><a href="../state_vtt_state/VttState/clearTokens.html">clearTokens</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -596,6 +778,19 @@ the portal index to the peer.
 </dt>
 <dd>
   Removes all tokens from the map.
+  
+
+</dd>
+
+        <dt id="commitShadow" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/commitShadow.html">commitShadow</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Commits pending shadow cells into <a href="../state_vtt_state/VttState/revealedCells.html">revealedCells</a>.
   
 
 </dd>
@@ -612,6 +807,19 @@ the portal index to the peer.
 object is not in a usable state and should be discarded (calls to
 <a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier/addListener.html">addListener</a> will throw after the object is disposed).
   <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="editToken" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/editToken.html">editToken</a></span><span class="signature">(<wbr><span class="parameter" id="editToken-param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, {</span><span class="parameter" id="editToken-param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">name</span>, </span><span class="parameter" id="editToken-param-maxHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">maxHp</span>, </span><span class="parameter" id="editToken-param-currentHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">currentHp</span>, </span><span class="parameter" id="editToken-param-conditions"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>&gt;</span>?</span> <span class="parameter-name">conditions</span></span>})
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Edits combat metadata on an existing token.
+  
 
 </dd>
 
@@ -637,6 +845,19 @@ object is not in a usable state and should be discarded (calls to
 </dt>
 <dd>
   Loads a <code>.dd2vtt</code> map file from raw bytes.
+  
+
+</dd>
+
+        <dt id="loadPdfAsMap" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/loadPdfAsMap.html">loadPdfAsMap</a></span><span class="signature">(<wbr><span class="parameter" id="loadPdfAsMap-param-imageBytes"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a></span> <span class="parameter-name">imageBytes</span>, {</span><span class="parameter" id="loadPdfAsMap-param-gridCols"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridCols</span>, </span><span class="parameter" id="loadPdfAsMap-param-gridRows"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridRows</span>, </span><span class="parameter" id="loadPdfAsMap-param-imageWidth"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">imageWidth</span>, </span><span class="parameter" id="loadPdfAsMap-param-imageHeight"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">imageHeight</span></span>})
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Loads a PDF page as a map with user-specified grid dimensions.
   
 
 </dd>
@@ -677,6 +898,20 @@ object is not in a usable state and should be discarded (calls to
 <dd class="inherited">
   Call all the registered listeners.
   <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="redo" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/redo.html">redo</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Re-applies the most recently undone action by popping it from the
+redo stack, applying its effect, and pushing it onto the undo stack.
+  
 
 </dd>
 
@@ -729,6 +964,45 @@ notified when the object changes.
 </dt>
 <dd>
   Reveals all fog cells on the map.
+  
+
+</dd>
+
+        <dt id="revealRoom" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/revealRoom.html">revealRoom</a></span><span class="signature">(<wbr><span class="parameter" id="revealRoom-param-cells"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span> <span class="parameter-name">cells</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Reveals or hides a set of cells (used by room-reveal flood fill).
+  
+
+</dd>
+
+        <dt id="rotateRulerCW" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/rotateRulerCW.html">rotateRulerCW</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Rotates the ruler 90 degrees clockwise, cycling 0 -&gt; 90 -&gt; 180 -&gt; 270 -&gt; 0.
+  
+
+</dd>
+
+        <dt id="setAoe" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setAoe.html">setAoe</a></span><span class="signature">(<wbr><span class="parameter" id="setAoe-param-template"><span class="type-annotation"><a href="../model_aoe_template/AoeTemplate-class.html">AoeTemplate</a>?</span> <span class="parameter-name">template</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the active AoE template and notifies listeners.
   
 
 </dd>
@@ -798,6 +1072,45 @@ notified when the object changes.
 
 </dd>
 
+        <dt id="setRulerPosition" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setRulerPosition.html">setRulerPosition</a></span><span class="signature">(<wbr><span class="parameter" id="setRulerPosition-param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="setRulerPosition-param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">y</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the ruler corner position in grid coordinates.
+  
+
+</dd>
+
+        <dt id="setScaleFactor" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setScaleFactor.html">setScaleFactor</a></span><span class="signature">(<wbr><span class="parameter" id="setScaleFactor-param-factor"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">factor</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the scale slider factor, clamped to the range <code>[0.5, 2.0]</code>.
+  
+
+</dd>
+
+        <dt id="setSessionSettings" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setSessionSettings.html">setSessionSettings</a></span><span class="signature">(<wbr><span class="parameter" id="setSessionSettings-param-settings"><span class="type-annotation"><a href="../model_session/SessionSettings-class.html">SessionSettings</a></span> <span class="parameter-name">settings</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Replaces the active <a href="../state_vtt_state/VttState/sessionSettings.html">sessionSettings</a> and notifies listeners.
+  
+
+</dd>
+
         <dt id="toggleFog" class="callable">
   <span class="name"><a href="../state_vtt_state/VttState/toggleFog.html">toggleFog</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -863,6 +1176,32 @@ notified when the object changes.
 
 </dd>
 
+        <dt id="toggleRuler" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/toggleRuler.html">toggleRuler</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles the ruler overlay visibility.
+  
+
+</dd>
+
+        <dt id="toggleShadowMode" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/toggleShadowMode.html">toggleShadowMode</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Toggles <a href="../state_vtt_state/VttState/shadowMode.html">shadowMode</a> on or off and clears any pending shadow cells.
+  
+
+</dd>
+
         <dt id="toggleWalls" class="callable">
   <span class="name"><a href="../state_vtt_state/VttState/toggleWalls.html">toggleWalls</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -899,6 +1238,20 @@ notified when the object changes.
 <dd class="inherited">
   A string representation of this object.
   <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="undo" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/undo.html">undo</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Undoes the most recent action by popping it from the undo stack,
+reversing its effect, and pushing it onto the redo stack.
+  
 
 </dd>
 
@@ -965,7 +1318,7 @@ notified when the object changes.
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

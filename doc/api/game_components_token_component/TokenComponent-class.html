@@ -54,8 +54,17 @@
 
     
 <section class="desc markdown">
-  <p>Draws a single token on the battlemap.
-Accepts a dynamic cellSize instead of hardcoded GameState.cellSize.</p>
+  <p>Draws a single token on the battlemap.</p>
+<p>Renders a colored circle with the token's label number, plus optional
+extras: a name label above, an HP bar below, and condition indicator
+dots above the name. All of these are driven by the token's data fields.</p>
+<p>Text painters for the label and name are cached and only recreated when
+the underlying data changes, to avoid per-frame allocation.</p>
+<p>See also:</p>
+<ul>
+<li><a href="../game_components_token_layer/TokenLayer-class.html">TokenLayer</a>, which manages a collection of these components.</li>
+<li><a href="../model_map_token/MapToken-class.html">MapToken</a>, the data model backing each token.</li>
+</ul>
 </section>
 
 
@@ -92,10 +101,10 @@ Accepts a dynamic cellSize instead of hardcoded GameState.cellSize.</p>
     <h2>Constructors</h2>
     <dl class="constructor-summary-list">
         <dt id="TokenComponent.new" class="callable">
-          <span class="name"><a href="../game_components_token_component/TokenComponent/TokenComponent.html">TokenComponent</a></span><span class="signature">({<span class="parameter" id="-param-tokenId"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tokenId</span>, </span><span class="parameter" id="-param-label"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">label</span>, </span><span class="parameter" id="-param-color"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a></span> <span class="parameter-name">color</span>, </span><span class="parameter" id="-param-gridX"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridX</span>, </span><span class="parameter" id="-param-gridY"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridY</span>, </span><span class="parameter" id="-param-cellSize"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">cellSize</span></span>})</span>
+          <span class="name"><a href="../game_components_token_component/TokenComponent/TokenComponent.html">TokenComponent</a></span><span class="signature">({<span class="parameter" id="-param-tokenId"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tokenId</span>, </span><span class="parameter" id="-param-label"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">label</span>, </span><span class="parameter" id="-param-color"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a></span> <span class="parameter-name">color</span>, </span><span class="parameter" id="-param-gridX"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridX</span>, </span><span class="parameter" id="-param-gridY"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">gridY</span>, </span><span class="parameter" id="-param-cellSize"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">cellSize</span>, </span><span class="parameter" id="-param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">name</span> = <span class="default-value">&#39;&#39;</span>, </span><span class="parameter" id="-param-maxHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">maxHp</span> = <span class="default-value">0</span>, </span><span class="parameter" id="-param-currentHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">currentHp</span> = <span class="default-value">0</span>, </span><span class="parameter" id="-param-conditions"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>&gt;</span></span> <span class="parameter-name">conditions</span> = <span class="default-value">const []</span></span>})</span>
         </dt>
         <dd>
-          
+          Creates a <a href="../game_components_token_component/TokenComponent-class.html">TokenComponent</a> positioned at the given grid cell.
         </dd>
     </dl>
   </section>
@@ -233,7 +242,7 @@ angle is positive, or counterclockwise if the angle is negative.
 
 </dt>
 <dd>
-  
+  Size of one grid cell in world pixels.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -270,7 +279,31 @@ in the parent's coordinates.
 
 </dt>
 <dd>
+  Fill color of the token circle.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="conditions" class="property">
+  <span class="name"><a href="../game_components_token_component/TokenComponent/conditions.html">conditions</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>&gt;</span></span>
   
+
+</dt>
+<dd>
+  Active conditions on this token (e.g. "Poisoned", "Stunned").
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="currentHp" class="property">
+  <span class="name"><a href="../game_components_token_component/TokenComponent/currentHp.html">currentHp</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd>
+  Current hit points for this token.
   <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
@@ -359,7 +392,7 @@ text.
 
 </dt>
 <dd>
-  
+  Horizontal grid coordinate (column index, zero-based).
   <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
@@ -371,7 +404,7 @@ text.
 
 </dt>
 <dd>
-  
+  Vertical grid coordinate (row index, zero-based).
   <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
@@ -520,7 +553,7 @@ mounted to a new parent.
 
 </dt>
 <dd>
-  
+  Short display label (e.g. "1", "2") shown inside the circle.
   <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
@@ -537,6 +570,18 @@ mounted to a new parent.
 
 </dd>
 
+        <dt id="maxHp" class="property">
+  <span class="name"><a href="../game_components_token_component/TokenComponent/maxHp.html">maxHp</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd>
+  Maximum hit points for this token.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
         <dt id="mounted" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/mounted.html">mounted</a></span>
   <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
@@ -546,6 +591,18 @@ mounted to a new parent.
 <dd class="inherited">
   A future that will complete once the component is mounted on its parent.
   <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="name" class="property">
+  <span class="name"><a href="../game_components_token_component/TokenComponent/name.html">name</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  Display name shown above the token circle.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
 
@@ -693,7 +750,7 @@ handling.
 
 </dt>
 <dd>
-  
+  Unique identifier matching <a href="../model_map_token/MapToken/id.html">MapToken.id</a>.
   <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
@@ -1547,7 +1604,7 @@ component updates itself.
 
 </dt>
 <dd>
-  
+  Updates this component's visual state from a <a href="../model_map_token/MapToken-class.html">MapToken</a>.
   
 
 </dd>
@@ -1617,7 +1674,7 @@ priority of the direct siblings, not the children or the ancestors.
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

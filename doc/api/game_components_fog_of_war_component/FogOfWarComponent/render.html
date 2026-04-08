@@ -74,16 +74,19 @@
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">@override
 void render(Canvas canvas) {
-  final bounds = Rect.fromLTWH(0, 0, size.x, size.y);
-
-  canvas.saveLayer(bounds, _layerPaint);
-  canvas.drawRect(bounds, _fogPaint);
-
-  for (final index in state.revealedCells) {
-    canvas.drawRect(_cellRect(index), _erasePaint);
+  final mode = state.sessionSettings.fogMode;
+  switch (mode) {
+    case &#39;standard&#39;:
+      _renderStandard(canvas);
+    case &#39;soft&#39;:
+      _renderSoft(canvas);
+    case &#39;cloud&#39;:
+      _renderCloud(canvas);
+    case &#39;atmospheric&#39;:
+      _renderAtmospheric(canvas);
+    default:
+      _renderStandard(canvas);
   }
-
-  canvas.restore();
 }</code></pre>
 </section>
 
@@ -112,7 +115,7 @@ void render(Canvas canvas) {
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

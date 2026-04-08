@@ -63,7 +63,9 @@
     
 <section class="desc markdown">
   <p>Removes all drawing strokes from the map.</p>
-<p>Fires <a href="../../state_vtt_state/VttState/onDrawingsCleared.html">onDrawingsCleared</a> for relay forwarding.</p>
+<p>Saves a snapshot of all current strokes and pushes a <a href="../../model_undo_action/StrokeClearAction-class.html">StrokeClearAction</a>
+onto the undo stack before clearing. Fires <a href="../../state_vtt_state/VttState/onDrawingsCleared.html">onDrawingsCleared</a> for
+relay forwarding.</p>
 </section>
 
 
@@ -71,6 +73,9 @@
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void clearDrawings() {
+  if (strokes.isNotEmpty) {
+    _pushUndo(StrokeClearAction(List.from(strokes)));
+  }
   strokes.clear();
   notifyListeners();
   onDrawingsCleared?.call();
@@ -102,7 +107,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

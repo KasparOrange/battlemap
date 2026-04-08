@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="API docs for the showSessionSettingsDialog function from the session_settings_dialog library, for the Dart programming language.">
+  <title>showSessionSettingsDialog function - session_settings_dialog library - Dart API</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="../static-assets/github.css?v1">
+  <link rel="stylesheet" href="../static-assets/styles.css?v1">
+  <link rel="icon" href="../static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="../" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li><a href="../index.html">battlemap</a></li>
+    <li><a href="../ui_session_settings_dialog/">ui&#47;session_settings_dialog.dart</a></li>
+    <li class="self-crumb">showSessionSettingsDialog function</li>
+  </ol>
+  <div class="self-name">showSessionSettingsDialog</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <button class="toggle" id="theme-button" title="Toggle between light and dark mode" aria-label="Light and dark mode toggle">
+    <span id="dark-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      dark_mode
+    </span>
+    <span id="light-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      light_mode
+    </span>
+  </button>
+</header>
+<main>
+  <div
+      id="dartdoc-main-content"
+      class="main-content"
+      data-above-sidebar="ui_session_settings_dialog&#47;ui_session_settings_dialog-library-sidebar.html"
+      data-below-sidebar="">
+      <div>
+<h1><span class="kind-function">showSessionSettingsDialog</span> function 
+ 
+</h1></div>
+
+    <section class="multi-line-signature">
+        
+<span class="returntype"><a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../model_session/SessionSettings-class.html">SessionSettings</a>?</span>&gt;</span></span>
+<span class="name ">showSessionSettingsDialog</span>(<wbr><ol class="parameter-list"> <li><span class="parameter" id="showSessionSettingsDialog-param-context"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/widgets/BuildContext-class.html">BuildContext</a></span> <span class="parameter-name">context</span>, {</span></li>
+<li><span class="parameter" id="showSessionSettingsDialog-param-initial"><span class="type-annotation"><a href="../model_session/SessionSettings-class.html">SessionSettings</a>?</span> <span class="parameter-name">initial</span>, </span></li>
+</ol>})
+
+        
+
+    </section>
+    
+<section class="desc markdown">
+  <p>Shows a modal dialog for configuring <a href="../model_session/SessionSettings-class.html">SessionSettings</a>.</p>
+<p>Returns the updated <a href="../model_session/SessionSettings-class.html">SessionSettings</a> on save, or <code>null</code> if cancelled.
+If <code>initial</code> is provided, the dialog starts with those values;
+otherwise it defaults to the Pen &amp; Paper preset.</p>
+<p>The dialog has two sections:</p>
+<ol>
+<li><strong>Template</strong> -- "Pen &amp; Paper" and "Digital" preset buttons.</li>
+<li><strong>Features</strong> -- individual toggle switches grouped by category.</li>
+</ol>
+<p>See also:</p>
+<ul>
+<li><a href="../model_session/SessionSettings-class.html">SessionSettings</a>, the model class being edited.</li>
+<li><a href="../ui_vtt_companion_screen/VttCompanionScreen-class.html">VttCompanionScreen</a>, which calls this before creating a new session.</li>
+<li><a href="../ui_dm_control_panel/DmControlPanel-class.html">DmControlPanel</a>, which calls this from the settings gear button.</li>
+</ul>
+</section>
+
+
+    
+<section class="summary source-code" id="source">
+  <h2><span>Implementation</span></h2>
+  <pre class="language-dart"><code class="language-dart">Future&lt;SessionSettings?&gt; showSessionSettingsDialog(
+  BuildContext context, {
+  SessionSettings? initial,
+}) async {
+  return showDialog&lt;SessionSettings&gt;(
+    context: context,
+    builder: (ctx) =&gt; _SessionSettingsDialog(initial: initial),
+  );
+}</code></pre>
+</section>
+
+
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li><a href="../index.html">battlemap</a></li>
+    <li><a href="../ui_session_settings_dialog/">session_settings_dialog</a></li>
+    <li class="self-crumb">showSessionSettingsDialog function</li>
+</ol>
+
+    <h5>session_settings_dialog library</h5>
+    <div id="dartdoc-sidebar-left-content"></div>
+  </div><!--/.sidebar-offcanvas-left-->
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+  </div><!--/.sidebar-offcanvas-->
+</main>
+<footer>
+  <span class="no-break">
+    battlemap
+      1.1.2+12
+  </span>
+  
+</footer>
+
+
+<script src="../static-assets/highlight.pack.js?v1"></script>
+<script src="../static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+

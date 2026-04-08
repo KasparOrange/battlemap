@@ -54,8 +54,10 @@
 
     
 <section class="desc markdown">
-  <p>Stub for web builds — remote logging disabled.
-Web builds use the JavaScript console override in index.html instead.</p>
+  <p>Stub for web builds — remote logging disabled.</p>
+<p>Web builds use the JavaScript console override in <code>index.html</code> instead.
+This stub keeps the same API surface as <code>remote_log.dart</code> so call sites
+can be conditionally imported via <code>if (dart.library.io)</code>.</p>
 </section>
 
 
@@ -165,6 +167,45 @@ Web builds use the JavaScript console override in index.html instead.</p>
   <section class="summary offset-anchor" id="static-methods">
     <h2>Static Methods</h2>
     <dl class="callables">
+        <dt id="debug" class="callable">
+  <span class="name"><a href="../network_remote_log_stub/RemoteLog/debug.html">debug</a></span><span class="signature">(<wbr><span class="parameter" id="debug-param-tag"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tag</span>, </span><span class="parameter" id="debug-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span>, [</span><span class="parameter" id="debug-param-extra"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">extra</span></span>])
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  No-op on web.
+  
+
+</dd>
+
+        <dt id="error" class="callable">
+  <span class="name"><a href="../network_remote_log_stub/RemoteLog/error.html">error</a></span><span class="signature">(<wbr><span class="parameter" id="error-param-tag"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tag</span>, </span><span class="parameter" id="error-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span>, [</span><span class="parameter" id="error-param-extra"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">extra</span></span>])
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  No-op on web.
+  
+
+</dd>
+
+        <dt id="info" class="callable">
+  <span class="name"><a href="../network_remote_log_stub/RemoteLog/info.html">info</a></span><span class="signature">(<wbr><span class="parameter" id="info-param-tag"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tag</span>, </span><span class="parameter" id="info-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span>, [</span><span class="parameter" id="info-param-extra"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">extra</span></span>])
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  No-op on web.
+  
+
+</dd>
+
         <dt id="send" class="callable">
   <span class="name"><a href="../network_remote_log_stub/RemoteLog/send.html">send</a></span><span class="signature">(<wbr><span class="parameter" id="send-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span></span>)
     <span class="returntype parameter">&#8594; void</span>
@@ -173,7 +214,7 @@ Web builds use the JavaScript console override in index.html instead.</p>
 
 </dt>
 <dd>
-  
+  No-op on web.
   
 
 </dd>
@@ -186,7 +227,7 @@ Web builds use the JavaScript console override in index.html instead.</p>
 
 </dt>
 <dd>
-  
+  No-op on web.
   
 
 </dd>
@@ -199,7 +240,7 @@ Web builds use the JavaScript console override in index.html instead.</p>
 
 </dt>
 <dd>
-  
+  No-op on web.
   
 
 </dd>
@@ -212,7 +253,20 @@ Web builds use the JavaScript console override in index.html instead.</p>
 
 </dt>
 <dd>
+  No-op on web; configures the source tag on native.
   
+
+</dd>
+
+        <dt id="warn" class="callable">
+  <span class="name"><a href="../network_remote_log_stub/RemoteLog/warn.html">warn</a></span><span class="signature">(<wbr><span class="parameter" id="warn-param-tag"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">tag</span>, </span><span class="parameter" id="warn-param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">msg</span>, [</span><span class="parameter" id="warn-param-extra"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span> <span class="parameter-name">extra</span></span>])
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  No-op on web.
   
 
 </dd>
@@ -244,7 +298,7 @@ Web builds use the JavaScript console override in index.html instead.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

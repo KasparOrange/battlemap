@@ -106,6 +106,29 @@ when it receives a <code>vtt.fullState</code> message from the TV.</p>
   drawColor = Color(json[&#39;drawColor&#39;] as int? ?? 0xFFE53935);
   drawWidth = (json[&#39;drawWidth&#39;] as num?)?.toDouble() ?? 3.0;
 
+  &#47;&#47; Shadow mode fields — backwards compatible
+  shadowMode = json[&#39;shadowMode&#39;] as bool? ?? true;
+  shadowRevealCells = json[&#39;shadowRevealCells&#39;] != null
+      ? Set&lt;int&gt;.from(
+          (json[&#39;shadowRevealCells&#39;] as List).map((e) =&gt; e as int))
+      : {};
+  shadowHideCells = json[&#39;shadowHideCells&#39;] != null
+      ? Set&lt;int&gt;.from(
+          (json[&#39;shadowHideCells&#39;] as List).map((e) =&gt; e as int))
+      : {};
+
+  &#47;&#47; Ruler overlay fields — backwards compatible
+  rulerVisible = json[&#39;rulerVisible&#39;] as bool? ?? false;
+  rulerX = (json[&#39;rulerX&#39;] as num?)?.toDouble() ?? 0;
+  rulerY = (json[&#39;rulerY&#39;] as num?)?.toDouble() ?? 0;
+  rulerRotation = json[&#39;rulerRotation&#39;] as int? ?? 0;
+  scaleSliderFactor = (json[&#39;scaleSliderFactor&#39;] as num?)?.toDouble() ?? 1.0;
+
+  &#47;&#47; Session settings — backwards compatible
+  sessionSettings = json[&#39;sessionSettings&#39;] != null
+      ? SessionSettings.fromJson(json[&#39;sessionSettings&#39;] as Map&lt;String, dynamic&gt;)
+      : SessionSettings.penAndPaper();
+
   notifyListeners(); &#47;&#47; single notification
 }</code></pre>
 </section>
@@ -135,7 +158,7 @@ when it receives a <code>vtt.fullState</code> message from the TV.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

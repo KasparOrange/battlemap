@@ -27,6 +27,7 @@ import '../state/vtt_state.dart';
 import '../storage/map_library.dart';
 import '../update/update_service_stub.dart'
     if (dart.library.io) '../update/update_service.dart';
+import '../util/file_signatures.dart';
 
 /// The set of views that the TV can display.
 ///
@@ -94,6 +95,7 @@ class _TvShellState extends State<TvShell> {
   String _activeSessionName = 'Session';
   DateTime? _sessionCreatedAt;
   bool _isPdfSession = false;
+  bool _isImageSession = false;
 
   // Rendering spinner (for PDF render, map decode, etc.)
   bool _isRendering = false;
@@ -399,10 +401,11 @@ class _TvShellState extends State<TvShell> {
       }
       _log('Image download complete: ${imageBytes.length} bytes');
 
-      // Save to library as a "PDF" type (image with user grid config, no UVTT metadata)
+      // Image entries use the user-configured grid fields like PDFs do,
+      // but are flagged with isImage so resume can skip PDF rendering.
       final entry = await _library.addMap(
         imageBytes, displayName,
-        isPdf: true, pdfGridCols: gridCols, pdfGridRows: gridRows,
+        isImage: true, pdfGridCols: gridCols, pdfGridRows: gridRows,
       );
       entry.vpsUrl = url;
       await _library.updateEntry(entry);
@@ -429,7 +432,8 @@ class _TvShellState extends State<TvShell> {
       _activeSessionId = const Uuid().v4();
       _activeSessionName = 'Session 1';
       _sessionCreatedAt = DateTime.now();
-      _isPdfSession = true;
+      _isPdfSession = false;
+      _isImageSession = true;
 
       _setView(TvView.game);
       _state.addListener(_onStateChanged);
@@ -585,9 +589,18 @@ class _TvShellState extends State<TvShell> {
       final bytes = await _library.loadMapBytes(session.mapId);
       _log('Map loaded from disk: ${bytes.length} bytes');
 
-      // Check if this is a PDF session — render page to image first
-      final isPdf = session.isPdfSession || (entry?.isPdf == true);
-      if (isPdf) {
+      // Decide what kind of map this is. Schema flags are the source of
+      // truth, but legacy entries may have isPdf=true while actually
+      // holding image bytes (a bug pre-1.1.2). Sniff the magic bytes as a
+      // bulletproof fallback so resuming such sessions still works.
+      final claimsImage = session.isImageSession || (entry?.isImage == true);
+      final claimsPdf = session.isPdfSession || (entry?.isPdf == true);
+      final actuallyPdf = FileSignatures.looksLikePdf(bytes);
+      // If something says PDF but the bytes aren't a PDF, treat as image.
+      final loadAsImage = claimsImage || (claimsPdf && !actuallyPdf);
+      final loadAsPdf = claimsPdf && actuallyPdf;
+
+      if (loadAsPdf) {
         setState(() { _isRendering = true; _renderingLabel = 'Rendering PDF...'; });
         _relay.sendRaw(jsonEncode({'type': 'tv.rendering', 'active': true, 'label': 'Rendering PDF...'}));
         final rendered = await PdfHelper.renderPdfPage(bytes);
@@ -606,6 +619,28 @@ class _TvShellState extends State<TvShell> {
         _log('PDF rendered: ${width}x$height, grid ${gridCols}x$gridRows');
         _state.loadPdfAsMap(
           imageBytes,
+          gridCols: gridCols,
+          gridRows: gridRows,
+          imageWidth: width.toDouble(),
+          imageHeight: height.toDouble(),
+        );
+      } else if (loadAsImage) {
+        // Raw raster image — decode for dimensions, then load as a synthetic
+        // UVTT map. No PDF rendering required.
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        if (!mounted) {
+          frame.image.dispose();
+          return;
+        }
+        final width = frame.image.width;
+        final height = frame.image.height;
+        frame.image.dispose();
+        final gridCols = entry?.pdfGridCols ?? 20;
+        final gridRows = entry?.pdfGridRows ?? 15;
+        _log('Image map: ${width}x$height, grid ${gridCols}x$gridRows');
+        _state.loadPdfAsMap(
+          bytes,
           gridCols: gridCols,
           gridRows: gridRows,
           imageWidth: width.toDouble(),
@@ -651,7 +686,8 @@ class _TvShellState extends State<TvShell> {
       _activeSessionId = session.id;
       _activeSessionName = session.name;
       _sessionCreatedAt = session.createdAt;
-      _isPdfSession = isPdf;
+      _isPdfSession = loadAsPdf;
+      _isImageSession = loadAsImage;
 
       _setView(TvView.game);
       _state.addListener(_onStateChanged);
@@ -661,10 +697,11 @@ class _TvShellState extends State<TvShell> {
 
       // Send map to companion so it can display it
       final mapImageBytes = _state.map?.imageBytes;
-      _log('Send map: isPdf=$isPdf, hasMap=${_state.map != null}, imageLen=${mapImageBytes?.length ?? 0}');
-      if (isPdf && mapImageBytes != null) {
-        // PDF: send rendered image via chunks (companion can't render PDFs)
-        _log('Sending rendered PDF image to companion (${(mapImageBytes.length / 1024).round()} KB)');
+      _log('Send map: pdf=$loadAsPdf, image=$loadAsImage, hasMap=${_state.map != null}, imageLen=${mapImageBytes?.length ?? 0}');
+      if ((loadAsPdf || loadAsImage) && mapImageBytes != null) {
+        // PDF (rendered) or raw image: send pixels via chunks. Companion
+        // can't render PDFs on web, so we always ship the bitmap.
+        _log('Sending image bytes to companion (${(mapImageBytes.length / 1024).round()} KB)');
         _relay.sendMapChunked(mapImageBytes);
       } else if (entry?.vpsUrl != null) {
         // UVTT: tell companion to download from VPS
@@ -708,15 +745,22 @@ class _TvShellState extends State<TvShell> {
 
   /// Saves the current session state to disk.
   ///
-  /// If [isPdfSession] is provided, it updates [_isPdfSession] and includes
-  /// it in the serialized session so that future resumes know to render the
-  /// PDF page before loading.
+  /// Optional [isPdfSession] / [isImageSession] override the cached
+  /// `_isPdfSession` / `_isImageSession` flags so that the persisted
+  /// session knows whether to render a PDF or load image bytes directly
+  /// on resume. The two flags are mutually exclusive — passing one as
+  /// `true` does not automatically clear the other, so callers should
+  /// supply both when transitioning between modes.
   ///
   /// Called both from the initial session creation and from the 2-second
   /// auto-save timer.
-  Future<void> _saveCurrentSession({bool? isPdfSession}) async {
+  Future<void> _saveCurrentSession({
+    bool? isPdfSession,
+    bool? isImageSession,
+  }) async {
     if (_activeSessionId == null || _activeMapId == null) return;
     if (isPdfSession != null) _isPdfSession = isPdfSession;
+    if (isImageSession != null) _isImageSession = isImageSession;
     final camera = _game?.getCameraState() ?? {'x': 0.0, 'y': 0.0, 'zoom': 1.0, 'angle': 0.0};
     final session = Session(
       id: _activeSessionId!,
@@ -748,6 +792,7 @@ class _TvShellState extends State<TvShell> {
       cameraZoom: (camera['zoom'] as num).toDouble(),
       cameraAngle: (camera['angle'] as num).toDouble(),
       isPdfSession: _isPdfSession,
+      isImageSession: _isImageSession,
       settings: _state.sessionSettings.copy(),
     );
     await _library.saveSession(session);

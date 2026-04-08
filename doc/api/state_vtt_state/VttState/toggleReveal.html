@@ -64,6 +64,8 @@
     
 <section class="desc markdown">
   <p>Toggles a single fog cell between revealed and hidden.</p>
+<p>In <a href="../../state_vtt_state/VttState/shadowMode.html">shadowMode</a>, toggles the cell within the shadow sets instead
+of modifying <a href="../../state_vtt_state/VttState/revealedCells.html">revealedCells</a> directly.</p>
 <p>The <code>index</code> is computed as <code>row * gridCols + col</code>.</p>
 </section>
 
@@ -72,11 +74,27 @@
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void toggleReveal(int index) {
-  if (revealedCells.contains(index)) {
+  if (shadowMode) {
+    &#47;&#47; In shadow mode, toggle between shadow sets
+    if (shadowRevealCells.contains(index)) {
+      shadowRevealCells.remove(index);
+    } else if (shadowHideCells.contains(index)) {
+      shadowHideCells.remove(index);
+    } else if (revealedCells.contains(index)) {
+      shadowHideCells.add(index);
+    } else {
+      shadowRevealCells.add(index);
+    }
+    notifyListeners();
+    return;
+  }
+  final wasRevealed = revealedCells.contains(index);
+  if (wasRevealed) {
     revealedCells.remove(index);
   } else {
     revealedCells.add(index);
   }
+  _pushUndo(FogAction({index}, !wasRevealed));
   notifyListeners();
 }</code></pre>
 </section>
@@ -106,7 +124,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

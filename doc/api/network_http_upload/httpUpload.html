@@ -103,9 +103,11 @@
             final body = xhr.responseText;
             completer.complete(jsonDecode(body) as Map&lt;String, dynamic&gt;);
           } catch (e) {
+            debugPrint(&#39;httpUpload: response decode failed: $e&#39;);
             completer.complete(null);
           }
         } else {
+          debugPrint(&#39;httpUpload: $url returned status ${xhr.status}&#39;);
           completer.complete(null);
         }
       }.toJS,
@@ -133,6 +135,7 @@
 
     return await completer.future;
   } catch (e) {
+    debugPrint(&#39;httpUpload: $url failed: $e&#39;);
     return null;
   }
 }</code></pre>
@@ -162,7 +165,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

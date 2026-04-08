@@ -64,9 +64,12 @@
     
 <section class="desc markdown">
   <p>Batch reveal or hide fog cells (used by brush drag painting).</p>
-<p>If <a href="../../state_vtt_state/VttState/revealMode.html">revealMode</a> is <code>true</code>, the given <code>indices</code> are added to
-<a href="../../state_vtt_state/VttState/revealedCells.html">revealedCells</a>. If <code>false</code>, they are removed. Only notifies
-listeners if at least one cell actually changed state.</p>
+<p>In <a href="../../state_vtt_state/VttState/shadowMode.html">shadowMode</a>, cells are routed to <a href="../../state_vtt_state/VttState/shadowRevealCells.html">shadowRevealCells</a> or
+<a href="../../state_vtt_state/VttState/shadowHideCells.html">shadowHideCells</a> instead of modifying <a href="../../state_vtt_state/VttState/revealedCells.html">revealedCells</a> directly.</p>
+<p>In live mode, if <a href="../../state_vtt_state/VttState/revealMode.html">revealMode</a> is <code>true</code>, the given <code>indices</code> are
+added to <a href="../../state_vtt_state/VttState/revealedCells.html">revealedCells</a>. If <code>false</code>, they are removed. Only
+notifies listeners if at least one cell actually changed state.
+Pushes a <a href="../../model_undo_action/FogAction-class.html">FogAction</a> for undo when cells change.</p>
 </section>
 
 
@@ -74,15 +77,33 @@ listeners if at least one cell actually changed state.</p>
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void applyBrushReveal(List&lt;int&gt; indices) {
-  bool changed = false;
+  if (shadowMode) {
+    bool changed = false;
+    for (final index in indices) {
+      if (revealMode) {
+        if (shadowRevealCells.add(index)) changed = true;
+        shadowHideCells.remove(index);
+      } else {
+        if (shadowHideCells.add(index)) changed = true;
+        shadowRevealCells.remove(index);
+      }
+    }
+    if (changed) notifyListeners();
+    return;
+  }
+  &#47;&#47; Live mode: modify revealedCells directly and push undo
+  final cellsChanged = &lt;int&gt;{};
   for (final index in indices) {
     if (revealMode) {
-      if (revealedCells.add(index)) changed = true;
+      if (revealedCells.add(index)) cellsChanged.add(index);
     } else {
-      if (revealedCells.remove(index)) changed = true;
+      if (revealedCells.remove(index)) cellsChanged.add(index);
     }
   }
-  if (changed) notifyListeners();
+  if (cellsChanged.isNotEmpty) {
+    _pushUndo(FogAction(cellsChanged, revealMode));
+    notifyListeners();
+  }
 }</code></pre>
 </section>
 
@@ -111,7 +132,7 @@ listeners if at least one cell actually changed state.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

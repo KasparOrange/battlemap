@@ -66,7 +66,8 @@
     
 <section class="desc markdown">
   <p>Moves an existing token to a new grid position.</p>
-<p>Finds the token by <code>id</code> and updates its <a href="../../model_map_token/MapToken/gridX.html">MapToken.gridX</a> and
+<p>Saves the old position and pushes a <a href="../../model_undo_action/TokenMoveAction-class.html">TokenMoveAction</a> onto the undo
+stack. Finds the token by <code>id</code> and updates its <a href="../../model_map_token/MapToken/gridX.html">MapToken.gridX</a> and
 <a href="../../model_map_token/MapToken/gridY.html">MapToken.gridY</a>. Fires <a href="../../state_vtt_state/VttState/onTokenMoved.html">onTokenMoved</a> for relay forwarding.</p>
 <p>Throws <a href="https://api.flutter.dev/flutter/dart-core/StateError-class.html">StateError</a> if no token with the given <code>id</code> exists.</p>
 </section>
@@ -77,6 +78,9 @@
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void moveToken(String id, int newGridX, int newGridY) {
   final token = tokens.firstWhere((t) =&gt; t.id == id);
+  final oldX = token.gridX;
+  final oldY = token.gridY;
+  _pushUndo(TokenMoveAction(id, oldX, oldY, newGridX, newGridY));
   token.gridX = newGridX;
   token.gridY = newGridY;
   notifyListeners();
@@ -109,7 +113,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

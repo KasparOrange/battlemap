@@ -102,6 +102,7 @@ Reports progress via callback.</p>
     client.close();
     return Uint8List.fromList(chunks.expand((c) =&gt; c).toList());
   } catch (e) {
+    debugPrint(&#39;httpDownload: $url failed: $e&#39;);
     return null;
   }
 }</code></pre>
@@ -131,7 +132,7 @@ Reports progress via callback.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>

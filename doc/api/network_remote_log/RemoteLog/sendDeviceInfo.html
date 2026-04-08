@@ -62,7 +62,10 @@
     </section>
     
 <section class="desc markdown">
-  <p>Send device info (screen size, platform, app version).</p>
+  <p>Sends platform/version/screen info as a single <code>deviceInfo</code> event.</p>
+<p>Called once at startup so the log stream identifies which device the
+subsequent entries came from. Logged at <a href="../../network_remote_log/LogLevel.html">LogLevel.info</a> with tag
+<code>device</code>.</p>
 </section>
 
 
@@ -75,8 +78,8 @@
     final view = WidgetsBindingOrNull.instance?.platformDispatcher.views.first;
     final size = view?.physicalSize;
     final ratio = view?.devicePixelRatio ?? 1.0;
-    sendEvent(&#39;deviceInfo&#39;, {
-      &#39;msg&#39;: &#39;Device info&#39;,
+    RemoteLog.info(&#39;device&#39;, &#39;Device info&#39;, {
+      &#39;event&#39;: &#39;deviceInfo&#39;,
       &#39;platform&#39;: Platform.operatingSystem,
       &#39;osVersion&#39;: Platform.operatingSystemVersion,
       &#39;appVersion&#39;: info.version,
@@ -86,7 +89,7 @@
       &#39;pixelRatio&#39;: ratio,
     });
   } catch (e) {
-    send(&#39;sendDeviceInfo failed: $e&#39;);
+    RemoteLog.error(&#39;device&#39;, &#39;sendDeviceInfo failed&#39;, {&#39;error&#39;: &#39;$e&#39;});
   }
 }</code></pre>
 </section>
@@ -116,7 +119,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.0.8+9
+      1.1.2+12
   </span>
   
 </footer>
