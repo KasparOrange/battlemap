@@ -40,9 +40,10 @@ particles, glow → Metal/Impeller, fine; 3D dice, animations → Flame, fine.
 
 **The one real gap is PDF rendering on the TV.** Fix: rasterize on the phone (below).
 
-## plan: rasterize PDFs on the phone
+## rasterize PDFs on the phone — done 2026-09-06 (1.1.3+13)
 
-The companion already renders PDFs for its own preview (`pdfrx`, web build). Instead of
+`VttCompanionScreen._pickAndUploadMap`: pdfrx ≥ 2 ships PDFium as WASM inside the web build
+(`assets/packages/pdfrx/assets/pdfium.wasm`, 5 MB, loaded on first PDF), so instead of
 shipping the PDF to the TV and rendering it there:
 
 1. companion picks the page → renders it to a PNG at map resolution (cap ~4096 px long edge)
@@ -52,7 +53,9 @@ shipping the PDF to the TV and rendering it there:
    the "image session resume mistakenly going through PDF render" class of bugs disappears)
 
 Benefits on both platforms: no PDF engine on the box, faster session resume, one map type on
-the TV. Roadmap #34 ("PDF in VTT mode") becomes a phone-side feature. Estimated: a day.
+the TV. Only page 1 is rendered (page picker: open item). The TV keeps `vtt.pdfUploaded` for
+older phone builds. Not yet verified in a real browser (the terminal-browser click test was
+unreliable) — first real test is on the phone.
 
 ## where this runs
 
@@ -105,9 +108,9 @@ All in `pubspec.yaml`, all platforms — the VPS build needs **Flutter ≥ 3.47*
 | + `flutter_tvos`, `path_provider_tvos`, `package_info_plus_tvos`, `wakelock_plus_tvos` | federated tvOS ports (SPM for the first two, CocoaPods for the other two; `brew install cocoapods`) |
 | `analysis_options.yaml` excludes `build/ android/ web/` | written by `flutter-tvos pub get` |
 
-`pdfrx` still has no tvOS PDFium binary: the Dart side compiles, a PDF map on the Apple TV
-fails inside `PdfHelper.renderPdfPage` (caught, returns null) until #36 moves rendering to the
-phone. `.dd2vtt` and image maps are unaffected.
+`pdfrx` still has no tvOS PDFium binary: the Dart side compiles, but only the legacy
+`vtt.pdfUploaded` path (old phone builds) and PDF-session resume would hit it — new uploads
+arrive as PNG (next section).
 
 ## things to know on tvOS
 

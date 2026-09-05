@@ -194,8 +194,8 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 31 | 74 unit tests | Done | Relay routing, state, session, map entry |
 | 32 | Hive integration | Not started | Replace raw JSON files with cross-platform DB |
 | 33 | Shorebird OTA updates | Not started | Code push without APK reinstall |
-| 34 | PDF in VTT mode | Not started | Load PDF as alternative to .dd2vtt — as #36, phone-side |
-| 36 | Rasterize PDFs on the phone | Not started | Phone renders page → PNG → HTTP transfer; `pdfrx` leaves the TV side (docs/apple-tv-dev.md) |
+| 34 | PDF in VTT mode | Done via #36 | PDF → PNG on the phone, TV gets an image map |
+| 36 | Rasterize PDFs on the phone | Done (1.1.3+13), needs phone test | pdfrx WASM in the web build renders page 1 → PNG → HTTP upload → `vtt.imageUploaded`; TV keeps legacy `vtt.pdfUploaded` |
 | 37 | Apple TV dev target (flutter-tvos) | Done (Mac) | `tvos/` host project + `_tvos` ports; runs on simulator + physical Apple TV; PDF maps need #36 |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |

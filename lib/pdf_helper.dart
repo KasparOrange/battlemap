@@ -12,14 +12,15 @@ import 'game_state.dart';
 /// [renderPdfPage] utility for the VTT PDF map flow, which renders a PDF
 /// page to PNG bytes for use as a battlemap background image.
 ///
-/// IMPORTANT: pdfrx uses `dart:ui` for rendering, which only works on native
-/// platforms (Android/iOS/desktop). The companion phone (web build) does not
-/// call these methods — it relies on the TV to render and send the result.
+/// Runs on every platform that has a PDFium build — Android, iOS, desktop,
+/// and **web** (pdfrx ≥ 2 ships PDFium as WASM inside the web build's assets).
+/// Not on tvOS (no binary): the companion phone rasterizes PDFs before upload
+/// (`VttCompanionScreen._pickAndUploadMap`), so the TV only receives images.
 ///
 /// See also:
 /// - [VttState.loadPdfAsMap], which consumes the rendered PNG bytes.
-/// - `TvShell._downloadAndLoadPdf` (in `lib/ui/tv_shell.dart`), which
-///   orchestrates the PDF upload flow.
+/// - `TvShell._downloadAndLoadPdf` (in `lib/ui/tv_shell.dart`), the legacy
+///   TV-side PDF path kept for older phone builds.
 class PdfHelper {
   PdfDocument? _document;
   Uint8List? _bytes;

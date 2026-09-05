@@ -51,11 +51,16 @@ relay sends ping every 20s. client sends ping every 15s. zombie detection at 30-
 2. phone sends: `{"type": "vtt.mapUploaded", "url": "http://...", "displayName": "..."}`
 3. TV HTTP GETs the file from the URL
 
-### upload PDF (phone → VPS → TV)
-1. phone shows grid config dialog (PDFs have no embedded grid metadata)
-2. phone HTTP PUTs file to `http://VPS:4242/upload/<filename>`
-3. phone sends: `{"type": "vtt.pdfUploaded", "url": "http://...", "displayName": "...", "gridCols": 20, "gridRows": 15}`
-4. TV HTTP GETs the PDF, renders first page to PNG via pdfrx, loads as map
+### upload PDF or image (phone → VPS → TV) — since 1.1.3
+1. phone shows grid config dialog (no embedded grid metadata)
+2. **PDF only:** phone renders page 1 to PNG itself (pdfrx PDFium-WASM, ≤ 4096 px) — the TV never
+   sees a PDF, so it needs no PDF engine (Apple TV has none)
+3. phone HTTP PUTs the PNG/JPG/WebP to `http://VPS:4242/upload/<name>.png`
+4. phone sends: `{"type": "vtt.imageUploaded", "url": "http://...", "displayName": "map.png", "gridCols": 20, "gridRows": 15}`
+5. TV HTTP GETs the image, loads it as a map
+
+Legacy (phone builds < 1.1.3): `vtt.pdfUploaded` with the raw PDF; the TV renders page 1 with
+pdfrx. Still handled by the TV; fails on tvOS.
 
 ### download (TV → phone, for session resume)
 ```

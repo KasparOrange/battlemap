@@ -5,7 +5,7 @@
 - VPS with Ubuntu (the dev machine — runs Flutter SDK, relay, servers)
 - iPhone with SSH client (Prompt 3) for development
 - Xiaomi TV Box S 3rd Gen (or any Android TV box) for the table display
-- Flutter SDK **≥ 3.47** installed on VPS (pdfrx 2.x floor since 2026-09-05)
+- Flutter SDK **≥ 3.47** installed on VPS (pdfrx 2.x floor since 2026-09-05; upgraded to 3.47.2 on 2026-09-06)
 - optional: the living-room Apple TV as a dev target via flutter-tvos — `docs/apple-tv-dev.md`
 
 ## development environments (decided 2026-09-05)
@@ -77,6 +77,23 @@ echo '{"version":"X.Y.Z+N","versionCode":N}' > build/web/version.json
 # 4. restart dev server to serve new files
 pkill -f dev_server.py; sleep 1
 python3 tools/dev_server.py > /dev/null 2>&1 &
+```
+
+Over ssh, start services detached — `(setsid nohup python3 tools/dev_server.py > /tmp/dev_server.log 2>&1 < /dev/null &)` —
+plain `nohup … &` dies with the ssh session, and `pkill -f dev_server.py` inside an
+`ssh host 'pkill -f dev_server.py; …'` command kills that command's own shell (its command
+line contains the pattern): run the pkill in a separate ssh call.
+
+### deploying a web build from the Mac
+
+When the VPS cannot build (e.g. Flutter too old), build on the Mac and copy only the web files —
+keep the VPS's APK, API docs, uploads and `version.json` (a newer `version.json` without a new
+APK makes the TV offer a phantom update):
+
+```bash
+rsync -az --exclude uploads/ --exclude battlemap.apk --exclude api/ --exclude version.json \
+  build/web/ kaspar@72.62.88.197:~/battlemap/build/web/
+# then restart dev_server (above)
 ```
 
 ### TV update

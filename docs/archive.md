@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-09-06 00:20 - 389d2c14-05de-4f55-9d3c-6695b9d6b48e
+- Konrad: "make everything ready for me to test … how I upload a PDF … to the rasterizing pipeline" → #36 built, services up
+	- **Phone-side PDF rasterizing** (`_pickAndUploadMap`): pdfrx 2.x PDFium-WASM renders page 1 → PNG → existing image upload → `vtt.imageUploaded`; TV keeps the legacy `vtt.pdfUploaded` path. Version 1.1.3+13
+	- VPS: relay + dev server restarted (detached via setsid; they had been down since 2026-07-07), Flutter upgraded 3.41.4 → 3.47.2 (pdfrx floor), web build deployed from the Mac by rsync (VPS built nothing yet)
+	- Not verified in a browser: terminal-browser clicks on the Flutter canvas were unreliable (no accessibility tree) — first real test is Konrad on the phone; relay has one table slot, so the simulator app was terminated to leave it to the Apple TV
+	- Learned: `ssh host 'pkill -f dev_server.py; …'` kills its own shell; plain `nohup &` over ssh dies with the session (`docs/setup.md`)
+
 ### 26-09-05 23:35 - 389d2c14-05de-4f55-9d3c-6695b9d6b48e
 - Konrad: "check the plans … for the new plan to make a development build for TVOS and then start executing that" → `docs/apple-tv-dev.md` setup executed on the Mac
 	- `fluttertv/flutter-tvos` 1.10.0 cloned to `~/code/flutter-tvos` (Flutter 3.47.2), CocoaPods via brew, `tvos/` host project generated and committed (bundle `com.example.battlemap`, team from the dev cert)

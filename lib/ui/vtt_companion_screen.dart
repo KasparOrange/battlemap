@@ -4,11 +4,13 @@ import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flame/game.dart' hide Route, Matrix4, Vector2, Vector3, Vector4;
+import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
 
 import '../network/http_upload_stub.dart'
     if (dart.library.html) '../network/http_upload.dart';
 import '../network/relay_config.dart';
+import '../pdf_helper.dart';
 
 import '../game/vtt_game.dart';
 import '../model/map_library_entry.dart';
@@ -337,19 +339,23 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     }
   }
 
-  /// Opens a file picker for `.dd2vtt`, `.uvtt`, or `.pdf` files and uploads
-  /// the selected file to the VPS.
+  /// Opens a file picker for `.dd2vtt`/`.uvtt`, image, or `.pdf` files and
+  /// uploads the map to the VPS.
   ///
   /// For UVTT files: loads locally for immediate preview and sends a
   /// `vtt.mapUploaded` command so the TV downloads and processes the map.
   ///
-  /// For PDF files: shows a grid configuration dialog first (since PDFs lack
-  /// embedded grid metadata), then uploads and sends a `vtt.pdfUploaded`
-  /// command. The TV handles PDF rendering (pdfrx is not available on web).
+  /// For images and PDFs: shows a grid configuration dialog first (no
+  /// embedded grid metadata), then uploads and sends `vtt.imageUploaded`.
+  /// **PDFs are rasterized here on the phone** ([PdfHelper.renderPdfPage],
+  /// pdfrx's PDFium WASM build, first page, ≤ 4096 px) and uploaded as a PNG
+  /// named `<file>.png` — the TV only ever receives an image map, so it needs
+  /// no PDF engine (Apple TV has none; `docs/apple-tv-dev.md`). The legacy
+  /// `vtt.pdfUploaded` path on the TV stays for older phone builds.
   ///
   /// See also:
-  /// - [_showPdfGridDialog], which collects grid dimensions for PDF maps.
-  /// - [TvShell._downloadAndLoadPdf], the TV-side handler for PDF uploads.
+  /// - [_showPdfGridDialog], which collects grid dimensions for PDF/image maps.
+  /// - [TvShell._downloadAndLoadImage], the TV-side handler.
   Future<void> _pickAndUploadMap() async {
     // Use FileType.any because Safari doesn't recognize .dd2vtt/.uvtt extensions
     final file = await FilePicker.pickFile(type: FileType.any);
@@ -401,10 +407,30 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     }
 
     if (!_beginLoading()) return;
-    _showSnack('Uploading map...');
 
-    DevLog.add('Companion: uploading ${isPdf ? "PDF" : isImage ? "image" : "map"} '
-        '"${file.name}" (${(bytes.length / 1024).round()} KB)');
+    // PDF: rasterize on the phone (roadmap #36). The TV never sees a PDF.
+    Uint8List uploadBytes = bytes;
+    String uploadName = file.name;
+    if (isPdf) {
+      _showSnack('Rendering PDF page 1...');
+      if (mounted) setState(() => _transferProgress = null);
+      final rendered = await PdfHelper.renderPdfPage(bytes);
+      if (rendered == null) {
+        DevLog.add('Companion: PDF render failed for "${file.name}"');
+        _showSnack('Could not render this PDF', color: Colors.redAccent);
+        _endLoading();
+        return;
+      }
+      uploadBytes = rendered['imageBytes'] as Uint8List;
+      uploadName = '${file.name.substring(0, file.name.length - 4)}.png';
+      DevLog.add('Companion: PDF rendered to ${rendered['width']}x${rendered['height']} '
+          'PNG (${(uploadBytes.length / 1024).round()} KB, '
+          '${rendered['pageCount']} page(s), using page 1)');
+    }
+
+    _showSnack('Uploading map...');
+    DevLog.add('Companion: uploading ${isPdf ? "rasterized PDF" : isImage ? "image" : "map"} '
+        '"$uploadName" (${(uploadBytes.length / 1024).round()} KB)');
 
     // For UVTT files, load locally for immediate preview.
     // For PDFs/images, don't load locally — the TV handles rendering.
@@ -416,9 +442,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       // Upload to VPS via HTTP, then tell TV to download
       if (mounted) setState(() => _transferProgress = 0.01);
       try {
-        final uploadUrl = 'http://${RelayConfig.host}:4242/upload/${Uri.encodeComponent(file.name)}';
+        final uploadUrl = 'http://${RelayConfig.host}:4242/upload/${Uri.encodeComponent(uploadName)}';
         DevLog.add('Companion: uploading to $uploadUrl');
-        final resp = await httpUpload(uploadUrl, bytes, onProgress: (p) {
+        final resp = await httpUpload(uploadUrl, uploadBytes, onProgress: (p) {
           if (mounted) setState(() => _transferProgress = p);
         });
         if (resp != null) {
@@ -426,11 +452,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
           DevLog.add('Companion: upload done, telling TV to download');
           _showSnack('Map uploaded');
           if (needsGridConfig) {
-            // PDF or image: send with grid config
+            // Image (or PDF rendered to PNG above): send with grid config
             _relay!.sendRaw(jsonEncode({
-              'type': isPdf ? 'vtt.pdfUploaded' : 'vtt.imageUploaded',
+              'type': 'vtt.imageUploaded',
               'url': downloadUrl,
-              'displayName': file.name,
+              'displayName': uploadName,
               'gridCols': gridConfig!.cols,
               'gridRows': gridConfig.rows,
             }));
