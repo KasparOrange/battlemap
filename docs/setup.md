@@ -78,6 +78,13 @@ pkill -f dev_server.py; sleep 1
 python3 tools/dev_server.py > /dev/null 2>&1 &
 ```
 
+Over ssh the shell is non-login, so `flutter` and the Android SDK are not on PATH — prefix the
+build with `export ANDROID_HOME=$HOME/android-sdk JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+PATH=$HOME/flutter/bin:$PATH` (otherwise `flutter build apk` prints "No Android SDK found" and
+exits 0 without an APK — check the file's timestamp). Full remote deploy from the Mac, 2026-09-06:
+push → `ssh … git pull --ff-only` → APK build as above → `cp` + `version.json` → rsync web +
+`doc/api` from the Mac → restart dev_server.
+
 Over ssh, start services detached — `(setsid nohup python3 tools/dev_server.py > /tmp/dev_server.log 2>&1 < /dev/null &)` —
 plain `nohup … &` dies with the ssh session, and `pkill -f dev_server.py` inside an
 `ssh host 'pkill -f dev_server.py; …'` command kills that command's own shell (its command
