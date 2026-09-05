@@ -5,11 +5,12 @@
 | package | version | purpose | notes |
 |---------|---------|---------|-------|
 | `flame` | ^1.22.0 | game engine — component model, sprites, canvas rendering | core rendering |
-| `pdfrx` | ^1.0.0 | PDF loading and rendering | used for PDF map backgrounds. **No tvOS build** (native PDFium) — plan: rasterize on the phone, drop from the TV side (`docs/apple-tv-dev.md`) |
-| `file_picker` | ^8.0.0 | file selection dialog | map upload from phone |
+| `pdfrx` | ^2.6.1 | PDF loading and rendering | used for PDF map backgrounds. Needs Flutter ≥ 3.47 and `pdfrxFlutterInitialize()`. **No tvOS PDFium binary** — plan: rasterize on the phone, drop from the TV side (`docs/apple-tv-dev.md`) |
+| `file_picker` | ^12.2.0 | file selection dialog | map upload from phone (`FilePicker.pickFile` + `readAsBytes()`) |
 | `web_socket_channel` | ^3.0.0 | WebSocket client for relay | works on both web (Safari) and native (APK) |
 | `path_provider` | ^2.1.0 | app documents directory | map/session storage on TV. tvOS: `path_provider_tvos` |
-| `package_info_plus` | ^8.0.0 | read current app version | for update version comparison + log device info. tvOS: `package_info_plus_tvos` |
+| `package_info_plus` | ^10.0.0 | read current app version | for update version comparison + log device info. tvOS: `package_info_plus_tvos` |
+| `wakelock_plus` | >=1.3.3 <1.8.0 | keep the TV screen awake | pinned <1.8 (its tvOS support breaks `pod install`); tvOS: `wakelock_plus_tvos` |
 | `uuid` | ^4.0.0 | generate unique IDs | map entries, sessions, tokens |
 
 ## adopted: MwLog (VictoriaLogs) for remote logs — 2026-09-05
@@ -29,8 +30,9 @@ token-cheap query script (`logq.sh` in the my-tube repo, `MWLOG_ENV=~/.config/mw
 ## dev target: Apple TV — see `docs/apple-tv-dev.md`
 
 The `fluttertv/flutter-tvos` fork runs the app on the living-room Apple TV for development
-only; needs `path_provider_tvos`, `package_info_plus_tvos`, `wakelock_plus_tvos` added when
-the tvOS host project is generated.
+only. Set up 2026-09-05: `flutter_tvos`, `path_provider_tvos`, `package_info_plus_tvos`,
+`wakelock_plus_tvos` are in the pubspec (no-ops elsewhere); the dependency bumps it forced are
+listed in `docs/apple-tv-dev.md` "what the tvOS build forced on the dependencies".
 
 ## adopted: hive
 

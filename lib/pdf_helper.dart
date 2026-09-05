@@ -24,6 +24,20 @@ class PdfHelper {
   PdfDocument? _document;
   Uint8List? _bytes;
 
+  static bool _engineReady = false;
+
+  /// Initialises the pdfrx engine once per process.
+  ///
+  /// pdfrx 2.x requires [pdfrxFlutterInitialize] before any direct
+  /// [PdfDocument] call (we never build a pdfrx widget). Idempotent; a
+  /// failure (e.g. no PDFium binary for this platform, such as tvOS) is
+  /// surfaced by the subsequent `openData` call and handled there.
+  static void _ensureEngine() {
+    if (_engineReady) return;
+    pdfrxFlutterInitialize();
+    _engineReady = true;
+  }
+
   /// Renders a single PDF page to PNG image bytes for use as a map background.
   ///
   /// Opens the PDF from [pdfBytes], renders the page at [pageIndex] at high
@@ -52,6 +66,7 @@ class PdfHelper {
   }) async {
     PdfDocument? doc;
     try {
+      _ensureEngine();
       doc = await PdfDocument.openData(pdfBytes);
       if (pageIndex < 0 || pageIndex >= doc.pages.length) {
         doc.dispose();
@@ -108,6 +123,7 @@ class PdfHelper {
   /// Opens the PDF from [bytes] and renders page 0 into [gameState].
   Future<void> loadPdf(Uint8List bytes, GameState gameState) async {
     try {
+      _ensureEngine();
       _document?.dispose();
       _bytes = bytes;
       _document = await PdfDocument.openData(bytes);

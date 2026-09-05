@@ -114,14 +114,12 @@ class _CompanionScreenState extends State<CompanionScreen> {
   }
 
   Future<void> _pickPdf() async {
-    final result = await FilePicker.platform.pickFiles(
+    final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
-      withData: true,
     );
-    if (result == null || result.files.isEmpty) return;
-    final bytes = result.files.first.bytes;
-    if (bytes == null) return;
+    if (file == null) return;
+    final bytes = await file.readAsBytes();
 
     // Reject files over 50MB
     if (bytes.length > 50 * 1024 * 1024) {

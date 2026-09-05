@@ -60,20 +60,54 @@ Only on the **Mac** — the fork needs macOS + Xcode. The VPS stays the primary 
 the phone companion and the Xiaomi APK (`docs/setup.md` "development environments"); the Apple
 TV is the at-home display for the TV side while iterating.
 
-## setup (once, on the Mac)
+## setup — done 2026-09-05 (Mac)
+
+The fork lives in `~/code/flutter-tvos` (1.10.0, pins Flutter 3.47.2 + the tvOS engine); the
+`tvos/` host project is committed. What works, verified:
+
+- **tvOS simulator** (`Apple TV 4K (3rd generation)`, tvOS 26.5): builds, runs, mode selector
+  → TV mode via the select key (Siri Remote = arrow keys + Return in the Simulator window).
+- **physical Apple TV** (`TV`, tvOS 26.6, paired over Wi-Fi): `--release` builds, installs,
+  runs (Impeller/Metal) and logs into MwLog. Signing just worked (the fork put the `PN7996GFJ3`
+  team from the dev certificate into `tvos/Runner.xcodeproj`).
+  **Debug on the device does not attach**: the wireless lldb attach times out ("Dart VM Service
+  was not found"), even with `FLUTTER_TVOS_LLDB_ATTACH_TIMEOUT_SECONDS=600`, and the debug
+  engine never starts without it (the app sits on the launch screen). Untested suspects: the
+  terminal's *Local Network* permission (System Settings ▸ Privacy & Security), first-time
+  symbol download. Until that works: **hot reload on the simulator, `--release` on the TV** —
+  which is what the fork's README recommends anyway.
+- **storage on the real Apple TV**: Documents is read-only, so `main.dart` initialises Hive in
+  the cache directory when `Platform.operatingSystem == 'tvos'` (found the hard way: the map
+  library's `openBox` threw `PathAccessException`; the simulator allows the write).
 
 ```bash
-git clone https://github.com/fluttertv/flutter-tvos.git ~/code/flutter-tvos
-export PATH="$PATH:$HOME/code/flutter-tvos/bin"
-flutter-tvos precache && flutter-tvos doctor
-
-# in the battlemap checkout
-flutter-tvos create --platforms=tvos .          # adds tvos/ host project (commit it)
-# pubspec: add path_provider_tvos, package_info_plus_tvos, wakelock_plus_tvos
-#          (audioplayers_tvos when soundscapes land)
+export PATH="$PATH:$HOME/code/flutter-tvos/bin"      # put in ~/.zshrc
+cd ~/code/battlemap
+flutter-tvos devices                                  # simulator + "TV" when it is awake
 . ~/.config/mwlog/battlemap.env
-flutter-tvos run -d <apple-tv-or-simulator> --dart-define=MWLOG_AUTH=$MWLOG_USER:$MWLOG_PASS
+flutter-tvos run -d <id> --dart-define=MWLOG_AUTH=$MWLOG_USER:$MWLOG_PASS
 ```
+
+`flutter-tvos` is a drop-in for `flutter` (`pub get`, `build tvos --simulator`, …); the plain
+`flutter` it wraps is `~/code/flutter-tvos/flutter/bin/flutter` (use that for `analyze`/`test`,
+the wrapper has no `analyze`). Bumping the fork: `flutter-tvos upgrade`.
+
+### what the tvOS build forced on the dependencies
+
+All in `pubspec.yaml`, all platforms — the VPS build needs **Flutter ≥ 3.47** now (pdfrx).
+
+| change | why |
+|---|---|
+| `pdfrx` ^1.0 → **^2.6.1** (+ `pdfrxFlutterInitialize()` in `PdfHelper`) | 1.3.5 no longer compiles on Flutter 3.47; 2.x needs the explicit init before any `PdfDocument` call |
+| `package_info_plus` ^8 → **^10** | `package_info_plus_tvos` needs platform-interface ≥ 4.1 |
+| `file_picker` ^8 → **^12.2** (`FilePicker.pickFile` + `readAsBytes()`) | forced by package_info_plus 10; v12 removed `FilePicker.platform` and `PlatformFile.size` |
+| `wakelock_plus` pinned **<1.8** | 1.8 declares `tvos:` itself but its pod depends on the iOS-only `Flutter` pod → `pod install` fails; the `wakelock_plus_tvos` port must be the only tvOS provider |
+| + `flutter_tvos`, `path_provider_tvos`, `package_info_plus_tvos`, `wakelock_plus_tvos` | federated tvOS ports (SPM for the first two, CocoaPods for the other two; `brew install cocoapods`) |
+| `analysis_options.yaml` excludes `build/ android/ web/` | written by `flutter-tvos pub get` |
+
+`pdfrx` still has no tvOS PDFium binary: the Dart side compiles, a PDF map on the Apple TV
+fails inside `PdfHelper.renderPdfPage` (caught, returns null) until #36 moves rendering to the
+phone. `.dd2vtt` and image maps are unaffected.
 
 ## things to know on tvOS
 

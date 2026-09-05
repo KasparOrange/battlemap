@@ -5,7 +5,7 @@
 - VPS with Ubuntu (the dev machine — runs Flutter SDK, relay, servers)
 - iPhone with SSH client (Prompt 3) for development
 - Xiaomi TV Box S 3rd Gen (or any Android TV box) for the table display
-- Flutter SDK installed on VPS
+- Flutter SDK **≥ 3.47** installed on VPS (pdfrx 2.x floor since 2026-09-05)
 - optional: the living-room Apple TV as a dev target via flutter-tvos — `docs/apple-tv-dev.md`
 
 ## development environments (decided 2026-09-05)

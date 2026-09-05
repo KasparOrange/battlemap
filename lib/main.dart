@@ -1,15 +1,34 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart';
 import 'ui/tv_shell.dart';
 import 'ui/vtt_companion_screen.dart';
 import 'ui/dev_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
+  await _initHive();
   runApp(Phoenix(child: const BattlemapApp()));
+}
+
+/// Opens Hive in the platform's writable app directory.
+///
+/// [Hive.initFlutter] uses the documents directory, which on a **physical
+/// Apple TV** is read-only (tvOS only lets an app write to Caches, which the
+/// system may purge — acceptable for the dev target, see
+/// `docs/apple-tv-dev.md`). The simulator permits the write, so this only
+/// matters on the real device. Every other platform keeps the default.
+Future<void> _initHive() async {
+  if (!kIsWeb && Platform.operatingSystem == 'tvos') {
+    Hive.init((await getApplicationCacheDirectory()).path);
+  } else {
+    await Hive.initFlutter();
+  }
 }
 
 class BattlemapApp extends StatelessWidget {

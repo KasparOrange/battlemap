@@ -352,18 +352,14 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// - [TvShell._downloadAndLoadPdf], the TV-side handler for PDF uploads.
   Future<void> _pickAndUploadMap() async {
     // Use FileType.any because Safari doesn't recognize .dd2vtt/.uvtt extensions
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      withData: true,
-    );
-    if (result == null || result.files.isEmpty) {
+    final file = await FilePicker.pickFile(type: FileType.any);
+    if (file == null) {
       DevLog.add('Companion: file picker cancelled');
       return;
     }
-    final file = result.files.first;
-    final bytes = file.bytes;
-    if (bytes == null || bytes.isEmpty) {
-      DevLog.add('Companion: file picker returned no data for "${file.name}" (${file.size} bytes on disk)');
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty) {
+      DevLog.add('Companion: file picker returned no data for "${file.name}"');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
