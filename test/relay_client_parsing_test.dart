@@ -190,7 +190,7 @@ void main() {
         double? cy;
         double? cz;
         double? ca;
-        companion.onCameraSync = (x, y, z, a) {
+        companion.onCameraSync = (x, y, z, a, vw, vh) {
           cx = x;
           cy = y;
           cz = z;
@@ -213,7 +213,7 @@ void main() {
       final companion = VttRelayClient(role: 'companion');
       try {
         bool fired = false;
-        companion.onCameraSync = (_, __, ___, ____) => fired = true;
+        companion.onCameraSync = (_, __, ___, ____, _____, ______) => fired = true;
         expect(
           () => companion.handleIncomingMessage(jsonEncode({
             'type': 'vtt.fullState',

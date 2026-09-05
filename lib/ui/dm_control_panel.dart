@@ -32,12 +32,27 @@ const _kSurface = Color(0xFF241e18);
 /// Highlighted surface color for active / selected items.
 const _kSurfaceActive = Color(0xFF3a3020);
 
+// ─── Sizing (thumb-friendly: ≥ 44 px targets) ───────────────────────
+
+/// Minimum height of every tappable control.
+const double _kTarget = 44;
+
+/// Body text size.
+const double _kText = 14;
+
+/// Icon size inside buttons.
+const double _kIcon = 20;
+
 /// Bundle of callbacks for every action the DM control panel can trigger.
 ///
 /// Each screen that hosts a [DmControlPanel] provides its own
 /// implementations. In networked mode ([VttCompanionScreen]), callbacks
 /// send commands through the [VttRelayClient]. In local mode, callbacks
 /// act directly on [VttState] and [VttGame].
+///
+/// The camera-link callbacks ([onSetCameraLink], [onSendView],
+/// [onMatchTv]) are optional; the Camera tab shows the TV-link controls
+/// only when they are provided (networked mode).
 ///
 /// See also:
 /// - [DmControlPanel], the widget that invokes these callbacks.
@@ -66,22 +81,22 @@ class DmCallbacks {
   /// Sets the fog brush radius to `radius` grid cells (0, 1, or 2).
   final void Function(int radius) onSetBrushRadius;
 
-  /// Zooms the camera in by one step.
+  /// Zooms the TV camera in by one step.
   final VoidCallback onZoomIn;
 
-  /// Zooms the camera out by one step.
+  /// Zooms the TV camera out by one step.
   final VoidCallback onZoomOut;
 
-  /// Resets the camera zoom so the entire map fits on screen.
+  /// Resets the TV camera zoom so the entire map fits on screen.
   final VoidCallback onZoomToFit;
 
-  /// Rotates the camera 90 degrees clockwise.
+  /// Rotates the TV camera 90 degrees clockwise.
   final VoidCallback onRotateCW;
 
-  /// Rotates the camera 90 degrees counter-clockwise.
+  /// Rotates the TV camera 90 degrees counter-clockwise.
   final VoidCallback onRotateCCW;
 
-  /// Resets the camera rotation to 0 degrees.
+  /// Resets the TV camera rotation to 0 degrees.
   final VoidCallback onResetRotation;
 
   /// Calibrates the grid so squares match 1-inch miniature bases.
@@ -111,7 +126,7 @@ class DmCallbacks {
   /// Sets the drawing stroke color to the given [Color].
   final void Function(Color) onSetDrawColor;
 
-  /// Sets the drawing stroke width in logical pixels.
+  /// Sets the drawing stroke width in world pixels.
   final void Function(double) onSetDrawWidth;
 
   /// Clears all drawing strokes from the map.
@@ -134,6 +149,12 @@ class DmCallbacks {
       int? maxHp,
       int? currentHp,
       Set<String>? conditions}) onEditToken;
+
+  /// Removes a single token by id (token edit dialog "Delete").
+  ///
+  /// Optional for backwards compatibility; the Delete button is hidden
+  /// when `null`.
+  final void Function(String id)? onRemoveToken;
 
   // ── Undo / Redo ───────────────────────────────────────────────────
 
@@ -167,7 +188,7 @@ class DmCallbacks {
   /// Switches to AoE template interaction mode.
   final VoidCallback onSetAoeMode;
 
-  /// Places an area-of-effect template on the map.
+  /// Places or updates the area-of-effect template on the map.
   final void Function(AoeTemplate template) onSetAoe;
 
   /// Removes the active area-of-effect template.
@@ -182,6 +203,9 @@ class DmCallbacks {
   final VoidCallback onRotateRuler;
 
   /// Sets the scale slider factor for fine-tune zoom adjustment.
+  ///
+  /// Called once on slider release (the panel previews the value locally
+  /// while dragging).
   final void Function(double factor) onSetScaleFactor;
 
   /// Sends updated [SessionSettings] to the TV for the active session.
@@ -194,6 +218,20 @@ class DmCallbacks {
   /// `effect` is one of `'flash'`, `'shake'`, `'fade'`, `'pulse'`, or
   /// `'danger'`.
   final void Function(String effect) onTriggerEffect;
+
+  // ── Camera link (networked mode only) ─────────────────────────────
+
+  /// Turns continuous "TV follows the phone camera" on or off.
+  final void Function(bool linked)? onSetCameraLink;
+
+  /// Sends the phone's current camera to the TV once.
+  final VoidCallback? onSendView;
+
+  /// Moves the phone camera to the TV's current view.
+  final VoidCallback? onMatchTv;
+
+  /// Fits the whole map into the phone screen (phone camera only).
+  final VoidCallback? onPhoneZoomToFit;
 
   /// Creates a [DmCallbacks] with all required action handlers.
   const DmCallbacks({
@@ -223,6 +261,7 @@ class DmCallbacks {
     required this.onUndoStroke,
     required this.onClearTokens,
     required this.onEditToken,
+    this.onRemoveToken,
     required this.onUndo,
     required this.onRedo,
     required this.onToggleShadowMode,
@@ -238,14 +277,22 @@ class DmCallbacks {
     required this.onSetScaleFactor,
     required this.onUpdateSessionSettings,
     required this.onTriggerEffect,
+    this.onSetCameraLink,
+    this.onSendView,
+    this.onMatchTv,
+    this.onPhoneZoomToFit,
   });
 }
 
-/// Collapsible DM control panel with a tabbed medieval-themed UI.
+/// DM control panel — a bottom sheet with a tab bar at the bottom edge.
 ///
-/// When collapsed, it displays as a golden shield icon (48x48). When
-/// expanded, it shows a 220px-wide panel with 6 tabs: Combat, Fog,
-/// Draw, Measure, Camera, and Settings.
+/// Designed for one-handed phone use: the tab bar (Combat, Fog, Draw,
+/// Measure, Camera, Settings) sits at the bottom within thumb reach, the
+/// active tab's content opens above it, and tapping the active tab again
+/// collapses the content so only the tab bar remains. All targets are at
+/// least 44 px high with 14 px text and 20 px icons.
+///
+/// The host lays it out below the map (a `Column`), not floating over it.
 ///
 /// All user actions are routed through [callbacks], which may either act
 /// locally or send commands over the network depending on the hosting
@@ -276,28 +323,19 @@ class _DmControlPanelState extends State<DmControlPanel> {
   bool _expanded = false;
   int _activeTab = 0;
 
-  // AoE template state
-  AoeShape _aoeShape = AoeShape.circle;
-  int _aoeSizeFt = 20;
+  /// Local preview of the scale slider while dragging (sent on release).
+  double? _scalePreview;
 
-  /// Sends the current AoE template configuration to the TV via callback.
-  ///
-  /// Converts the size from feet to grid squares (5ft per square),
-  /// placing the origin at map center (0, 0) as a default.
-  void _sendCurrentAoe() {
-    final radiusInSquares = _aoeSizeFt / 5.0;
-    cb.onSetAoe(AoeTemplate(
-      shape: _aoeShape,
-      originX: 0,
-      originY: 0,
-      radius: radiusInSquares,
-    ));
-  }
+  /// Local preview of the draw width slider while dragging (sent on release).
+  double? _widthPreview;
+
+  /// Whether "link TV to phone" is on (panel-local UI state).
+  bool _cameraLinked = false;
 
   VttState get state => widget.state;
   DmCallbacks get cb => widget.callbacks;
 
-  /// All possible tab definitions: icon, tooltip label, and tab ID.
+  /// All possible tab definitions: icon, label, and tab ID.
   static const _allTabs = [
     (Icons.shield, 'Combat', 'combat'),
     (Icons.cloud, 'Fog', 'fog'),
@@ -329,65 +367,49 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_expanded) {
-      return GestureDetector(
-        onTap: () => setState(() => _expanded = true),
-        child: Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: _kPanelBg,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _kBorderGold),
-          ),
-          child: const Icon(Icons.shield, color: _kAccentGold, size: 22),
-        ),
-      );
-    }
-
+    final maxContent = MediaQuery.of(context).size.height * 0.45;
     return Container(
-      width: 220,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height - 80,
-      ),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: _kPanelBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _kBorderGold),
+        border: Border(top: BorderSide(color: _kBorderGold)),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header
-          _buildHeader(),
-          // Tab bar
-          _buildTabBar(),
-          // Divider
-          Container(height: 1, color: _kBorderGold),
-          // Tab content
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(12),
-              child: _buildTabContent(),
-            ),
-          ),
-        ],
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_expanded) ...[
+              _buildHeader(),
+              Container(height: 1, color: _kBorderGold),
+              ConstrainedBox(
+                constraints: BoxConstraints(maxHeight: maxContent),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                  child: _buildTabContent(),
+                ),
+              ),
+              Container(height: 1, color: _kBorderGold),
+            ],
+            _buildTabBar(),
+          ],
+        ),
       ),
     );
   }
 
-  /// Builds the panel header with "DM" title, undo/redo buttons, and close button.
+  /// Builds the header row: "DM" title, undo/redo, session settings gear,
+  /// and a collapse chevron.
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 4, 4),
+      padding: const EdgeInsets.fromLTRB(14, 2, 4, 2),
       child: Row(
         children: [
-          const Icon(Icons.shield, color: _kAccentGold, size: 16),
-          const SizedBox(width: 6),
-          const Expanded(
+          const Icon(Icons.shield, color: _kAccentGold, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
             child: Text(
-              'DM',
-              style: TextStyle(
+              _visibleTabs.length > _activeTab ? _visibleTabs[_activeTab].$2 : 'DM',
+              style: const TextStyle(
                 color: _kTextPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -395,32 +417,18 @@ class _DmControlPanelState extends State<DmControlPanel> {
               ),
             ),
           ),
-          // Undo button
-          GestureDetector(
-            onTap: state.canUndo ? cb.onUndo : null,
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.undo,
-                color: state.canUndo ? _kAccentGold : _kAccentGoldDim,
-                size: 18,
-              ),
-            ),
+          _IconTarget(
+            icon: Icons.undo,
+            enabled: state.canUndo,
+            onTap: cb.onUndo,
           ),
-          // Redo button
-          GestureDetector(
-            onTap: state.canRedo ? cb.onRedo : null,
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(
-                Icons.redo,
-                color: state.canRedo ? _kAccentGold : _kAccentGoldDim,
-                size: 18,
-              ),
-            ),
+          _IconTarget(
+            icon: Icons.redo,
+            enabled: state.canRedo,
+            onTap: cb.onRedo,
           ),
-          // Session settings gear button
-          GestureDetector(
+          _IconTarget(
+            icon: Icons.settings,
             onTap: () async {
               final updated = await showSessionSettingsDialog(
                 context,
@@ -430,60 +438,71 @@ class _DmControlPanelState extends State<DmControlPanel> {
                 cb.onUpdateSessionSettings(updated);
               }
             },
-            child: const Padding(
-              padding: EdgeInsets.all(4),
-              child: Icon(Icons.settings, color: _kAccentGoldDim, size: 18),
-            ),
           ),
-          GestureDetector(
+          _IconTarget(
+            icon: Icons.expand_more,
             onTap: () => setState(() => _expanded = false),
-            child: const Padding(
-              padding: EdgeInsets.all(8),
-              child: Icon(Icons.close, color: _kAccentGoldDim, size: 18),
-            ),
           ),
         ],
       ),
     );
   }
 
-  /// Builds the 6-icon horizontal tab bar.
+  /// Builds the bottom tab bar. Tapping the active tab toggles the content.
   Widget _buildTabBar() {
     final tabs = _visibleTabs;
     // Clamp _activeTab to valid range
     if (_activeTab >= tabs.length) _activeTab = 0;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Row(
-        children: [
-          for (int i = 0; i < tabs.length; i++)
-            Expanded(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() => _activeTab = i);
-                  // Auto-activate measure mode when switching to Measure tab
-                  if (tabs[i].$3 == 'measure') cb.onSetMeasureMode();
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  decoration: BoxDecoration(
-                    border: _activeTab == i
-                        ? const Border(
-                            bottom:
-                                BorderSide(color: _kAccentGold, width: 2),
-                          )
-                        : null,
-                  ),
-                  child: Icon(
-                    tabs[i].$1,
-                    color: _activeTab == i ? _kAccentGold : _kAccentGoldDim,
-                    size: 20,
-                  ),
+    return Row(
+      children: [
+        for (int i = 0; i < tabs.length; i++)
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                setState(() {
+                  if (_activeTab == i) {
+                    _expanded = !_expanded;
+                  } else {
+                    _activeTab = i;
+                    _expanded = true;
+                  }
+                });
+                // Auto-activate measure mode when opening the Measure tab
+                if (tabs[i].$3 == 'measure' && _expanded) cb.onSetMeasureMode();
+              },
+              child: Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  border: _activeTab == i && _expanded
+                      ? const Border(
+                          top: BorderSide(color: _kAccentGold, width: 2),
+                        )
+                      : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      tabs[i].$1,
+                      color: _activeTab == i ? _kAccentGold : _kAccentGoldDim,
+                      size: 22,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      tabs[i].$2,
+                      style: TextStyle(
+                        color: _activeTab == i ? _kTextPrimary : _kTextSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 
@@ -513,160 +532,140 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Combat Tab ──────────────────────────────────────────
 
+  /// Applies a new shape/size to the AoE tool and, if a template is on the
+  /// map, updates it in place (origin and angle are kept).
+  void _setAoeTool(AoeShape shape, double radius) {
+    state.setAoeTool(shape, radius);
+    final current = state.activeAoe;
+    if (current != null) {
+      cb.onSetAoe(AoeTemplate(
+        shape: shape,
+        originX: current.originX,
+        originY: current.originY,
+        radius: radius,
+        angle: current.angle,
+      ));
+    }
+  }
+
   /// Builds the Combat tab: token placement toggle, token list with
-  /// HP controls, and a clear-all button.
+  /// HP controls, a clear-all button, and the AoE template controls.
   Widget _buildCombatTab() {
     final tokens = state.tokens;
+    final s = state.sessionSettings;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _GoldButton(
-          icon: Icons.person_pin,
-          label: 'Place Token',
-          active: state.interactionMode == InteractionMode.token,
-          onTap: cb.onSetTokenMode,
-        ),
-        const SizedBox(height: 8),
-        if (tokens.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Text(
-              'Switch to token mode\nand tap the map',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: _kTextSecondary,
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
+        if (s.tokens) ...[
+          _GoldButton(
+            icon: Icons.person_pin,
+            label: 'Place Token',
+            active: state.interactionMode == InteractionMode.token,
+            onTap: cb.onSetTokenMode,
+          ),
+          const SizedBox(height: 8),
+          if (tokens.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'Switch to token mode and tap the map',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _kTextSecondary,
+                  fontSize: _kText,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
+            )
+          else ...[
+            for (final token in tokens) ...[
+              _buildTokenRow(token),
+              const SizedBox(height: 6),
+            ],
+            const SizedBox(height: 4),
+            _GoldButton(
+              icon: Icons.delete_outline,
+              label: 'Clear All Tokens',
+              onTap: cb.onClearTokens,
             ),
-          )
-        else ...[
-          for (final token in tokens) ...[
-            _buildTokenRow(token),
-            const SizedBox(height: 6),
           ],
         ],
-        if (tokens.isNotEmpty) ...[
-          const SizedBox(height: 4),
+        if (s.aoeTemplates) ...[
+          if (s.tokens) ...[
+            const SizedBox(height: 12),
+            Container(height: 1, color: _kBorderGold),
+            const SizedBox(height: 10),
+          ],
           _GoldButton(
-            icon: Icons.delete_outline,
-            label: 'Clear All Tokens',
-            onTap: cb.onClearTokens,
+            icon: Icons.my_location,
+            label: 'AoE Mode',
+            active: state.interactionMode == InteractionMode.aoe,
+            onTap: cb.onSetAoeMode,
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Tap the map to place. Drag to aim a cone or line, or to move a circle or square.',
+            style: TextStyle(color: _kTextSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 8),
+          const _GoldLabel('Shape'),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              for (final entry in {
+                AoeShape.circle: Icons.circle_outlined,
+                AoeShape.cone: Icons.pie_chart_outline,
+                AoeShape.line: Icons.horizontal_rule,
+                AoeShape.square: Icons.crop_square,
+              }.entries) ...[
+                if (entry.key != AoeShape.circle) const SizedBox(width: 6),
+                Expanded(
+                  child: _Chip(
+                    active: state.aoeShape == entry.key,
+                    onTap: () => _setAoeTool(entry.key, state.aoeRadius),
+                    child: Icon(
+                      entry.value,
+                      color: state.aoeShape == entry.key ? _kAccentGold : _kAccentGoldDim,
+                      size: _kIcon,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          const _GoldLabel('Size'),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              for (final ft in [10, 15, 20, 30, 60]) ...[
+                if (ft != 10) const SizedBox(width: 6),
+                Expanded(
+                  child: _Chip(
+                    active: (state.aoeRadius * 5).round() == ft,
+                    onTap: () => _setAoeTool(state.aoeShape, ft / 5.0),
+                    child: Text(
+                      '$ft',
+                      style: TextStyle(
+                        color: (state.aoeRadius * 5).round() == ft
+                            ? _kTextPrimary
+                            : _kTextSecondary,
+                        fontSize: _kText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          _GoldButton(
+            icon: Icons.close,
+            label: 'Clear AoE',
+            onTap: cb.onClearAoe,
           ),
         ],
-        // ── AoE Templates ──────────────────────────────────────────
-        const SizedBox(height: 12),
-        Container(height: 1, color: _kBorderGold),
-        const SizedBox(height: 8),
-        const _GoldLabel('AoE'),
-        const SizedBox(height: 4),
-        // Shape selector
-        Row(
-          children: [
-            for (final entry in {
-              AoeShape.circle: Icons.circle_outlined,
-              AoeShape.cone: Icons.pie_chart_outline,
-              AoeShape.line: Icons.horizontal_rule,
-              AoeShape.square: Icons.crop_square,
-            }.entries) ...[
-              if (entry.key != AoeShape.circle) const SizedBox(width: 4),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() => _aoeShape = entry.key);
-                    _sendCurrentAoe();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _aoeShape == entry.key
-                          ? _kSurfaceActive
-                          : _kSurface,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: _aoeShape == entry.key
-                            ? _kAccentGold
-                            : _kBorderGold,
-                      ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        entry.value,
-                        color: _aoeShape == entry.key
-                            ? _kAccentGold
-                            : _kAccentGoldDim,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 6),
-        // Size selector (in feet: 10, 15, 20, 30, 60)
-        const _GoldLabel('Size'),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 4,
-          runSpacing: 4,
-          children: [
-            for (final ft in [10, 15, 20, 30, 60])
-              GestureDetector(
-                onTap: () {
-                  setState(() => _aoeSizeFt = ft);
-                  _sendCurrentAoe();
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _aoeSizeFt == ft
-                        ? _kSurfaceActive
-                        : _kSurface,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _aoeSizeFt == ft
-                          ? _kAccentGold
-                          : _kBorderGold,
-                    ),
-                  ),
-                  child: Text(
-                    '${ft}ft',
-                    style: TextStyle(
-                      color: _aoeSizeFt == ft
-                          ? _kTextPrimary
-                          : _kTextSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Expanded(
-              child: _GoldButton(
-                icon: Icons.my_location,
-                label: 'AoE Mode',
-                active: false,
-                onTap: cb.onSetAoeMode,
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: _GoldButton(
-                icon: Icons.close,
-                label: 'Clear',
-                onTap: cb.onClearAoe,
-              ),
-            ),
-          ],
-        ),
       ],
     );
   }
@@ -679,7 +678,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
     return GestureDetector(
       onTap: () => _showTokenEditDialog(token),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: _kSurface,
           borderRadius: BorderRadius.circular(6),
@@ -692,8 +691,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
             Row(
               children: [
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: 14,
+                  height: 14,
                   decoration: BoxDecoration(
                     color: token.color,
                     shape: BoxShape.circle,
@@ -705,7 +704,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                     displayName,
                     style: const TextStyle(
                       color: _kTextPrimary,
-                      fontSize: 13,
+                      fontSize: _kText,
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 1,
@@ -733,6 +732,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
                         ),
                     ],
                   ),
+                const SizedBox(width: 6),
+                const Icon(Icons.edit, color: _kAccentGoldDim, size: 16),
               ],
             ),
             // HP row (only if maxHp > 0)
@@ -758,7 +759,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                           color: token.currentHp <= 0
                               ? Colors.redAccent
                               : _kTextPrimary,
-                          fontSize: 13,
+                          fontSize: _kText,
                           fontWeight: FontWeight.w600,
                           fontFamily: 'monospace',
                         ),
@@ -785,7 +786,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   /// Shows a medieval-styled dialog for editing a token's combat metadata.
   ///
-  /// Fields: name, maxHp, currentHp, condition toggles, and a delete button.
+  /// Fields: name, maxHp, currentHp, condition toggles, and a delete button
+  /// (shown when [DmCallbacks.onRemoveToken] is provided).
   /// On save, calls [DmCallbacks.onEditToken] with all changed values.
   void _showTokenEditDialog(MapToken token) {
     final nameCtrl = TextEditingController(text: token.name);
@@ -878,12 +880,12 @@ class _DmControlPanelState extends State<DmControlPanel> {
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                                horizontal: 12, vertical: 8),
                             decoration: BoxDecoration(
                               color: selectedConditions.contains(entry.key)
                                   ? Color(entry.value).withValues(alpha: 0.3)
                                   : _kSurface,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: selectedConditions.contains(entry.key)
                                     ? Color(entry.value)
@@ -896,7 +898,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                                 color: selectedConditions.contains(entry.key)
                                     ? Color(entry.value)
                                     : _kTextSecondary,
-                                fontSize: 11,
+                                fontSize: 13,
                               ),
                             ),
                           ),
@@ -908,26 +910,24 @@ class _DmControlPanelState extends State<DmControlPanel> {
             ),
             actions: [
               // Delete
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  // Remove the token by setting HP to trigger awareness
-                  // We use the clear mechanism through the state
-                  cb.onEditToken(token.id,
-                      name: '', maxHp: 0, currentHp: 0, conditions: {});
-                },
-                child: const Text(
-                  'Reset',
-                  style: TextStyle(color: _kTextSecondary, fontSize: 13),
+              if (cb.onRemoveToken != null)
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    cb.onRemoveToken!(token.id);
+                  },
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.redAccent, fontSize: _kText),
+                  ),
                 ),
-              ),
               const Spacer(),
               // Cancel
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text(
                   'Cancel',
-                  style: TextStyle(color: _kTextSecondary, fontSize: 13),
+                  style: TextStyle(color: _kTextSecondary, fontSize: _kText),
                 ),
               ),
               // Save
@@ -947,7 +947,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                 },
                 child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                   decoration: BoxDecoration(
                     color: _kAccentGold,
                     borderRadius: BorderRadius.circular(6),
@@ -956,7 +956,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                     'Save',
                     style: TextStyle(
                       color: _kPanelBg,
-                      fontSize: 13,
+                      fontSize: _kText,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -984,7 +984,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
       controller: controller,
       keyboardType:
           isNumeric ? const TextInputType.numberWithOptions() : TextInputType.text,
-      style: const TextStyle(color: _kTextPrimary, fontSize: 14),
+      style: const TextStyle(color: _kTextPrimary, fontSize: _kText),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -1004,8 +1004,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Fog Tab ─────────────────────────────────────────────
 
-  /// Builds the Fog tab: shadow toggle, fog on/off, reveal/hide all,
-  /// brush mode, brush size, and room reveal.
+  /// Builds the Fog tab: brush mode (Reveal|Hide), brush size, room reveal,
+  /// shadow toggle with commit/discard, fog on/off, reveal all / hide all.
   Widget _buildFogTab() {
     final hasShadowCells =
         state.shadowRevealCells.isNotEmpty || state.shadowHideCells.isNotEmpty;
@@ -1015,10 +1015,66 @@ class _DmControlPanelState extends State<DmControlPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _GoldButton(
+          icon: Icons.cloud,
+          label: 'Fog Brush',
+          active: state.interactionMode == InteractionMode.fogReveal,
+          onTap: cb.onSetFogMode,
+        ),
+        const SizedBox(height: 8),
+        const _GoldLabel('Brush paints'),
+        const SizedBox(height: 4),
+        _Segmented(
+          options: const [
+            (Icons.wb_sunny, 'Reveal'),
+            (Icons.dark_mode, 'Hide'),
+          ],
+          selected: state.revealMode ? 0 : 1,
+          onSelect: (i) {
+            if ((i == 0) != state.revealMode) cb.onToggleRevealMode();
+          },
+        ),
+        const SizedBox(height: 8),
+        const _GoldLabel('Brush size'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            for (final entry in {0: '1', 1: '3', 2: '5'}.entries) ...[
+              if (entry.key > 0) const SizedBox(width: 6),
+              Expanded(
+                child: _Chip(
+                  active: state.brushRadius == entry.key,
+                  onTap: () => cb.onSetBrushRadius(entry.key),
+                  child: Text(
+                    entry.value,
+                    style: TextStyle(
+                      color: state.brushRadius == entry.key
+                          ? _kTextPrimary
+                          : _kTextSecondary,
+                      fontSize: _kText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Room reveal mode button
+        _GoldButton(
+          icon: Icons.meeting_room,
+          label: 'Room (tap a room to fill)',
+          active: state.interactionMode == InteractionMode.roomReveal,
+          onTap: cb.onSetRoomRevealMode,
+        ),
+        const SizedBox(height: 12),
+        Container(height: 1, color: _kBorderGold),
+        const SizedBox(height: 10),
         // Shadow / Live toggle
         _GoldToggle(
           icon: state.shadowMode ? Icons.preview : Icons.flash_on,
-          label: state.shadowMode ? 'Shadow' : 'Live',
+          label: state.shadowMode ? 'Shadow mode (preview first)' : 'Live mode',
           active: state.shadowMode,
           onTap: cb.onToggleShadowMode,
         ),
@@ -1032,66 +1088,39 @@ class _DmControlPanelState extends State<DmControlPanel> {
                   '$shadowCellCount cells staged',
                   style: const TextStyle(
                     color: _kTextSecondary,
-                    fontSize: 11,
+                    fontSize: 13,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
               ),
-              // Apply (commit)
-              GestureDetector(
+              _ActionSquare(
+                icon: Icons.check,
+                color: const Color(0xFF4CAF50),
                 onTap: cb.onCommitShadow,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2E7D32).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: const Color(0xFF4CAF50),
-                    ),
-                  ),
-                  child: const Icon(Icons.check, color: Color(0xFF4CAF50), size: 16),
-                ),
               ),
               const SizedBox(width: 6),
-              // Clear
-              GestureDetector(
+              _ActionSquare(
+                icon: Icons.close,
+                color: const Color(0xFFE53935),
                 onTap: cb.onClearShadow,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFC62828).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(
-                      color: const Color(0xFFE53935),
-                    ),
-                  ),
-                  child: const Icon(Icons.close, color: Color(0xFFE53935), size: 16),
-                ),
               ),
             ],
           ),
         ],
         const SizedBox(height: 8),
-        _GoldButton(
-          icon: Icons.cloud,
-          label: 'Fog Brush',
-          active: state.interactionMode == InteractionMode.fogReveal,
-          onTap: cb.onSetFogMode,
-        ),
-        const SizedBox(height: 8),
         _GoldToggle(
           icon: state.fogEnabled ? Icons.cloud : Icons.cloud_off,
-          label: 'Fog',
+          label: 'Fog layer',
           active: state.fogEnabled,
           onTap: cb.onToggleFog,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
               child: _GoldButton(
                 icon: Icons.visibility,
-                label: 'Reveal',
+                label: 'Reveal all',
                 onTap: cb.onRevealAll,
               ),
             ),
@@ -1099,68 +1128,11 @@ class _DmControlPanelState extends State<DmControlPanel> {
             Expanded(
               child: _GoldButton(
                 icon: Icons.visibility_off,
-                label: 'Hide',
+                label: 'Hide all',
                 onTap: cb.onHideAll,
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 8),
-        _GoldToggle(
-          icon: state.revealMode ? Icons.wb_sunny : Icons.dark_mode,
-          label: state.revealMode ? 'Reveal' : 'Hide',
-          active: state.revealMode,
-          onTap: cb.onToggleRevealMode,
-        ),
-        const SizedBox(height: 8),
-        // Brush size
-        const _GoldLabel('Brush Size'),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            for (final entry in {0: '1', 1: '3', 2: '5'}.entries) ...[
-              if (entry.key > 0) const SizedBox(width: 4),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => cb.onSetBrushRadius(entry.key),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: state.brushRadius == entry.key
-                          ? _kSurfaceActive
-                          : _kSurface,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: state.brushRadius == entry.key
-                            ? _kAccentGold
-                            : _kBorderGold,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        entry.value,
-                        style: TextStyle(
-                          color: state.brushRadius == entry.key
-                              ? _kTextPrimary
-                              : _kTextSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 8),
-        // Room reveal mode button
-        _GoldButton(
-          icon: Icons.meeting_room,
-          label: 'Room',
-          active: false, // roomReveal mode may not be in InteractionMode yet
-          onTap: cb.onSetRoomRevealMode,
         ),
       ],
     );
@@ -1168,7 +1140,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Draw Tab ────────────────────────────────────────────
 
-  /// Builds the Draw tab: color palette, width presets, clear/undo buttons.
+  /// Builds the Draw tab: color palette, width presets + slider, clear/undo.
   Widget _buildDrawTab() {
     const colors = [
       Color(0xFFE53935), // red
@@ -1178,6 +1150,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
       Color(0xFFFF8F00), // orange
       Color(0xFFFFFFFF), // white
     ];
+    final width = _widthPreview ?? state.drawWidth;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1196,20 +1169,24 @@ class _DmControlPanelState extends State<DmControlPanel> {
             for (final color in colors)
               Expanded(
                 child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
                   onTap: () => cb.onSetDrawColor(color),
-                  child: Center(
-                    child: Container(
-                      width: 22,
-                      height: 22,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: state.drawColor.toARGB32() == color.toARGB32()
-                            ? Border.all(color: _kAccentGold, width: 2.5)
-                            : Border.all(
-                                color: _kBorderGold,
-                                width: 1,
-                              ),
+                  child: SizedBox(
+                    height: _kTarget,
+                    child: Center(
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: state.drawColor.toARGB32() == color.toARGB32()
+                              ? Border.all(color: _kAccentGold, width: 3)
+                              : Border.all(
+                                  color: _kBorderGold,
+                                  width: 1,
+                                ),
+                        ),
                       ),
                     ),
                   ),
@@ -1218,40 +1195,28 @@ class _DmControlPanelState extends State<DmControlPanel> {
           ],
         ),
         const SizedBox(height: 10),
-        // Width presets
-        const _GoldLabel('Width'),
+        // Width presets + slider
+        _GoldLabel('Width  ${width.round()} px'),
         const SizedBox(height: 4),
         Row(
           children: [
-            for (final entry in {2.0: 'S', 4.0: 'M', 8.0: 'L'}.entries) ...[
-              if (entry.key != 2.0) const SizedBox(width: 4),
+            for (final entry in {2.0: 'S', 4.0: 'M', 8.0: 'L', 14.0: 'XL'}.entries) ...[
+              if (entry.key != 2.0) const SizedBox(width: 6),
               Expanded(
-                child: GestureDetector(
-                  onTap: () => cb.onSetDrawWidth(entry.key),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
+                child: _Chip(
+                  active: state.drawWidth == entry.key,
+                  onTap: () {
+                    setState(() => _widthPreview = null);
+                    cb.onSetDrawWidth(entry.key);
+                  },
+                  child: Text(
+                    entry.value,
+                    style: TextStyle(
                       color: state.drawWidth == entry.key
-                          ? _kSurfaceActive
-                          : _kSurface,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: state.drawWidth == entry.key
-                            ? _kAccentGold
-                            : _kBorderGold,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        entry.value,
-                        style: TextStyle(
-                          color: state.drawWidth == entry.key
-                              ? _kTextPrimary
-                              : _kTextSecondary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                          ? _kTextPrimary
+                          : _kTextSecondary,
+                      fontSize: _kText,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -1259,7 +1224,17 @@ class _DmControlPanelState extends State<DmControlPanel> {
             ],
           ],
         ),
-        const SizedBox(height: 10),
+        _goldSlider(
+          value: width.clamp(1.0, 20.0),
+          min: 1,
+          max: 20,
+          divisions: 19,
+          onChanged: (v) => setState(() => _widthPreview = v),
+          onChangeEnd: (v) {
+            setState(() => _widthPreview = null);
+            cb.onSetDrawWidth(v.roundToDouble());
+          },
+        ),
         // Clear / Undo
         Row(
           children: [
@@ -1274,7 +1249,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
             Expanded(
               child: _GoldButton(
                 icon: Icons.undo,
-                label: 'Undo',
+                label: 'Undo stroke',
                 onTap: cb.onUndoStroke,
               ),
             ),
@@ -1286,7 +1261,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Measure Tab ─────────────────────────────────────────
 
-  /// Builds the Measure tab: hint text for drag-to-measure.
+  /// Builds the Measure tab: measure mode + the physical ruler controls.
   Widget _buildMeasureTab() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1297,35 +1272,97 @@ class _DmControlPanelState extends State<DmControlPanel> {
           active: state.interactionMode == InteractionMode.measure,
           onTap: cb.onSetMeasureMode,
         ),
-        const SizedBox(height: 16),
-        const Center(
-          child: Column(
-            children: [
-              Icon(Icons.straighten, color: _kAccentGoldDim, size: 32),
-              SizedBox(height: 8),
-              Text(
-                'Drag on map to measure',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _kTextSecondary,
-                  fontSize: 13,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
-            ],
-          ),
+        const SizedBox(height: 4),
+        const Text(
+          'Drag on the map to measure. Tap to clear. The players see the line on the TV.',
+          style: TextStyle(color: _kTextSecondary, fontSize: 12),
         ),
+        const SizedBox(height: 12),
+        Container(height: 1, color: _kBorderGold),
+        const SizedBox(height: 10),
+        const _GoldLabel('Ruler'),
+        const SizedBox(height: 4),
+        _GoldToggle(
+          icon: Icons.square_foot,
+          label: 'Ruler on the map',
+          active: state.rulerVisible,
+          onTap: cb.onToggleRuler,
+        ),
+        if (state.rulerVisible) ...[
+          const SizedBox(height: 6),
+          _GoldButton(
+            icon: Icons.rotate_right,
+            label: 'Rotate ruler',
+            onTap: cb.onRotateRuler,
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Drag the ruler on the map to move it (in any mode).',
+            style: TextStyle(color: _kTextSecondary, fontSize: 12),
+          ),
+        ],
       ],
     );
   }
 
   // ─── Camera Tab ──────────────────────────────────────────
 
-  /// Builds the Camera tab: zoom in/out/fit and rotate CW/CCW/reset.
+  /// Builds the Camera tab: phone fit, TV zoom/rotate, and the TV link
+  /// controls (link, send view, match TV) when provided by the host.
   Widget _buildCameraTab() {
+    final hasLink = cb.onSetCameraLink != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (hasLink) ...[
+          const _GoldLabel('Phone'),
+          const SizedBox(height: 4),
+          const Text(
+            'Pinch and drag with two fingers to move the phone view. The dashed frame is what the TV shows.',
+            style: TextStyle(color: _kTextSecondary, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: _GoldButton(
+                  icon: Icons.fit_screen,
+                  label: 'Fit map',
+                  onTap: cb.onPhoneZoomToFit ?? () {},
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _GoldButton(
+                  icon: Icons.center_focus_strong,
+                  label: 'Match TV',
+                  onTap: cb.onMatchTv ?? () {},
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(height: 1, color: _kBorderGold),
+          const SizedBox(height: 10),
+          const _GoldLabel('TV'),
+          const SizedBox(height: 4),
+          _GoldToggle(
+            icon: Icons.link,
+            label: 'TV follows the phone',
+            active: _cameraLinked,
+            onTap: () {
+              setState(() => _cameraLinked = !_cameraLinked);
+              cb.onSetCameraLink!(_cameraLinked);
+            },
+          ),
+          const SizedBox(height: 6),
+          _GoldButton(
+            icon: Icons.send_to_mobile,
+            label: 'Send this view to the TV',
+            onTap: cb.onSendView ?? () {},
+          ),
+          const SizedBox(height: 10),
+        ],
         const _GoldLabel('Zoom'),
         const SizedBox(height: 4),
         Row(
@@ -1333,13 +1370,13 @@ class _DmControlPanelState extends State<DmControlPanel> {
             Expanded(
               child: _GoldButton(icon: Icons.remove, label: '', onTap: cb.onZoomOut),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Expanded(
               flex: 2,
               child: _GoldButton(
                   icon: Icons.fit_screen, label: 'Fit', onTap: cb.onZoomToFit),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Expanded(
               child: _GoldButton(icon: Icons.add, label: '', onTap: cb.onZoomIn),
             ),
@@ -1354,16 +1391,16 @@ class _DmControlPanelState extends State<DmControlPanel> {
               child: _GoldButton(
                   icon: Icons.rotate_left, label: '', onTap: cb.onRotateCCW),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Expanded(
               flex: 2,
               child: _GoldButton(
                 icon: Icons.screen_rotation_alt,
-                label: '0\u00B0',
+                label: '0°',
                 onTap: cb.onResetRotation,
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Expanded(
               child: _GoldButton(
                   icon: Icons.rotate_right, label: '', onTap: cb.onRotateCW),
@@ -1376,8 +1413,11 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Settings Tab ────────────────────────────────────────
 
-  /// Builds the Settings tab: load map, grid/walls toggles, calibrate button.
+  /// Builds the Settings tab: load map, grid/walls toggles, calibrate,
+  /// scale slider (calibrated only), effects.
   Widget _buildSettingsTab() {
+    final calibrated = state.calibratedBaseZoom != null;
+    final scale = _scalePreview ?? state.scaleSliderFactor;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1400,59 +1440,39 @@ class _DmControlPanelState extends State<DmControlPanel> {
           active: state.showWalls,
           onTap: cb.onToggleWalls,
         ),
+        const SizedBox(height: 12),
+        Container(height: 1, color: _kBorderGold),
         const SizedBox(height: 10),
-        const _GoldLabel('Calibrate'),
+        const _GoldLabel('Physical scale'),
         const SizedBox(height: 4),
         _GoldButton(
           icon: Icons.straighten,
-          label: state.calibratedBaseZoom != null
-              ? '${state.tvWidthInches!.round()}" calibrated'
-              : 'Set TV size',
+          label: calibrated
+              ? '${state.tvWidthInches!.round()}" TV — calibrated'
+              : 'Set TV size (calibrate)',
+          active: calibrated,
           onTap: () => _showCalibrationDialog(context),
         ),
-        const SizedBox(height: 12),
-        const Divider(color: _kBorderGold, height: 1),
-        const SizedBox(height: 10),
-        const _GoldLabel('Ruler'),
-        const SizedBox(height: 4),
-        _GoldToggle(
-          icon: Icons.square_foot,
-          label: 'Ruler overlay',
-          active: state.rulerVisible,
-          onTap: cb.onToggleRuler,
-        ),
         const SizedBox(height: 6),
-        _GoldButton(
-          icon: Icons.rotate_right,
-          label: 'Rotate ruler',
-          onTap: cb.onRotateRuler,
-        ),
-        const SizedBox(height: 10),
-        const _GoldLabel('Scale'),
-        const SizedBox(height: 4),
-        Text(
-          'Scale: ${state.scaleSliderFactor.toStringAsFixed(2)}x',
-          style: const TextStyle(color: _kTextSecondary, fontSize: 12),
-        ),
-        const SizedBox(height: 2),
-        SliderTheme(
-          data: SliderThemeData(
-            activeTrackColor: _kAccentGold,
-            inactiveTrackColor: _kAccentGoldDim.withValues(alpha: 0.4),
-            thumbColor: _kAccentGold,
-            overlayColor: _kAccentGold.withValues(alpha: 0.2),
-            trackHeight: 3,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-          ),
-          child: Slider(
-            value: state.scaleSliderFactor,
+        if (calibrated) ...[
+          _GoldLabel('Scale  ${scale.toStringAsFixed(2)}×'),
+          _goldSlider(
+            value: scale,
             min: 0.5,
             max: 2.0,
-            onChanged: (v) => cb.onSetScaleFactor(v),
+            onChanged: (v) => setState(() => _scalePreview = v),
+            onChangeEnd: (v) {
+              setState(() => _scalePreview = null);
+              cb.onSetScaleFactor(v);
+            },
           ),
-        ),
+        ] else
+          const Text(
+            'Calibrate the TV size first, then fine-tune the grid scale here.',
+            style: TextStyle(color: _kTextSecondary, fontSize: 12),
+          ),
         const SizedBox(height: 12),
-        const Divider(color: _kBorderGold, height: 1),
+        Container(height: 1, color: _kBorderGold),
         const SizedBox(height: 10),
         const _GoldLabel('Effects'),
         const SizedBox(height: 4),
@@ -1465,7 +1485,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                 onTap: () => cb.onTriggerEffect('flash'),
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Expanded(
               child: _GoldButton(
                 icon: Icons.vibration,
@@ -1475,7 +1495,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         Row(
           children: [
             Expanded(
@@ -1485,7 +1505,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                 onTap: () => cb.onTriggerEffect('fade'),
               ),
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 6),
             Expanded(
               child: _GoldButton(
                 icon: Icons.all_out,
@@ -1495,13 +1515,42 @@ class _DmControlPanelState extends State<DmControlPanel> {
             ),
           ],
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 6),
         _GoldButton(
           icon: Icons.warning,
           label: 'Danger',
           onTap: () => cb.onTriggerEffect('danger'),
         ),
       ],
+    );
+  }
+
+  /// Gold-themed slider with a large thumb.
+  Widget _goldSlider({
+    required double value,
+    required double min,
+    required double max,
+    int? divisions,
+    required ValueChanged<double> onChanged,
+    required ValueChanged<double> onChangeEnd,
+  }) {
+    return SliderTheme(
+      data: SliderThemeData(
+        activeTrackColor: _kAccentGold,
+        inactiveTrackColor: _kAccentGoldDim.withValues(alpha: 0.4),
+        thumbColor: _kAccentGold,
+        overlayColor: _kAccentGold.withValues(alpha: 0.2),
+        trackHeight: 4,
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+      ),
+      child: Slider(
+        value: value,
+        min: min,
+        max: max,
+        divisions: divisions,
+        onChanged: onChanged,
+        onChangeEnd: onChangeEnd,
+      ),
     );
   }
 
@@ -1608,7 +1657,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
             },
             child: Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               decoration: BoxDecoration(
                 color: _kAccentGold,
                 borderRadius: BorderRadius.circular(6),
@@ -1617,7 +1666,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                 'Calibrate',
                 style: TextStyle(
                   color: _kPanelBg,
-                  fontSize: 13,
+                  fontSize: _kText,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1631,7 +1680,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
 // ─── Shared themed widgets ──────────────────────────────────────────
 
-/// Gold-bordered button with optional active highlight.
+/// Gold-bordered button with optional active highlight (≥ 44 px high).
 ///
 /// Used throughout the DM panel for action buttons. When [active] is
 /// true, draws a gold border and lighter background.
@@ -1639,7 +1688,7 @@ class _GoldButton extends StatelessWidget {
   /// Icon displayed on the left side of the button.
   final IconData icon;
 
-  /// Text label shown next to the icon.
+  /// Text label shown next to the icon (empty = icon only, centered).
   final String label;
 
   /// Callback invoked when the button is tapped.
@@ -1658,12 +1707,14 @@ class _GoldButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        constraints: const BoxConstraints(minHeight: _kTarget),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: active ? _kSurfaceActive : _kSurface,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: active ? _kAccentGold : _kBorderGold,
           ),
@@ -1674,15 +1725,15 @@ class _GoldButton extends StatelessWidget {
               label.isEmpty ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
             Icon(icon,
-                color: active ? _kAccentGold : _kAccentGoldDim, size: 16),
+                color: active ? _kAccentGold : _kAccentGoldDim, size: _kIcon),
             if (label.isNotEmpty) ...[
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Flexible(
                 child: Text(
                   label,
                   style: TextStyle(
                     color: active ? _kTextPrimary : _kTextSecondary,
-                    fontSize: 12,
+                    fontSize: _kText,
                     fontWeight: FontWeight.w500,
                   ),
                   maxLines: 1,
@@ -1697,7 +1748,7 @@ class _GoldButton extends StatelessWidget {
   }
 }
 
-/// Gold-themed toggle switch with a status dot indicator.
+/// Gold-themed toggle switch with a status dot indicator (≥ 44 px high).
 ///
 /// Displays an icon, label, and a colored dot on the right side
 /// (gold when active, dim when inactive).
@@ -1724,12 +1775,14 @@ class _GoldToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        constraints: const BoxConstraints(minHeight: _kTarget),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: active ? _kSurfaceActive : _kSurface,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: active ? _kAccentGold : _kBorderGold,
           ),
@@ -1737,25 +1790,175 @@ class _GoldToggle extends StatelessWidget {
         child: Row(
           children: [
             Icon(icon,
-                color: active ? _kAccentGold : _kAccentGoldDim, size: 16),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: active ? _kTextPrimary : _kTextSecondary,
-                fontSize: 12,
+                color: active ? _kAccentGold : _kAccentGoldDim, size: _kIcon),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: active ? _kTextPrimary : _kTextSecondary,
+                  fontSize: _kText,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Spacer(),
             Container(
-              width: 8,
-              height: 8,
+              width: 10,
+              height: 10,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: active ? _kAccentGold : _kBorderGold,
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Two-or-more-way segmented choice (e.g. brush Reveal | Hide).
+class _Segmented extends StatelessWidget {
+  /// Icon + label per option.
+  final List<(IconData, String)> options;
+
+  /// Index of the selected option.
+  final int selected;
+
+  /// Called with the tapped index.
+  final ValueChanged<int> onSelect;
+
+  const _Segmented({
+    required this.options,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (int i = 0; i < options.length; i++) ...[
+          if (i > 0) const SizedBox(width: 6),
+          Expanded(
+            child: _Chip(
+              active: selected == i,
+              onTap: () => onSelect(i),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(options[i].$1,
+                      color: selected == i ? _kAccentGold : _kAccentGoldDim,
+                      size: _kIcon),
+                  const SizedBox(width: 6),
+                  Text(
+                    options[i].$2,
+                    style: TextStyle(
+                      color: selected == i ? _kTextPrimary : _kTextSecondary,
+                      fontSize: _kText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Selectable chip (≥ 44 px) used for presets: brush size, width, AoE.
+class _Chip extends StatelessWidget {
+  /// Whether this chip is the selected one.
+  final bool active;
+
+  /// Called when tapped.
+  final VoidCallback onTap;
+
+  /// Chip content (text or icon), centered.
+  final Widget child;
+
+  const _Chip({required this.active, required this.onTap, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: _kTarget),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        decoration: BoxDecoration(
+          color: active ? _kSurfaceActive : _kSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: active ? _kAccentGold : _kBorderGold),
+        ),
+        child: Center(child: child),
+      ),
+    );
+  }
+}
+
+/// Square colored action button (shadow commit / discard).
+class _ActionSquare extends StatelessWidget {
+  /// Icon to show.
+  final IconData icon;
+
+  /// Accent color (border, icon, tinted background).
+  final Color color;
+
+  /// Called when tapped.
+  final VoidCallback onTap;
+
+  const _ActionSquare({required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        width: _kTarget,
+        height: _kTarget,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color),
+        ),
+        child: Icon(icon, color: color, size: _kIcon),
+      ),
+    );
+  }
+}
+
+/// 44 px icon-only target for the header (undo, redo, settings, collapse).
+class _IconTarget extends StatelessWidget {
+  /// Icon to show.
+  final IconData icon;
+
+  /// Dimmed and inert when `false`.
+  final bool enabled;
+
+  /// Called when tapped (and [enabled]).
+  final VoidCallback onTap;
+
+  const _IconTarget({required this.icon, required this.onTap, this.enabled = true});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: enabled ? onTap : null,
+      child: SizedBox(
+        width: _kTarget,
+        height: _kTarget,
+        child: Icon(
+          icon,
+          color: enabled ? _kAccentGold : _kAccentGoldDim.withValues(alpha: 0.5),
+          size: 22,
         ),
       ),
     );
@@ -1775,7 +1978,7 @@ class _GoldLabel extends StatelessWidget {
       text,
       style: const TextStyle(
         color: _kAccentGoldDim,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: FontWeight.w600,
         letterSpacing: 0.5,
       ),
@@ -1783,7 +1986,7 @@ class _GoldLabel extends StatelessWidget {
   }
 }
 
-/// Small square button for HP increment/decrement in the Combat tab.
+/// Square button for HP increment/decrement in the Combat tab.
 class _HpButton extends StatelessWidget {
   /// The icon to display (typically [Icons.add] or [Icons.remove]).
   final IconData icon;
@@ -1799,16 +2002,17 @@ class _HpButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        width: 36,
-        height: 28,
+        width: 48,
+        height: 40,
         decoration: BoxDecoration(
           color: _kSurface,
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(color: _kBorderGold),
         ),
-        child: Icon(icon, color: _kAccentGoldDim, size: 16),
+        child: Icon(icon, color: _kAccentGoldDim, size: _kIcon),
       ),
     );
   }

@@ -134,7 +134,31 @@ companion downloads from VPS via HTTP.
 {"type": "vtt.resetRotation"}
 {"type": "vtt.calibrate", "tvWidthInches": 43.0}
 {"type": "vtt.resetCalibration"}
+{"type": "vtt.setCamera", "x": 1200.0, "y": 800.0, "zoom": 0.6, "angle": 0.0}   // since 1.1.5
+{"type": "vtt.setScaleFactor", "factor": 1.25}   // fine-tune on top of calibration, 0.5–2.0
 ```
+
+`vtt.setCamera` sets the TV camera to an absolute transform (world center, zoom clamped to the
+TV's calibrated minimum, angle in radians). The phone sends it once for "send this view to the
+TV" and throttled (≥ 80 ms apart) while "TV follows the phone" is on. **The phone camera is
+independent of the TV camera** — the phone never applies the broadcast camera to its own view,
+it draws it as a dashed frame (see `camera.vw`/`vh` below).
+
+## tool overlays (companion → table)
+
+```
+{"type": "vtt.setMeasure", "x1": 100.0, "y1": 200.0, "x2": 500.0, "y2": 200.0}   // since 1.1.5
+{"type": "vtt.setMeasure"}                                                        // no coords = clear
+{"type": "vtt.setAoe", "shape": "circle"|"cone"|"line"|"square", "originX": 5.5, "originY": 3.0, "radius": 4.0, "angle": 0.0}
+{"type": "vtt.clearAoe"}
+{"type": "vtt.toggleRuler"}
+{"type": "vtt.setRulerPosition", "x": 3.25, "y": 7.5}   // corner, grid squares; sent while dragging the ruler on the phone
+{"type": "vtt.rotateRuler"}
+{"type": "vtt.undo"}
+{"type": "vtt.redo"}
+```
+
+Measure coordinates are world pixels; AoE origin/radius and ruler position are grid squares.
 
 ## state broadcast (table → companion)
 
@@ -154,9 +178,14 @@ sent every 50ms when state changes:
   "tokens": [{"id": "...", "gridX": 5, "gridY": 3, "color": 0xFFE53935, "label": "1"}],
   "strokes": [...],
   "interactionMode": "fogReveal",
-  "camera": {"x": 100.0, "y": 200.0, "zoom": 0.5, "angle": 0.0}
+  "canUndo": true,  "canRedo": false,                      // since 1.1.5 — the TV's undo stacks; the phone's buttons read these
+  "measure": {"x1": 100.0, "y1": 200.0, "x2": 500.0, "y2": 200.0} | null,   // since 1.1.5
+  "camera": {"x": 100.0, "y": 200.0, "zoom": 0.5, "angle": 0.0, "vw": 1920.0, "vh": 1080.0}   // vw/vh (viewport px) since 1.1.5
 }
 ```
+
+Older TV builds omit `canUndo`/`canRedo` (the phone then falls back to its local stack),
+`measure` and `vw`/`vh` (no TV frame is drawn).
 
 ## update commands
 

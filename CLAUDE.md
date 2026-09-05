@@ -42,6 +42,7 @@ Detailed documentation lives in `docs/`:
 | `docs/packages.md` | All dependencies: current, adopted, considered, rejected |
 | `docs/shorebird-setup.md` | OTA update setup (Shorebird code push) |
 | `docs/apple-tv-dev.md` | Apple TV as a dev target (flutter-tvos): setup + what it forced on dependencies, tvOS caveats, PDF rasterized on the phone |
+| `docs/action.md` | **Live work** — the companion overhaul: bug list, decisions, planned workflow. Read first. |
 | `docs/archive.md` | History, newest on top: one entry per prompt that changed docs or code (append-only) |
 
 ## Architecture
@@ -197,6 +198,8 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 34 | PDF in VTT mode | Done via #36 | PDF → PNG on the phone, TV gets an image map |
 | 36 | Rasterize PDFs on the phone | Done (1.1.4+14), needs phone test | pdfrx WASM in the web build renders page 1 → PNG → HTTP upload → `vtt.imageUploaded`; TV keeps legacy `vtt.pdfUploaded` |
 | 37 | Apple TV dev target (flutter-tvos) | Done (Mac) | `tvos/` host project + `_tvos` ports; runs on simulator + physical Apple TV; PDF maps need #36 |
+| 38 | Companion overhaul (camera, panel, ruler, measure, AoE, dead buttons) | Code done (2026-09-06, 1.1.5+15), needs phone + TV test | Fixed from the code read; what was changed: `docs/archive.md` 26-09-06 03:30; next steps `docs/action.md`; local bench in `docs/setup.md` |
+| 39 | Direct TV connection without relay (LAN / hotspot) | Not started | Legacy `lib/network/vtt_server.dart` is the starting point — keep it |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |
 | 11 | Shape drawing tools | Not started | Circles, cones, area-of-effect markers |

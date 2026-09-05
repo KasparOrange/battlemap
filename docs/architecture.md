@@ -50,11 +50,27 @@ the TV has no touch, no keyboard, no usable remote. the phone controls everythin
 ## interaction modes
 
 single-finger gestures route to the active tool:
-- **fog** — drag to reveal/hide fog cells
-- **draw** — freehand drawing with color/size
+- **fog** — drag to reveal/hide fog cells (one `vtt.brushReveal` per cell entered), tap a door to toggle it
+- **room** — tap a room to flood-fill reveal/hide it
+- **draw** — freehand drawing with color/width
 - **token** — tap to place, drag to move
+- **measure** — drag to measure (line + distance synced to the TV), tap to clear
+- **aoe** — tap places the panel's shape/size; drag aims a cone/line or moves a circle/square
 
-two-finger gestures always control the camera (pinch zoom + pan).
+two-finger gestures (any pointer count > 1, detected by pointer count — not by pinch scale)
+always control the camera (pinch zoom + pan); the tool only starts on the first single-finger
+move, so a late second finger never paints. Scroll wheel zooms (desktop). The ruler, when
+visible, is draggable in every mode. Zoom is clamped to `[fit × 0.5, 10]`; the TV additionally
+never goes below its calibrated zoom.
+
+**Phone camera vs TV camera (since 2026-09-06):** the phone's view is independent. The TV
+broadcasts its camera *and viewport size*; the phone draws it as a dashed gold frame. The
+Camera tab offers "TV follows the phone" (throttled `vtt.setCamera`), "send this view", "match
+TV", plus zoom/rotate buttons that act on the TV.
+
+**DM panel** (`lib/ui/dm_control_panel.dart`): a bottom sheet — tab bar at the bottom edge
+(thumb reach), content above it, tap the active tab to collapse. ≥ 44 px targets, 14 px text.
+Sliders (draw width, scale) preview locally and send on release.
 
 ## rendering order (flame engine)
 

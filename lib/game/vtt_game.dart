@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math';
 import 'dart:ui' as ui;
 
@@ -23,15 +22,40 @@ import 'components/measure_component.dart';
 import 'components/ruler_component.dart';
 import 'components/token_layer.dart';
 import 'components/torch_glow_component.dart';
+import 'components/tv_viewport_component.dart';
 import 'components/wall_component.dart';
 import 'wall_grid.dart';
 
-/// Flame game for VTT table display.
-/// Renders the map image with grid overlay, handles camera pan/zoom.
-/// Routes single-finger input to the active tool (fog/draw/token).
-/// Two-finger gestures control the camera (pinch zoom + drag pan).
-class VttGame extends FlameGame with ScaleDetector {
+export 'components/tv_viewport_component.dart' show CameraSnapshot;
+
+/// Flame game for the VTT map — runs on the TV (display) and on the phone
+/// (editor preview).
+///
+/// Renders the map image with grid overlay and all tool layers, and owns
+/// the camera. Input routing:
+/// - **Two fingers** (any pointer count > 1) → camera pinch-zoom + pan,
+///   detected via [ScaleUpdateInfo.pointerCount] so a two-finger pan without
+///   pinching never reaches a tool.
+/// - **One finger drag** → the active tool ([VttState.interactionMode]); the
+///   tool starts on the first real move, not on touch-down, so a second
+///   finger arriving late cannot leave a brush stroke behind.
+/// - **Tap** (no movement) → the tool's tap action.
+/// - **Scroll wheel** → zoom (desktop testing).
+///
+/// The TV ([isDisplay] = `true`) enforces the calibrated minimum zoom; the
+/// phone does not, its minimum zoom is half the fit-to-screen zoom so the
+/// whole map can always be seen ([minZoom]).
+///
+/// See also:
+/// - [VttState], the shared state this game renders.
+/// - [TvViewportComponent], the phone-side outline of the TV's view.
+class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
+  /// The shared state rendered by this game.
   final VttState state;
+
+  /// Whether this instance is the TV display (enforces calibration) rather
+  /// than the phone preview (free camera, TV viewport overlay).
+  final bool isDisplay;
 
   VttMapImageComponent? _mapImage;
   VttGridOverlayComponent? _gridOverlay;
@@ -46,6 +70,7 @@ class VttGame extends FlameGame with ScaleDetector {
   RulerComponent? _ruler;
   TorchGlowComponent? _torchGlow;
   GlobalEffectsComponent? _globalEffects;
+  TvViewportComponent? _tvViewport;
 
   /// Discretized wall grid for flood-fill room reveal.
   WallGrid? _wallGrid;
@@ -55,9 +80,14 @@ class VttGame extends FlameGame with ScaleDetector {
 
   double? _lastCalibratedZoom;
 
+  /// Upper zoom bound (screen pixels per world pixel).
+  static const double maxZoom = 10.0;
+
   // Camera gesture state
   double _initialZoom = 1.0;
   bool _isMultiTouch = false;
+  bool _toolActive = false;
+  Vector2? _scaleStartPos;
 
   // Drawing state for live stroke
   List<Offset> _currentStrokePoints = [];
@@ -65,11 +95,28 @@ class VttGame extends FlameGame with ScaleDetector {
   // Token drag state
   String? _draggingTokenId;
 
-  // Tap detection (short gesture with minimal movement)
-  Vector2? _scaleStartPos;
-  bool _hasDragged = false;
+  // Fog brush: last painted cell, to skip duplicate frames
+  int? _lastBrushCell;
 
-  VttGame({required this.state});
+  // Ruler drag state (grid-space offset from the corner to the grab point)
+  bool _draggingRuler = false;
+  Offset _rulerGrabOffset = Offset.zero;
+
+  // Camera change reporting
+  CameraSnapshot? _lastReportedCamera;
+
+  /// Latest TV camera snapshot (phone side), drawn by [TvViewportComponent].
+  CameraSnapshot? _tvCamera;
+
+  /// Called (at most once per frame) when this game's camera changed.
+  ///
+  /// The phone uses it to forward its camera to the TV while "link TV to
+  /// phone" is on. `null` disables the check entirely.
+  void Function(CameraSnapshot camera)? onCameraChanged;
+
+  /// Creates the game for [state]. [isDisplay] is `true` on the TV and in
+  /// the companion's local mode, `false` for the networked phone preview.
+  VttGame({required this.state, this.isDisplay = true});
 
   @override
   Color backgroundColor() => const Color(0xFF111111);
@@ -85,6 +132,18 @@ class VttGame extends FlameGame with ScaleDetector {
   void onRemove() {
     state.removeListener(_onStateChanged);
     super.onRemove();
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (onCameraChanged != null) {
+      final snap = cameraSnapshot;
+      if (snap.differsFrom(_lastReportedCamera)) {
+        _lastReportedCamera = snap;
+        onCameraChanged!(snap);
+      }
+    }
   }
 
   void _onStateChanged() {
@@ -107,8 +166,8 @@ class VttGame extends FlameGame with ScaleDetector {
       _wallGrid = WallGrid.fromMap(state.map!, state.openPortals);
     }
 
-    // Enforce calibrated zoom (with scale slider factor applied)
-    if (state.calibratedBaseZoom != null) {
+    // Enforce calibrated zoom on the display only (with scale slider factor)
+    if (isDisplay && state.calibratedBaseZoom != null) {
       final effectiveZoom = state.calibratedBaseZoom! * state.scaleSliderFactor;
       if (state.calibratedBaseZoom != _lastCalibratedZoom ||
           camera.viewfinder.zoom < effectiveZoom) {
@@ -238,6 +297,16 @@ class VttGame extends FlameGame with ScaleDetector {
     );
     world.add(_ruler!);
 
+    // TV viewport outline (priority 28, phone only)
+    if (!isDisplay) {
+      _tvViewport = TvViewportComponent(
+        snapshot: () => _tvCamera,
+        screenZoom: () => camera.viewfinder.zoom,
+        mapSize: mapSizeVec,
+      );
+      world.add(_tvViewport!);
+    }
+
     // Global effects overlay (priority 30 — above everything)
     _globalEffects = GlobalEffectsComponent(
       state: state,
@@ -258,6 +327,28 @@ class VttGame extends FlameGame with ScaleDetector {
 
     // Zoom to fit the map in the viewport
     _zoomToFit(mapPixelW, mapPixelH);
+  }
+
+  /// Zoom at which the whole map fits the viewport (0.1 if unknown).
+  double get fitZoom {
+    final map = state.map;
+    if (map == null || !isMounted) return 0.1;
+    final viewSize = camera.viewport.size;
+    if (viewSize.x == 0 || viewSize.y == 0) return 0.1;
+    return min(viewSize.x / map.pixelWidth, viewSize.y / map.pixelHeight);
+  }
+
+  /// Lower zoom bound.
+  ///
+  /// On the display with calibration: the calibrated base zoom times the
+  /// scale slider factor (grid squares never smaller than 1 inch).
+  /// Otherwise half of [fitZoom], so pinching out can always show the whole
+  /// map with a margin (a fixed 0.1 could not reach fit for large maps).
+  double get minZoom {
+    if (isDisplay && state.calibratedBaseZoom != null) {
+      return state.calibratedBaseZoom! * state.scaleSliderFactor;
+    }
+    return fitZoom * 0.5;
   }
 
   void _zoomToFit(double mapW, double mapH) {
@@ -294,6 +385,8 @@ class VttGame extends FlameGame with ScaleDetector {
     _measure = null;
     _ruler?.removeFromParent();
     _ruler = null;
+    _tvViewport?.removeFromParent();
+    _tvViewport = null;
     _torchGlow?.removeFromParent();
     _torchGlow = null;
     _globalEffects?.removeFromParent();
@@ -302,18 +395,19 @@ class VttGame extends FlameGame with ScaleDetector {
     _lastOpenPortals = null;
   }
 
-  // --- Public camera controls (called from DM panel) ---
+  // --- Public camera controls (called from DM panel / relay dispatch) ---
 
+  /// Zooms in one step (×1.3), clamped to [minZoom]..[maxZoom].
   void zoomIn() {
-    final minZoom = (state.calibratedBaseZoom ?? 0.1) * state.scaleSliderFactor;
-    camera.viewfinder.zoom = (camera.viewfinder.zoom * 1.3).clamp(minZoom, 10.0);
+    camera.viewfinder.zoom = (camera.viewfinder.zoom * 1.3).clamp(minZoom, maxZoom);
   }
 
+  /// Zooms out one step (÷1.3), clamped to [minZoom]..[maxZoom].
   void zoomOut() {
-    final minZoom = (state.calibratedBaseZoom ?? 0.1) * state.scaleSliderFactor;
-    camera.viewfinder.zoom = (camera.viewfinder.zoom / 1.3).clamp(minZoom, 10.0);
+    camera.viewfinder.zoom = (camera.viewfinder.zoom / 1.3).clamp(minZoom, maxZoom);
   }
 
+  /// Fits the whole map into the viewport and centers it.
   void zoomToFit() {
     if (state.map == null) return;
     _zoomToFit(state.map!.pixelWidth, state.map!.pixelHeight);
@@ -323,27 +417,58 @@ class VttGame extends FlameGame with ScaleDetector {
     );
   }
 
+  /// Rotates the camera 90° clockwise.
   void rotateCW() {
     camera.viewfinder.angle += 1.5707963; // pi/2
   }
 
+  /// Rotates the camera 90° counter-clockwise.
   void rotateCCW() {
     camera.viewfinder.angle -= 1.5707963; // pi/2
   }
 
+  /// Resets the camera rotation to 0.
   void resetRotation() {
     camera.viewfinder.angle = 0;
   }
 
+  /// Current camera zoom.
   double get currentZoom => camera.viewfinder.zoom;
+
+  /// Current camera rotation in whole degrees.
   double get currentAngleDegrees =>
       (camera.viewfinder.angle * 180 / 3.14159265).roundToDouble();
 
-  /// Set camera to match TV state (called on phone after receiving vtt.fullState).
+  /// Sets the camera transform verbatim (session resume on the TV).
   void syncCamera(double x, double y, double zoom, double angle) {
     camera.viewfinder.position = Vector2(x, y);
     camera.viewfinder.zoom = zoom;
     camera.viewfinder.angle = angle;
+  }
+
+  /// Sets the camera transform with [zoom] clamped to [minZoom]..[maxZoom].
+  ///
+  /// Used for `vtt.setCamera` on the TV and "match TV" on the phone.
+  void applyCamera(double x, double y, double zoom, double angle) {
+    syncCamera(x, y, zoom.clamp(minZoom, maxZoom), angle);
+  }
+
+  /// Stores the TV's camera (phone side) for the viewport outline and
+  /// "match TV". No-op on the display.
+  void setTvViewport(CameraSnapshot snapshot) {
+    _tvCamera = snapshot;
+  }
+
+  /// The last TV camera received via [setTvViewport], or `null`.
+  CameraSnapshot? get tvCamera => _tvCamera;
+
+  /// Moves this camera to the TV's last known transform (phone side).
+  ///
+  /// Does nothing when no TV camera has been received yet.
+  void matchTvCamera() {
+    final cam = _tvCamera;
+    if (cam == null) return;
+    applyCamera(cam.x, cam.y, cam.zoom, cam.angle);
   }
 
   /// Triggers a global visual effect on the game canvas.
@@ -355,17 +480,23 @@ class VttGame extends FlameGame with ScaleDetector {
   void triggerEffect(String effect) =>
       _globalEffects?.triggerEffect(effect);
 
-  /// Get current camera state for broadcasting.
-  Map<String, double> getCameraState() => {
-        'x': camera.viewfinder.position.x,
-        'y': camera.viewfinder.position.y,
-        'zoom': camera.viewfinder.zoom,
-        'angle': camera.viewfinder.angle,
-      };
+  /// Current camera transform plus viewport size.
+  CameraSnapshot get cameraSnapshot => CameraSnapshot(
+        x: camera.viewfinder.position.x,
+        y: camera.viewfinder.position.y,
+        zoom: camera.viewfinder.zoom,
+        angle: camera.viewfinder.angle,
+        vw: isMounted ? camera.viewport.size.x : 0,
+        vh: isMounted ? camera.viewport.size.y : 0,
+      );
+
+  /// Current camera state for broadcasting (`x`, `y`, `zoom`, `angle`,
+  /// `vw`, `vh`), see [CameraSnapshot.toJson].
+  Map<String, double> getCameraState() => cameraSnapshot.toJson();
 
   // ===== Gesture handling =====
-  // Two-finger (scale) = camera zoom + pan
-  // Single-finger drag = active tool (fog/draw/token)
+  // Two-finger (pointerCount > 1) = camera zoom + pan
+  // Single-finger drag = active tool (fog/draw/token/…)
   // Tap = active tool action
 
   double _getPixelsPerGrid() {
@@ -385,59 +516,71 @@ class VttGame extends FlameGame with ScaleDetector {
     return camera.globalToLocal(screenPos);
   }
 
-  // --- Scale gestures (pinch zoom + camera pan, or single-finger tool drag) ---
+  /// Minimum finger travel (screen px) before a drag starts the tool.
+  static const double _dragThreshold = 4.0;
 
   @override
   void onScaleStart(ScaleStartInfo info) {
-    _isMultiTouch = false;
-    _hasDragged = false;
+    _isMultiTouch = info.pointerCount > 1;
+    _toolActive = false;
     _initialZoom = camera.viewfinder.zoom;
     _scaleStartPos = info.eventPosition.global.clone();
-
-    if (!state.isInteractive) return;
-
-    // Start tool gesture (will be cancelled if multi-touch detected)
-    final worldPos = _screenToWorld(info.eventPosition.global);
-    _toolDragStart(worldPos);
   }
 
   @override
   void onScaleUpdate(ScaleUpdateInfo info) {
-    // Detect multi-touch by checking if scale deviates from 1.0
-    if ((info.scale.global.x - 1.0).abs() > 0.05) {
+    if (info.pointerCount > 1 && !_isMultiTouch) {
+      // Second finger arrived after a single-finger start: hand the gesture
+      // to the camera and drop whatever the tool had begun.
       _isMultiTouch = true;
+      if (_toolActive) {
+        _toolCancel();
+        _toolActive = false;
+      }
+      _initialZoom = camera.viewfinder.zoom;
     }
 
     if (_isMultiTouch) {
-      // Camera zoom + pan (multi-finger gesture)
-      final minZoom = (state.calibratedBaseZoom ?? 0.1) * state.scaleSliderFactor;
       final newZoom = _initialZoom * info.scale.global.x;
-      camera.viewfinder.zoom = newZoom.clamp(minZoom, 10.0);
+      camera.viewfinder.zoom = newZoom.clamp(minZoom, maxZoom);
       camera.viewfinder.position -= info.delta.global / camera.viewfinder.zoom;
-    } else if (state.isInteractive) {
-      // Single-finger tool drag — mark as dragged if moved enough
-      if (_scaleStartPos != null &&
-          (info.eventPosition.global - _scaleStartPos!).length > 5) {
-        _hasDragged = true;
-      }
-      final worldPos = _screenToWorld(info.eventPosition.global);
-      _toolDragUpdate(worldPos);
+      return;
     }
+
+    if (!state.isInteractive || _scaleStartPos == null) return;
+    final pos = info.eventPosition.global;
+    if (!_toolActive) {
+      if ((pos - _scaleStartPos!).length < _dragThreshold) return;
+      _toolActive = true;
+      _toolDragStart(_screenToWorld(_scaleStartPos!));
+    }
+    _toolDragUpdate(_screenToWorld(pos));
   }
 
   @override
   void onScaleEnd(ScaleEndInfo info) {
     if (!_isMultiTouch && state.isInteractive) {
-      // If barely moved, treat as a tap
-      if (!_hasDragged && _scaleStartPos != null) {
-        final worldPos = _screenToWorld(_scaleStartPos!);
-        _handleTap(worldPos);
+      if (_toolActive) {
+        _toolDragEnd();
+      } else if (_scaleStartPos != null) {
+        _handleTap(_screenToWorld(_scaleStartPos!));
       }
-      _toolDragEnd();
     }
     _isMultiTouch = false;
+    _toolActive = false;
     _draggingTokenId = null;
+    _draggingRuler = false;
+    _lastBrushCell = null;
     _scaleStartPos = null;
+  }
+
+  @override
+  void onScroll(PointerScrollInfo info) {
+    final dy = info.scrollDelta.global.y;
+    if (dy == 0) return;
+    final factor = dy > 0 ? 1 / 1.15 : 1.15;
+    camera.viewfinder.zoom =
+        (camera.viewfinder.zoom * factor).clamp(minZoom, maxZoom);
   }
 
   void _handleTap(Vector2 worldPos) {
@@ -450,9 +593,8 @@ class VttGame extends FlameGame with ScaleDetector {
       case InteractionMode.token:
         _tokenTapAt(worldPos);
       case InteractionMode.measure:
-        // Tap clears previous measurement and starts fresh
-        _measure?.clear();
-        _measureStart(worldPos);
+        // Tap clears the previous measurement
+        state.clearMeasure();
       case InteractionMode.roomReveal:
         if (_tryTogglePortal(worldPos)) return;
         if (_wallGrid != null) {
@@ -466,23 +608,27 @@ class VttGame extends FlameGame with ScaleDetector {
           }
         }
       case InteractionMode.aoe:
-        // AoE: tap sets origin
-        final ppg = _getPixelsPerGrid();
-        final gridX = worldPos.x / ppg;
-        final gridY = worldPos.y / ppg;
-        state.setAoe(AoeTemplate(
-          shape: AoeShape.circle,
-          originX: gridX, originY: gridY,
-          radius: 4, // default 20ft
-        ));
+        // AoE: tap places the active template's shape/size at this origin
+        _aoeStart(worldPos);
     }
   }
 
   // --- Tool drag dispatch ---
 
   void _toolDragStart(Vector2 worldPos) {
+    // The ruler is draggable in every mode while visible
+    if (state.rulerVisible && _rulerHitTest(worldPos)) {
+      _draggingRuler = true;
+      final ppg = _getPixelsPerGrid();
+      _rulerGrabOffset = Offset(
+        worldPos.x / ppg - state.rulerX,
+        worldPos.y / ppg - state.rulerY,
+      );
+      return;
+    }
     switch (state.interactionMode) {
       case InteractionMode.fogReveal:
+        _lastBrushCell = null;
         _fogBrushAt(worldPos);
         break;
       case InteractionMode.draw:
@@ -503,6 +649,14 @@ class VttGame extends FlameGame with ScaleDetector {
   }
 
   void _toolDragUpdate(Vector2 worldPos) {
+    if (_draggingRuler) {
+      final ppg = _getPixelsPerGrid();
+      state.setRulerPosition(
+        worldPos.x / ppg - _rulerGrabOffset.dx,
+        worldPos.y / ppg - _rulerGrabOffset.dy,
+      );
+      return;
+    }
     switch (state.interactionMode) {
       case InteractionMode.fogReveal:
         _fogBrushAt(worldPos);
@@ -525,9 +679,13 @@ class VttGame extends FlameGame with ScaleDetector {
   }
 
   void _toolDragEnd() {
+    if (_draggingRuler) {
+      _draggingRuler = false;
+      return;
+    }
     switch (state.interactionMode) {
       case InteractionMode.fogReveal:
-        // No finalization needed for fog
+        _lastBrushCell = null;
         break;
       case InteractionMode.draw:
         _drawEnd();
@@ -545,33 +703,71 @@ class VttGame extends FlameGame with ScaleDetector {
     }
   }
 
+  /// Aborts an in-progress tool gesture because a second finger arrived.
+  ///
+  /// Discards the live stroke and any drag handles; fog cells already
+  /// painted stay (they are undoable).
+  void _toolCancel() {
+    _draggingRuler = false;
+    _draggingTokenId = null;
+    _lastBrushCell = null;
+    if (_currentStrokePoints.isNotEmpty) {
+      _currentStrokePoints.clear();
+      state.setLiveStroke(null);
+    }
+  }
+
   // ===== AoE tool =====
 
   Vector2? _aoeOrigin;
 
+  /// Places the active template ([VttState.aoeShape] / [VttState.aoeRadius])
+  /// with its origin at [worldPos]; the angle of an existing template of
+  /// the same shape is kept.
   void _aoeStart(Vector2 worldPos) {
     final ppg = _getPixelsPerGrid();
     _aoeOrigin = worldPos;
+    final current = state.activeAoe;
     state.setAoe(AoeTemplate(
-      shape: AoeShape.circle,
-      originX: worldPos.x / ppg, originY: worldPos.y / ppg,
-      radius: 4,
+      shape: state.aoeShape,
+      originX: worldPos.x / ppg,
+      originY: worldPos.y / ppg,
+      radius: state.aoeRadius,
+      angle: current != null && current.shape == state.aoeShape ? current.angle : 0,
     ));
   }
 
+  /// Drag: cone/line aim from the origin towards the finger; circle/square
+  /// move with the finger. Shape and radius are never changed by dragging.
   void _aoeUpdate(Vector2 worldPos) {
     if (_aoeOrigin == null) return;
     final ppg = _getPixelsPerGrid();
-    final ox = _aoeOrigin!.x / ppg;
-    final oy = _aoeOrigin!.y / ppg;
-    final dx = worldPos.x / ppg - ox;
-    final dy = worldPos.y / ppg - oy;
-    state.setAoe(AoeTemplate(
-      shape: AoeShape.circle,
-      originX: ox, originY: oy,
-      radius: sqrt(dx * dx + dy * dy),
-      angle: atan2(dy, dx),
-    ));
+    final current = state.activeAoe;
+    final shape = current?.shape ?? state.aoeShape;
+    final radius = current?.radius ?? state.aoeRadius;
+    switch (shape) {
+      case AoeShape.cone:
+      case AoeShape.line:
+        final dx = worldPos.x - _aoeOrigin!.x;
+        final dy = worldPos.y - _aoeOrigin!.y;
+        if (dx.abs() < 1 && dy.abs() < 1) return;
+        state.setAoe(AoeTemplate(
+          shape: shape,
+          originX: _aoeOrigin!.x / ppg,
+          originY: _aoeOrigin!.y / ppg,
+          radius: radius,
+          angle: atan2(dy, dx),
+        ));
+      case AoeShape.circle:
+      case AoeShape.square:
+        state.setAoe(AoeTemplate(
+          shape: shape,
+          originX: worldPos.x / ppg,
+          originY: worldPos.y / ppg,
+          radius: radius,
+          angle: current?.angle ?? 0,
+        ));
+    }
   }
 
   // ===== Fog reveal tool =====
@@ -589,6 +785,9 @@ class VttGame extends FlameGame with ScaleDetector {
     state.toggleReveal(index);
   }
 
+  /// Paints the brush around [worldPos]; skipped while the finger stays in
+  /// the same cell so a drag sends one `vtt.brushReveal` per cell, not per
+  /// frame.
   void _fogBrushAt(Vector2 worldPos) {
     final ppg = _getPixelsPerGrid();
     final centerX = (worldPos.x / ppg).floor();
@@ -596,6 +795,9 @@ class VttGame extends FlameGame with ScaleDetector {
     final r = state.brushRadius;
     final gridCols = _getGridCols();
     final gridRows = _getGridRows();
+    final centerIndex = centerY * gridCols + centerX;
+    if (_lastBrushCell == centerIndex) return;
+    _lastBrushCell = centerIndex;
     final indices = <int>[];
 
     for (int dy = -r; dy <= r; dy++) {
@@ -616,10 +818,12 @@ class VttGame extends FlameGame with ScaleDetector {
     }
   }
 
+  /// Toggles the portal under [worldPos], with a quarter-square hit pad on
+  /// each side. Returns `true` if a portal was hit.
   bool _tryTogglePortal(Vector2 worldPos) {
     final portals = state.map?.portals ?? [];
     final ppg = _getPixelsPerGrid();
-    const pad = 8.0;
+    final pad = 0.25 * ppg;
     for (int i = 0; i < portals.length; i++) {
       final p = portals[i];
       final p0x = p.bounds[0].x * ppg;
@@ -719,15 +923,36 @@ class VttGame extends FlameGame with ScaleDetector {
 
   // ===== Measure tool =====
 
-  /// Begins a new measurement at the given world position.
-  ///
-  /// Clears any previous measurement and sets both start and end to [worldPos].
+  /// Begins a new measurement at the given world position (start = end).
   void _measureStart(Vector2 worldPos) {
-    _measure?.setStart(worldPos.toOffset());
+    final p = worldPos.toOffset();
+    state.setMeasure(p, p);
   }
 
   /// Updates the endpoint of the current measurement as the user drags.
   void _measureUpdate(Vector2 worldPos) {
-    _measure?.setEnd(worldPos.toOffset());
+    state.setMeasure(state.measureStart ?? worldPos.toOffset(), worldPos.toOffset());
+  }
+
+  // ===== Ruler =====
+
+  /// Whether [worldPos] lies on one of the ruler's arms (plus a small pad).
+  ///
+  /// Transforms the point into the ruler's local frame (corner at the
+  /// origin, arms along +x and −y, see [RulerComponent]) and tests the two
+  /// arm rectangles.
+  bool _rulerHitTest(Vector2 worldPos) {
+    final ppg = _getPixelsPerGrid();
+    final dx = worldPos.x - state.rulerX * ppg;
+    final dy = worldPos.y - state.rulerY * ppg;
+    final a = -state.rulerRotation * pi / 180;
+    final lx = dx * cos(a) - dy * sin(a);
+    final ly = dx * sin(a) + dy * cos(a);
+    final len = RulerComponent.armLengthSquares * ppg;
+    final w = RulerComponent.armWidthSquares * ppg;
+    final pad = 0.15 * ppg;
+    final onHorizontal = lx >= -pad && lx <= len + pad && ly >= -w - pad && ly <= pad;
+    final onVertical = lx >= -w - pad && lx <= pad && ly >= -len - pad && ly <= pad;
+    return onHorizontal || onVertical;
   }
 }

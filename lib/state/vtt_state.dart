@@ -181,7 +181,10 @@ class VttState extends ChangeNotifier {
   Color drawColor = const Color(0xFFE53935);
 
   /// Current line width for new strokes, in world pixels.
-  double drawWidth = 3.0;
+  ///
+  /// Default 4 matches the "M" preset in the DM panel so a preset is
+  /// highlighted from the start.
+  double drawWidth = 4.0;
 
   // --- Undo / Redo ---
 
@@ -199,11 +202,63 @@ class VttState extends ChangeNotifier {
   /// Maximum number of undo actions retained.
   static const int _maxUndoSize = 50;
 
+  /// Undo availability reported by the TV in the last `vtt.fullState`.
+  ///
+  /// `null` until a remote state arrives; from then on [canUndo] reflects
+  /// the TV's stack, because on the phone the local stack is never undone
+  /// (undo/redo are relay commands) and would otherwise show stale values.
+  bool? _remoteCanUndo;
+
+  /// Redo availability reported by the TV, see [_remoteCanUndo].
+  bool? _remoteCanRedo;
+
   /// Whether there are actions that can be undone.
-  bool get canUndo => _undoStack.isNotEmpty;
+  ///
+  /// On the companion this mirrors the TV's undo stack once the first
+  /// `vtt.fullState` has been applied; locally it reads the own stack.
+  bool get canUndo => _remoteCanUndo ?? _undoStack.isNotEmpty;
 
   /// Whether there are undone actions that can be redone.
-  bool get canRedo => _redoStack.isNotEmpty;
+  ///
+  /// Mirrors the TV after the first `vtt.fullState`, see [canUndo].
+  bool get canRedo => _remoteCanRedo ?? _redoStack.isNotEmpty;
+
+  // --- Measure tool ---
+
+  /// Start of the current distance measurement in world pixels, or `null`.
+  ///
+  /// Part of the synced state so the players see the measurement on the
+  /// TV; the phone sends `vtt.setMeasure` while dragging.
+  Offset? measureStart;
+
+  /// End of the current distance measurement in world pixels, or `null`.
+  Offset? measureEnd;
+
+  /// Called when the measurement changes locally, for relay forwarding.
+  ///
+  /// Both offsets `null` means the measurement was cleared.
+  void Function(Offset? start, Offset? end)? onMeasureChanged;
+
+  /// Called when the active AoE template changes locally (tap/drag on the
+  /// map or panel edits), for relay forwarding. `null` means cleared.
+  void Function(AoeTemplate? template)? onAoeChanged;
+
+  /// Called when the ruler is dragged to a new corner position locally,
+  /// for relay forwarding. Coordinates are in grid squares.
+  void Function(double x, double y)? onRulerMoved;
+
+  // --- AoE tool settings (phone-local, not synced) ---
+
+  /// Shape used for the next AoE template placed by tapping the map.
+  ///
+  /// Chosen in the DM panel; when a template is already active the panel
+  /// also updates it in place. Not part of [toJson].
+  AoeShape aoeShape = AoeShape.circle;
+
+  /// Radius (or length) in grid squares for the next AoE template.
+  ///
+  /// Default 4 squares = 20 ft. See [aoeShape].
+  double aoeRadius = 4;
 
   // --- Ruler overlay ---
 
@@ -951,6 +1006,9 @@ class VttState extends ChangeNotifier {
     shadowHideCells.clear();
     _undoStack.clear();
     _redoStack.clear();
+    measureStart = null;
+    measureEnd = null;
+    activeAoe = null;
     notifyListeners();
   }
 
@@ -960,16 +1018,46 @@ class VttState extends ChangeNotifier {
   AoeTemplate? activeAoe;
 
   /// Sets the active AoE template and notifies listeners.
+  ///
+  /// Fires [onAoeChanged] for relay forwarding.
   void setAoe(AoeTemplate? template) {
     activeAoe = template;
     notifyListeners();
+    onAoeChanged?.call(template);
   }
 
-  /// Clears the active AoE template.
+  /// Clears the active AoE template. Fires [onAoeChanged] with `null`.
   void clearAoe() {
     activeAoe = null;
     notifyListeners();
+    onAoeChanged?.call(null);
   }
+
+  /// Sets the shape and radius used for the next placed AoE template.
+  ///
+  /// Phone-local tool settings (see [aoeShape], [aoeRadius]); does not
+  /// touch [activeAoe] and is not forwarded over the relay.
+  void setAoeTool(AoeShape shape, double radius) {
+    aoeShape = shape;
+    aoeRadius = radius;
+    notifyListeners();
+  }
+
+  // ===== Measure tool =====
+
+  /// Sets the current measurement line in world pixels.
+  ///
+  /// Pass both as `null` (or call [clearMeasure]) to hide it. Fires
+  /// [onMeasureChanged] for relay forwarding.
+  void setMeasure(Offset? start, Offset? end) {
+    measureStart = start;
+    measureEnd = end;
+    notifyListeners();
+    onMeasureChanged?.call(start, end);
+  }
+
+  /// Hides the measurement line. Fires [onMeasureChanged] with `null`s.
+  void clearMeasure() => setMeasure(null, null);
 
   // ===== Ruler overlay =====
 
@@ -980,10 +1068,14 @@ class VttState extends ChangeNotifier {
   }
 
   /// Sets the ruler corner position in grid coordinates.
+  ///
+  /// Fires [onRulerMoved] for relay forwarding (the phone drags the ruler
+  /// on its own map and the TV follows).
   void setRulerPosition(double x, double y) {
     rulerX = x;
     rulerY = y;
     notifyListeners();
+    onRulerMoved?.call(x, y);
   }
 
   /// Rotates the ruler 90 degrees clockwise, cycling 0 -> 90 -> 180 -> 270 -> 0.
@@ -1050,14 +1142,26 @@ class VttState extends ChangeNotifier {
         'rulerRotation': rulerRotation,
         'scaleSliderFactor': scaleSliderFactor,
         'sessionSettings': sessionSettings.toJson(),
+        'canUndo': canUndo,
+        'canRedo': canRedo,
+        'measure': measureStart != null && measureEnd != null
+            ? {
+                'x1': measureStart!.dx,
+                'y1': measureStart!.dy,
+                'x2': measureEnd!.dx,
+                'y2': measureEnd!.dy,
+              }
+            : null,
       };
 
   /// Applies a full state snapshot received from the relay (TV to phone sync).
   ///
   /// Overwrites all local state fields with the values from [json] and
   /// fires a single [notifyListeners] call. Fields added in later versions
-  /// ([interactionMode], [tokens], [strokes], [drawColor], [drawWidth])
-  /// fall back to defaults if absent, for backwards compatibility.
+  /// ([interactionMode], [tokens], [strokes], [drawColor], [drawWidth],
+  /// `canUndo`/`canRedo`, `measure`) fall back to defaults if absent, for
+  /// backwards compatibility. Phone-local tool settings ([aoeShape],
+  /// [aoeRadius]) are left untouched.
   ///
   /// This is the inverse of [toJson] and is called on the companion phone
   /// when it receives a `vtt.fullState` message from the TV.
@@ -1089,10 +1193,10 @@ class VttState extends ChangeNotifier {
             .toList() ??
         [];
     drawColor = Color(json['drawColor'] as int? ?? 0xFFE53935);
-    drawWidth = (json['drawWidth'] as num?)?.toDouble() ?? 3.0;
+    drawWidth = (json['drawWidth'] as num?)?.toDouble() ?? 4.0;
 
-    // Shadow mode fields — backwards compatible
-    shadowMode = json['shadowMode'] as bool? ?? true;
+    // Shadow mode fields — backwards compatible (default matches the field)
+    shadowMode = json['shadowMode'] as bool? ?? false;
     shadowRevealCells = json['shadowRevealCells'] != null
         ? Set<int>.from(
             (json['shadowRevealCells'] as List).map((e) => e as int))
@@ -1113,6 +1217,21 @@ class VttState extends ChangeNotifier {
     sessionSettings = json['sessionSettings'] != null
         ? SessionSettings.fromJson(json['sessionSettings'] as Map<String, dynamic>)
         : SessionSettings.penAndPaper();
+
+    // Undo/redo availability of the TV (absent from older TV builds →
+    // keep reading the local stack)
+    _remoteCanUndo = json['canUndo'] as bool?;
+    _remoteCanRedo = json['canRedo'] as bool?;
+
+    // Measure line
+    final m = json['measure'] as Map<String, dynamic>?;
+    if (m != null) {
+      measureStart = Offset((m['x1'] as num).toDouble(), (m['y1'] as num).toDouble());
+      measureEnd = Offset((m['x2'] as num).toDouble(), (m['y2'] as num).toDouble());
+    } else {
+      measureStart = null;
+      measureEnd = null;
+    }
 
     notifyListeners(); // single notification
   }

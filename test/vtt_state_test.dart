@@ -142,7 +142,7 @@ void main() {
       expect(restored.tokens, isEmpty);
       expect(restored.strokes, isEmpty);
       expect(restored.drawColor, const Color(0xFFE53935));
-      expect(restored.drawWidth, 3.0);
+      expect(restored.drawWidth, 4.0);
     });
   });
 
@@ -1490,7 +1490,7 @@ void main() {
 
       final restored = VttState();
       restored.applyRemoteState(oldJson);
-      expect(restored.shadowMode, true);
+      expect(restored.shadowMode, false); // matches the field default (companion overhaul)
       expect(restored.shadowRevealCells, isEmpty);
       expect(restored.shadowHideCells, isEmpty);
     });

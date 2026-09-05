@@ -1194,6 +1194,26 @@ class _TvShellState extends State<TvShell> {
           );
         case 'vtt.resetCalibration':
           _state.resetCalibration();
+        case 'vtt.setCamera':
+          _game?.applyCamera(
+            (msg['x'] as num).toDouble(),
+            (msg['y'] as num).toDouble(),
+            (msg['zoom'] as num).toDouble(),
+            (msg['angle'] as num?)?.toDouble() ?? 0,
+          );
+          _broadcastFullState();
+          _markDirtyForAutoSave();
+
+        // Measure line
+        case 'vtt.setMeasure':
+          if (msg['x1'] != null) {
+            _state.setMeasure(
+              Offset((msg['x1'] as num).toDouble(), (msg['y1'] as num).toDouble()),
+              Offset((msg['x2'] as num).toDouble(), (msg['y2'] as num).toDouble()),
+            );
+          } else {
+            _state.clearMeasure();
+          }
 
         // Undo / Redo
         case 'vtt.undo':

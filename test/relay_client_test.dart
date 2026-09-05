@@ -185,7 +185,7 @@ void main() {
       };
 
       double? camX, camY, camZoom, camAngle;
-      companionClient.onCameraSync = (x, y, zoom, angle) {
+      companionClient.onCameraSync = (x, y, zoom, angle, vw, vh) {
         camX = x;
         camY = y;
         camZoom = zoom;

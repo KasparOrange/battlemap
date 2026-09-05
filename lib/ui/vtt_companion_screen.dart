@@ -93,13 +93,23 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   bool _isLoading = false;
   Timer? _loadingTimeout;
 
+  // Camera link: TV follows the phone camera (throttled vtt.setCamera)
+  bool _cameraLinked = false;
+  Timer? _cameraSendTimer;
+  CameraSnapshot? _pendingCamera;
+
+  /// Minimum interval between two `vtt.setCamera` messages while linked.
+  static const Duration _cameraSendInterval = Duration(milliseconds: 80);
+
   bool get _isNetworked => !widget.localMode;
 
   @override
   void initState() {
     super.initState();
     _state.isInteractive = true;
-    _game = VttGame(state: _state);
+    // Networked: the phone camera is free (no calibration clamp) and shows
+    // the TV's viewport as an outline. Local mode: the phone *is* the display.
+    _game = VttGame(state: _state, isDisplay: widget.localMode);
     _state.addListener(_onStateChanged);
     if (_isNetworked) _connectRelay();
   }
@@ -107,6 +117,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   @override
   void dispose() {
     _loadingTimeout?.cancel();
+    _cameraSendTimer?.cancel();
     _state.removeListener(_onStateChanged);
     _relaySub?.cancel();
     _relay?.dispose();
@@ -192,8 +203,14 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         }
       }
     };
-    _relay!.onCameraSync = (x, y, zoom, angle) {
-      _game.syncCamera(x, y, zoom, angle);
+    _relay!.onCameraSync = (x, y, zoom, angle, vw, vh) {
+      // The phone camera stays independent; the TV view is drawn as a frame.
+      _game.setTvViewport(CameraSnapshot(
+          x: x, y: y, zoom: zoom, angle: angle, vw: vw, vh: vh));
+    };
+    _game.onCameraChanged = (snap) {
+      if (!_cameraLinked) return;
+      _queueCameraSend(snap);
     };
     _relay!.onMapLoaded = (bytes) {
       DevLog.add('Companion: map received via chunks (${(bytes.length / 1024).round()} KB)');
@@ -276,6 +293,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     };
     _relay!.onTvError = (msg) {
       DevLog.add('TV ERROR: $msg');
+      // A failed command must not leave the double-tap guard armed.
+      _endLoading();
+      if (mounted) setState(() => _loadingSessionId = null);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -297,6 +317,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.onStrokeAdded = (stroke) => _relay!.sendAddStroke(stroke.toJson());
     _state.onDrawingsCleared = () => _relay!.sendClearDrawings();
     _state.onLiveStrokeChanged = (stroke) => _relay!.sendStrokeUpdate(stroke?.toJson());
+    _state.onMeasureChanged = (start, end) => _relay!.sendSetMeasure(start, end);
+    _state.onAoeChanged = (t) =>
+        t == null ? _relay!.sendClearAoe() : _relay!.sendSetAoe(t.toJson());
+    _state.onRulerMoved = (x, y) => _relay!.sendSetRulerPosition(x, y);
     _relaySub = _relay!.stateStream.listen((s) {
       if (s == RelayConnectionState.paired) {
         DevLog.add('Companion: paired with TV');
@@ -309,6 +333,22 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       setState(() => _relayState = s);
     });
     _relay!.connect();
+  }
+
+  /// Forwards the phone camera to the TV, at most once per
+  /// [_cameraSendInterval]; the latest snapshot wins when throttled.
+  void _queueCameraSend(CameraSnapshot snap) {
+    if (_cameraSendTimer != null) {
+      _pendingCamera = snap;
+      return;
+    }
+    _relay?.sendSetCamera(snap.toJson());
+    _cameraSendTimer = Timer(_cameraSendInterval, () {
+      _cameraSendTimer = null;
+      final pending = _pendingCamera;
+      _pendingCamera = null;
+      if (pending != null && _cameraLinked) _queueCameraSend(pending);
+    });
   }
 
   /// Called when the map has been loaded (via chunks or HTTP download).
@@ -449,13 +489,13 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       // Upload to VPS via HTTP, then tell TV to download
       if (mounted) setState(() => _transferProgress = 0.01);
       try {
-        final uploadUrl = 'http://${RelayConfig.host}:4242/upload/${Uri.encodeComponent(uploadName)}';
+        final uploadUrl = '${RelayConfig.httpBase}/upload/${Uri.encodeComponent(uploadName)}';
         DevLog.add('Companion: uploading to $uploadUrl');
         final resp = await httpUpload(uploadUrl, uploadBytes, onProgress: (p) {
           if (mounted) setState(() => _transferProgress = p);
         });
         if (resp != null) {
-          final downloadUrl = 'http://${RelayConfig.host}:4242${resp['url']}';
+          final downloadUrl = '${RelayConfig.httpBase}${resp['url']}';
           DevLog.add('Companion: upload done, telling TV to download');
           _showSnack('Map uploaded');
           if (needsGridConfig) {
@@ -656,6 +696,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                 maxHp: maxHp ?? 0,
                 currentHp: currentHp ?? 0,
                 conditions: conditions?.toList() ?? []),
+        onRemoveToken: (id) {
+          c.sendRemoveToken(id);
+          _showSnack('Token removed');
+        },
         onSetMeasureMode: () => c.sendSetInteractionMode('measure'),
         // Undo / Redo
         onUndo: c.sendUndo,
@@ -684,8 +728,29 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         // Session settings
         onUpdateSessionSettings: (settings) =>
             c.sendUpdateSessionSettings(settings.toJson()),
-        // Global effects
-        onTriggerEffect: (effect) => c.sendTriggerEffect(effect),
+        // Global effects — also play locally so the phone gives feedback
+        onTriggerEffect: (effect) {
+          c.sendTriggerEffect(effect);
+          _game.triggerEffect(effect);
+        },
+        // Camera link
+        onSetCameraLink: (linked) {
+          _cameraLinked = linked;
+          if (linked) _queueCameraSend(_game.cameraSnapshot);
+          _showSnack(linked ? 'TV follows the phone' : 'TV camera unlinked');
+        },
+        onSendView: () {
+          c.sendSetCamera(_game.getCameraState());
+          _showSnack('View sent to TV');
+        },
+        onMatchTv: () {
+          if (_game.tvCamera == null) {
+            _showSnack('No TV view received yet', color: Colors.orangeAccent);
+            return;
+          }
+          _game.matchTvCamera();
+        },
+        onPhoneZoomToFit: _game.zoomToFit,
       );
     }
     return DmCallbacks(
@@ -725,6 +790,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onEditToken: (id, {name, maxHp, currentHp, conditions}) =>
           _state.editToken(id,
               name: name, maxHp: maxHp, currentHp: currentHp, conditions: conditions),
+      onRemoveToken: _state.removeToken,
       onSetMeasureMode: () => _state.setInteractionMode(InteractionMode.measure),
       // Undo / Redo
       onUndo: _state.undo,
@@ -810,8 +876,29 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   Widget _buildWaitingUI() {
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A2E),
-      body: Center(
-        child: Column(
+      body: Stack(
+        children: [
+          // Back to the mode selector — the only way out while connecting
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white54),
+                tooltip: 'Back',
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ),
+          Center(
+            child: _buildWaitingBody(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWaitingBody() {
+    return Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
@@ -827,13 +914,13 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
             Text(
               _relayState == RelayConnectionState.paired
                   ? 'Connected to TV'
-                  : 'Connecting...',
+                  : _relayState == RelayConnectionState.connected
+                      ? 'Waiting for the TV...'
+                      : 'Connecting...',
               style: const TextStyle(color: Colors.white38, fontSize: 18),
             ),
           ],
-        ),
-      ),
-    );
+        );
   }
 
   // ─── Library UI ─────────────────────────────────────────
@@ -1103,19 +1190,46 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                     isLoading ? '${(progress * 100).toInt()}%' : ago,
                     style: const TextStyle(color: Colors.white24, fontSize: 11),
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: () {
-                      _relay?.sendDeleteSession(session.id);
-                      _showSnack('Session deleted');
-                    },
-                    child: const Icon(Icons.close, color: Colors.white24, size: 16),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.white38, size: 20),
+                    tooltip: 'Delete session',
+                    constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+                    onPressed: () => _confirmDeleteSession(session),
                   ),
                 ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDeleteSession(Session session) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        title: const Text('Delete Session?'),
+        content: Text(
+          'Delete "${session.name}"? Fog, tokens and drawings of this session are lost.',
+          style: const TextStyle(color: Colors.white54),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _relay?.sendDeleteSession(session.id);
+              _showSnack('Session deleted');
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
       ),
     );
   }
@@ -1226,9 +1340,25 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
 
   // ─── Game UI ────────────────────────────────────────────
 
+  /// Game view: the map fills the space above the DM panel, which sits at
+  /// the bottom edge as a sheet (tab bar always visible, content on demand).
   Widget _buildGameUI() {
     return Scaffold(
-      body: Stack(
+      backgroundColor: const Color(0xFF111111),
+      body: Column(
+        children: [
+          Expanded(child: _buildMapArea()),
+          DmControlPanel(
+            state: _state,
+            callbacks: _buildCallbacks(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMapArea() {
+    return Stack(
         children: [
           GameWidget(game: _game),
 
@@ -1259,16 +1389,6 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
               left: 56,
               child: _buildConnectionDot(),
             ),
-
-          // DM Control Panel
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: DmControlPanel(
-              state: _state,
-              callbacks: _buildCallbacks(),
-            ),
-          ),
 
           // Map info
           if (_state.map != null)
@@ -1303,14 +1423,13 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                   Icon(Icons.map, color: Colors.white12, size: 64),
                   SizedBox(height: 16),
                   Text(
-                    'Tap the gear icon to load a .dd2vtt or .pdf map',
+                    'Settings tab → Load Map (.dd2vtt, image or PDF)',
                     style: TextStyle(color: Colors.white24, fontSize: 16),
                   ),
                 ],
               ),
             ),
         ],
-      ),
     );
   }
 

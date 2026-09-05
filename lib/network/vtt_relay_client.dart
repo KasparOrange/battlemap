@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'dart:ui' show Offset;
 
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -77,9 +78,13 @@ class VttRelayClient {
   /// Called when camera state is received as part of a `vtt.fullState`
   /// (companion side only).
   ///
-  /// Parameters are the camera's world-space `x`, `y`, `zoom` level, and
-  /// rotation `angle` in radians.
-  void Function(double x, double y, double zoom, double angle)? onCameraSync;
+  /// Parameters are the camera's world-space `x`, `y`, `zoom` level,
+  /// rotation `angle` in radians, and the TV viewport size `vw` × `vh` in
+  /// screen pixels (0 when the TV build predates the `vw`/`vh` fields).
+  /// The companion draws that viewport as a dashed rectangle — it does
+  /// **not** move its own camera.
+  void Function(double x, double y, double zoom, double angle, double vw,
+      double vh)? onCameraSync;
 
   /// Called when a chunked map transfer completes (either side).
   ///
@@ -347,6 +352,8 @@ class VttRelayClient {
                 (cam['y'] as num).toDouble(),
                 (cam['zoom'] as num).toDouble(),
                 (cam['angle'] as num).toDouble(),
+                (cam['vw'] as num?)?.toDouble() ?? 0,
+                (cam['vh'] as num?)?.toDouble() ?? 0,
               );
             }
           }
@@ -549,6 +556,34 @@ class VttRelayClient {
 
   /// Resets the TV calibration, reverting to default zoom behaviour.
   void sendResetCalibration() => _send({'type': 'vtt.resetCalibration'});
+
+  /// Moves the TV camera to an absolute transform.
+  ///
+  /// [camera] holds `x`, `y` (world center), `zoom` and `angle` (radians)
+  /// — the phone's own camera when "link TV to phone" is on or "send view"
+  /// is tapped. Extra keys (`vw`, `vh`) are ignored by the TV.
+  void sendSetCamera(Map<String, double> camera) => _send({
+        'type': 'vtt.setCamera',
+        'x': camera['x'],
+        'y': camera['y'],
+        'zoom': camera['zoom'],
+        'angle': camera['angle'],
+      });
+
+  /// Sets or clears the measurement line on the TV.
+  ///
+  /// Coordinates are world pixels. Pass `null` for [start] and [end] to
+  /// hide the line (the message then carries no coordinates).
+  void sendSetMeasure(Offset? start, Offset? end) {
+    final msg = <String, dynamic>{'type': 'vtt.setMeasure'};
+    if (start != null && end != null) {
+      msg['x1'] = start.dx;
+      msg['y1'] = start.dy;
+      msg['x2'] = end.dx;
+      msg['y2'] = end.dy;
+    }
+    _send(msg);
+  }
 
   // --- Interaction mode ---
 
@@ -768,9 +803,9 @@ class VttRelayClient {
   /// Broadcasts the TV's full game state to the companion.
   ///
   /// [stateJson] is the serialised [VttState] (fog, portals, tokens, etc.)
-  /// and [camera] contains `x`, `y`, `zoom`, and `angle` keys describing
-  /// the current camera transform. This is called at up to 20 Hz from the
-  /// TV's throttled broadcast timer.
+  /// and [camera] contains `x`, `y`, `zoom`, `angle`, plus the viewport
+  /// size `vw`/`vh`, describing the current camera transform. This is
+  /// called at up to 20 Hz from the TV's throttled broadcast timer.
   void sendFullState(Map<String, dynamic> stateJson, Map<String, double> camera) {
     final json = {
       'type': 'vtt.fullState',
