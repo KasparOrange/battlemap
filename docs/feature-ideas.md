@@ -93,6 +93,8 @@ these add game mechanics on top of the pen & paper visuals.
 ## shared features (both modes)
 
 - [x] VPS WebSocket relay (phone controls TV)
+- [ ] **direct TV connection without relay** — play without internet (friend's place, hotspot): TV hosts the WebSocket server on the LAN, phone connects to its IP. Pre-relay design, legacy `lib/network/vtt_server.dart` (#39)
+- [ ] **companion overhaul** — independent phone camera + TV viewport outline, bottom-sheet DM panel, ruler/measure/AoE fixes; full list `docs/action.md` (#38)
 - [x] map library with persistent storage (Hive)
 - [x] session save/restore (auto-save, resume)
 - [x] in-app updates (Shorebird OTA + APK fallback)

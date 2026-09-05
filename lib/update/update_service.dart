@@ -44,7 +44,7 @@ Future<UpdateInfo?> checkForUpdate() async {
     final client = HttpClient();
     client.connectionTimeout = const Duration(seconds: 5);
     final request = await client
-        .getUrl(Uri.parse('http://${RelayConfig.host}:4242/version.json'));
+        .getUrl(Uri.parse('${RelayConfig.httpBase}/version.json'));
     final response = await request.close();
 
     if (response.statusCode != 200) {
@@ -80,7 +80,7 @@ Future<void> downloadAndInstall({
 }) async {
   try {
     onStatus?.call('Downloading APK...');
-    final url = 'http://${RelayConfig.host}:4242/battlemap.apk';
+    final url = '${RelayConfig.httpBase}/battlemap.apk';
 
     final client = HttpClient();
     client.connectionTimeout = const Duration(seconds: 10);

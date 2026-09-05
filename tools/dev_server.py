@@ -7,6 +7,9 @@ Endpoints:
   GET  /uploads/*   — serve uploaded files
   POST /*           — receive browser console logs (legacy)
   OPTIONS /*        — CORS preflight
+
+BATTLEMAP_WEB_DIR overrides the served directory (default: the VPS checkout)
+for a local bench — see docs/setup.md.
 """
 import json
 import os
@@ -14,7 +17,8 @@ import time
 import uuid
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 
-UPLOAD_DIR = "/home/kaspar/battlemap/build/web/uploads"
+WEB_DIR = os.environ.get("BATTLEMAP_WEB_DIR", "/home/kaspar/battlemap/build/web")
+UPLOAD_DIR = os.path.join(WEB_DIR, "uploads")
 MAX_UPLOAD_SIZE = 200 * 1024 * 1024  # 200 MB
 UPLOAD_MAX_AGE_DAYS = 7
 
@@ -122,7 +126,7 @@ class DevHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    os.chdir("/home/kaspar/battlemap/build/web")
+    os.chdir(WEB_DIR)
     cleanup_old_uploads()
     server = HTTPServer(("0.0.0.0", 4242), DevHandler)
     print(f"Dev server on :4242 (uploads dir: {UPLOAD_DIR}, max upload: {MAX_UPLOAD_SIZE // (1024*1024)} MB)")
