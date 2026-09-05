@@ -6,6 +6,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-09-06 00:45 - 389d2c14-05de-4f55-9d3c-6695b9d6b48e
+- Konrad: picked a PNG on the phone, "nothing happened afterwards" → relay showed companion + Apple TV paired (the TV's "Library loaded: 0 maps" also proves the Hive cache-dir fix on the real device) but no upload ever reached the dev server → the pick returned null
+	- Cause: `file_picker_web` ≥ 3 cancels the pick on the window `focus` event by default; iOS Safari fires it when the Files sheet closes. The deprecated top-level flag is ignored by the web plugin — only `FilePickerWebOptions` counts, so `lib/network/file_picker_options_{stub,web}.dart` (conditional import, `file_picker_web` now a direct dependency)
+	- Version 1.1.4+14, web deployed from the Mac; APK rebuilt on the VPS (Flutter 3.47.2) with the MwLog define
+
 ### 26-09-06 00:20 - 389d2c14-05de-4f55-9d3c-6695b9d6b48e
 - Konrad: "make everything ready for me to test … how I upload a PDF … to the rasterizing pipeline" → #36 built, services up
 	- **Phone-side PDF rasterizing** (`_pickAndUploadMap`): pdfrx 2.x PDFium-WASM renders page 1 → PNG → existing image upload → `vtt.imageUploaded`; TV keeps the legacy `vtt.pdfUploaded` path. Version 1.1.3+13

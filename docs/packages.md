@@ -6,7 +6,8 @@
 |---------|---------|---------|-------|
 | `flame` | ^1.22.0 | game engine — component model, sprites, canvas rendering | core rendering |
 | `pdfrx` | ^2.6.1 | PDF loading and rendering | used for PDF map backgrounds. Needs Flutter ≥ 3.47 and `pdfrxFlutterInitialize()`. **No tvOS PDFium binary** — plan: rasterize on the phone, drop from the TV side (`docs/apple-tv-dev.md`) |
-| `file_picker` | ^12.2.0 | file selection dialog | map upload from phone (`FilePicker.pickFile` + `readAsBytes()`) |
+| `file_picker` | ^12.2.0 | file selection dialog | map upload from phone (`FilePicker.pickFile` + `readAsBytes()`). Web needs `FilePickerWebOptions(cancelUploadOnWindowBlur: false)` (`lib/network/file_picker_options_web.dart`) or iOS Safari cancels every pick |
+| `file_picker_web` | ^3.1.0 | web options class only | conditional import; see above |
 | `web_socket_channel` | ^3.0.0 | WebSocket client for relay | works on both web (Safari) and native (APK) |
 | `path_provider` | ^2.1.0 | app documents directory | map/session storage on TV. tvOS: `path_provider_tvos` |
 | `package_info_plus` | ^10.0.0 | read current app version | for update version comparison + log device info. tvOS: `package_info_plus_tvos` |

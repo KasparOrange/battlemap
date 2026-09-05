@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 
 import '../network/http_upload_stub.dart'
     if (dart.library.html) '../network/http_upload.dart';
+import '../network/file_picker_options_stub.dart'
+    if (dart.library.js_interop) '../network/file_picker_options_web.dart';
 import '../network/relay_config.dart';
 import '../pdf_helper.dart';
 
@@ -358,7 +360,12 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// - [TvShell._downloadAndLoadImage], the TV-side handler.
   Future<void> _pickAndUploadMap() async {
     // Use FileType.any because Safari doesn't recognize .dd2vtt/.uvtt extensions
-    final file = await FilePicker.pickFile(type: FileType.any);
+    // webFilePickerOptions: keep the pick alive while iOS Safari shows the
+    // Files sheet (the plugin default cancels it on window focus).
+    final file = await FilePicker.pickFile(
+      type: FileType.any,
+      webOptions: webFilePickerOptions(),
+    );
     if (file == null) {
       DevLog.add('Companion: file picker cancelled');
       return;

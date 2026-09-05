@@ -1,7 +1,7 @@
 name: battlemap
 description: A D&D digital battlemap for TV tables
 publish_to: 'none'
-version: 1.1.3+13
+version: 1.1.4+14
 
 environment:
   sdk: ^3.7.0
@@ -12,6 +12,7 @@ dependencies:
   flame: ^1.22.0
   pdfrx: ^2.6.1
   file_picker: ^12.2.0
+  file_picker_web: ^3.1.0  # only for FilePickerWebOptions (web_file_picker_options.dart)
   web_socket_channel: ^3.0.0
   path_provider: ^2.1.0
   package_info_plus: ^10.0.0

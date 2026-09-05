@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'game_state.dart';
 import 'game/battlemap_game.dart';
+import 'network/file_picker_options_stub.dart'
+    if (dart.library.js_interop) 'network/file_picker_options_web.dart';
 import 'pdf_helper.dart';
 
 // Conditional import for networking
@@ -117,6 +119,7 @@ class _CompanionScreenState extends State<CompanionScreen> {
     final file = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['pdf'],
+      webOptions: webFilePickerOptions(), // survive the iOS Files sheet
     );
     if (file == null) return;
     final bytes = await file.readAsBytes();
