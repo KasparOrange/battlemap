@@ -42,6 +42,7 @@ Detailed documentation lives in `docs/`:
 | `docs/packages.md` | All dependencies: current, adopted, considered, rejected |
 | `docs/shorebird-setup.md` | OTA update setup (Shorebird code push) |
 | `docs/apple-tv-dev.md` | Apple TV as a dev target (flutter-tvos): plugin audit, setup, PDF-on-phone plan |
+| `docs/archive.md` | History, newest on top: one entry per prompt that changed docs or code (append-only) |
 
 ## Architecture
 
