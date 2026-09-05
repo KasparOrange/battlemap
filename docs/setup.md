@@ -6,30 +6,43 @@
 - iPhone with SSH client (Prompt 3) for development
 - Xiaomi TV Box S 3rd Gen (or any Android TV box) for the table display
 - Flutter SDK installed on VPS
+- optional: the living-room Apple TV as a dev target via flutter-tvos — `docs/apple-tv-dev.md`
+
+## development environments (decided 2026-09-05)
+
+Two places, one repo on GitHub (`main`), **the VPS is primary**:
+
+| where | when | what |
+|---|---|---|
+| **VPS** (`ssh kaspar@72.62.88.197`, mosh from the phone) | outside, on the phone with Claude Code | phone companion (web build, served by dev_server, visible on the phone right away), APK builds, Shorebird, relay/servers |
+| **Mac** (`~/code/battlemap`) | at home | Apple TV dev target via flutter-tvos (needs macOS + Xcode — `docs/apple-tv-dev.md`), everything else too |
+
+Rules: commit + push from wherever you worked, `git pull --ff-only` on the other side before
+starting; never leave uncommitted work behind on the VPS (it was invisible from the Mac for
+months in 2026). Builds that need macOS live on the Mac; builds for the Xiaomi box live on the VPS.
 
 ## VPS services
 
-three Python servers run on the VPS:
+two Python servers run on the VPS (the log server is retired — logs go to MwLog, see "logs" below):
 
 | service | port | purpose |
 |---------|------|---------|
 | `tools/vtt_relay.py` | 9090 | WebSocket relay between TV and phone |
 | `tools/dev_server.py` | 4242 | HTTP server: web build, APK download, map uploads |
-| `tools/log_server.py` | 4243 | structured log receiver (JSONL) |
 
 ### starting services
 
 ```bash
-# start all three (from project root)
+# start both (from project root) — NOTE: nothing restarts them after a reboot;
+# they have been down since the 2026-07-07 reboot. TODO: systemd units.
 python3 tools/vtt_relay.py >> /tmp/vtt_relay.log 2>&1 &
 python3 tools/dev_server.py > /dev/null 2>&1 &
-python3 tools/log_server.py > /dev/null 2>&1 &
 ```
 
 ### checking services
 
 ```bash
-ss -tlnp | grep -E '4242|4243|9090'
+ss -tlnp | grep -E '4242|9090'
 curl -s http://127.0.0.1:4243/health
 ```
 
@@ -81,13 +94,30 @@ flutter analyze                 # check for errors
 
 ## logs
 
+Logs go to **MwLog** — VictoriaLogs on this VPS, tenant `battlemap`
+(`https://srv1189697.hstgr.cloud/p/battlemap/…`, registry in `/opt/victorialogs/projects.md`).
+`tools/log_server.py` and `/tmp/battlemap.log` are retired.
+
+The APK needs the credential baked in at build time (web builds use the stub and never log):
+
 ```bash
-tail -f /tmp/battlemap.log                          # all logs (TV + companion + relay)
-grep '"src":"tv"' /tmp/battlemap.log                # TV only
-grep '"src":"relay"' /tmp/battlemap.log              # relay events
-grep '"event":"error"' /tmp/battlemap.log            # errors
-python3 tools/diag.py status                         # query TV state
+. ~/.config/mwlog/battlemap.env
+flutter build apk --release --dart-define=MWLOG_AUTH=$MWLOG_USER:$MWLOG_PASS
+# shorebird release / patch take the same --dart-define
 ```
+
+Query (from the Mac, my-tube repo — counts and capped samples, never dumps):
+
+```bash
+MWLOG_ENV=~/.config/mwlog/battlemap.env scripts/logq.sh count --since 2h
+MWLOG_ENV=~/.config/mwlog/battlemap.env scripts/logq.sh raw '_time:1d src:tv level:error'
+MWLOG_ENV=~/.config/mwlog/battlemap.env scripts/logq.sh grep 'paired|resume' --since 1d
+python3 tools/diag.py status                         # query TV state (unchanged)
+```
+
+Fields per entry: `app` (stream), `src` tv|companion (stream), `level`, `tag`, `msg`, `ts`, plus
+whatever `extra` the call site adds. UI: `https://srv1189697.hstgr.cloud/select/vmui/` (admin,
+AccountID 2).
 
 ## relay config
 

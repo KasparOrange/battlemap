@@ -21,6 +21,14 @@ Both modes are the **same Flutter APK**. The TV box runs the APK. The phone runs
 - Use Flutter's `Focus`, `FocusTraversalGroup`, and `onKeyEvent` for TV remote support
 - Test: every screen should be minimally navigable with just arrow keys + enter
 
+## Development environments
+
+The **VPS is the primary dev machine** (Flutter + Android SDK, relay, servers; worked from the
+phone via mosh + Claude Code when outside). The **Mac** checkout (`~/code/battlemap`) is for
+home and for the Apple TV dev target (flutter-tvos needs macOS/Xcode). Both sync through GitHub
+`main`: commit + push where you worked, `git pull --ff-only` on the other side first. Details:
+`docs/setup.md` "development environments".
+
 ## Documentation
 
 Detailed documentation lives in `docs/`:
@@ -33,6 +41,7 @@ Detailed documentation lives in `docs/`:
 | `docs/sessions.md` | Session lifecycle, auto-save, what's persisted, thumbnails |
 | `docs/packages.md` | All dependencies: current, adopted, considered, rejected |
 | `docs/shorebird-setup.md` | OTA update setup (Shorebird code push) |
+| `docs/apple-tv-dev.md` | Apple TV as a dev target (flutter-tvos): plugin audit, setup, PDF-on-phone plan |
 
 ## Architecture
 
@@ -176,14 +185,17 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 24 | In-app updates | Done | Version check, APK download, install intent |
 | 25 | Unified mode merge | Done | Drawing + tokens + fog in one mode |
 | 26 | DM panel: mode toggle | Done | Fog/Draw/Token mode switch |
-| 27 | Structured logging | Done | JSONL logs from TV + companion + relay |
+| 27 | Structured logging | Done | JSON lines from TV + companion + relay |
+| 35 | Logs → MwLog (VictoriaLogs tenant) | Code done, needs APK rebuild | `remote_log.dart` posts to the VPS VictoriaLogs; build with `--dart-define=MWLOG_AUTH` (docs/setup.md "logs") |
 | 28 | Developer screen | Done | Scrolling log viewer, diagnostics |
 | 29 | Relay reliability | Done | Ping/pong, zombie detection, backoff, rate limiting |
 | 30 | Storage reliability | Done | Index recovery, atomic writes, error responses |
 | 31 | 74 unit tests | Done | Relay routing, state, session, map entry |
 | 32 | Hive integration | Not started | Replace raw JSON files with cross-platform DB |
 | 33 | Shorebird OTA updates | Not started | Code push without APK reinstall |
-| 34 | PDF in VTT mode | Not started | Load PDF as alternative to .dd2vtt |
+| 34 | PDF in VTT mode | Not started | Load PDF as alternative to .dd2vtt — as #36, phone-side |
+| 36 | Rasterize PDFs on the phone | Not started | Phone renders page → PNG → HTTP transfer; `pdfrx` leaves the TV side (docs/apple-tv-dev.md) |
+| 37 | Apple TV dev target (flutter-tvos) | Not started | tvos/ host project + `_tvos` plugin ports; blocked only by #36 for PDF maps |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |
 | 11 | Shape drawing tools | Not started | Circles, cones, area-of-effect markers |

@@ -5,12 +5,32 @@
 | package | version | purpose | notes |
 |---------|---------|---------|-------|
 | `flame` | ^1.22.0 | game engine — component model, sprites, canvas rendering | core rendering |
-| `pdfrx` | ^1.0.0 | PDF loading and rendering | used for PDF map backgrounds |
+| `pdfrx` | ^1.0.0 | PDF loading and rendering | used for PDF map backgrounds. **No tvOS build** (native PDFium) — plan: rasterize on the phone, drop from the TV side (`docs/apple-tv-dev.md`) |
 | `file_picker` | ^8.0.0 | file selection dialog | map upload from phone |
 | `web_socket_channel` | ^3.0.0 | WebSocket client for relay | works on both web (Safari) and native (APK) |
-| `path_provider` | ^2.1.0 | app documents directory | map/session storage on TV |
-| `package_info_plus` | ^8.0.0 | read current app version | for update version comparison |
+| `path_provider` | ^2.1.0 | app documents directory | map/session storage on TV. tvOS: `path_provider_tvos` |
+| `package_info_plus` | ^8.0.0 | read current app version | for update version comparison + log device info. tvOS: `package_info_plus_tvos` |
 | `uuid` | ^4.0.0 | generate unique IDs | map entries, sessions, tokens |
+
+## adopted: MwLog (VictoriaLogs) for remote logs — 2026-09-05
+
+**what:** [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/) (single Go binary,
+Apache-2) behind Caddy on the VPS, one tenant per private project (`/opt/victorialogs/projects.md`
+on the VPS). The battlemap is tenant `battlemap`; MyTube (the tvOS app) is tenant `mytube`.
+
+**why:** the old `tools/log_server.py` wrote to `/tmp` (lost at every reboot), only lived while
+someone started it by hand, and answering "what broke an hour ago" meant grepping a file over
+SSH. VictoriaLogs keeps 180 days, has a query language with regex + counts, a UI, and a
+token-cheap query script (`logq.sh` in the my-tube repo, `MWLOG_ENV=~/.config/mwlog/battlemap.env`).
+
+**how:** `lib/network/remote_log.dart` posts JSON lines with basic auth; the credential comes from
+`--dart-define=MWLOG_AUTH=user:pass` (never in source — the repo is public). No new package.
+
+## dev target: Apple TV — see `docs/apple-tv-dev.md`
+
+The `fluttertv/flutter-tvos` fork runs the app on the living-room Apple TV for development
+only; needs `path_provider_tvos`, `package_info_plus_tvos`, `wakelock_plus_tvos` added when
+the tvOS host project is generated.
 
 ## adopted: hive
 

@@ -36,9 +36,9 @@ enum LogLevel {
 /// {"src": "tv", "level": "info", "tag": "session", "msg": "Session resumed"}
 /// ```
 ///
-/// Entries are batched in [_queue] and flushed asynchronously over HTTP POST
-/// to `_remoteUrl` (the VPS log server on port 4243). The log server appends
-/// each entry to `/tmp/battlemap.log` as JSONL.
+/// Entries are batched in [_queue] and flushed asynchronously over HTTPS POST
+/// to `_remoteUrl` — MwLog (VictoriaLogs, tenant "battlemap"); query them with
+/// `logq.sh` from the my-tube repo or the vmui admin UI.
 ///
 /// Use [debug], [info], [warn], or [error] for tagged level-aware logging.
 /// The legacy [send] and [sendEvent] entry points remain for compatibility
@@ -46,10 +46,20 @@ enum LogLevel {
 ///
 /// See also:
 /// * [LogLevel] for the level enum.
-/// * `tools/log_server.py` for the server-side handler.
+/// * `docs/setup.md` "logs" for querying and the build-time credential.
 class RemoteLog {
-  /// HTTP endpoint of the VPS log server (port 4243).
-  static const String _remoteUrl = 'http://72.62.88.197:4243/';
+  /// MwLog ingest endpoint (VictoriaLogs behind Caddy, tenant "battlemap").
+  ///
+  /// Entries are posted as JSON lines; `app`/`src` become the stream fields,
+  /// `msg` the message, `ts` the event time. See `docs/setup.md` "logs".
+  static const String _remoteUrl =
+      'https://srv1189697.hstgr.cloud/p/battlemap/insert/jsonline'
+      '?_stream_fields=app,src&_msg_field=msg&_time_field=ts';
+
+  /// Basic-auth credentials `user:password`, injected at build time:
+  /// `--dart-define=MWLOG_AUTH=battlemap:<password>` (from
+  /// `~/.config/mwlog/battlemap.env`). Empty → remote logging is disabled.
+  static const String _auth = String.fromEnvironment('MWLOG_AUTH');
 
   /// Pending entries waiting to be flushed to the server.
   static final List<Map<String, dynamic>> _queue = [];
@@ -110,6 +120,13 @@ class RemoteLog {
       'msg': msg,
     };
     if (extra != null) entry.addAll(extra);
+    _enqueue(entry);
+  }
+
+  /// Stamps the fields every MwLog entry carries and schedules a flush.
+  static void _enqueue(Map<String, dynamic> entry) {
+    entry['app'] = 'battlemap';
+    entry['ts'] = DateTime.now().toUtc().toIso8601String();
     _queue.add(entry);
     if (!_flushing) _flush();
   }
@@ -120,12 +137,11 @@ class RemoteLog {
   ///
   /// Prefer [info] (or one of the other level helpers) for new call sites.
   static void send(String msg) {
-    _queue.add({
+    _enqueue({
       'src': _source,
       'level': LogLevel.info.name,
       'msg': msg,
     });
-    if (!_flushing) _flush();
   }
 
   /// Legacy entry point: sends a structured event with extra data fields.
@@ -142,8 +158,7 @@ class RemoteLog {
     };
     entry.addAll(data);
     if (!entry.containsKey('msg')) entry['msg'] = event;
-    _queue.add(entry);
-    if (!_flushing) _flush();
+    _enqueue(entry);
   }
 
   /// Sends platform/version/screen info as a single `deviceInfo` event.
@@ -179,6 +194,10 @@ class RemoteLog {
   /// broken log server never breaks the app.
   static Future<void> _flush() async {
     if (_queue.isEmpty) return;
+    if (_auth.isEmpty) {
+      _queue.clear(); // no credential baked into this build → drop silently
+      return;
+    }
     _flushing = true;
     final batch = List<Map<String, dynamic>>.from(_queue);
     _queue.clear();
@@ -186,8 +205,13 @@ class RemoteLog {
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 3);
       final request = await client.postUrl(Uri.parse(_remoteUrl));
+      // Explicit JSON content type: VictoriaLogs silently ignores form bodies.
       request.headers.contentType = ContentType.json;
-      request.write(jsonEncode(batch));
+      request.headers.set(
+        HttpHeaders.authorizationHeader,
+        'Basic ${base64Encode(utf8.encode(_auth))}',
+      );
+      request.write(batch.map(jsonEncode).join('\n'));
       final response = await request.close();
       await response.drain();
       client.close();

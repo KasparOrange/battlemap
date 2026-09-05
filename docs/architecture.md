@@ -11,9 +11,11 @@ phone (safari)          VPS (72.62.88.197)          TV (xiaomi box)
 │ (web build)  │        │ port 9090    │            │ (apk)        │
 │              │──http──│ dev_server   │────http────│              │
 │              │        │ port 4242    │            │              │
-└──────────────┘        │ log_server   │            └──────────────┘
-                        │ port 4243    │
-                        └──────────────┘
+└──────────────┘        └──────────────┘            └──────────────┘
+        │                                                   │
+        └────── https ──▶  MwLog (VictoriaLogs + Caddy)  ◀───┘
+                           srv1189697.hstgr.cloud/p/battlemap
+                           (only the APK logs; the web build uses a stub)
 ```
 
 ## data flow
@@ -21,11 +23,11 @@ phone (safari)          VPS (72.62.88.197)          TV (xiaomi box)
 - **commands** flow phone → relay → TV (fog reveal, token place, door toggle, navigation)
 - **state** flows TV → relay → phone (fullState broadcast every 50ms when paired)
 - **maps** flow phone → VPS HTTP → TV HTTP download (large files bypass the relay)
-- **logs** flow both → VPS log server (structured JSONL)
+- **logs** flow TV (APK) → MwLog, our VictoriaLogs tenant `battlemap` on the same VPS (structured JSON lines, basic auth baked in at build time — `docs/setup.md` "logs"). The old `log_server.py` / `/tmp/battlemap.log` are retired (2026-09-05).
 
 ## TV storage
 
-the TV stores everything persistently in its app documents directory:
+the TV stores everything persistently in its app documents directory (on the Apple TV dev target this is purgeable Caches — `docs/apple-tv-dev.md`):
 
 ```
 <appDocDir>/
