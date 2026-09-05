@@ -187,7 +187,7 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 25 | Unified mode merge | Done | Drawing + tokens + fog in one mode |
 | 26 | DM panel: mode toggle | Done | Fog/Draw/Token mode switch |
 | 27 | Structured logging | Done | JSON lines from TV + companion + relay |
-| 35 | Logs → MwLog (VictoriaLogs tenant) | Code done, needs APK rebuild | `remote_log.dart` posts to the VPS VictoriaLogs; build with `--dart-define=MWLOG_AUTH` (docs/setup.md "logs") |
+| 35 | Logs → MwLog (VictoriaLogs tenant) | Done (APK 1.1.4+14) | `remote_log.dart` posts to the VPS VictoriaLogs; build with `--dart-define=MWLOG_AUTH` (docs/setup.md "logs") |
 | 28 | Developer screen | Done | Scrolling log viewer, diagnostics |
 | 29 | Relay reliability | Done | Ping/pong, zombie detection, backoff, rate limiting |
 | 30 | Storage reliability | Done | Index recovery, atomic writes, error responses |
@@ -195,7 +195,7 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 32 | Hive integration | Not started | Replace raw JSON files with cross-platform DB |
 | 33 | Shorebird OTA updates | Not started | Code push without APK reinstall |
 | 34 | PDF in VTT mode | Done via #36 | PDF → PNG on the phone, TV gets an image map |
-| 36 | Rasterize PDFs on the phone | Done (1.1.3+13), needs phone test | pdfrx WASM in the web build renders page 1 → PNG → HTTP upload → `vtt.imageUploaded`; TV keeps legacy `vtt.pdfUploaded` |
+| 36 | Rasterize PDFs on the phone | Done (1.1.4+14), needs phone test | pdfrx WASM in the web build renders page 1 → PNG → HTTP upload → `vtt.imageUploaded`; TV keeps legacy `vtt.pdfUploaded` |
 | 37 | Apple TV dev target (flutter-tvos) | Done (Mac) | `tvos/` host project + `_tvos` ports; runs on simulator + physical Apple TV; PDF maps need #36 |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |
