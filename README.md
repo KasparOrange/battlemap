@@ -55,9 +55,10 @@ lightweight Python WebSocket relay running on a VPS.
 
 ### Prerequisites
 
-- Flutter SDK (stable channel)
+- Flutter SDK ≥ 3.47 (stable channel)
 - Android SDK (for APK builds)
-- Python 3 (for the VPS relay server)
+- Python 3 (for the VPS relay and HTTP server)
+- optional, Mac only: [flutter-tvos](https://github.com/fluttertv/flutter-tvos) to run the TV side on an Apple TV while developing (`docs/apple-tv-dev.md`)
 
 ### Development (web)
 
@@ -80,14 +81,25 @@ adb install -r build/app/outputs/flutter-apk/app-release.apk
 Bump the `version` field in `pubspec.yaml` before each release (increment the
 `+N` version code so Android recognises the upgrade).
 
-### VPS Relay
+### Apple TV (development only)
 
 ```bash
-python3 tools/vtt_relay.py
+flutter-tvos run -d <simulator-or-apple-tv> [--release]
+```
+
+Hot reload on the tvOS simulator; `--release` on the physical Apple TV. The product
+stays the Xiaomi box.
+
+### VPS Relay and HTTP server
+
+```bash
+python3 tools/vtt_relay.py     # port 9090 — WebSocket hub between TV and phone
+python3 tools/dev_server.py    # port 4242 — web build, APK, map uploads
 ```
 
 The relay listens for WebSocket connections from both the TV and the companion
-phone, forwarding messages between them.
+phone, forwarding messages between them. Map files (`.dd2vtt`, images; PDFs are
+rasterized to PNG on the phone first) go through the HTTP server, not the relay.
 
 ## Documentation
 

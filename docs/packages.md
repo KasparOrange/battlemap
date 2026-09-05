@@ -5,7 +5,7 @@
 | package | version | purpose | notes |
 |---------|---------|---------|-------|
 | `flame` | ^1.22.0 | game engine — component model, sprites, canvas rendering | core rendering |
-| `pdfrx` | ^2.6.1 | PDF loading and rendering | used for PDF map backgrounds. Needs Flutter ≥ 3.47 and `pdfrxFlutterInitialize()`. **No tvOS PDFium binary** — plan: rasterize on the phone, drop from the TV side (`docs/apple-tv-dev.md`) |
+| `pdfrx` | ^2.6.1 | PDF loading and rendering | used for PDF map backgrounds. Needs Flutter ≥ 3.47 and `pdfrxFlutterInitialize()`. **No tvOS PDFium binary** — since 1.1.3 the phone rasterizes PDFs (web: PDFium WASM, 5 MB asset) and the TV only gets images; the TV-side path is legacy (`docs/apple-tv-dev.md`) |
 | `file_picker` | ^12.2.0 | file selection dialog | map upload from phone (`FilePicker.pickFile` + `readAsBytes()`). Web needs `FilePickerWebOptions(cancelUploadOnWindowBlur: false)` (`lib/network/file_picker_options_web.dart`) or iOS Safari cancels every pick |
 | `file_picker_web` | ^3.1.0 | web options class only | conditional import; see above |
 | `web_socket_channel` | ^3.0.0 | WebSocket client for relay | works on both web (Safari) and native (APK) |

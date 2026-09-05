@@ -22,7 +22,7 @@ phone (safari)          VPS (72.62.88.197)          TV (xiaomi box)
 
 - **commands** flow phone → relay → TV (fog reveal, token place, door toggle, navigation)
 - **state** flows TV → relay → phone (fullState broadcast every 50ms when paired)
-- **maps** flow phone → VPS HTTP → TV HTTP download (large files bypass the relay)
+- **maps** flow phone → VPS HTTP → TV HTTP download (large files bypass the relay); PDFs are rasterized to PNG on the phone first, so the TV only ever loads `.dd2vtt` or images
 - **logs** flow TV (APK) → MwLog, our VictoriaLogs tenant `battlemap` on the same VPS (structured JSON lines, basic auth baked in at build time — `docs/setup.md` "logs"). The old `log_server.py` / `/tmp/battlemap.log` are retired (2026-09-05).
 
 ## TV storage
@@ -60,7 +60,7 @@ two-finger gestures always control the camera (pinch zoom + pan).
 
 | priority | component | description |
 |----------|-----------|-------------|
-| 0 | map image | .dd2vtt or PDF background |
+| 0 | map image | .dd2vtt image, uploaded PNG/JPG, or a PDF page rasterized on the phone |
 | 1 | grid overlay | grid lines |
 | 2 | strokes | completed drawings |
 | 3 | live stroke | in-progress stroke preview |

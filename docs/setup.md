@@ -42,8 +42,7 @@ python3 tools/dev_server.py > /dev/null 2>&1 &
 ### checking services
 
 ```bash
-ss -tlnp | grep -E '4242|9090'
-curl -s http://127.0.0.1:4243/health
+ss -tln | grep -E '4242|9090'
 ```
 
 ## building

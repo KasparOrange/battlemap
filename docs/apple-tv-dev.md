@@ -27,7 +27,7 @@ of the unmodified Flutter framework:
 | package | on the TV side? | tvOS |
 |---|---|---|
 | `flame`, `hive`, `hive_flutter`, `uuid`, `flutter_phoenix`, `web_socket_channel` | yes | pure Dart — fine |
-| `pdfrx` | **yes** (`tv_shell.dart`, `pdf_helper.dart`, `vtt_state.dart`) | **blocked** — ships a native PDFium binary per platform, none for tvOS |
+| `pdfrx` | **yes** (`tv_shell.dart`, `pdf_helper.dart`, `vtt_state.dart`) | **no tvOS binary** (native PDFium) — resolved by rasterizing on the phone (below); only the legacy `vtt.pdfUploaded` path still touches it on the TV |
 | `file_picker` | phone only | irrelevant |
 | `path_provider` | yes | `path_provider_tvos` |
 | `package_info_plus` | yes | `package_info_plus_tvos` |
@@ -49,7 +49,7 @@ shipping the PDF to the TV and rendering it there:
 1. companion picks the page → renders it to a PNG at map resolution (cap ~4096 px long edge)
 2. uploads the PNG through the existing HTTP map transfer (`dev_server` `/upload/…`)
 3. the TV receives an **image map**, the same path `.dd2vtt`/image maps already take
-4. `pdfrx` leaves the TV side entirely (`tv_shell.dart`, `pdf_helper.dart` TV branches,
+4. `pdfrx` can leave the TV side once the legacy `vtt.pdfUploaded` path is dropped (`tv_shell.dart`, `pdf_helper.dart` TV branches,
    the "image session resume mistakenly going through PDF render" class of bugs disappears)
 
 Benefits on both platforms: no PDF engine on the box, faster session resume, one map type on

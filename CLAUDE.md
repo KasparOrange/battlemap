@@ -41,7 +41,7 @@ Detailed documentation lives in `docs/`:
 | `docs/sessions.md` | Session lifecycle, auto-save, what's persisted, thumbnails |
 | `docs/packages.md` | All dependencies: current, adopted, considered, rejected |
 | `docs/shorebird-setup.md` | OTA update setup (Shorebird code push) |
-| `docs/apple-tv-dev.md` | Apple TV as a dev target (flutter-tvos): plugin audit, setup, PDF-on-phone plan |
+| `docs/apple-tv-dev.md` | Apple TV as a dev target (flutter-tvos): setup + what it forced on dependencies, tvOS caveats, PDF rasterized on the phone |
 | `docs/archive.md` | History, newest on top: one entry per prompt that changed docs or code (append-only) |
 
 ## Architecture
@@ -50,7 +50,7 @@ See `docs/architecture.md` for the full system diagram. Key points:
 
 - **VPS relay** (`tools/vtt_relay.py`, port 9090) — WebSocket relay, both TV and phone connect as clients
 - **HTTP server** (`tools/dev_server.py`, port 4242) — serves web build, APK downloads, map file uploads
-- **Log server** (`tools/log_server.py`, port 4243) — structured JSONL logging from both devices
+- **Logs** go to MwLog (VictoriaLogs tenant `battlemap` on the same VPS) — `docs/setup.md` "logs"; `tools/log_server.py` is retired
 - **Map files** travel phone → HTTP upload → VPS → HTTP download → TV (not through the relay)
 - **Commands** travel phone → relay → TV (small JSON messages)
 - **State** broadcasts TV → relay → phone (50ms throttle)

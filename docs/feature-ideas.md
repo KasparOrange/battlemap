@@ -99,7 +99,7 @@ these add game mechanics on top of the pen & paper visuals.
 - [x] structured logging + developer screen
 - [ ] **logs → MwLog** — code done 2026-09-05, ships with the next APK build (`--dart-define=MWLOG_AUTH`)
 - [ ] **rasterize PDFs on the phone** — TV only ever receives images; unblocks the Apple TV dev target
-- [ ] **Apple TV as dev target** — flutter-tvos fork, hot reload on the living-room TV (`docs/apple-tv-dev.md`)
+- [x] **Apple TV as dev target** — done 2026-09-05: simulator for hot reload, `--release` on the living-room TV (`docs/apple-tv-dev.md`)
 - [x] medieval-themed DM control panel
 - [x] TV remote fallback (D-pad navigation)
 - [ ] **session settings dialog** — template picker + feature toggles
