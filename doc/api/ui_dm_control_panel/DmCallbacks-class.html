@@ -59,6 +59,9 @@
 implementations. In networked mode (<a href="../ui_vtt_companion_screen/VttCompanionScreen-class.html">VttCompanionScreen</a>), callbacks
 send commands through the <a href="../network_vtt_relay_client/VttRelayClient-class.html">VttRelayClient</a>. In local mode, callbacks
 act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> and <a href="../game_vtt_game/VttGame-class.html">VttGame</a>.</p>
+<p>The camera-link callbacks (<a href="../ui_dm_control_panel/DmCallbacks/onSetCameraLink.html">onSetCameraLink</a>, <a href="../ui_dm_control_panel/DmCallbacks/onSendView.html">onSendView</a>,
+<a href="../ui_dm_control_panel/DmCallbacks/onMatchTv.html">onMatchTv</a>) are optional; the Camera tab shows the TV-link controls
+only when they are provided (networked mode).</p>
 <p>See also:</p>
 <ul>
 <li><a href="../ui_dm_control_panel/DmControlPanel-class.html">DmControlPanel</a>, the widget that invokes these callbacks.</li>
@@ -72,7 +75,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
     <h2>Constructors</h2>
     <dl class="constructor-summary-list">
         <dt id="DmCallbacks.new" class="callable">
-          <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/DmCallbacks.html">DmCallbacks</a></span><span class="signature">({<span class="parameter" id="-param-onLoadMap"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onLoadMap</span>, </span><span class="parameter" id="-param-onToggleFog"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleFog</span>, </span><span class="parameter" id="-param-onRevealAll"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRevealAll</span>, </span><span class="parameter" id="-param-onHideAll"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onHideAll</span>, </span><span class="parameter" id="-param-onToggleGrid"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleGrid</span>, </span><span class="parameter" id="-param-onToggleWalls"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleWalls</span>, </span><span class="parameter" id="-param-onToggleRevealMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleRevealMode</span>, </span><span class="parameter" id="-param-onSetBrushRadius"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetBrushRadius</span>(<span class="parameter" id="param-radius"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">radius</span></span>), </span><span class="parameter" id="-param-onZoomIn"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onZoomIn</span>, </span><span class="parameter" id="-param-onZoomOut"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onZoomOut</span>, </span><span class="parameter" id="-param-onZoomToFit"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onZoomToFit</span>, </span><span class="parameter" id="-param-onRotateCW"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRotateCW</span>, </span><span class="parameter" id="-param-onRotateCCW"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRotateCCW</span>, </span><span class="parameter" id="-param-onResetRotation"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onResetRotation</span>, </span><span class="parameter" id="-param-onCalibrate"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onCalibrate</span>(<span class="parameter" id="param-tvWidthInches"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">tvWidthInches</span></span>), </span><span class="parameter" id="-param-onResetCalibration"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onResetCalibration</span>, </span><span class="parameter" id="-param-onSetFogMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetFogMode</span>, </span><span class="parameter" id="-param-onSetDrawMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetDrawMode</span>, </span><span class="parameter" id="-param-onSetTokenMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetTokenMode</span>, </span><span class="parameter" id="-param-onSetMeasureMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetMeasureMode</span>, </span><span class="parameter" id="-param-onSetDrawColor"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetDrawColor</span>(<span class="parameter" id="param-"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a></span></span>), </span><span class="parameter" id="-param-onSetDrawWidth"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetDrawWidth</span>(<span class="parameter" id="param-"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span></span>), </span><span class="parameter" id="-param-onClearDrawings"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onClearDrawings</span>, </span><span class="parameter" id="-param-onUndoStroke"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onUndoStroke</span>, </span><span class="parameter" id="-param-onClearTokens"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onClearTokens</span>, </span><span class="parameter" id="-param-onEditToken"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onEditToken</span>(<span class="parameter" id="param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, {</span><span class="parameter" id="param-conditions"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>&gt;</span>?</span> <span class="parameter-name">conditions</span>, </span><span class="parameter" id="param-currentHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">currentHp</span>, </span><span class="parameter" id="param-maxHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">maxHp</span>, </span><span class="parameter" id="param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">name</span></span>}), </span><span class="parameter" id="-param-onUndo"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onUndo</span>, </span><span class="parameter" id="-param-onRedo"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRedo</span>, </span><span class="parameter" id="-param-onToggleShadowMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleShadowMode</span>, </span><span class="parameter" id="-param-onCommitShadow"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onCommitShadow</span>, </span><span class="parameter" id="-param-onClearShadow"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onClearShadow</span>, </span><span class="parameter" id="-param-onSetRoomRevealMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetRoomRevealMode</span>, </span><span class="parameter" id="-param-onRoomReveal"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onRoomReveal</span>(<span class="parameter" id="param-cells"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span> <span class="parameter-name">cells</span></span>), </span><span class="parameter" id="-param-onSetAoeMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetAoeMode</span>, </span><span class="parameter" id="-param-onSetAoe"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetAoe</span>(<span class="parameter" id="param-template"><span class="type-annotation"><a href="../model_aoe_template/AoeTemplate-class.html">AoeTemplate</a></span> <span class="parameter-name">template</span></span>), </span><span class="parameter" id="-param-onClearAoe"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onClearAoe</span>, </span><span class="parameter" id="-param-onToggleRuler"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleRuler</span>, </span><span class="parameter" id="-param-onRotateRuler"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRotateRuler</span>, </span><span class="parameter" id="-param-onSetScaleFactor"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetScaleFactor</span>(<span class="parameter" id="param-factor"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">factor</span></span>), </span><span class="parameter" id="-param-onUpdateSessionSettings"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onUpdateSessionSettings</span>(<span class="parameter" id="param-settings"><span class="type-annotation"><a href="../model_session/SessionSettings-class.html">SessionSettings</a></span> <span class="parameter-name">settings</span></span>), </span><span class="parameter" id="-param-onTriggerEffect"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onTriggerEffect</span>(<span class="parameter" id="param-effect"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">effect</span></span>)</span>})</span>
+          <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/DmCallbacks.html">DmCallbacks</a></span><span class="signature">({<span class="parameter" id="param-onLoadMap"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onLoadMap</span>, </span><span class="parameter" id="param-onToggleFog"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleFog</span>, </span><span class="parameter" id="param-onRevealAll"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRevealAll</span>, </span><span class="parameter" id="param-onHideAll"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onHideAll</span>, </span><span class="parameter" id="param-onToggleGrid"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleGrid</span>, </span><span class="parameter" id="param-onToggleWalls"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleWalls</span>, </span><span class="parameter" id="param-onToggleRevealMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleRevealMode</span>, </span><span class="parameter" id="param-onSetBrushRadius"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetBrushRadius</span>(<span class="parameter" id="param-radius"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">radius</span></span>), </span><span class="parameter" id="param-onZoomIn"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onZoomIn</span>, </span><span class="parameter" id="param-onZoomOut"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onZoomOut</span>, </span><span class="parameter" id="param-onZoomToFit"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onZoomToFit</span>, </span><span class="parameter" id="param-onRotateCW"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRotateCW</span>, </span><span class="parameter" id="param-onRotateCCW"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRotateCCW</span>, </span><span class="parameter" id="param-onResetRotation"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onResetRotation</span>, </span><span class="parameter" id="param-onCalibrate"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onCalibrate</span>(<span class="parameter" id="param-tvWidthInches"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">tvWidthInches</span></span>), </span><span class="parameter" id="param-onResetCalibration"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onResetCalibration</span>, </span><span class="parameter" id="param-onSetFogMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetFogMode</span>, </span><span class="parameter" id="param-onSetDrawMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetDrawMode</span>, </span><span class="parameter" id="param-onSetTokenMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetTokenMode</span>, </span><span class="parameter" id="param-onSetMeasureMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetMeasureMode</span>, </span><span class="parameter" id="param-onSetDrawColor"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetDrawColor</span>(<span class="parameter" id="param-"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a></span></span>), </span><span class="parameter" id="param-onSetDrawWidth"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetDrawWidth</span>(<span class="parameter" id="param-tvWidthInches"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">tvWidthInches</span></span>), </span><span class="parameter" id="param-onClearDrawings"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onClearDrawings</span>, </span><span class="parameter" id="param-onUndoStroke"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onUndoStroke</span>, </span><span class="parameter" id="param-onClearTokens"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onClearTokens</span>, </span><span class="parameter" id="param-onEditToken"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onEditToken</span>(<span class="parameter" id="param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span>, {</span><span class="parameter" id="param-conditions"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Set-class.html">Set</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>&gt;</span>?</span> <span class="parameter-name">conditions</span>, </span><span class="parameter" id="param-currentHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">currentHp</span>, </span><span class="parameter" id="param-maxHp"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">maxHp</span>, </span><span class="parameter" id="param-name"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">name</span></span>}), </span><span class="parameter" id="param-onRemoveToken"><span class="type-annotation">void</span> <span class="parameter-name">onRemoveToken</span>(<span class="parameter" id="param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span></span>)?, </span><span class="parameter" id="param-onUndo"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onUndo</span>, </span><span class="parameter" id="param-onRedo"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRedo</span>, </span><span class="parameter" id="param-onToggleShadowMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleShadowMode</span>, </span><span class="parameter" id="param-onCommitShadow"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onCommitShadow</span>, </span><span class="parameter" id="param-onClearShadow"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onClearShadow</span>, </span><span class="parameter" id="param-onSetRoomRevealMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetRoomRevealMode</span>, </span><span class="parameter" id="param-onRoomReveal"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onRoomReveal</span>(<span class="parameter" id="param-cells"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span> <span class="parameter-name">cells</span></span>), </span><span class="parameter" id="param-onSetAoeMode"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onSetAoeMode</span>, </span><span class="parameter" id="param-onSetAoe"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetAoe</span>(<span class="parameter" id="param-template"><span class="type-annotation"><a href="../model_aoe_template/AoeTemplate-class.html">AoeTemplate</a></span> <span class="parameter-name">template</span></span>), </span><span class="parameter" id="param-onClearAoe"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onClearAoe</span>, </span><span class="parameter" id="param-onToggleRuler"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onToggleRuler</span>, </span><span class="parameter" id="param-onRotateRuler"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span> <span class="parameter-name">onRotateRuler</span>, </span><span class="parameter" id="param-onSetScaleFactor"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onSetScaleFactor</span>(<span class="parameter" id="param-tvWidthInches"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">tvWidthInches</span></span>), </span><span class="parameter" id="param-onUpdateSessionSettings"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onUpdateSessionSettings</span>(<span class="parameter" id="param-settings"><span class="type-annotation"><a href="../model_session/SessionSettings-class.html">SessionSettings</a></span> <span class="parameter-name">settings</span></span>), </span><span class="parameter" id="param-onTriggerEffect"><span>required</span> <span class="type-annotation">void</span> <span class="parameter-name">onTriggerEffect</span>(<span class="parameter" id="param-effect"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">effect</span></span>), </span><span class="parameter" id="param-onSetCameraLink"><span class="type-annotation">void</span> <span class="parameter-name">onSetCameraLink</span>(<span class="parameter" id="param-linked"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">linked</span></span>)?, </span><span class="parameter" id="param-onSendView"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a>?</span> <span class="parameter-name">onSendView</span>, </span><span class="parameter" id="param-onMatchTv"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a>?</span> <span class="parameter-name">onMatchTv</span>, </span><span class="parameter" id="param-onPhoneZoomToFit"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a>?</span> <span class="parameter-name">onPhoneZoomToFit</span></span>})</span>
         </dt>
         <dd>
           Creates a <a href="../ui_dm_control_panel/DmCallbacks-class.html">DmCallbacks</a> with all required action handlers.
@@ -206,6 +209,30 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
 </dd>
 
+        <dt id="onMatchTv" class="property">
+  <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/onMatchTv.html">onMatchTv</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a>?</span>
+  
+
+</dt>
+<dd>
+  Moves the phone camera to the TV's current view.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="onPhoneZoomToFit" class="property">
+  <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/onPhoneZoomToFit.html">onPhoneZoomToFit</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a>?</span>
+  
+
+</dt>
+<dd>
+  Fits the whole map into the phone screen (phone camera only).
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
         <dt id="onRedo" class="property">
   <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/onRedo.html">onRedo</a></span>
   <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a></span>
@@ -214,6 +241,18 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 </dt>
 <dd>
   Redoes the most recently undone action on the TV.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="onRemoveToken" class="property">
+  <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/onRemoveToken.html">onRemoveToken</a></span>
+  <span class="signature">&#8594; void Function<span class="signature">(<span class="parameter" id="param-id"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">id</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Removes a single token by id (token edit dialog "Delete").
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -237,7 +276,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
 </dt>
 <dd>
-  Resets the camera rotation to 0 degrees.
+  Resets the TV camera rotation to 0 degrees.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -273,7 +312,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
 </dt>
 <dd>
-  Rotates the camera 90 degrees counter-clockwise.
+  Rotates the TV camera 90 degrees counter-clockwise.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -285,7 +324,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
 </dt>
 <dd>
-  Rotates the camera 90 degrees clockwise.
+  Rotates the TV camera 90 degrees clockwise.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -302,6 +341,18 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
 </dd>
 
+        <dt id="onSendView" class="property">
+  <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/onSendView.html">onSendView</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-ui/VoidCallback.html">VoidCallback</a>?</span>
+  
+
+</dt>
+<dd>
+  Sends the phone's current camera to the TV once.
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
         <dt id="onSetAoe" class="property">
   <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/onSetAoe.html">onSetAoe</a></span>
   <span class="signature">&#8594; void Function<span class="signature">(<span class="parameter" id="param-template"><span class="type-annotation"><a href="../model_aoe_template/AoeTemplate-class.html">AoeTemplate</a></span> <span class="parameter-name">template</span></span>)</span></span>
@@ -309,7 +360,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
 </dt>
 <dd>
-  Places an area-of-effect template on the map.
+  Places or updates the area-of-effect template on the map.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -334,6 +385,18 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 </dt>
 <dd>
   Sets the fog brush radius to <code>radius</code> grid cells (0, 1, or 2).
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="onSetCameraLink" class="property">
+  <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/onSetCameraLink.html">onSetCameraLink</a></span>
+  <span class="signature">&#8594; void Function<span class="signature">(<span class="parameter" id="param-linked"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">linked</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Turns continuous "TV follows the phone camera" on or off.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -364,12 +427,12 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
         <dt id="onSetDrawWidth" class="property">
   <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/onSetDrawWidth.html">onSetDrawWidth</a></span>
-  <span class="signature">&#8594; void Function<span class="signature">(<span class="parameter" id="param-"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span></span>)</span></span>
+  <span class="signature">&#8594; void Function<span class="signature">(<span class="parameter" id="param-tvWidthInches"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">tvWidthInches</span></span>)</span></span>
   
 
 </dt>
 <dd>
-  Sets the drawing stroke width in logical pixels.
+  Sets the drawing stroke width in world pixels.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -412,7 +475,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
         <dt id="onSetScaleFactor" class="property">
   <span class="name"><a href="../ui_dm_control_panel/DmCallbacks/onSetScaleFactor.html">onSetScaleFactor</a></span>
-  <span class="signature">&#8594; void Function<span class="signature">(<span class="parameter" id="param-factor"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">factor</span></span>)</span></span>
+  <span class="signature">&#8594; void Function<span class="signature">(<span class="parameter" id="param-tvWidthInches"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">tvWidthInches</span></span>)</span></span>
   
 
 </dt>
@@ -561,7 +624,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
 </dt>
 <dd>
-  Zooms the camera in by one step.
+  Zooms the TV camera in by one step.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -573,7 +636,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
 </dt>
 <dd>
-  Zooms the camera out by one step.
+  Zooms the TV camera out by one step.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -585,7 +648,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 
 </dt>
 <dd>
-  Resets the camera zoom so the entire map fits on screen.
+  Resets the TV camera zoom so the entire map fits on screen.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -687,7 +750,7 @@ act directly on <a href="../state_vtt_state/VttState-class.html">VttState</a> an
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

@@ -62,19 +62,15 @@
     </section>
     
 <section class="desc markdown">
-  <p>Get current camera state for broadcasting.</p>
+  <p>Current camera state for broadcasting (<code>x</code>, <code>y</code>, <code>zoom</code>, <code>angle</code>,
+<code>vw</code>, <code>vh</code>), see <a href="../../game_components_tv_viewport_component/CameraSnapshot/toJson.html">CameraSnapshot.toJson</a>.</p>
 </section>
 
 
     
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
-  <pre class="language-dart"><code class="language-dart">Map&lt;String, double&gt; getCameraState() =&gt; {
-      &#39;x&#39;: camera.viewfinder.position.x,
-      &#39;y&#39;: camera.viewfinder.position.y,
-      &#39;zoom&#39;: camera.viewfinder.zoom,
-      &#39;angle&#39;: camera.viewfinder.angle,
-    };</code></pre>
+  <pre class="language-dart"><code class="language-dart">Map&lt;String, double&gt; getCameraState() =&gt; cameraSnapshot.toJson();</code></pre>
 </section>
 
 
@@ -102,7 +98,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

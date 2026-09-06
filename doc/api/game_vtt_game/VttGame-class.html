@@ -54,10 +54,28 @@
 
     
 <section class="desc markdown">
-  <p>Flame game for VTT table display.
-Renders the map image with grid overlay, handles camera pan/zoom.
-Routes single-finger input to the active tool (fog/draw/token).
-Two-finger gestures control the camera (pinch zoom + drag pan).</p>
+  <p>Flame game for the VTT map — runs on the TV (display) and on the phone
+(editor preview).</p>
+<p>Renders the map image with grid overlay and all tool layers, and owns
+the camera. Input routing:</p>
+<ul>
+<li><strong>Two fingers</strong> (any pointer count &gt; 1) → camera pinch-zoom + pan,
+detected via <a href="https://pub.dev/documentation/flame/1.36.0/events/ScaleUpdateInfo/pointerCount.html">ScaleUpdateInfo.pointerCount</a> so a two-finger pan without
+pinching never reaches a tool.</li>
+<li><strong>One finger drag</strong> → the active tool (<a href="../state_vtt_state/VttState/interactionMode.html">VttState.interactionMode</a>); the
+tool starts on the first real move, not on touch-down, so a second
+finger arriving late cannot leave a brush stroke behind.</li>
+<li><strong>Tap</strong> (no movement) → the tool's tap action.</li>
+<li><strong>Scroll wheel</strong> → zoom (desktop testing).</li>
+</ul>
+<p>The TV (<a href="../game_vtt_game/VttGame/isDisplay.html">isDisplay</a> = <code>true</code>) enforces the calibrated minimum zoom; the
+phone does not, its minimum zoom is half the fit-to-screen zoom so the
+whole map can always be seen (<a href="../game_vtt_game/VttGame/minZoom.html">minZoom</a>).</p>
+<p>See also:</p>
+<ul>
+<li><a href="../state_vtt_state/VttState-class.html">VttState</a>, the shared state this game renders.</li>
+<li><a href="../game_components_tv_viewport_component/TvViewportComponent-class.html">TvViewportComponent</a>, the phone-side outline of the TV's view.</li>
+</ul>
 </section>
 
 
@@ -80,6 +98,7 @@ Two-finger gestures control the camera (pinch zoom + drag pan).</p>
   <dd>
     <ul class="comma-separated clazz-relationships">
         <li><a href="https://pub.dev/documentation/flame/1.36.0/input/ScaleDetector-mixin.html">ScaleDetector</a></li>
+        <li><a href="https://pub.dev/documentation/flame/1.36.0/input/ScrollDetector-mixin.html">ScrollDetector</a></li>
     </ul>
   </dd>
 
@@ -103,10 +122,11 @@ Two-finger gestures control the camera (pinch zoom + drag pan).</p>
     <h2>Constructors</h2>
     <dl class="constructor-summary-list">
         <dt id="VttGame.new" class="callable">
-          <span class="name"><a href="../game_vtt_game/VttGame/VttGame.html">VttGame</a></span><span class="signature">({<span class="parameter" id="-param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span></span>})</span>
+          <span class="name"><a href="../game_vtt_game/VttGame/VttGame.html">VttGame</a></span><span class="signature">({<span class="parameter" id="param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span><span class="parameter" id="param-isDisplay"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">isDisplay</span> = <span class="default-value">true</span></span>})</span>
         </dt>
         <dd>
-          
+          Creates the game for <code>state</code>. <code>isDisplay</code> is <code>true</code> on the TV and in
+the companion's local mode, <code>false</code> for the networked phone preview.
         </dd>
     </dl>
   </section>
@@ -154,9 +174,21 @@ instance if needed.
 
 </dd>
 
+        <dt id="cameraSnapshot" class="property">
+  <span class="name"><a href="../game_vtt_game/VttGame/cameraSnapshot.html">cameraSnapshot</a></span>
+  <span class="signature">&#8594; <a href="../game_components_tv_viewport_component/CameraSnapshot-class.html">CameraSnapshot</a></span>
+  
+
+</dt>
+<dd>
+  Current camera transform plus viewport size.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
         <dt id="canvasSize" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/Game/canvasSize.html">canvasSize</a></span>
-  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -185,7 +217,7 @@ instance if needed.
 
 </dt>
 <dd>
-  
+  Current camera rotation in whole degrees.
   <div class="features"><span class="feature">no setter</span></div>
 
 </dd>
@@ -197,7 +229,7 @@ instance if needed.
 
 </dt>
 <dd>
-  
+  Current camera zoom.
   <div class="features"><span class="feature">no setter</span></div>
 
 </dd>
@@ -264,6 +296,18 @@ its parent has when it is prepared.
   Returns a <a href="https://pub.dev/documentation/flame/1.36.0/text/TextPaint-class.html">TextPaint</a> object with the <a href="https://pub.dev/documentation/flame/1.36.0/components/Component/debugColor.html">debugColor</a> set as color for the
 text.
   <div class="features"><span class="feature">no setter</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="fitZoom" class="property">
+  <span class="name"><a href="../game_vtt_game/VttGame/fitZoom.html">fitZoom</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>
+  
+
+</dt>
+<dd>
+  Zoom at which the whole map fits the viewport (0.1 if unknown).
+  <div class="features"><span class="feature">no setter</span></div>
 
 </dd>
 
@@ -370,6 +414,19 @@ needed.
 
 </dd>
 
+        <dt id="isDisplay" class="property">
+  <span class="name"><a href="../game_vtt_game/VttGame/isDisplay.html">isDisplay</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
+  
+
+</dt>
+<dd>
+  Whether this instance is the TV display (enforces calibration) rather
+than the phone preview (free camera, TV viewport overlay).
+  <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
         <dt id="isLoaded" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/isLoaded.html">isLoaded</a></span>
   <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
@@ -459,7 +516,7 @@ mounted to a new parent.
 
         <dt id="lifecycleEventsProcessed" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/lifecycleEventsProcessed.html">lifecycleEventsProcessed</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -472,7 +529,7 @@ processed.
 
         <dt id="loaded" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/loaded.html">loaded</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -482,9 +539,21 @@ processed.
 
 </dd>
 
+        <dt id="minZoom" class="property">
+  <span class="name"><a href="../game_vtt_game/VttGame/minZoom.html">minZoom</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>
+  
+
+</dt>
+<dd>
+  Lower zoom bound.
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
         <dt id="mounted" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/mounted.html">mounted</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -518,6 +587,18 @@ of the cursor to the closest region available on the tree.
   Set by the PointerMoveDispatcher to receive mouse events from the
 game widget.
   <div class="features"><span class="feature">getter/setter pair</span><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="onCameraChanged" class="property">
+  <span class="name"><a href="../game_vtt_game/VttGame/onCameraChanged.html">onCameraChanged</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-camera"><span class="type-annotation"><a href="../game_components_tv_viewport_component/CameraSnapshot-class.html">CameraSnapshot</a></span> <span class="parameter-name">camera</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called (at most once per frame) when this game's camera changed.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
 
@@ -584,7 +665,7 @@ which your components are rendered.
 
         <dt id="removed" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/removed.html">removed</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -634,7 +715,7 @@ render context to all its children (recursively).
 
         <dt id="size" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/size.html">size</a></span>
-  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -651,8 +732,20 @@ render context to all its children (recursively).
 
 </dt>
 <dd>
-  
+  The shared state rendered by this game.
   <div class="features"><span class="feature">final</span></div>
+
+</dd>
+
+        <dt id="tvCamera" class="property">
+  <span class="name"><a href="../game_vtt_game/VttGame/tvCamera.html">tvCamera</a></span>
+  <span class="signature">&#8594; <a href="../game_components_tv_viewport_component/CameraSnapshot-class.html">CameraSnapshot</a>?</span>
+  
+
+</dt>
+<dd>
+  The last TV camera received via <a href="../game_vtt_game/VttGame/setTvViewport.html">setTvViewport</a>, or <code>null</code>.
+  <div class="features"><span class="feature">no setter</span></div>
 
 </dd>
 
@@ -693,7 +786,7 @@ Inside of this world is where most of your components should be added.
 
         <dt id="addAll" class="callable inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/addAll.html">addAll</a></span><span class="signature">(<wbr><span class="parameter" id="addAll-param-components"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Iterable-class.html">Iterable</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span>&gt;</span></span> <span class="parameter-name">components</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   </span>
   
 
@@ -742,6 +835,19 @@ Inside of this world is where most of your components should be added.
 then the great-grand-parent, and so on, until it reaches a component
 without a parent.
   <div class="features"><span class="feature">inherited</span></div>
+
+</dd>
+
+        <dt id="applyCamera" class="callable">
+  <span class="name"><a href="../game_vtt_game/VttGame/applyCamera.html">applyCamera</a></span><span class="signature">(<wbr><span class="parameter" id="applyCamera-param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="applyCamera-param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">y</span>, </span><span class="parameter" id="applyCamera-param-zoom"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">zoom</span>, </span><span class="parameter" id="applyCamera-param-angle"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">angle</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the camera transform with <code>zoom</code> clamped to <a href="../game_vtt_game/VttGame/minZoom.html">minZoom</a>..<a href="../game_vtt_game/VttGame/maxZoom-constant.html">maxZoom</a>.
+  
 
 </dd>
 
@@ -802,7 +908,7 @@ docs for context.
 </dd>
 
         <dt id="componentsAtPoint" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/componentsAtPoint.html">componentsAtPoint</a></span><span class="signature">(<wbr><span class="parameter" id="componentsAtPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, [</span><span class="parameter" id="componentsAtPoint-param-nestedPoints"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>&gt;</span>?</span> <span class="parameter-name">nestedPoints</span></span>])
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/componentsAtPoint.html">componentsAtPoint</a></span><span class="signature">(<wbr><span class="parameter" id="componentsAtPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, [</span><span class="parameter" id="componentsAtPoint-param-nestedPoints"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>&gt;</span>?</span> <span class="parameter-name">nestedPoints</span></span>])
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Iterable-class.html">Iterable</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span>&gt;</span></span>
   </span>
   
@@ -842,7 +948,7 @@ docs for context.
 </dd>
 
         <dt id="containsEventHandlerAt" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/containsEventHandlerAt.html">containsEventHandlerAt</a></span><span class="signature">(<wbr><span class="parameter" id="containsEventHandlerAt-param-position"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">position</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/containsEventHandlerAt.html">containsEventHandlerAt</a></span><span class="signature">(<wbr><span class="parameter" id="containsEventHandlerAt-param-position"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">position</span></span>)
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
   </span>
   
@@ -855,7 +961,7 @@ docs for context.
 </dd>
 
         <dt id="containsLocalPoint" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/containsLocalPoint.html">containsLocalPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsLocalPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/containsLocalPoint.html">containsLocalPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsLocalPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
   </span>
   
@@ -868,7 +974,7 @@ docs for context.
 </dd>
 
         <dt id="containsPoint" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/containsPoint.html">containsPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/containsPoint.html">containsPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
   </span>
   
@@ -881,8 +987,8 @@ docs for context.
 </dd>
 
         <dt id="convertGlobalToLocalCoordinate" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/Game/convertGlobalToLocalCoordinate.html">convertGlobalToLocalCoordinate</a></span><span class="signature">(<wbr><span class="parameter" id="convertGlobalToLocalCoordinate-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/Game/convertGlobalToLocalCoordinate.html">convertGlobalToLocalCoordinate</a></span><span class="signature">(<wbr><span class="parameter" id="convertGlobalToLocalCoordinate-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -897,8 +1003,8 @@ attached to Flutter, this operation is the identity.
 </dd>
 
         <dt id="convertLocalToGlobalCoordinate" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/Game/convertLocalToGlobalCoordinate.html">convertLocalToGlobalCoordinate</a></span><span class="signature">(<wbr><span class="parameter" id="convertLocalToGlobalCoordinate-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/Game/convertLocalToGlobalCoordinate.html">convertLocalToGlobalCoordinate</a></span><span class="signature">(<wbr><span class="parameter" id="convertLocalToGlobalCoordinate-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -1097,7 +1203,8 @@ are no such children.
 
 </dt>
 <dd>
-  Get current camera state for broadcasting.
+  Current camera state for broadcasting (<code>x</code>, <code>y</code>, <code>zoom</code>, <code>angle</code>,
+<code>vw</code>, <code>vh</code>), see <a href="../game_components_tv_viewport_component/CameraSnapshot/toJson.html">CameraSnapshot.toJson</a>.
   
 
 </dd>
@@ -1170,8 +1277,8 @@ paused or suspended, this is called.
 </dd>
 
         <dt id="loadParallax" class="callable">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxExtension/loadParallax.html">loadParallax</a></span><span class="signature">(<wbr><span class="parameter" id="loadParallax-param-dataList"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxData-class.html">ParallaxData</a></span>&gt;</span></span> <span class="parameter-name">dataList</span>, {</span><span class="parameter" id="loadParallax-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">size</span>, </span><span class="parameter" id="loadParallax-param-baseVelocity"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">baseVelocity</span>, </span><span class="parameter" id="loadParallax-param-velocityMultiplierDelta"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">velocityMultiplierDelta</span>, </span><span class="parameter" id="loadParallax-param-repeat"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/ImageRepeat.html">ImageRepeat</a></span> <span class="parameter-name">repeat</span> = <span class="default-value">ImageRepeat.repeatX</span>, </span><span class="parameter" id="loadParallax-param-alignment"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/Alignment-class.html">Alignment</a></span> <span class="parameter-name">alignment</span> = <span class="default-value">Alignment.bottomLeft</span>, </span><span class="parameter" id="loadParallax-param-fill"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/LayerFill.html">LayerFill</a></span> <span class="parameter-name">fill</span> = <span class="default-value">LayerFill.height</span>, </span><span class="parameter" id="loadParallax-param-filterQuality"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/FilterQuality.html">FilterQuality</a>?</span> <span class="parameter-name">filterQuality</span>, </span><span class="parameter" id="loadParallax-param-package"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">package</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/Parallax-class.html">Parallax</a></span>&gt;</span></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxExtension/loadParallax.html">loadParallax</a></span><span class="signature">(<wbr><span class="parameter" id="loadParallax-param-dataList"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxData-class.html">ParallaxData</a></span>&gt;</span></span> <span class="parameter-name">dataList</span>, {</span><span class="parameter" id="loadParallax-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">size</span>, </span><span class="parameter" id="loadParallax-param-baseVelocity"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">baseVelocity</span>, </span><span class="parameter" id="loadParallax-param-velocityMultiplierDelta"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">velocityMultiplierDelta</span>, </span><span class="parameter" id="loadParallax-param-repeat"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/ImageRepeat.html">ImageRepeat</a></span> <span class="parameter-name">repeat</span> = <span class="default-value">ImageRepeat.repeatX</span>, </span><span class="parameter" id="loadParallax-param-alignment"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/Alignment-class.html">Alignment</a></span> <span class="parameter-name">alignment</span> = <span class="default-value">Alignment.bottomLeft</span>, </span><span class="parameter" id="loadParallax-param-fill"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/LayerFill.html">LayerFill</a></span> <span class="parameter-name">fill</span> = <span class="default-value">LayerFill.height</span>, </span><span class="parameter" id="loadParallax-param-filterQuality"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/FilterQuality.html">FilterQuality</a>?</span> <span class="parameter-name">filterQuality</span>, </span><span class="parameter" id="loadParallax-param-package"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">package</span></span>})
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/Parallax-class.html">Parallax</a></span>&gt;</span></span>
   </span>
   
 
@@ -1188,7 +1295,7 @@ paused or suspended, this is called.
 
         <dt id="loadParallaxAnimation" class="callable">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxExtension/loadParallaxAnimation.html">loadParallaxAnimation</a></span><span class="signature">(<wbr><span class="parameter" id="loadParallaxAnimation-param-path"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">path</span>, </span><span class="parameter" id="loadParallaxAnimation-param-animationData"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/sprite/SpriteAnimationData-class.html">SpriteAnimationData</a></span> <span class="parameter-name">animationData</span>, {</span><span class="parameter" id="loadParallaxAnimation-param-repeat"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/ImageRepeat.html">ImageRepeat</a></span> <span class="parameter-name">repeat</span> = <span class="default-value">ImageRepeat.repeatX</span>, </span><span class="parameter" id="loadParallaxAnimation-param-alignment"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/Alignment-class.html">Alignment</a></span> <span class="parameter-name">alignment</span> = <span class="default-value">Alignment.bottomLeft</span>, </span><span class="parameter" id="loadParallaxAnimation-param-fill"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/LayerFill.html">LayerFill</a></span> <span class="parameter-name">fill</span> = <span class="default-value">LayerFill.height</span>, </span><span class="parameter" id="loadParallaxAnimation-param-filterQuality"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/FilterQuality.html">FilterQuality</a>?</span> <span class="parameter-name">filterQuality</span>, </span><span class="parameter" id="loadParallaxAnimation-param-package"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">package</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxAnimation-class.html">ParallaxAnimation</a></span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxAnimation-class.html">ParallaxAnimation</a></span>&gt;</span></span>
   </span>
   
 
@@ -1204,8 +1311,8 @@ paused or suspended, this is called.
 </dd>
 
         <dt id="loadParallaxComponent" class="callable">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/ParallaxComponentExtension/loadParallaxComponent.html">loadParallaxComponent</a></span><span class="signature">(<wbr><span class="parameter" id="loadParallaxComponent-param-dataList"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Iterable-class.html">Iterable</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxData-class.html">ParallaxData</a></span>&gt;</span></span> <span class="parameter-name">dataList</span>, {</span><span class="parameter" id="loadParallaxComponent-param-baseVelocity"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">baseVelocity</span>, </span><span class="parameter" id="loadParallaxComponent-param-velocityMultiplierDelta"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">velocityMultiplierDelta</span>, </span><span class="parameter" id="loadParallaxComponent-param-repeat"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/ImageRepeat.html">ImageRepeat</a></span> <span class="parameter-name">repeat</span> = <span class="default-value">ImageRepeat.repeatX</span>, </span><span class="parameter" id="loadParallaxComponent-param-alignment"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/Alignment-class.html">Alignment</a></span> <span class="parameter-name">alignment</span> = <span class="default-value">Alignment.bottomLeft</span>, </span><span class="parameter" id="loadParallaxComponent-param-fill"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/LayerFill.html">LayerFill</a></span> <span class="parameter-name">fill</span> = <span class="default-value">LayerFill.height</span>, </span><span class="parameter" id="loadParallaxComponent-param-images"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/cache/Images-class.html">Images</a>?</span> <span class="parameter-name">images</span>, </span><span class="parameter" id="loadParallaxComponent-param-position"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">position</span>, </span><span class="parameter" id="loadParallaxComponent-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">size</span>, </span><span class="parameter" id="loadParallaxComponent-param-scale"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">scale</span>, </span><span class="parameter" id="loadParallaxComponent-param-angle"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a>?</span> <span class="parameter-name">angle</span>, </span><span class="parameter" id="loadParallaxComponent-param-anchor"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Anchor-class.html">Anchor</a>?</span> <span class="parameter-name">anchor</span>, </span><span class="parameter" id="loadParallaxComponent-param-priority"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">priority</span>, </span><span class="parameter" id="loadParallaxComponent-param-filterQuality"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/FilterQuality.html">FilterQuality</a>?</span> <span class="parameter-name">filterQuality</span>, </span><span class="parameter" id="loadParallaxComponent-param-key"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/ComponentKey-class.html">ComponentKey</a>?</span> <span class="parameter-name">key</span>, </span><span class="parameter" id="loadParallaxComponent-param-package"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">package</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/components/ParallaxComponent-class.html">ParallaxComponent</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame-class.html">FlameGame</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/camera/World-class.html">World</a></span>&gt;</span></span>&gt;</span></span>&gt;</span></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/ParallaxComponentExtension/loadParallaxComponent.html">loadParallaxComponent</a></span><span class="signature">(<wbr><span class="parameter" id="loadParallaxComponent-param-dataList"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Iterable-class.html">Iterable</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxData-class.html">ParallaxData</a></span>&gt;</span></span> <span class="parameter-name">dataList</span>, {</span><span class="parameter" id="loadParallaxComponent-param-baseVelocity"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">baseVelocity</span>, </span><span class="parameter" id="loadParallaxComponent-param-velocityMultiplierDelta"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">velocityMultiplierDelta</span>, </span><span class="parameter" id="loadParallaxComponent-param-repeat"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/ImageRepeat.html">ImageRepeat</a></span> <span class="parameter-name">repeat</span> = <span class="default-value">ImageRepeat.repeatX</span>, </span><span class="parameter" id="loadParallaxComponent-param-alignment"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/Alignment-class.html">Alignment</a></span> <span class="parameter-name">alignment</span> = <span class="default-value">Alignment.bottomLeft</span>, </span><span class="parameter" id="loadParallaxComponent-param-fill"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/LayerFill.html">LayerFill</a></span> <span class="parameter-name">fill</span> = <span class="default-value">LayerFill.height</span>, </span><span class="parameter" id="loadParallaxComponent-param-images"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/cache/Images-class.html">Images</a>?</span> <span class="parameter-name">images</span>, </span><span class="parameter" id="loadParallaxComponent-param-position"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">position</span>, </span><span class="parameter" id="loadParallaxComponent-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">size</span>, </span><span class="parameter" id="loadParallaxComponent-param-scale"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">scale</span>, </span><span class="parameter" id="loadParallaxComponent-param-angle"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a>?</span> <span class="parameter-name">angle</span>, </span><span class="parameter" id="loadParallaxComponent-param-anchor"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Anchor-class.html">Anchor</a>?</span> <span class="parameter-name">anchor</span>, </span><span class="parameter" id="loadParallaxComponent-param-priority"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a>?</span> <span class="parameter-name">priority</span>, </span><span class="parameter" id="loadParallaxComponent-param-filterQuality"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/FilterQuality.html">FilterQuality</a>?</span> <span class="parameter-name">filterQuality</span>, </span><span class="parameter" id="loadParallaxComponent-param-key"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/ComponentKey-class.html">ComponentKey</a>?</span> <span class="parameter-name">key</span>, </span><span class="parameter" id="loadParallaxComponent-param-package"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">package</span></span>})
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/components/ParallaxComponent-class.html">ParallaxComponent</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame-class.html">FlameGame</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/camera/World-class.html">World</a></span>&gt;</span></span>&gt;</span></span>&gt;</span></span>
   </span>
   
 
@@ -1222,7 +1329,7 @@ paused or suspended, this is called.
 
         <dt id="loadParallaxImage" class="callable">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxExtension/loadParallaxImage.html">loadParallaxImage</a></span><span class="signature">(<wbr><span class="parameter" id="loadParallaxImage-param-path"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">path</span>, {</span><span class="parameter" id="loadParallaxImage-param-repeat"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/ImageRepeat.html">ImageRepeat</a></span> <span class="parameter-name">repeat</span> = <span class="default-value">ImageRepeat.repeatX</span>, </span><span class="parameter" id="loadParallaxImage-param-alignment"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/Alignment-class.html">Alignment</a></span> <span class="parameter-name">alignment</span> = <span class="default-value">Alignment.bottomLeft</span>, </span><span class="parameter" id="loadParallaxImage-param-fill"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/LayerFill.html">LayerFill</a></span> <span class="parameter-name">fill</span> = <span class="default-value">LayerFill.height</span>, </span><span class="parameter" id="loadParallaxImage-param-filterQuality"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/FilterQuality.html">FilterQuality</a>?</span> <span class="parameter-name">filterQuality</span>, </span><span class="parameter" id="loadParallaxImage-param-package"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">package</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxImage-class.html">ParallaxImage</a></span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxImage-class.html">ParallaxImage</a></span>&gt;</span></span>
   </span>
   
 
@@ -1238,8 +1345,8 @@ paused or suspended, this is called.
 </dd>
 
         <dt id="loadParallaxLayer" class="callable">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxExtension/loadParallaxLayer.html">loadParallaxLayer</a></span><span class="signature">(<wbr><span class="parameter" id="loadParallaxLayer-param-data"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxData-class.html">ParallaxData</a></span> <span class="parameter-name">data</span>, {</span><span class="parameter" id="loadParallaxLayer-param-repeat"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/ImageRepeat.html">ImageRepeat</a></span> <span class="parameter-name">repeat</span> = <span class="default-value">ImageRepeat.repeatX</span>, </span><span class="parameter" id="loadParallaxLayer-param-alignment"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/Alignment-class.html">Alignment</a></span> <span class="parameter-name">alignment</span> = <span class="default-value">Alignment.bottomLeft</span>, </span><span class="parameter" id="loadParallaxLayer-param-fill"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/LayerFill.html">LayerFill</a></span> <span class="parameter-name">fill</span> = <span class="default-value">LayerFill.height</span>, </span><span class="parameter" id="loadParallaxLayer-param-velocityMultiplier"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">velocityMultiplier</span>, </span><span class="parameter" id="loadParallaxLayer-param-filterQuality"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/FilterQuality.html">FilterQuality</a>?</span> <span class="parameter-name">filterQuality</span>, </span><span class="parameter" id="loadParallaxLayer-param-package"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">package</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxLayer-class.html">ParallaxLayer</a></span>&gt;</span></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxExtension/loadParallaxLayer.html">loadParallaxLayer</a></span><span class="signature">(<wbr><span class="parameter" id="loadParallaxLayer-param-data"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxData-class.html">ParallaxData</a></span> <span class="parameter-name">data</span>, {</span><span class="parameter" id="loadParallaxLayer-param-repeat"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/ImageRepeat.html">ImageRepeat</a></span> <span class="parameter-name">repeat</span> = <span class="default-value">ImageRepeat.repeatX</span>, </span><span class="parameter" id="loadParallaxLayer-param-alignment"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/painting/Alignment-class.html">Alignment</a></span> <span class="parameter-name">alignment</span> = <span class="default-value">Alignment.bottomLeft</span>, </span><span class="parameter" id="loadParallaxLayer-param-fill"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/LayerFill.html">LayerFill</a></span> <span class="parameter-name">fill</span> = <span class="default-value">LayerFill.height</span>, </span><span class="parameter" id="loadParallaxLayer-param-velocityMultiplier"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">velocityMultiplier</span>, </span><span class="parameter" id="loadParallaxLayer-param-filterQuality"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/FilterQuality.html">FilterQuality</a>?</span> <span class="parameter-name">filterQuality</span>, </span><span class="parameter" id="loadParallaxLayer-param-package"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">package</span></span>})
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/parallax/ParallaxLayer-class.html">ParallaxLayer</a></span>&gt;</span></span>
   </span>
   
 
@@ -1255,8 +1362,8 @@ paused or suspended, this is called.
 </dd>
 
         <dt id="loadSprite" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/Game/loadSprite.html">loadSprite</a></span><span class="signature">(<wbr><span class="parameter" id="loadSprite-param-path"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">path</span>, {</span><span class="parameter" id="loadSprite-param-srcSize"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">srcSize</span>, </span><span class="parameter" id="loadSprite-param-srcPosition"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">srcPosition</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/sprite/Sprite-class.html">Sprite</a></span>&gt;</span></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/Game/loadSprite.html">loadSprite</a></span><span class="signature">(<wbr><span class="parameter" id="loadSprite-param-path"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">path</span>, {</span><span class="parameter" id="loadSprite-param-srcSize"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">srcSize</span>, </span><span class="parameter" id="loadSprite-param-srcPosition"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">srcPosition</span></span>})
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/sprite/Sprite-class.html">Sprite</a></span>&gt;</span></span>
   </span>
   
 
@@ -1270,7 +1377,7 @@ options.
 
         <dt id="loadSpriteAnimation" class="callable inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/Game/loadSpriteAnimation.html">loadSpriteAnimation</a></span><span class="signature">(<wbr><span class="parameter" id="loadSpriteAnimation-param-path"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">path</span>, </span><span class="parameter" id="loadSpriteAnimation-param-data"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/sprite/SpriteAnimationData-class.html">SpriteAnimationData</a></span> <span class="parameter-name">data</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/sprite/SpriteAnimation-class.html">SpriteAnimation</a></span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/sprite/SpriteAnimation-class.html">SpriteAnimation</a></span>&gt;</span></span>
   </span>
   
 
@@ -1284,7 +1391,7 @@ its options.
 
         <dt id="loadSpriteBatch" class="callable">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/sprite/SpriteBatchExtension/loadSpriteBatch.html">loadSpriteBatch</a></span><span class="signature">(<wbr><span class="parameter" id="loadSpriteBatch-param-path"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">path</span>, {</span><span class="parameter" id="loadSpriteBatch-param-defaultColor"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Color-class.html">Color</a>?</span> <span class="parameter-name">defaultColor</span>, </span><span class="parameter" id="loadSpriteBatch-param-defaultBlendMode"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/BlendMode.html">BlendMode</a>?</span> <span class="parameter-name">defaultBlendMode</span>, </span><span class="parameter" id="loadSpriteBatch-param-defaultTransform"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/RSTransform-class.html">RSTransform</a>?</span> <span class="parameter-name">defaultTransform</span>, </span><span class="parameter" id="loadSpriteBatch-param-imageCache"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/cache/Images-class.html">Images</a>?</span> <span class="parameter-name">imageCache</span>, </span><span class="parameter" id="loadSpriteBatch-param-useAtlas"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">useAtlas</span> = <span class="default-value">true</span>, </span><span class="parameter" id="loadSpriteBatch-param-package"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a>?</span> <span class="parameter-name">package</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/sprite/SpriteBatch-class.html">SpriteBatch</a></span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/sprite/SpriteBatch-class.html">SpriteBatch</a></span>&gt;</span></span>
   </span>
   
 
@@ -1296,6 +1403,19 @@ its options.
       </p>
   Utility method to load and cache the image for a <a href="https://pub.dev/documentation/flame/1.36.0/sprite/SpriteBatch-class.html">SpriteBatch</a> based on
 its options.
+  
+
+</dd>
+
+        <dt id="matchTvCamera" class="callable">
+  <span class="name"><a href="../game_vtt_game/VttGame/matchTvCamera.html">matchTvCamera</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Moves this camera to the TV's last known transform (phone side).
   
 
 </dd>
@@ -1371,7 +1491,7 @@ not be on the flutter widget tree anymore.
 </dd>
 
         <dt id="onGameResize" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/onGameResize.html">onGameResize</a></span><span class="signature">(<wbr><span class="parameter" id="onGameResize-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">size</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/onGameResize.html">onGameResize</a></span><span class="signature">(<wbr><span class="parameter" id="onGameResize-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">size</span></span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -1400,7 +1520,7 @@ of how to handle the resize event.
 
         <dt id="onLoad" class="callable">
   <span class="name"><a href="../game_vtt_game/VttGame/onLoad.html">onLoad</a></span><span class="signature">(<wbr>)
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   </span>
   
 
@@ -1425,7 +1545,7 @@ of how to handle the resize event.
 </dd>
 
         <dt id="onParentResize" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onParentResize.html">onParentResize</a></span><span class="signature">(<wbr><span class="parameter" id="onParentResize-param-maxSize"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">maxSize</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onParentResize.html">onParentResize</a></span><span class="signature">(<wbr><span class="parameter" id="onParentResize-param-maxSize"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">maxSize</span></span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -1492,6 +1612,19 @@ from the component tree).
 
 </dd>
 
+        <dt id="onScroll" class="callable">
+  <span class="name"><a href="../game_vtt_game/VttGame/onScroll.html">onScroll</a></span><span class="signature">(<wbr><span class="parameter" id="onScroll-param-info"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/events/PointerScrollInfo-class.html">PointerScrollInfo</a></span> <span class="parameter-name">info</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  
+  <div class="features"><span class="feature">override</span></div>
+
+</dd>
+
         <dt id="pauseEngine" class="callable inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/pauseEngine.html">pauseEngine</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; void</span>
@@ -1537,7 +1670,7 @@ the handler has been called with all children.
 
         <dt id="ready" class="callable inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/ready.html">ready</a></span><span class="signature">(<wbr>)
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   </span>
   
 
@@ -1615,7 +1748,7 @@ and their children.
 </dd>
 
         <dt id="removeWhere" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/removeWhere.html">removeWhere</a></span><span class="signature">(<wbr><span class="parameter" id="removeWhere-param-test"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">test</span>(<span class="parameter" id="param-component"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span> <span class="parameter-name">component</span></span>)</span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/removeWhere.html">removeWhere</a></span><span class="signature">(<wbr><span class="parameter" id="removeWhere-param-test"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">test</span>(<span class="parameter" id="contains-param-c"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span> <span class="parameter-name">c</span></span>)</span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -1675,7 +1808,7 @@ canvas is reset for each one.
 
 </dt>
 <dd>
-  
+  Resets the camera rotation to 0.
   
 
 </dd>
@@ -1701,7 +1834,7 @@ canvas is reset for each one.
 
 </dt>
 <dd>
-  
+  Rotates the camera 90° counter-clockwise.
   
 
 </dd>
@@ -1714,7 +1847,21 @@ canvas is reset for each one.
 
 </dt>
 <dd>
+  Rotates the camera 90° clockwise.
   
+
+</dd>
+
+        <dt id="setTvViewport" class="callable">
+  <span class="name"><a href="../game_vtt_game/VttGame/setTvViewport.html">setTvViewport</a></span><span class="signature">(<wbr><span class="parameter" id="setTvViewport-param-snapshot"><span class="type-annotation"><a href="../game_components_tv_viewport_component/CameraSnapshot-class.html">CameraSnapshot</a></span> <span class="parameter-name">snapshot</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Stores the TV's camera (phone side) for the viewport outline and
+"match TV". No-op on the display.
   
 
 </dd>
@@ -1741,7 +1888,7 @@ paused state. By default step time is assumed to be 1/60th of a second.
 
 </dt>
 <dd>
-  Set camera to match TV state (called on phone after receiving vtt.fullState).
+  Sets the camera transform verbatim (session resume on the TV).
   
 
 </dd>
@@ -1786,17 +1933,17 @@ loaded by the game widget.
 
 </dd>
 
-        <dt id="update" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/update.html">update</a></span><span class="signature">(<wbr><span class="parameter" id="update-param-dt"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">dt</span></span>)
+        <dt id="update" class="callable">
+  <span class="name"><a href="../game_vtt_game/VttGame/update.html">update</a></span><span class="signature">(<wbr><span class="parameter" id="update-param-dt"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">dt</span></span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
 
 </dt>
-<dd class="inherited">
+<dd>
   This method is called periodically by the game engine to request that your
 component updates itself.
-  <div class="features"><span class="feature">inherited</span></div>
+  <div class="features"><span class="feature">override</span></div>
 
 </dd>
 
@@ -1808,7 +1955,7 @@ component updates itself.
 
 </dt>
 <dd class="inherited">
-  This method traverses the component tree and calls <a href="https://pub.dev/documentation/flame/1.36.0/game/FlameGame/update.html">update</a> on all its
+  This method traverses the component tree and calls <a href="../game_vtt_game/VttGame/update.html">update</a> on all its
 children according to their <a href="https://pub.dev/documentation/flame/1.36.0/components/Component/priority.html">priority</a> order, relative to the
 priority of the direct siblings, not the children or the ancestors.
   <div class="features"><span class="feature">inherited</span></div>
@@ -1823,7 +1970,7 @@ priority of the direct siblings, not the children or the ancestors.
 
 </dt>
 <dd>
-  
+  Zooms in one step (×1.3), clamped to <a href="../game_vtt_game/VttGame/minZoom.html">minZoom</a>..<a href="../game_vtt_game/VttGame/maxZoom-constant.html">maxZoom</a>.
   
 
 </dd>
@@ -1836,7 +1983,7 @@ priority of the direct siblings, not the children or the ancestors.
 
 </dt>
 <dd>
-  
+  Zooms out one step (÷1.3), clamped to <a href="../game_vtt_game/VttGame/minZoom.html">minZoom</a>..<a href="../game_vtt_game/VttGame/maxZoom-constant.html">maxZoom</a>.
   
 
 </dd>
@@ -1849,7 +1996,7 @@ priority of the direct siblings, not the children or the ancestors.
 
 </dt>
 <dd>
-  
+  Fits the whole map into the viewport and centers it.
   
 
 </dd>
@@ -1881,6 +2028,23 @@ priority of the direct siblings, not the children or the ancestors.
     
     
 
+  <section class="summary offset-anchor" id="constants">
+    <h2>Constants</h2>
+    <dl class="properties">
+        <dt id="maxZoom" class="constant">
+    <span class="name "><a href="../game_vtt_game/VttGame/maxZoom-constant.html">maxZoom</a></span>
+  <span class="signature">&#8594; const <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>
+  
+
+</dt>
+<dd>
+  Upper zoom bound (screen pixels per world pixel).
+  
+
+</dd>
+
+    </dl>
+  </section>
   </div> <!-- /.main-content -->
   <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
     <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
@@ -1904,7 +2068,7 @@ priority of the direct siblings, not the children or the ancestors.
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

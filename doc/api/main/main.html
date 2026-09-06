@@ -68,7 +68,7 @@
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
+  await _initHive();
   runApp(Phoenix(child: const BattlemapApp()));
 }</code></pre>
 </section>
@@ -97,7 +97,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

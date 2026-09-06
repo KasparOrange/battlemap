@@ -65,6 +65,8 @@
     
 <section class="desc markdown">
   <p>Sets the ruler corner position in grid coordinates.</p>
+<p>Fires <a href="../../state_vtt_state/VttState/onRulerMoved.html">onRulerMoved</a> for relay forwarding (the phone drags the ruler
+on its own map and the TV follows).</p>
 </section>
 
 
@@ -75,6 +77,7 @@
   rulerX = x;
   rulerY = y;
   notifyListeners();
+  onRulerMoved?.call(x, y);
 }</code></pre>
 </section>
 
@@ -103,7 +106,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

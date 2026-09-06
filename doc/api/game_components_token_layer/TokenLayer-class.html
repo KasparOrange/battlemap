@@ -104,7 +104,7 @@ name, HP, conditions, or appearance.</li>
     <h2>Constructors</h2>
     <dl class="constructor-summary-list">
         <dt id="TokenLayer.new" class="callable">
-          <span class="name"><a href="../game_components_token_layer/TokenLayer/TokenLayer.html">TokenLayer</a></span><span class="signature">({<span class="parameter" id="-param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span><span class="parameter" id="-param-cellSize"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">cellSize</span></span>})</span>
+          <span class="name"><a href="../game_components_token_layer/TokenLayer/TokenLayer.html">TokenLayer</a></span><span class="signature">({<span class="parameter" id="param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span><span class="parameter" id="param-cellSize"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">cellSize</span></span>})</span>
         </dt>
         <dd>
           Creates a <a href="../game_components_token_layer/TokenLayer-class.html">TokenLayer</a> with the given <code>state</code> and <code>cellSize</code>.
@@ -308,7 +308,7 @@ mounted to a new parent.
 
         <dt id="loaded" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/loaded.html">loaded</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -320,7 +320,7 @@ mounted to a new parent.
 
         <dt id="mounted" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/mounted.html">mounted</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -357,7 +357,7 @@ which your components are rendered.
 
         <dt id="removed" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/removed.html">removed</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -428,7 +428,7 @@ render context to all its children (recursively).
 
         <dt id="addAll" class="callable inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/addAll.html">addAll</a></span><span class="signature">(<wbr><span class="parameter" id="addAll-param-components"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Iterable-class.html">Iterable</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span>&gt;</span></span> <span class="parameter-name">components</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   </span>
   
 
@@ -482,7 +482,7 @@ docs for context.
 </dd>
 
         <dt id="componentsAtPoint" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/componentsAtPoint.html">componentsAtPoint</a></span><span class="signature">(<wbr><span class="parameter" id="componentsAtPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, [</span><span class="parameter" id="componentsAtPoint-param-nestedPoints"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>&gt;</span>?</span> <span class="parameter-name">nestedPoints</span></span>])
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/componentsAtPoint.html">componentsAtPoint</a></span><span class="signature">(<wbr><span class="parameter" id="componentsAtPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, [</span><span class="parameter" id="componentsAtPoint-param-nestedPoints"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>&gt;</span>?</span> <span class="parameter-name">nestedPoints</span></span>])
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Iterable-class.html">Iterable</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span>&gt;</span></span>
   </span>
   
@@ -509,7 +509,7 @@ docs for context.
 </dd>
 
         <dt id="containsLocalPoint" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/containsLocalPoint.html">containsLocalPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsLocalPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/containsLocalPoint.html">containsLocalPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsLocalPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
   </span>
   
@@ -522,7 +522,7 @@ docs for context.
 </dd>
 
         <dt id="containsPoint" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/containsPoint.html">containsPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/containsPoint.html">containsPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
   </span>
   
@@ -688,7 +688,7 @@ to or removed from its parent children list.
 </dd>
 
         <dt id="onGameResize" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onGameResize.html">onGameResize</a></span><span class="signature">(<wbr><span class="parameter" id="onGameResize-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">size</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onGameResize.html">onGameResize</a></span><span class="signature">(<wbr><span class="parameter" id="onGameResize-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">size</span></span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -740,7 +740,7 @@ to or removed from its parent children list.
 </dd>
 
         <dt id="onParentResize" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onParentResize.html">onParentResize</a></span><span class="signature">(<wbr><span class="parameter" id="onParentResize-param-maxSize"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">maxSize</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onParentResize.html">onParentResize</a></span><span class="signature">(<wbr><span class="parameter" id="onParentResize-param-maxSize"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">maxSize</span></span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -839,7 +839,7 @@ and their children.
 </dd>
 
         <dt id="removeWhere" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/removeWhere.html">removeWhere</a></span><span class="signature">(<wbr><span class="parameter" id="removeWhere-param-test"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">test</span>(<span class="parameter" id="param-component"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span> <span class="parameter-name">component</span></span>)</span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/removeWhere.html">removeWhere</a></span><span class="signature">(<wbr><span class="parameter" id="removeWhere-param-test"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">test</span>(<span class="parameter" id="contains-param-c"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span> <span class="parameter-name">c</span></span>)</span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -995,7 +995,7 @@ priority of the direct siblings, not the children or the ancestors.
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

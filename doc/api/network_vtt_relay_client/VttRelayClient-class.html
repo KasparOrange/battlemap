@@ -86,7 +86,7 @@ split into 500 KB chunks, and sent as a sequence of <code>vtt.mapStart</code>,
     <h2>Constructors</h2>
     <dl class="constructor-summary-list">
         <dt id="VttRelayClient.new" class="callable">
-          <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/VttRelayClient.html">VttRelayClient</a></span><span class="signature">({<span class="parameter" id="-param-role"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">role</span>, </span><span class="parameter" id="-param-host"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">host</span> = <span class="default-value">RelayConfig.host</span>, </span><span class="parameter" id="-param-port"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">port</span> = <span class="default-value">RelayConfig.port</span></span>})</span>
+          <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/VttRelayClient.html">VttRelayClient</a></span><span class="signature">({<span class="parameter" id="param-role"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">role</span>, </span><span class="parameter" id="param-host"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span> <span class="parameter-name">host</span> = <span class="default-value">RelayConfig.host</span>, </span><span class="parameter" id="param-port"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">port</span> = <span class="default-value">RelayConfig.port</span></span>})</span>
         </dt>
         <dd>
           Creates a relay client for the given <code>role</code>.
@@ -149,7 +149,7 @@ split into 500 KB chunks, and sent as a sequence of <code>vtt.mapStart</code>,
 
         <dt id="onCameraSync" class="property">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onCameraSync.html">onCameraSync</a></span>
-  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">y</span>, </span><span class="parameter" id="param-zoom"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">zoom</span>, </span><span class="parameter" id="param-angle"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">angle</span></span>)</span>?</span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">y</span>, </span><span class="parameter" id="param-zoom"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">zoom</span>, </span><span class="parameter" id="param-angle"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">angle</span>, </span><span class="parameter" id="param-vw"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">vw</span>, </span><span class="parameter" id="param-vh"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">vh</span></span>)</span>?</span>
   
 
 </dt>
@@ -174,7 +174,7 @@ split into 500 KB chunks, and sent as a sequence of <code>vtt.mapStart</code>,
 
         <dt id="onLibraryListing" class="property">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onLibraryListing.html">onLibraryListing</a></span>
-  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-listing"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">listing</span></span>)</span>?</span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">msg</span></span>)</span>?</span>
   
 
 </dt>
@@ -210,7 +210,7 @@ split into 500 KB chunks, and sent as a sequence of <code>vtt.mapStart</code>,
 
         <dt id="onPatchProgress" class="property">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onPatchProgress.html">onPatchProgress</a></span>
-  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-progress"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">progress</span></span>)</span>?</span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">msg</span></span>)</span>?</span>
   
 
 </dt>
@@ -222,7 +222,7 @@ split into 500 KB chunks, and sent as a sequence of <code>vtt.mapStart</code>,
 
         <dt id="onPatchStatus" class="property">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onPatchStatus.html">onPatchStatus</a></span>
-  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-status"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">status</span></span>)</span>?</span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">msg</span></span>)</span>?</span>
   
 
 </dt>
@@ -306,7 +306,7 @@ split into 500 KB chunks, and sent as a sequence of <code>vtt.mapStart</code>,
 
         <dt id="onUpdateVersionInfo" class="property">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/onUpdateVersionInfo.html">onUpdateVersionInfo</a></span>
-  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-info"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">info</span></span>)</span>?</span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-msg"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span></span> <span class="parameter-name">msg</span></span>)</span>?</span>
   
 
 </dt>
@@ -354,7 +354,7 @@ split into 500 KB chunks, and sent as a sequence of <code>vtt.mapStart</code>,
 
         <dt id="stateStream" class="property">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/stateStream.html">stateStream</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Stream-class.html">Stream</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../network_vtt_relay_client/RelayConnectionState.html">RelayConnectionState</a></span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Stream-class.html">Stream</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../network_vtt_relay_client/RelayConnectionState.html">RelayConnectionState</a></span>&gt;</span></span>
   
 
 </dt>
@@ -958,6 +958,19 @@ inches on the TV surface.
 
 </dd>
 
+        <dt id="sendSetCamera" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetCamera.html">sendSetCamera</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetCamera-param-camera"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>&gt;</span></span> <span class="parameter-name">camera</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Moves the TV camera to an absolute transform.
+  
+
+</dd>
+
         <dt id="sendSetDrawColor" class="callable">
   <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetDrawColor.html">sendSetDrawColor</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetDrawColor-param-colorValue"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">colorValue</span></span>)
     <span class="returntype parameter">&#8594; void</span>
@@ -993,6 +1006,19 @@ inches on the TV surface.
 </dt>
 <dd>
   Switches the TV's active interaction mode.
+  
+
+</dd>
+
+        <dt id="sendSetMeasure" class="callable">
+  <span class="name"><a href="../network_vtt_relay_client/VttRelayClient/sendSetMeasure.html">sendSetMeasure</a></span><span class="signature">(<wbr><span class="parameter" id="sendSetMeasure-param-start"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span> <span class="parameter-name">start</span>, </span><span class="parameter" id="sendSetMeasure-param-end"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span> <span class="parameter-name">end</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets or clears the measurement line on the TV.
   
 
 </dd>
@@ -1346,7 +1372,7 @@ inches on the TV surface.
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

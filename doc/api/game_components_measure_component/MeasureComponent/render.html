@@ -74,9 +74,9 @@
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">@override
 void render(Canvas canvas) {
-  if (startPoint == null || endPoint == null) return;
-  final start = startPoint!;
-  final end = endPoint!;
+  final start = state.measureStart;
+  final end = state.measureEnd;
+  if (start == null || end == null) return;
 
   &#47;&#47; Don&#39;t render if start and end are the same point
   if ((end - start).distance &lt; 1.0) return;
@@ -84,20 +84,19 @@ void render(Canvas canvas) {
   const lineColor = Color(0xFFD4A76A); &#47;&#47; gold&#47;amber
   final linePaint = Paint()
     ..color = lineColor
-    ..strokeWidth = 2.0
+    ..strokeWidth = 0.04 * pixelsPerGrid
     ..style = PaintingStyle.stroke;
 
   &#47;&#47; Dashed line
   _drawDashedLine(canvas, start, end, linePaint);
 
-  &#47;&#47; Start marker
+  &#47;&#47; Endpoint markers
   final markerPaint = Paint()
     ..color = lineColor
     ..style = PaintingStyle.fill;
-  canvas.drawCircle(start, 4.0, markerPaint);
-
-  &#47;&#47; End marker
-  canvas.drawCircle(end, 4.0, markerPaint);
+  final markerR = 0.08 * pixelsPerGrid;
+  canvas.drawCircle(start, markerR, markerPaint);
+  canvas.drawCircle(end, markerR, markerPaint);
 
   &#47;&#47; Distance label at midpoint
   _renderDistanceLabel(canvas, start, end);
@@ -129,7 +128,7 @@ void render(Canvas canvas) {
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

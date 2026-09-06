@@ -101,6 +101,16 @@ strokes, draw settings, and the active interaction mode.</p>
       &#39;rulerRotation&#39;: rulerRotation,
       &#39;scaleSliderFactor&#39;: scaleSliderFactor,
       &#39;sessionSettings&#39;: sessionSettings.toJson(),
+      &#39;canUndo&#39;: canUndo,
+      &#39;canRedo&#39;: canRedo,
+      &#39;measure&#39;: measureStart != null &amp;&amp; measureEnd != null
+          ? {
+              &#39;x1&#39;: measureStart!.dx,
+              &#39;y1&#39;: measureStart!.dy,
+              &#39;x2&#39;: measureEnd!.dx,
+              &#39;y2&#39;: measureEnd!.dy,
+            }
+          : null,
     };</code></pre>
 </section>
 
@@ -129,7 +139,7 @@ strokes, draw settings, and the active interaction mode.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

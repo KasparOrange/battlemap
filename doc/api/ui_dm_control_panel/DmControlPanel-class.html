@@ -54,10 +54,13 @@
 
     
 <section class="desc markdown">
-  <p>Collapsible DM control panel with a tabbed medieval-themed UI.</p>
-<p>When collapsed, it displays as a golden shield icon (48x48). When
-expanded, it shows a 220px-wide panel with 6 tabs: Combat, Fog,
-Draw, Measure, Camera, and Settings.</p>
+  <p>DM control panel — a bottom sheet with a tab bar at the bottom edge.</p>
+<p>Designed for one-handed phone use: the tab bar (Combat, Fog, Draw,
+Measure, Camera, Settings) sits at the bottom within thumb reach, the
+active tab's content opens above it, and tapping the active tab again
+collapses the content so only the tab bar remains. All targets are at
+least 44 px high with 14 px text and 20 px icons.</p>
+<p>The host lays it out below the map (a <code>Column</code>), not floating over it.</p>
 <p>All user actions are routed through <a href="../ui_dm_control_panel/DmControlPanel/callbacks.html">callbacks</a>, which may either act
 locally or send commands over the network depending on the hosting
 screen.</p>
@@ -99,7 +102,7 @@ screen.</p>
     <h2>Constructors</h2>
     <dl class="constructor-summary-list">
         <dt id="DmControlPanel.new" class="callable">
-          <span class="name"><a href="../ui_dm_control_panel/DmControlPanel/DmControlPanel.html">DmControlPanel</a></span><span class="signature">({<span class="parameter" id="-param-key"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/foundation/Key-class.html">Key</a>?</span> <span class="parameter-name">key</span>, </span><span class="parameter" id="-param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span><span class="parameter" id="-param-callbacks"><span>required</span> <span class="type-annotation"><a href="../ui_dm_control_panel/DmCallbacks-class.html">DmCallbacks</a></span> <span class="parameter-name">callbacks</span></span>})</span>
+          <span class="name"><a href="../ui_dm_control_panel/DmControlPanel/DmControlPanel.html">DmControlPanel</a></span><span class="signature">({<span class="parameter" id="param-key"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/foundation/Key-class.html">Key</a>?</span> <span class="parameter-name">key</span>, </span><span class="parameter" id="param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span><span class="parameter" id="param-callbacks"><span>required</span> <span class="type-annotation"><a href="../ui_dm_control_panel/DmCallbacks-class.html">DmCallbacks</a></span> <span class="parameter-name">callbacks</span></span>})</span>
         </dt>
         <dd>
           Creates a DM control panel bound to <code>state</code> and <code>callbacks</code>.
@@ -364,7 +367,7 @@ tools and by <a href="https://api.flutter.dev/flutter/foundation/DiagnosticsNode
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

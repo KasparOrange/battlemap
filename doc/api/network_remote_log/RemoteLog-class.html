@@ -58,16 +58,16 @@
 <p>Each entry is a JSON object with at minimum:</p>
 <pre class="language-json"><code class="language-json">{"src": "tv", "level": "info", "tag": "session", "msg": "Session resumed"}
 </code></pre>
-<p>Entries are batched in <code>_queue</code> and flushed asynchronously over HTTP POST
-to <code>_remoteUrl</code> (the VPS log server on port 4243). The log server appends
-each entry to <code>/tmp/battlemap.log</code> as JSONL.</p>
+<p>Entries are batched in <code>_queue</code> and flushed asynchronously over HTTPS POST
+to <code>_remoteUrl</code> — MwLog (VictoriaLogs, tenant "battlemap"); query them with
+<code>logq.sh</code> from the my-tube repo or the vmui admin UI.</p>
 <p>Use <a href="../network_remote_log/RemoteLog/debug.html">debug</a>, <a href="../network_remote_log/RemoteLog/info.html">info</a>, <a href="../network_remote_log/RemoteLog/warn.html">warn</a>, or <a href="../network_remote_log/RemoteLog/error.html">error</a> for tagged level-aware logging.
 The legacy <a href="../network_remote_log/RemoteLog/send.html">send</a> and <a href="../network_remote_log/RemoteLog/sendEvent.html">sendEvent</a> entry points remain for compatibility
 with older call sites and default to <a href="../network_remote_log/LogLevel.html">LogLevel.info</a> / no tag.</p>
 <p>See also:</p>
 <ul>
 <li><a href="../network_remote_log/LogLevel.html">LogLevel</a> for the level enum.</li>
-<li><code>tools/log_server.py</code> for the server-side handler.</li>
+<li><code>docs/setup.md</code> "logs" for querying and the build-time credential.</li>
 </ul>
 </section>
 
@@ -232,7 +232,7 @@ with older call sites and default to <a href="../network_remote_log/LogLevel.htm
 
         <dt id="sendDeviceInfo" class="callable">
   <span class="name"><a href="../network_remote_log/RemoteLog/sendDeviceInfo.html">sendDeviceInfo</a></span><span class="signature">(<wbr>)
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   </span>
   
 
@@ -309,7 +309,7 @@ with older call sites and default to <a href="../network_remote_log/LogLevel.htm
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

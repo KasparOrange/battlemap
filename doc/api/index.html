@@ -154,9 +154,10 @@ lightweight Python WebSocket relay running on a VPS.</p>
 <h2 id="building-and-running">Building and Running</h2>
 <h3 id="prerequisites">Prerequisites</h3>
 <ul>
-<li>Flutter SDK (stable channel)</li>
+<li>Flutter SDK ≥ 3.47 (stable channel)</li>
 <li>Android SDK (for APK builds)</li>
-<li>Python 3 (for the VPS relay server)</li>
+<li>Python 3 (for the VPS relay and HTTP server)</li>
+<li>optional, Mac only: <a href="https://github.com/fluttertv/flutter-tvos">flutter-tvos</a> to run the TV side on an Apple TV while developing (<code>docs/apple-tv-dev.md</code>)</li>
 </ul>
 <h3 id="development-web">Development (web)</h3>
 <pre class="language-bash"><code class="language-bash">flutter run -d web-server --web-port=4242 --web-hostname=0.0.0.0
@@ -171,11 +172,18 @@ adb install -r build/app/outputs/flutter-apk/app-release.apk
 </code></pre>
 <p>Bump the <code>version</code> field in <code>pubspec.yaml</code> before each release (increment the
 <code>+N</code> version code so Android recognises the upgrade).</p>
-<h3 id="vps-relay">VPS Relay</h3>
-<pre class="language-bash"><code class="language-bash">python3 tools/vtt_relay.py
+<h3 id="apple-tv-development-only">Apple TV (development only)</h3>
+<pre class="language-bash"><code class="language-bash">flutter-tvos run -d &lt;simulator-or-apple-tv&gt; [--release]
+</code></pre>
+<p>Hot reload on the tvOS simulator; <code>--release</code> on the physical Apple TV. The product
+stays the Xiaomi box.</p>
+<h3 id="vps-relay-and-http-server">VPS Relay and HTTP server</h3>
+<pre class="language-bash"><code class="language-bash">python3 tools/vtt_relay.py     # port 9090 — WebSocket hub between TV and phone
+python3 tools/dev_server.py    # port 4242 — web build, APK, map uploads
 </code></pre>
 <p>The relay listens for WebSocket connections from both the TV and the companion
-phone, forwarding messages between them.</p>
+phone, forwarding messages between them. Map files (<code>.dd2vtt</code>, images; PDFs are
+rasterized to PNG on the phone first) go through the HTTP server, not the relay.</p>
 <h2 id="documentation">Documentation</h2>
 <p>Run <code>dart doc</code> to generate full API documentation from the source:</p>
 <pre class="language-bash"><code class="language-bash">dart doc
@@ -307,6 +315,13 @@ phone, forwarding messages between them.</p>
 <dd>
 </dd>
 
+          <dt id="tv_viewport_component">
+  <span class="name"><a href="game_components_tv_viewport_component/">game/components/tv_viewport_component</a></span> 
+
+</dt>
+<dd>
+</dd>
+
           <dt id="wall_component">
   <span class="name"><a href="game_components_wall_component/">game/components/wall_component</a></span> 
 
@@ -407,6 +422,20 @@ phone, forwarding messages between them.</p>
 
           <dt id="client_stub">
   <span class="name"><a href="network_client_stub/">network/client_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="file_picker_options_stub">
+  <span class="name"><a href="network_file_picker_options_stub/">network/file_picker_options_stub</a></span> 
+
+</dt>
+<dd>
+</dd>
+
+          <dt id="file_picker_options_web">
+  <span class="name"><a href="network_file_picker_options_web/">network/file_picker_options_web</a></span> 
 
 </dt>
 <dd>
@@ -656,6 +685,7 @@ phone, forwarding messages between them.</p>
       <li><a href="game_components_token_component/">game/components/token_component</a></li>
       <li><a href="game_components_token_layer/">game/components/token_layer</a></li>
       <li><a href="game_components_torch_glow_component/">game/components/torch_glow_component</a></li>
+      <li><a href="game_components_tv_viewport_component/">game/components/tv_viewport_component</a></li>
       <li><a href="game_components_wall_component/">game/components/wall_component</a></li>
       <li><a href="game_vtt_game/">game/vtt_game</a></li>
       <li><a href="game_wall_grid/">game/wall_grid</a></li>
@@ -671,6 +701,8 @@ phone, forwarding messages between them.</p>
       <li><a href="model_uvtt_parser/">model/uvtt_parser</a></li>
       <li><a href="network_client/">network/client</a></li>
       <li><a href="network_client_stub/">network/client_stub</a></li>
+      <li><a href="network_file_picker_options_stub/">network/file_picker_options_stub</a></li>
+      <li><a href="network_file_picker_options_web/">network/file_picker_options_web</a></li>
       <li><a href="network_http_download/">network/http_download</a></li>
       <li><a href="network_http_download_stub/">network/http_download_stub</a></li>
       <li><a href="network_http_upload/">network/http_upload</a></li>
@@ -710,7 +742,7 @@ phone, forwarding messages between them.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

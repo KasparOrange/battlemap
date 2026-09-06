@@ -136,6 +136,30 @@ with <a href="../state_vtt_state/VttState/toJson.html">toJson</a> and restored w
 
 </dd>
 
+        <dt id="aoeRadius" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/aoeRadius.html">aoeRadius</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>
+  
+
+</dt>
+<dd>
+  Radius (or length) in grid squares for the next AoE template.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="aoeShape" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/aoeShape.html">aoeShape</a></span>
+  <span class="signature">&#8596; <a href="../model_aoe_template/AoeShape.html">AoeShape</a></span>
+  
+
+</dt>
+<dd>
+  Shape used for the next AoE template placed by tapping the map.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
         <dt id="brushRadius" class="property">
   <span class="name"><a href="../state_vtt_state/VttState/brushRadius.html">brushRadius</a></span>
   <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
@@ -292,6 +316,43 @@ with <a href="../state_vtt_state/VttState/toJson.html">toJson</a> and restored w
 
 </dd>
 
+        <dt id="measureEnd" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/measureEnd.html">measureEnd</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span>
+  
+
+</dt>
+<dd>
+  End of the current distance measurement in world pixels, or <code>null</code>.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="measureStart" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/measureStart.html">measureStart</a></span>
+  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span>
+  
+
+</dt>
+<dd>
+  Start of the current distance measurement in world pixels, or <code>null</code>.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onAoeChanged" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onAoeChanged.html">onAoeChanged</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-template"><span class="type-annotation"><a href="../model_aoe_template/AoeTemplate-class.html">AoeTemplate</a>?</span> <span class="parameter-name">template</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when the active AoE template changes locally (tap/drag on the
+map or panel edits), for relay forwarding. <code>null</code> means cleared.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
         <dt id="onBrushPaint" class="property">
   <span class="name"><a href="../state_vtt_state/VttState/onBrushPaint.html">onBrushPaint</a></span>
   <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-indices"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>&gt;</span></span> <span class="parameter-name">indices</span></span>)</span>?</span>
@@ -329,6 +390,18 @@ the indices to the peer.
 
 </dd>
 
+        <dt id="onMeasureChanged" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onMeasureChanged.html">onMeasureChanged</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-start"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span> <span class="parameter-name">start</span>, </span><span class="parameter" id="param-end"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span> <span class="parameter-name">end</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when the measurement changes locally, for relay forwarding.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
         <dt id="onPortalTap" class="property">
   <span class="name"><a href="../state_vtt_state/VttState/onPortalTap.html">onPortalTap</a></span>
   <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-index"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">index</span></span>)</span>?</span>
@@ -338,6 +411,19 @@ the indices to the peer.
 <dd>
   Called when a portal is tapped (toggled), so the relay can forward
 the portal index to the peer.
+  <div class="features"><span class="feature">getter/setter pair</span></div>
+
+</dd>
+
+        <dt id="onRulerMoved" class="property">
+  <span class="name"><a href="../state_vtt_state/VttState/onRulerMoved.html">onRulerMoved</a></span>
+  <span class="signature">&#8596; void Function<span class="signature">(<span class="parameter" id="param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">y</span></span>)</span>?</span>
+  
+
+</dt>
+<dd>
+  Called when the ruler is dragged to a new corner position locally,
+for relay forwarding. Coordinates are in grid squares.
   <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
@@ -725,7 +811,7 @@ the portal index to the peer.
 
 </dt>
 <dd>
-  Clears the active AoE template.
+  Clears the active AoE template. Fires <a href="../state_vtt_state/VttState/onAoeChanged.html">onAoeChanged</a> with <code>null</code>.
   
 
 </dd>
@@ -752,6 +838,19 @@ the portal index to the peer.
 </dt>
 <dd>
   Unloads the current map and resets all map-related state.
+  
+
+</dd>
+
+        <dt id="clearMeasure" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/clearMeasure.html">clearMeasure</a></span><span class="signature">(<wbr>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Hides the measurement line. Fires <a href="../state_vtt_state/VttState/onMeasureChanged.html">onMeasureChanged</a> with <code>null</code>s.
   
 
 </dd>
@@ -803,9 +902,7 @@ the portal index to the peer.
 
 </dt>
 <dd class="inherited">
-  Discards any resources used by the object. After this is called, the
-object is not in a usable state and should be discarded (calls to
-<a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier/addListener.html">addListener</a> will throw after the object is disposed).
+  Discards any resources used by the object.
   <div class="features"><span class="feature">inherited</span></div>
 
 </dd>
@@ -1007,6 +1104,19 @@ notified when the object changes.
 
 </dd>
 
+        <dt id="setAoeTool" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setAoeTool.html">setAoeTool</a></span><span class="signature">(<wbr><span class="parameter" id="setAoeTool-param-shape"><span class="type-annotation"><a href="../model_aoe_template/AoeShape.html">AoeShape</a></span> <span class="parameter-name">shape</span>, </span><span class="parameter" id="setAoeTool-param-radius"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">radius</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the shape and radius used for the next placed AoE template.
+  
+
+</dd>
+
         <dt id="setBrushRadius" class="callable">
   <span class="name"><a href="../state_vtt_state/VttState/setBrushRadius.html">setBrushRadius</a></span><span class="signature">(<wbr><span class="parameter" id="setBrushRadius-param-radius"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">radius</span></span>)
     <span class="returntype parameter">&#8594; void</span>
@@ -1068,6 +1178,19 @@ notified when the object changes.
 </dt>
 <dd>
   Updates the live stroke preview, or clears it if <code>stroke</code> is <code>null</code>.
+  
+
+</dd>
+
+        <dt id="setMeasure" class="callable">
+  <span class="name"><a href="../state_vtt_state/VttState/setMeasure.html">setMeasure</a></span><span class="signature">(<wbr><span class="parameter" id="setMeasure-param-start"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span> <span class="parameter-name">start</span>, </span><span class="parameter" id="setMeasure-param-end"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span> <span class="parameter-name">end</span></span>)
+    <span class="returntype parameter">&#8594; void</span>
+  </span>
+  
+
+</dt>
+<dd>
+  Sets the current measurement line in world pixels.
   
 
 </dd>
@@ -1318,7 +1441,7 @@ reversing its effect, and pushing it onto the redo stack.
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

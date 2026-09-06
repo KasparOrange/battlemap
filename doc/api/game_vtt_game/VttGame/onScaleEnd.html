@@ -75,15 +75,17 @@
   <pre class="language-dart"><code class="language-dart">@override
 void onScaleEnd(ScaleEndInfo info) {
   if (!_isMultiTouch &amp;&amp; state.isInteractive) {
-    &#47;&#47; If barely moved, treat as a tap
-    if (!_hasDragged &amp;&amp; _scaleStartPos != null) {
-      final worldPos = _screenToWorld(_scaleStartPos!);
-      _handleTap(worldPos);
+    if (_toolActive) {
+      _toolDragEnd();
+    } else if (_scaleStartPos != null) {
+      _handleTap(_screenToWorld(_scaleStartPos!));
     }
-    _toolDragEnd();
   }
   _isMultiTouch = false;
+  _toolActive = false;
   _draggingTokenId = null;
+  _draggingRuler = false;
+  _lastBrushCell = null;
   _scaleStartPos = null;
 }</code></pre>
 </section>
@@ -113,7 +115,7 @@ void onScaleEnd(ScaleEndInfo info) {
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

@@ -66,8 +66,10 @@
   <p>Applies a full state snapshot received from the relay (TV to phone sync).</p>
 <p>Overwrites all local state fields with the values from <code>json</code> and
 fires a single <a href="https://api.flutter.dev/flutter/foundation/ChangeNotifier/notifyListeners.html">notifyListeners</a> call. Fields added in later versions
-(<a href="../../state_vtt_state/VttState/interactionMode.html">interactionMode</a>, <a href="../../state_vtt_state/VttState/tokens.html">tokens</a>, <a href="../../state_vtt_state/VttState/strokes.html">strokes</a>, <a href="../../state_vtt_state/VttState/drawColor.html">drawColor</a>, <a href="../../state_vtt_state/VttState/drawWidth.html">drawWidth</a>)
-fall back to defaults if absent, for backwards compatibility.</p>
+(<a href="../../state_vtt_state/VttState/interactionMode.html">interactionMode</a>, <a href="../../state_vtt_state/VttState/tokens.html">tokens</a>, <a href="../../state_vtt_state/VttState/strokes.html">strokes</a>, <a href="../../state_vtt_state/VttState/drawColor.html">drawColor</a>, <a href="../../state_vtt_state/VttState/drawWidth.html">drawWidth</a>,
+<code>canUndo</code>/<code>canRedo</code>, <code>measure</code>) fall back to defaults if absent, for
+backwards compatibility. Phone-local tool settings (<a href="../../state_vtt_state/VttState/aoeShape.html">aoeShape</a>,
+<a href="../../state_vtt_state/VttState/aoeRadius.html">aoeRadius</a>) are left untouched.</p>
 <p>This is the inverse of <a href="../../state_vtt_state/VttState/toJson.html">toJson</a> and is called on the companion phone
 when it receives a <code>vtt.fullState</code> message from the TV.</p>
 </section>
@@ -104,10 +106,10 @@ when it receives a <code>vtt.fullState</code> message from the TV.</p>
           .toList() ??
       [];
   drawColor = Color(json[&#39;drawColor&#39;] as int? ?? 0xFFE53935);
-  drawWidth = (json[&#39;drawWidth&#39;] as num?)?.toDouble() ?? 3.0;
+  drawWidth = (json[&#39;drawWidth&#39;] as num?)?.toDouble() ?? 4.0;
 
-  &#47;&#47; Shadow mode fields — backwards compatible
-  shadowMode = json[&#39;shadowMode&#39;] as bool? ?? true;
+  &#47;&#47; Shadow mode fields — backwards compatible (default matches the field)
+  shadowMode = json[&#39;shadowMode&#39;] as bool? ?? false;
   shadowRevealCells = json[&#39;shadowRevealCells&#39;] != null
       ? Set&lt;int&gt;.from(
           (json[&#39;shadowRevealCells&#39;] as List).map((e) =&gt; e as int))
@@ -128,6 +130,21 @@ when it receives a <code>vtt.fullState</code> message from the TV.</p>
   sessionSettings = json[&#39;sessionSettings&#39;] != null
       ? SessionSettings.fromJson(json[&#39;sessionSettings&#39;] as Map&lt;String, dynamic&gt;)
       : SessionSettings.penAndPaper();
+
+  &#47;&#47; Undo&#47;redo availability of the TV (absent from older TV builds →
+  &#47;&#47; keep reading the local stack)
+  _remoteCanUndo = json[&#39;canUndo&#39;] as bool?;
+  _remoteCanRedo = json[&#39;canRedo&#39;] as bool?;
+
+  &#47;&#47; Measure line
+  final m = json[&#39;measure&#39;] as Map&lt;String, dynamic&gt;?;
+  if (m != null) {
+    measureStart = Offset((m[&#39;x1&#39;] as num).toDouble(), (m[&#39;y1&#39;] as num).toDouble());
+    measureEnd = Offset((m[&#39;x2&#39;] as num).toDouble(), (m[&#39;y2&#39;] as num).toDouble());
+  } else {
+    measureStart = null;
+    measureEnd = null;
+  }
 
   notifyListeners(); &#47;&#47; single notification
 }</code></pre>
@@ -158,7 +175,7 @@ when it receives a <code>vtt.fullState</code> message from the TV.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

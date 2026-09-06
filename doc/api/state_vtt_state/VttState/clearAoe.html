@@ -62,7 +62,7 @@
     </section>
     
 <section class="desc markdown">
-  <p>Clears the active AoE template.</p>
+  <p>Clears the active AoE template. Fires <a href="../../state_vtt_state/VttState/onAoeChanged.html">onAoeChanged</a> with <code>null</code>.</p>
 </section>
 
 
@@ -72,6 +72,7 @@
   <pre class="language-dart"><code class="language-dart">void clearAoe() {
   activeAoe = null;
   notifyListeners();
+  onAoeChanged?.call(null);
 }</code></pre>
 </section>
 
@@ -100,7 +101,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

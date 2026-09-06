@@ -54,16 +54,21 @@
 
     <section class="multi-line-signature">
       
-      <span class="name ">VttGame</span>(<wbr>{<ol class="parameter-list"> <li><span class="parameter" id="-param-state"><span>required</span> <span class="type-annotation"><a href="../../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span></li>
+      <span class="name ">VttGame</span>(<wbr>{<ol class="parameter-list"> <li><span class="parameter" id="param-state"><span>required</span> <span class="type-annotation"><a href="../../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span></li>
+<li><span class="parameter" id="param-isDisplay"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">isDisplay</span> = <span class="default-value">true</span>, </span></li>
 </ol>})
     </section>
     
+<section class="desc markdown">
+  <p>Creates the game for <code>state</code>. <code>isDisplay</code> is <code>true</code> on the TV and in
+the companion's local mode, <code>false</code> for the networked phone preview.</p>
+</section>
 
 
     
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
-  <pre class="language-dart"><code class="language-dart">VttGame({required this.state});</code></pre>
+  <pre class="language-dart"><code class="language-dart">VttGame({required this.state, this.isDisplay = true});</code></pre>
 </section>
 
 
@@ -91,7 +96,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

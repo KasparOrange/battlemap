@@ -54,18 +54,21 @@
 
     
 <section class="desc markdown">
-  <p>Renders a measurement line overlay on the battlemap.</p>
-<p>Displays a dashed line between two world-coordinate points, with small
-circle markers at each endpoint and a distance label at the midpoint.
-The distance is calculated using D&amp;D 5e rules (5 ft per square, with
-alternating 5/10 ft for diagonal movement).</p>
-<p>The component stays visible after the drag ends until the next
-interaction clears it or a new measurement begins.</p>
+  <p>Renders the measurement line overlay on the battlemap.</p>
+<p>Reads <a href="../state_vtt_state/VttState/measureStart.html">VttState.measureStart</a> / <a href="../state_vtt_state/VttState/measureEnd.html">VttState.measureEnd</a> every frame and
+draws a dashed line between them with circle markers at each endpoint
+and a distance label at the midpoint. The distance uses D&amp;D 5e rules
+(5 ft per square, alternating 5/10 ft for diagonals).</p>
+<p>Because the endpoints live in the shared state, a measurement dragged
+on the phone is broadcast to the TV (<code>vtt.setMeasure</code>) and rendered
+there by the same component. Marker size and label scale with
+<a href="../game_components_measure_component/MeasureComponent/pixelsPerGrid.html">pixelsPerGrid</a> so they stay readable on large maps.</p>
 <p>Priority 20 ensures the measure line renders above all other map
 content (fog, tokens, walls, etc.).</p>
 <p>See also:</p>
 <ul>
-<li><a href="../game_vtt_game/VttGame-class.html">VttGame</a>, which creates and drives this component via drag gestures.</li>
+<li><a href="../game_vtt_game/VttGame-class.html">VttGame</a>, which drives the state via drag gestures.</li>
+<li><a href="../state_vtt_state/VttState/setMeasure.html">VttState.setMeasure</a>, the state setter.</li>
 <li><a href="../state_vtt_state/InteractionMode.html">InteractionMode.measure</a>, the interaction mode that activates measuring.</li>
 </ul>
 </section>
@@ -104,7 +107,7 @@ content (fog, tokens, walls, etc.).</p>
     <h2>Constructors</h2>
     <dl class="constructor-summary-list">
         <dt id="MeasureComponent.new" class="callable">
-          <span class="name"><a href="../game_components_measure_component/MeasureComponent/MeasureComponent.html">MeasureComponent</a></span><span class="signature">({<span class="parameter" id="-param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span><span class="parameter" id="-param-pixelsPerGrid"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">pixelsPerGrid</span>, </span><span class="parameter" id="-param-mapSize"><span>required</span> <span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">mapSize</span></span>})</span>
+          <span class="name"><a href="../game_components_measure_component/MeasureComponent/MeasureComponent.html">MeasureComponent</a></span><span class="signature">({<span class="parameter" id="param-state"><span>required</span> <span class="type-annotation"><a href="../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span><span class="parameter" id="param-pixelsPerGrid"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">pixelsPerGrid</span>, </span><span class="parameter" id="param-mapSize"><span>required</span> <span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">mapSize</span></span>})</span>
         </dt>
         <dd>
           Creates a <a href="../game_components_measure_component/MeasureComponent-class.html">MeasureComponent</a> for the given map.
@@ -146,7 +149,7 @@ if the component is flipped.
 
         <dt id="absoluteCenter" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absoluteCenter.html">absoluteCenter</a></span>
-  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -158,7 +161,7 @@ if the component is flipped.
 
         <dt id="absolutePosition" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absolutePosition.html">absolutePosition</a></span>
-  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -170,7 +173,7 @@ if the component is flipped.
 
         <dt id="absoluteScale" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absoluteScale.html">absoluteScale</a></span>
-  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -183,7 +186,7 @@ has been applied.
 
         <dt id="absoluteScaledSize" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absoluteScaledSize.html">absoluteScaledSize</a></span>
-  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -196,7 +199,7 @@ has been applied.
 
         <dt id="absoluteTopLeftPosition" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absoluteTopLeftPosition.html">absoluteTopLeftPosition</a></span>
-  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -240,7 +243,7 @@ angle is positive, or counterclockwise if the angle is negative.
 
         <dt id="center" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/center.html">center</a></span>
-  <span class="signature">&#8596; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8596; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -337,19 +340,6 @@ text.
 <dd class="inherited">
   The decorator is used to apply visual effects to a component.
   <div class="features"><span class="feature">getter/setter pair</span><span class="feature">inherited</span></div>
-
-</dd>
-
-        <dt id="endPoint" class="property">
-  <span class="name"><a href="../game_components_measure_component/MeasureComponent/endPoint.html">endPoint</a></span>
-  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span>
-  
-
-</dt>
-<dd>
-  End point of the measurement in world coordinates, or <code>null</code> if
-the user hasn't dragged yet.
-  <div class="features"><span class="feature">getter/setter pair</span></div>
 
 </dd>
 
@@ -492,7 +482,7 @@ mounted to a new parent.
 
         <dt id="loaded" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/loaded.html">loaded</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -504,7 +494,7 @@ mounted to a new parent.
 
         <dt id="mounted" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/mounted.html">mounted</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -551,7 +541,7 @@ For example, a nativeAngle of
 
 </dt>
 <dd>
-  World pixels per grid square, used for distance calculation.
+  World pixels per grid square, used for distance calculation and sizing.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
@@ -583,7 +573,7 @@ which your components are rendered.
 
         <dt id="removed" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/removed.html">removed</a></span>
-  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   
 
 </dt>
@@ -635,7 +625,7 @@ which results in a mirror reflection along the corresponding axis.
 
         <dt id="scaledSize" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/scaledSize.html">scaledSize</a></span>
-  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -663,19 +653,6 @@ handling.
 
 </dd>
 
-        <dt id="startPoint" class="property">
-  <span class="name"><a href="../game_components_measure_component/MeasureComponent/startPoint.html">startPoint</a></span>
-  <span class="signature">&#8596; <a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a>?</span>
-  
-
-</dt>
-<dd>
-  Start point of the measurement in world coordinates, or <code>null</code> if
-no measurement is active.
-  <div class="features"><span class="feature">getter/setter pair</span></div>
-
-</dd>
-
         <dt id="state" class="property">
   <span class="name"><a href="../game_components_measure_component/MeasureComponent/state.html">state</a></span>
   <span class="signature">&#8594; <a href="../state_vtt_state/VttState-class.html">VttState</a></span>
@@ -683,14 +660,14 @@ no measurement is active.
 
 </dt>
 <dd>
-  The shared VTT state (reserved for future use, e.g. snapping).
+  The shared VTT state holding the measurement endpoints.
   <div class="features"><span class="feature">final</span></div>
 
 </dd>
 
         <dt id="topLeftPosition" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/topLeftPosition.html">topLeftPosition</a></span>
-  <span class="signature">&#8596; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="signature">&#8596; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   
 
 </dt>
@@ -714,7 +691,7 @@ no measurement is active.
 
         <dt id="transformMatrix" class="property inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/transformMatrix.html">transformMatrix</a></span>
-  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Matrix4-class.html">Matrix4</a></span>
+  <span class="signature">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Matrix4-class.html">Matrix4</a></span>
   
 
 </dt>
@@ -773,8 +750,8 @@ may visually appear larger or smaller due to application of <a href="https://pub
     <h2>Methods</h2>
     <dl class="callables">
         <dt id="absolutePositionOf" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absolutePositionOf.html">absolutePositionOf</a></span><span class="signature">(<wbr><span class="parameter" id="absolutePositionOf-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absolutePositionOf.html">absolutePositionOf</a></span><span class="signature">(<wbr><span class="parameter" id="absolutePositionOf-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -788,7 +765,7 @@ into the global (world) coordinate space.
 
         <dt id="absolutePositionOfAnchor" class="callable inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absolutePositionOfAnchor.html">absolutePositionOfAnchor</a></span><span class="signature">(<wbr><span class="parameter" id="absolutePositionOfAnchor-param-anchor"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Anchor-class.html">Anchor</a></span> <span class="parameter-name">anchor</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -801,8 +778,8 @@ point within the component.
 </dd>
 
         <dt id="absoluteToLocal" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absoluteToLocal.html">absoluteToLocal</a></span><span class="signature">(<wbr><span class="parameter" id="absoluteToLocal-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/absoluteToLocal.html">absoluteToLocal</a></span><span class="signature">(<wbr><span class="parameter" id="absoluteToLocal-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -830,7 +807,7 @@ local coordinates. This function is the inverse of
 
         <dt id="addAll" class="callable inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/addAll.html">addAll</a></span><span class="signature">(<wbr><span class="parameter" id="addAll-param-components"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/Iterable-class.html">Iterable</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span>&gt;</span></span> <span class="parameter-name">components</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   </span>
   
 
@@ -870,7 +847,7 @@ without a parent.
 </dd>
 
         <dt id="angleTo" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/angleTo.html">angleTo</a></span><span class="signature">(<wbr><span class="parameter" id="angleTo-param-target"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">target</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/angleTo.html">angleTo</a></span><span class="signature">(<wbr><span class="parameter" id="angleTo-param-target"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">target</span></span>)
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span>
   </span>
   
@@ -883,19 +860,6 @@ how much the current component need to rotate to face the target. This
 angle is measured in clockwise direction. <code>target</code> should be in
 absolute/world coordinate system.
   <div class="features"><span class="feature">inherited</span></div>
-
-</dd>
-
-        <dt id="clear" class="callable">
-  <span class="name"><a href="../game_components_measure_component/MeasureComponent/clear.html">clear</a></span><span class="signature">(<wbr>)
-    <span class="returntype parameter">&#8594; void</span>
-  </span>
-  
-
-</dt>
-<dd>
-  Clears the measurement line (hides it).
-  
 
 </dd>
 
@@ -914,7 +878,7 @@ docs for context.
 </dd>
 
         <dt id="componentsAtPoint" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/componentsAtPoint.html">componentsAtPoint</a></span><span class="signature">(<wbr><span class="parameter" id="componentsAtPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, [</span><span class="parameter" id="componentsAtPoint-param-nestedPoints"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>&gt;</span>?</span> <span class="parameter-name">nestedPoints</span></span>])
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/componentsAtPoint.html">componentsAtPoint</a></span><span class="signature">(<wbr><span class="parameter" id="componentsAtPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, [</span><span class="parameter" id="componentsAtPoint-param-nestedPoints"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/List-class.html">List</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>&gt;</span>?</span> <span class="parameter-name">nestedPoints</span></span>])
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Iterable-class.html">Iterable</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span>&gt;</span></span>
   </span>
   
@@ -941,7 +905,7 @@ docs for context.
 </dd>
 
         <dt id="containsLocalPoint" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/containsLocalPoint.html">containsLocalPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsLocalPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/containsLocalPoint.html">containsLocalPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsLocalPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
   </span>
   
@@ -956,7 +920,7 @@ while the bottom and the right borders are exclusive.
 </dd>
 
         <dt id="containsPoint" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/containsPoint.html">containsPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/containsPoint.html">containsPoint</a></span><span class="signature">(<wbr><span class="parameter" id="containsPoint-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span>
   </span>
   
@@ -1163,8 +1127,8 @@ are no such children.
 </dd>
 
         <dt id="localToParent" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/localToParent.html">localToParent</a></span><span class="signature">(<wbr><span class="parameter" id="localToParent-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, {</span><span class="parameter" id="localToParent-param-output"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">output</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/localToParent.html">localToParent</a></span><span class="signature">(<wbr><span class="parameter" id="localToParent-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, {</span><span class="parameter" id="localToParent-param-output"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">output</span></span>})
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -1176,7 +1140,7 @@ are no such children.
 </dd>
 
         <dt id="lookAt" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/lookAt.html">lookAt</a></span><span class="signature">(<wbr><span class="parameter" id="lookAt-param-target"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">target</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/lookAt.html">lookAt</a></span><span class="signature">(<wbr><span class="parameter" id="lookAt-param-target"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">target</span></span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -1216,7 +1180,7 @@ to or removed from its parent children list.
 </dd>
 
         <dt id="onGameResize" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onGameResize.html">onGameResize</a></span><span class="signature">(<wbr><span class="parameter" id="onGameResize-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">size</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onGameResize.html">onGameResize</a></span><span class="signature">(<wbr><span class="parameter" id="onGameResize-param-size"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">size</span></span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -1268,7 +1232,7 @@ to or removed from its parent children list.
 </dd>
 
         <dt id="onParentResize" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onParentResize.html">onParentResize</a></span><span class="signature">(<wbr><span class="parameter" id="onParentResize-param-maxSize"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">maxSize</span></span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/onParentResize.html">onParentResize</a></span><span class="signature">(<wbr><span class="parameter" id="onParentResize-param-maxSize"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">maxSize</span></span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -1297,8 +1261,8 @@ from the component tree).
 </dd>
 
         <dt id="parentToLocal" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/parentToLocal.html">parentToLocal</a></span><span class="signature">(<wbr><span class="parameter" id="parentToLocal-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, {</span><span class="parameter" id="parentToLocal-param-output"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">output</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/parentToLocal.html">parentToLocal</a></span><span class="signature">(<wbr><span class="parameter" id="parentToLocal-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span>, {</span><span class="parameter" id="parentToLocal-param-output"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a>?</span> <span class="parameter-name">output</span></span>})
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -1310,8 +1274,8 @@ from the component tree).
 </dd>
 
         <dt id="positionOf" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/positionOf.html">positionOf</a></span><span class="signature">(<wbr><span class="parameter" id="positionOf-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/positionOf.html">positionOf</a></span><span class="signature">(<wbr><span class="parameter" id="positionOf-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -1325,7 +1289,7 @@ into the parent's coordinate space.
 
         <dt id="positionOfAnchor" class="callable inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/positionOfAnchor.html">positionOfAnchor</a></span><span class="signature">(<wbr><span class="parameter" id="positionOfAnchor-param-anchor"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Anchor-class.html">Anchor</a></span> <span class="parameter-name">anchor</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -1408,7 +1372,7 @@ and their children.
 </dd>
 
         <dt id="removeWhere" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/removeWhere.html">removeWhere</a></span><span class="signature">(<wbr><span class="parameter" id="removeWhere-param-test"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">test</span>(<span class="parameter" id="param-component"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span> <span class="parameter-name">component</span></span>)</span>)
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component/removeWhere.html">removeWhere</a></span><span class="signature">(<wbr><span class="parameter" id="removeWhere-param-test"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/bool-class.html">bool</a></span> <span class="parameter-name">test</span>(<span class="parameter" id="contains-param-c"><span class="type-annotation"><a href="https://pub.dev/documentation/flame/1.36.0/components/Component-class.html">Component</a></span> <span class="parameter-name">c</span></span>)</span>)
     <span class="returntype parameter">&#8594; void</span>
   </span>
   
@@ -1475,32 +1439,6 @@ i.e. setByRect ∘ toRect = identity).
 
 </dd>
 
-        <dt id="setEnd" class="callable">
-  <span class="name"><a href="../game_components_measure_component/MeasureComponent/setEnd.html">setEnd</a></span><span class="signature">(<wbr><span class="parameter" id="setEnd-param-worldPos"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a></span> <span class="parameter-name">worldPos</span></span>)
-    <span class="returntype parameter">&#8594; void</span>
-  </span>
-  
-
-</dt>
-<dd>
-  Updates the end point of the current measurement.
-  
-
-</dd>
-
-        <dt id="setStart" class="callable">
-  <span class="name"><a href="../game_components_measure_component/MeasureComponent/setStart.html">setStart</a></span><span class="signature">(<wbr><span class="parameter" id="setStart-param-worldPos"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Offset-class.html">Offset</a></span> <span class="parameter-name">worldPos</span></span>)
-    <span class="returntype parameter">&#8594; void</span>
-  </span>
-  
-
-</dt>
-<dd>
-  Begins a new measurement at <code>worldPos</code>.
-  
-
-</dd>
-
         <dt id="toAbsoluteRect" class="callable inherited">
   <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/toAbsoluteRect.html">toAbsoluteRect</a></span><span class="signature">(<wbr>)
     <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-ui/Rect-class.html">Rect</a></span>
@@ -1515,8 +1453,8 @@ i.e. setByRect ∘ toRect = identity).
 </dd>
 
         <dt id="toLocal" class="callable inherited">
-  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/toLocal.html">toLocal</a></span><span class="signature">(<wbr><span class="parameter" id="toLocal-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span>
+  <span class="name"><a href="https://pub.dev/documentation/flame/1.36.0/components/PositionComponent/toLocal.html">toLocal</a></span><span class="signature">(<wbr><span class="parameter" id="toLocal-param-point"><span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">point</span></span>)
+    <span class="returntype parameter">&#8594; <a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span>
   </span>
   
 
@@ -1549,7 +1487,7 @@ coordinates. This function is the inverse of <a href="https://pub.dev/documentat
 
 </dt>
 <dd class="inherited">
-  
+  A string representation of this object.
   <div class="features"><span class="feature">inherited</span></div>
 
 </dd>
@@ -1633,7 +1571,7 @@ priority of the direct siblings, not the children or the ancestors.
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

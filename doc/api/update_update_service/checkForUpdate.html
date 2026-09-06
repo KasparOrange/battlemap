@@ -54,7 +54,7 @@
 
     <section class="multi-line-signature">
         
-<span class="returntype"><a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../update_update_service/UpdateInfo-class.html">UpdateInfo</a>?</span>&gt;</span></span>
+<span class="returntype"><a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="../update_update_service/UpdateInfo-class.html">UpdateInfo</a>?</span>&gt;</span></span>
 <span class="name ">checkForUpdate</span>(<wbr>)
 
         
@@ -79,7 +79,7 @@
     final client = HttpClient();
     client.connectionTimeout = const Duration(seconds: 5);
     final request = await client
-        .getUrl(Uri.parse(&#39;http:&#47;&#47;${RelayConfig.host}:4242&#47;version.json&#39;));
+        .getUrl(Uri.parse(&#39;${RelayConfig.httpBase}&#47;version.json&#39;));
     final response = await request.close();
 
     if (response.statusCode != 200) {
@@ -133,7 +133,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

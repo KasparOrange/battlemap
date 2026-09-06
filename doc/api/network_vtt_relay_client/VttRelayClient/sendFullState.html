@@ -66,9 +66,9 @@
 <section class="desc markdown">
   <p>Broadcasts the TV's full game state to the companion.</p>
 <p><code>stateJson</code> is the serialised <a href="../../state_vtt_state/VttState-class.html">VttState</a> (fog, portals, tokens, etc.)
-and <code>camera</code> contains <code>x</code>, <code>y</code>, <code>zoom</code>, and <code>angle</code> keys describing
-the current camera transform. This is called at up to 20 Hz from the
-TV's throttled broadcast timer.</p>
+and <code>camera</code> contains <code>x</code>, <code>y</code>, <code>zoom</code>, <code>angle</code>, plus the viewport
+size <code>vw</code>/<code>vh</code>, describing the current camera transform. This is
+called at up to 20 Hz from the TV's throttled broadcast timer.</p>
 </section>
 
 
@@ -110,7 +110,7 @@ TV's throttled broadcast timer.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

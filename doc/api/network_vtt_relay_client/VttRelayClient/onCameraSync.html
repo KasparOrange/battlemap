@@ -55,7 +55,7 @@
     
       <section class="multi-line-signature">
         
-        void Function<span class="signature">(<span class="parameter" id="param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">y</span>, </span><span class="parameter" id="param-zoom"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">zoom</span>, </span><span class="parameter" id="param-angle"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">angle</span></span>)</span>?
+        void Function<span class="signature">(<span class="parameter" id="param-x"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">x</span>, </span><span class="parameter" id="param-y"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">y</span>, </span><span class="parameter" id="param-zoom"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">zoom</span>, </span><span class="parameter" id="param-angle"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">angle</span>, </span><span class="parameter" id="param-vw"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">vw</span>, </span><span class="parameter" id="param-vh"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">vh</span></span>)</span>?
         <span class="name ">onCameraSync</span>
         <div class="features"><span class="feature">getter/setter pair</span></div>
 
@@ -64,14 +64,18 @@
 <section class="desc markdown">
   <p>Called when camera state is received as part of a <code>vtt.fullState</code>
 (companion side only).</p>
-<p>Parameters are the camera's world-space <code>x</code>, <code>y</code>, <code>zoom</code> level, and
-rotation <code>angle</code> in radians.</p>
+<p>Parameters are the camera's world-space <code>x</code>, <code>y</code>, <code>zoom</code> level,
+rotation <code>angle</code> in radians, and the TV viewport size <code>vw</code> × <code>vh</code> in
+screen pixels (0 when the TV build predates the <code>vw</code>/<code>vh</code> fields).
+The companion draws that viewport as a dashed rectangle — it does
+<strong>not</strong> move its own camera.</p>
 </section>
 
       
 <section class="summary source-code" id="source">
   <h2><span>Implementation</span></h2>
-  <pre class="language-dart"><code class="language-dart">void Function(double x, double y, double zoom, double angle)? onCameraSync;</code></pre>
+  <pre class="language-dart"><code class="language-dart">void Function(double x, double y, double zoom, double angle, double vw,
+    double vh)? onCameraSync;</code></pre>
 </section>
 
 
@@ -100,7 +104,7 @@ rotation <code>angle</code> in radians.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

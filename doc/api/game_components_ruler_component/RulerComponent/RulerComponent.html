@@ -54,17 +54,17 @@
 
     <section class="multi-line-signature">
       
-      <span class="name ">RulerComponent</span>(<wbr>{<ol class="parameter-list"> <li><span class="parameter" id="-param-state"><span>required</span> <span class="type-annotation"><a href="../../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span></li>
-<li><span class="parameter" id="-param-pixelsPerGrid"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">pixelsPerGrid</span>, </span></li>
-<li><span class="parameter" id="-param-mapSize"><span>required</span> <span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.2.0/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">mapSize</span>, </span></li>
+      <span class="name ">RulerComponent</span>(<wbr>{<ol class="parameter-list"> <li><span class="parameter" id="param-state"><span>required</span> <span class="type-annotation"><a href="../../state_vtt_state/VttState-class.html">VttState</a></span> <span class="parameter-name">state</span>, </span></li>
+<li><span class="parameter" id="param-pixelsPerGrid"><span>required</span> <span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/double-class.html">double</a></span> <span class="parameter-name">pixelsPerGrid</span>, </span></li>
+<li><span class="parameter" id="param-mapSize"><span>required</span> <span class="type-annotation"><a href="https://pub.dev/documentation/vector_math/2.4.2/vector_math/Vector2-class.html">Vector2</a></span> <span class="parameter-name">mapSize</span>, </span></li>
 </ol>})
     </section>
     
 <section class="desc markdown">
   <p>Creates a <a href="../../game_components_ruler_component/RulerComponent-class.html">RulerComponent</a> for the given map.</p>
-<p><code>pixelsPerGrid</code> sets the spacing between tick marks.
-<code>mapSize</code> sets the component's bounding box so it renders regardless
-of camera position.</p>
+<p><code>pixelsPerGrid</code> sets the spacing between tick marks and every other
+dimension. <code>mapSize</code> sets the component's bounding box so it renders
+regardless of camera position.</p>
 </section>
 
 
@@ -78,7 +78,12 @@ of camera position.</p>
 }) : super(
         size: mapSize,
         priority: 25,
-      );</code></pre>
+      ) {
+  _woodBorder.strokeWidth = 0.025 * pixelsPerGrid;
+  _tickPaint.strokeWidth = 0.02 * pixelsPerGrid;
+  _halfTickPaint.strokeWidth = 0.012 * pixelsPerGrid;
+  _cornerPaint.strokeWidth = 0.02 * pixelsPerGrid;
+}</code></pre>
 </section>
 
 
@@ -106,7 +111,7 @@ of camera position.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

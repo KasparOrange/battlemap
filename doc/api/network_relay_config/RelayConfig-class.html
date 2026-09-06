@@ -58,9 +58,14 @@
 <p>Both the TV (<a href="../ui_tv_shell/TvShell-class.html">TvShell</a>) and the companion phone (<a href="../ui_vtt_companion_screen/VttCompanionScreen-class.html">VttCompanionScreen</a>)
 connect to this relay as WebSocket clients. The relay forwards messages
 between the paired table and companion roles.</p>
+<p>The host can be overridden at build time for a local bench (relay and
+dev server running on the same machine as the browser / simulator):</p>
+<pre class="language-sh"><code class="language-sh">flutter build web --dart-define=RELAY_HOST=localhost
+</code></pre>
 <p>See also:</p>
 <ul>
 <li><a href="../network_vtt_relay_client/VttRelayClient-class.html">VttRelayClient</a>, which uses these constants to establish connections.</li>
+<li><code>docs/setup.md</code> "local bench" for the full local test loop.</li>
 </ul>
 </section>
 
@@ -170,6 +175,18 @@ between the paired table and companion roles.</p>
   <section class="summary offset-anchor" id="static-properties">
     <h2>Static Properties</h2>
     <dl class="properties">
+        <dt id="httpBase" class="property">
+  <span class="name"><a href="../network_relay_config/RelayConfig/httpBase.html">httpBase</a></span>
+  <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
+  
+
+</dt>
+<dd>
+  Base HTTP URL of the dev server (no trailing slash).
+  <div class="features"><span class="feature">no setter</span></div>
+
+</dd>
+
         <dt id="wsUrl" class="property">
   <span class="name"><a href="../network_relay_config/RelayConfig/wsUrl.html">wsUrl</a></span>
   <span class="signature">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>
@@ -197,7 +214,20 @@ between the paired table and companion roles.</p>
 
 </dt>
 <dd>
-  IP address of the VPS hosting the WebSocket relay.
+  IP address (or hostname) of the machine hosting the relay and the
+HTTP dev server. Defaults to the VPS; override with <code>RELAY_HOST</code>.
+  
+
+</dd>
+
+        <dt id="httpPort" class="constant">
+    <span class="name "><a href="../network_relay_config/RelayConfig/httpPort-constant.html">httpPort</a></span>
+  <span class="signature">&#8594; const <a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span>
+  
+
+</dt>
+<dd>
+  TCP port of the HTTP dev server (web build, uploads, APK).
   
 
 </dd>
@@ -239,7 +269,7 @@ between the paired table and companion roles.</p>
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

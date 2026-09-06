@@ -59,7 +59,7 @@
         <li>@<a href="https://api.flutter.dev/flutter/dart-core/override-constant.html">override</a></li>
     </ol>
   </div>
-<span class="returntype"><a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+<span class="returntype"><a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
 <span class="name ">onLoad</span>(<wbr>)
 
       <div class="features"><span class="feature">override</span></div>
@@ -105,14 +105,14 @@ the lifetime of the <a href="https://pub.dev/documentation/flame/1.36.0/componen
   <pre class="language-dart"><code class="language-dart">@override
 Future&lt;void&gt; onLoad() async {
   await super.onLoad();
-  &#47;&#47; Pre-cache number painters for labels 1-5
-  for (int i = 1; i &lt;= 5; i++) {
+  &#47;&#47; Pre-cache number painters, sized to the arm width
+  for (int i = 1; i &lt;= armLengthSquares.toInt(); i++) {
     final painter = TextPainter(
       text: TextSpan(
         text: &#39;$i&#39;,
-        style: const TextStyle(
-          color: Color(0xFF1A0E05),
-          fontSize: 10,
+        style: TextStyle(
+          color: const Color(0xFF1A0E05),
+          fontSize: 0.3 * pixelsPerGrid,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -148,7 +148,7 @@ Future&lt;void&gt; onLoad() async {
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

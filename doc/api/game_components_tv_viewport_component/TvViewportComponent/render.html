@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, user-scalable=no">
+  <meta name="description" content="API docs for the render method from the TvViewportComponent class, for the Dart programming language.">
+  <title>render method - TvViewportComponent class - tv_viewport_component library - Dart API</title>
+
+
+  
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
+  
+  <link rel="stylesheet" href="../../static-assets/github.css?v1">
+  <link rel="stylesheet" href="../../static-assets/styles.css?v1">
+  <link rel="icon" href="../../static-assets/favicon.png?v1">
+  
+</head>
+
+<body data-base-href="../../" data-using-base-href="false" class="light-theme">
+<div id="overlay-under-drawer"></div>
+<header id="title">
+  <span id="sidenav-left-toggle" class="material-symbols-outlined" role="button" tabindex="0">menu</span>
+  <ol class="breadcrumbs gt-separated dark hidden-xs">
+    <li><a href="../../index.html">battlemap</a></li>
+    <li><a href="../../game_components_tv_viewport_component/">game&#47;components&#47;tv_viewport_component.dart</a></li>
+    <li><a href="../../game_components_tv_viewport_component/TvViewportComponent-class.html">TvViewportComponent</a></li>
+    <li class="self-crumb">render method</li>
+  </ol>
+  <div class="self-name">render</div>
+  <form class="search navbar-right" role="search">
+    <input type="text" id="search-box" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+  <button class="toggle" id="theme-button" title="Toggle between light and dark mode" aria-label="Light and dark mode toggle">
+    <span id="dark-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      dark_mode
+    </span>
+    <span id="light-theme-button" class="material-symbols-outlined" aria-hidden="true">
+      light_mode
+    </span>
+  </button>
+</header>
+<main>
+<div
+    id="dartdoc-main-content"
+    class="main-content"
+    data-above-sidebar="game_components_tv_viewport_component&#47;TvViewportComponent-class-sidebar.html"
+    data-below-sidebar="">
+    <div>
+<h1><span class="kind-method">render</span> method 
+</h1></div>
+
+    <section class="multi-line-signature">
+      
+  <div>
+    <ol class="annotation-list">
+        <li>@<a href="https://api.flutter.dev/flutter/dart-core/override-constant.html">override</a></li>
+    </ol>
+  </div>
+<span class="returntype">void</span>
+<span class="name ">render</span>(<wbr><ol class="parameter-list single-line"> <li><span class="parameter" id="render-param-canvas"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-ui/Canvas-class.html">Canvas</a></span> <span class="parameter-name">canvas</span></span></li>
+</ol>)
+
+      <div class="features"><span class="feature">override</span></div>
+
+    </section>
+    
+
+
+    
+<section class="summary source-code" id="source">
+  <h2><span>Implementation</span></h2>
+  <pre class="language-dart"><code class="language-dart">@override
+void render(Canvas canvas) {
+  final cam = snapshot();
+  if (cam == null || cam.vw &lt;= 0 || cam.vh &lt;= 0 || cam.zoom &lt;= 0) return;
+
+  final zoom = max(screenZoom(), 1e-4);
+  final w = cam.vw &#47; cam.zoom;
+  final h = cam.vh &#47; cam.zoom;
+  _paint.strokeWidth = 2.5 &#47; zoom;
+  final dash = 14.0 &#47; zoom;
+  final gap = 8.0 &#47; zoom;
+
+  canvas.save();
+  canvas.translate(cam.x, cam.y);
+  canvas.rotate(-cam.angle);
+  final rect = Rect.fromCenter(center: Offset.zero, width: w, height: h);
+  _dashedLine(canvas, rect.topLeft, rect.topRight, dash, gap);
+  _dashedLine(canvas, rect.topRight, rect.bottomRight, dash, gap);
+  _dashedLine(canvas, rect.bottomRight, rect.bottomLeft, dash, gap);
+  _dashedLine(canvas, rect.bottomLeft, rect.topLeft, dash, gap);
+  &#47;&#47; Corner dots so the rectangle reads as a frame, not as map detail.
+  final r = 4.0 &#47; zoom;
+  for (final c in [rect.topLeft, rect.topRight, rect.bottomRight, rect.bottomLeft]) {
+    canvas.drawCircle(c, r, _cornerPaint);
+  }
+  canvas.restore();
+}</code></pre>
+</section>
+
+
+  </div> <!-- /.main-content -->
+  <div id="dartdoc-sidebar-left" class="sidebar sidebar-offcanvas-left">
+    <!-- The search input and breadcrumbs below are only responsively visible at low resolutions. -->
+<header id="header-search-sidebar" class="hidden-l">
+  <form class="search-sidebar" role="search">
+    <input type="text" id="search-sidebar" autocomplete="off" disabled class="form-control typeahead" placeholder="Loading search...">
+  </form>
+</header>
+<ol class="breadcrumbs gt-separated dark hidden-l" id="sidebar-nav">
+    <li><a href="../../index.html">battlemap</a></li>
+    <li><a href="../../game_components_tv_viewport_component/">tv_viewport_component</a></li>
+    <li><a href="../../game_components_tv_viewport_component/TvViewportComponent-class.html">TvViewportComponent</a></li>
+    <li class="self-crumb">render method</li>
+</ol>
+
+    <h5>TvViewportComponent class</h5>
+    <div id="dartdoc-sidebar-left-content"></div>
+  </div><!--/.sidebar-offcanvas-->
+  <div id="dartdoc-sidebar-right" class="sidebar sidebar-offcanvas-right">
+</div><!--/.sidebar-offcanvas-->
+</main>
+<footer>
+  <span class="no-break">
+    battlemap
+      1.1.5+15
+  </span>
+  
+</footer>
+
+
+<script src="../../static-assets/highlight.pack.js?v1"></script>
+<script src="../../static-assets/docs.dart.js"></script>
+
+</body>
+</html>
+

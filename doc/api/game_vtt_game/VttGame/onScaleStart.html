@@ -74,16 +74,10 @@
   <h2><span>Implementation</span></h2>
   <pre class="language-dart"><code class="language-dart">@override
 void onScaleStart(ScaleStartInfo info) {
-  _isMultiTouch = false;
-  _hasDragged = false;
+  _isMultiTouch = info.pointerCount &gt; 1;
+  _toolActive = false;
   _initialZoom = camera.viewfinder.zoom;
   _scaleStartPos = info.eventPosition.global.clone();
-
-  if (!state.isInteractive) return;
-
-  &#47;&#47; Start tool gesture (will be cancelled if multi-touch detected)
-  final worldPos = _screenToWorld(info.eventPosition.global);
-  _toolDragStart(worldPos);
 }</code></pre>
 </section>
 
@@ -112,7 +106,7 @@ void onScaleStart(ScaleStartInfo info) {
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

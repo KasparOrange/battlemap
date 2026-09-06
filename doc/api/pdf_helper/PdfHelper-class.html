@@ -59,14 +59,15 @@ so that pdfrx import failures (e.g. on web) don't crash the app.</p>
 <p>Provides both instance methods for the legacy PDF viewer and a static
 <a href="../pdf_helper/PdfHelper/renderPdfPage.html">renderPdfPage</a> utility for the VTT PDF map flow, which renders a PDF
 page to PNG bytes for use as a battlemap background image.</p>
-<p>IMPORTANT: pdfrx uses <code>dart:ui</code> for rendering, which only works on native
-platforms (Android/iOS/desktop). The companion phone (web build) does not
-call these methods — it relies on the TV to render and send the result.</p>
+<p>Runs on every platform that has a PDFium build — Android, iOS, desktop,
+and <strong>web</strong> (pdfrx ≥ 2 ships PDFium as WASM inside the web build's assets).
+Not on tvOS (no binary): the companion phone rasterizes PDFs before upload
+(<code>VttCompanionScreen._pickAndUploadMap</code>), so the TV only receives images.</p>
 <p>See also:</p>
 <ul>
 <li><a href="../state_vtt_state/VttState/loadPdfAsMap.html">VttState.loadPdfAsMap</a>, which consumes the rendered PNG bytes.</li>
-<li><code>TvShell._downloadAndLoadPdf</code> (in <code>lib/ui/tv_shell.dart</code>), which
-orchestrates the PDF upload flow.</li>
+<li><code>TvShell._downloadAndLoadPdf</code> (in <code>lib/ui/tv_shell.dart</code>), the legacy
+TV-side PDF path kept for older phone builds.</li>
 </ul>
 </section>
 
@@ -144,14 +145,14 @@ orchestrates the PDF upload flow.</li>
 
 </dt>
 <dd>
-  Disposes the underlying <a href="https://pub.dev/documentation/pdfrx/1.3.5/pdfrx/PdfDocument-class.html">PdfDocument</a> and frees resources.
+  Disposes the underlying <a href="https://pub.dev/documentation/pdfrx_engine/0.6.0/pdfrx_engine/PdfDocument-class.html">PdfDocument</a> and frees resources.
   
 
 </dd>
 
         <dt id="loadPdf" class="callable">
   <span class="name"><a href="../pdf_helper/PdfHelper/loadPdf.html">loadPdf</a></span><span class="signature">(<wbr><span class="parameter" id="loadPdf-param-bytes"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a></span> <span class="parameter-name">bytes</span>, </span><span class="parameter" id="loadPdf-param-gameState"><span class="type-annotation"><a href="../game_state/GameState-class.html">GameState</a></span> <span class="parameter-name">gameState</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   </span>
   
 
@@ -177,7 +178,7 @@ orchestrates the PDF upload flow.</li>
 
         <dt id="setPage" class="callable">
   <span class="name"><a href="../pdf_helper/PdfHelper/setPage.html">setPage</a></span><span class="signature">(<wbr><span class="parameter" id="setPage-param-index"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">index</span>, </span><span class="parameter" id="setPage-param-gameState"><span class="type-annotation"><a href="../game_state/GameState-class.html">GameState</a></span> <span class="parameter-name">gameState</span></span>)
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter">void</span>&gt;</span></span>
   </span>
   
 
@@ -231,7 +232,7 @@ orchestrates the PDF upload flow.</li>
     <dl class="callables">
         <dt id="renderPdfPage" class="callable">
   <span class="name"><a href="../pdf_helper/PdfHelper/renderPdfPage.html">renderPdfPage</a></span><span class="signature">(<wbr><span class="parameter" id="renderPdfPage-param-pdfBytes"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-typed_data/Uint8List-class.html">Uint8List</a></span> <span class="parameter-name">pdfBytes</span>, {</span><span class="parameter" id="renderPdfPage-param-pageIndex"><span class="type-annotation"><a href="https://api.flutter.dev/flutter/dart-core/int-class.html">int</a></span> <span class="parameter-name">pageIndex</span> = <span class="default-value">0</span></span>})
-    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-core/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span>&gt;</span></span>
+    <span class="returntype parameter">&#8594; <a href="https://api.flutter.dev/flutter/dart-async/Future-class.html">Future</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/Map-class.html">Map</a><span class="signature">&lt;<wbr><span class="type-parameter"><a href="https://api.flutter.dev/flutter/dart-core/String-class.html">String</a></span>, <span class="type-parameter">dynamic</span>&gt;</span>?</span>&gt;</span></span>
   </span>
   
 
@@ -269,7 +270,7 @@ orchestrates the PDF upload flow.</li>
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

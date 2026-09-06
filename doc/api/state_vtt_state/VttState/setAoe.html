@@ -64,6 +64,7 @@
     
 <section class="desc markdown">
   <p>Sets the active AoE template and notifies listeners.</p>
+<p>Fires <a href="../../state_vtt_state/VttState/onAoeChanged.html">onAoeChanged</a> for relay forwarding.</p>
 </section>
 
 
@@ -73,6 +74,7 @@
   <pre class="language-dart"><code class="language-dart">void setAoe(AoeTemplate? template) {
   activeAoe = template;
   notifyListeners();
+  onAoeChanged?.call(template);
 }</code></pre>
 </section>
 
@@ -101,7 +103,7 @@
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

@@ -17,6 +17,8 @@ client (player tablet, button-only remote) on the JSON relay protocol.
 
 ## next
 
+0. **Konrad looked at the result (2026-09-06, after deploy 1.1.5+15) and saw problems he
+   will fix in the next session** — he did not list them; ask first, then fix from code.
 1. **Device test** (Konrad, phone + TV): walk the six tabs once. Specifically check
    - pinch/two-finger pan on the phone never paints fog; the dashed TV frame is where the TV
      looks; "TV follows the phone" moves the TV live; "match TV" jumps the phone to it

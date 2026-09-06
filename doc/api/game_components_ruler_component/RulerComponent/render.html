@@ -78,11 +78,12 @@ void render(Canvas canvas) {
 
   final cornerX = state.rulerX * pixelsPerGrid;
   final cornerY = state.rulerY * pixelsPerGrid;
-  final armLength = 5 * pixelsPerGrid;
-  final armWidth = 0.15 * pixelsPerGrid;
-  final tickLength = 0.08 * pixelsPerGrid;
-  final halfTickLength = 0.05 * pixelsPerGrid;
-  final cornerSize = 0.08 * pixelsPerGrid;
+  final armLength = armLengthSquares * pixelsPerGrid;
+  final armWidth = armWidthSquares * pixelsPerGrid;
+  final tickLength = 0.22 * pixelsPerGrid;
+  final halfTickLength = 0.12 * pixelsPerGrid;
+  final cornerSize = 0.2 * pixelsPerGrid;
+  final n = armLengthSquares.toInt();
 
   canvas.save();
   canvas.translate(cornerX, cornerY);
@@ -100,17 +101,15 @@ void render(Canvas canvas) {
   canvas.drawRect(vRect, _woodFill);
   canvas.drawRect(vRect, _woodBorder);
 
-  &#47;&#47; --- Tick marks on horizontal arm ---
-  for (int i = 0; i &lt;= 5; i++) {
+  &#47;&#47; --- Tick marks on horizontal arm (ticks on the outer edge, y = -armWidth) ---
+  for (int i = 0; i &lt;= n; i++) {
     final x = i * pixelsPerGrid;
-    &#47;&#47; Full tick
     canvas.drawLine(
       Offset(x, -armWidth),
       Offset(x, -armWidth + tickLength),
       _tickPaint,
     );
-    &#47;&#47; Half tick (except after last full tick)
-    if (i &lt; 5) {
+    if (i &lt; n) {
       final halfX = (i + 0.5) * pixelsPerGrid;
       canvas.drawLine(
         Offset(halfX, -armWidth),
@@ -118,27 +117,24 @@ void render(Canvas canvas) {
         _halfTickPaint,
       );
     }
-    &#47;&#47; Number label
-    if (i &gt; 0 &amp;&amp; i &lt;= 5 &amp;&amp; i - 1 &lt; _numberPainters.length) {
+    if (i &gt; 0 &amp;&amp; i - 1 &lt; _numberPainters.length) {
       final painter = _numberPainters[i - 1];
       painter.paint(
         canvas,
-        Offset(x - painter.width &#47; 2, -armWidth &#47; 2 - painter.height &#47; 2),
+        Offset(x - painter.width &#47; 2, -armWidth + tickLength + 0.02 * pixelsPerGrid),
       );
     }
   }
 
-  &#47;&#47; --- Tick marks on vertical arm ---
-  for (int i = 0; i &lt;= 5; i++) {
+  &#47;&#47; --- Tick marks on vertical arm (ticks on the outer edge, x = -armWidth) ---
+  for (int i = 0; i &lt;= n; i++) {
     final y = -i * pixelsPerGrid;
-    &#47;&#47; Full tick
     canvas.drawLine(
       Offset(-armWidth, y),
       Offset(-armWidth + tickLength, y),
       _tickPaint,
     );
-    &#47;&#47; Half tick (except after last full tick)
-    if (i &lt; 5) {
+    if (i &lt; n) {
       final halfY = -(i + 0.5) * pixelsPerGrid;
       canvas.drawLine(
         Offset(-armWidth, halfY),
@@ -146,12 +142,11 @@ void render(Canvas canvas) {
         _halfTickPaint,
       );
     }
-    &#47;&#47; Number label
-    if (i &gt; 0 &amp;&amp; i &lt;= 5 &amp;&amp; i - 1 &lt; _numberPainters.length) {
+    if (i &gt; 0 &amp;&amp; i - 1 &lt; _numberPainters.length) {
       final painter = _numberPainters[i - 1];
       painter.paint(
         canvas,
-        Offset(-armWidth &#47; 2 - painter.width &#47; 2, y - painter.height &#47; 2),
+        Offset(-armWidth + tickLength + 0.02 * pixelsPerGrid, y - painter.height &#47; 2),
       );
     }
   }
@@ -192,7 +187,7 @@ void render(Canvas canvas) {
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>

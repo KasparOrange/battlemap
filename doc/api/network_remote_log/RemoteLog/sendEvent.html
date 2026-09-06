@@ -82,8 +82,7 @@ already provide one) the <code>msg</code> field. Defaults to <a href="../../netw
   };
   entry.addAll(data);
   if (!entry.containsKey(&#39;msg&#39;)) entry[&#39;msg&#39;] = event;
-  _queue.add(entry);
-  if (!_flushing) _flush();
+  _enqueue(entry);
 }</code></pre>
 </section>
 
@@ -112,7 +111,7 @@ already provide one) the <code>msg</code> field. Defaults to <a href="../../netw
 <footer>
   <span class="no-break">
     battlemap
-      1.1.2+12
+      1.1.5+15
   </span>
   
 </footer>
