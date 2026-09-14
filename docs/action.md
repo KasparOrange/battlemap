@@ -6,7 +6,7 @@ Read this first in the next session. Done items move to `archive.md`, they do no
 
 The 12-point companion bug list (found 2026-09-06 by a full code read, see archive 26-09-06
 01:10) is **fixed in code as of 2026-09-06 (session 01JM3a…)**: `flutter analyze` clean, 361
-tests green, web build compiles. What is fixed and how is in `archive.md` (entry 26-09-06) and
+tests green, web build compiles; dead code removed 2026-09-14 (`next` 3). What is fixed and how is in `archive.md` (entry 26-09-06) and
 in the docs it touched (`relay-protocol.md` "camera commands"/"tool overlays"/"state
 broadcast", `architecture.md` "interaction modes"). **Nothing has been tested on a real phone
 or TV yet.**
@@ -31,12 +31,12 @@ client (player tablet, button-only remote) on the JSON relay protocol.
      one-handed and does not hide the map when collapsed
 2. If bugs surface: fix from code, `flutter analyze` + `flutter test` (361 green at hand-off),
    no screenshot walkthroughs in the main session (memory rule); a subagent may click through.
-3. **Dead code to delete** (nothing imports it; `main.dart` only uses `TvShell`,
-   `VttCompanionScreen`, `DevScreen`): `lib/companion_screen.dart`, `lib/table_screen.dart`,
-   `lib/game_state.dart`, `lib/game/battlemap_game.dart`, `lib/game/components/grid_component.dart`,
-   `pdf_background_component.dart`, `lib/ui/vtt_screen.dart`, `lib/network/client*.dart`,
+3. **Dead code deleted 2026-09-14** (see archive entry): `lib/companion_screen.dart`,
+   `table_screen.dart`, `game_state.dart`, `game/battlemap_game.dart`, `grid_component.dart`,
+   `pdf_background_component.dart`, `ui/vtt_screen.dart`, `network/client*.dart`,
    `server*.dart`, `vtt_client*.dart`, and the `GameState` instance methods in `pdf_helper.dart`
-   (keep the static `renderPdfPage`). **Keep `lib/network/vtt_server.dart`** (see below).
+   (only the static `renderPdfPage` remains). `flutter analyze` clean, 361/361 tests green —
+   no test belonged to the deleted code. `lib/network/vtt_server.dart` kept (see below).
 4. Optional visual pass on the local bench (`setup.md` "local bench"): a handful of
    screenshots, not a click-through. Playwright + Flutter semantics (`SemanticsBinding
    .instance.ensureSemantics()` behind a define) is the plan for a subagent-driven

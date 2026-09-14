@@ -3,14 +3,12 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import 'game_state.dart';
-
-/// Handles PDF loading and rendering, isolated from GameState
-/// so that pdfrx import failures (e.g. on web) don't crash the app.
+/// Handles PDF rendering, isolated from the rest of the app so that pdfrx
+/// import failures (e.g. on web) don't crash the app.
 ///
-/// Provides both instance methods for the legacy PDF viewer and a static
-/// [renderPdfPage] utility for the VTT PDF map flow, which renders a PDF
-/// page to PNG bytes for use as a battlemap background image.
+/// Provides the static [renderPdfPage] utility for the VTT PDF map flow,
+/// which renders a PDF page to PNG bytes for use as a battlemap background
+/// image.
 ///
 /// Runs on every platform that has a PDFium build — Android, iOS, desktop,
 /// and **web** (pdfrx ≥ 2 ships PDFium as WASM inside the web build's assets).
@@ -22,9 +20,6 @@ import 'game_state.dart';
 /// - `TvShell._downloadAndLoadPdf` (in `lib/ui/tv_shell.dart`), the legacy
 ///   TV-side PDF path kept for older phone builds.
 class PdfHelper {
-  PdfDocument? _document;
-  Uint8List? _bytes;
-
   static bool _engineReady = false;
 
   /// Initialises the pdfrx engine once per process.
@@ -117,69 +112,5 @@ class PdfHelper {
       doc?.dispose();
       return null;
     }
-  }
-
-  /// Loads a PDF for the legacy PDF viewer (non-VTT mode).
-  ///
-  /// Opens the PDF from [bytes] and renders page 0 into [gameState].
-  Future<void> loadPdf(Uint8List bytes, GameState gameState) async {
-    try {
-      _ensureEngine();
-      _document?.dispose();
-      _bytes = bytes;
-      _document = await PdfDocument.openData(bytes);
-      await _renderPage(0, gameState);
-    } catch (e) {
-      debugPrint('PDF load error: $e');
-    }
-  }
-
-  /// Switches to a different page in the loaded PDF.
-  ///
-  /// The [index] must be within `[0, pageCount)`. Does nothing if no
-  /// PDF is loaded or the index is out of range.
-  Future<void> setPage(int index, GameState gameState) async {
-    if (_document == null) return;
-    if (index < 0 || index >= _document!.pages.length) return;
-    await _renderPage(index, gameState);
-  }
-
-  /// Clears the loaded PDF and resets [gameState] PDF fields.
-  void clear(GameState gameState) {
-    _document?.dispose();
-    _document = null;
-    _bytes = null;
-    gameState.clearPdf();
-  }
-
-  Future<void> _renderPage(int index, GameState gameState) async {
-    if (_document == null || _bytes == null) return;
-    final page = _document!.pages[index];
-
-    // Max 2048px on longest side — keeps GPU memory safe on 2GB device
-    const maxDim = 2048.0;
-    final scale = maxDim / (page.width > page.height ? page.width : page.height);
-    final renderWidth = (page.width * scale).toInt();
-    final renderHeight = (page.height * scale).toInt();
-
-    final rendered = await page.render(
-      fullWidth: renderWidth.toDouble(),
-      fullHeight: renderHeight.toDouble(),
-    );
-    if (rendered == null) return;
-
-    final ui.Image image = await rendered.createImage();
-
-    gameState.setPdfState(
-      bytes: _bytes!,
-      pageCount: _document!.pages.length,
-      pageIndex: index,
-      image: image,
-    );
-  }
-
-  /// Disposes the underlying [PdfDocument] and frees resources.
-  void dispose() {
-    _document?.dispose();
   }
 }

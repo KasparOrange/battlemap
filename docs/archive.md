@@ -6,6 +6,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-09-14 - session_016jcYHtEqjZJn1HWLA2qq13
+- Coordinator (Konrad away): `action.md` next 3 → dead code deleted. Verified first that nothing outside the set imports it (only `main.dart` → `TvShell`/`VttCompanionScreen`/`DevScreen`). Removed: `lib/companion_screen.dart`, `lib/table_screen.dart`, `lib/game_state.dart`, `lib/game/battlemap_game.dart`, `lib/game/components/grid_component.dart`, `lib/game/components/pdf_background_component.dart`, `lib/ui/vtt_screen.dart`, `lib/network/{client,client_stub,server,server_stub,vtt_client,vtt_client_stub}.dart`; `lib/pdf_helper.dart` reduced to the static `renderPdfPage` (legacy `loadPdf`/`setPage`/`clear`/`dispose` gone). `lib/network/vtt_server.dart` + stub kept on purpose (offline play, roadmap #39). `flutter analyze` clean, `flutter test` 361/361 green (SDK: `~/code/flutter-tvos/flutter/bin`, the Mac has no other `flutter` on PATH). `docs/plans/vtt-table-display.md` still names `vtt_screen.dart` — historical plan, left as is.
+
 ### 26-09-06 03:30 - 01JM3aYboxge6YgQfEwedt2y
 - Konrad: "Fix the open bugs noted in the documentation" → all 12 groups of `action.md` (2026-09-06 list) fixed in code, from the code alone (no walkthrough); `flutter analyze` clean, 361 tests (346 + 15 new in `test/companion_overhaul_test.dart`), web build compiles; **not yet tested on phone/TV**
 	- **Camera** (1, 10): phone camera independent — `vtt.fullState.camera` is no longer applied on the phone, it is drawn as a dashed gold frame (`TvViewportComponent`, needs the new `vw`/`vh` in the broadcast); new `vtt.setCamera` (TV) fed by "TV follows the phone" (throttled 80 ms via `VttGame.onCameraChanged`), "send this view", "match TV"; `VttGame.isDisplay` — only the TV enforces calibration; min zoom = fit × 0.5 instead of 0.1
