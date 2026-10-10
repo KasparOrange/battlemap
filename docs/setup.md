@@ -178,7 +178,8 @@ companion) gets its Chrome tab reopened at `…/?v=<time>#/companion` instead (s
 build from the Mac".
 The TV resends its game to a companion that takes over the slot (`onPeerReconnected`).
 First real run: `deploy.sh tablet` on 2026-10-10 18:53 (native companion 1.1.6+16 → 1.1.8+18,
-data kept, relaunched into Companion Mode); the `tv` target has not run yet.
+data kept, relaunched into Companion Mode). `deploy.sh tv tablet` runs since 1.1.10+20 (2026-10-10
+evening): TV back in its game after ~15 s each time, the tablet relaunched into Companion Mode.
 
 Needs: box + tablet paired with this Mac (`latrine android devices`), the bench venv
 (`~/.local/share/battlemap/venv`, created on first run), `~/.config/mwlog/battlemap.env`.
@@ -188,7 +189,13 @@ Gotcha (2026-10-10): the clean worktree builds **HEAD**, so committing a whole f
 session is still editing in this checkout ships their half-done code — the build fails on
 symbols that exist only in their uncommitted files. Before committing a shared file, check
 `git diff --cached`; to keep only your hunks without touching their copy, stage a blob
-(`git hash-object -w <file>` + `git update-index --cacheinfo 100644,<hash>,<path>`).
+(`git hash-object -w <file>` + `git update-index --cacheinfo 100644,<hash>,<path>`). Build that
+blob from `git show HEAD:<path>` plus your own edits (a script that applies anchored
+replacements to both the working file and HEAD's text), not from the working file. Commit right
+after staging and check `git show --stat HEAD`: another session committing in between once
+dropped a staged archive entry, which then lived only in the working file. In such scripts read a
+file fully before opening it for writing — `open(p,'w').write(f(open(p).read()))` empties it first
+(that wiped docs/archive.md once, 2026-10-10).
 Whether the tablet's bars are hidden: `ANDROID_ADB_SERVER_PORT=5059 adb -s <tablet> shell dumpsys
 window | grep navigationBars` → `visible=false`.
 

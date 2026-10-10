@@ -80,7 +80,9 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 1. Switch the session to 02. Tokens and fog from 03 are *not* carried over.
 2. Open and close several doors from the tablet; the TV updates within a moment.
 3. Reveal one room: does fog stop at walls? Through an open door, does it continue?
-4. Measure from the front door to the kitchen; the line and distance show on the TV while dragging.
+4. Fog tab ▸ Circle, radius 4, "Preview first": tap next to a wall — the blue circle stops at the
+   wall and shows on the tablet only, the TV stays fogged; − / + resizes it; ✓ shows it on the TV.
+5. Measure from the front door to the kitchen; the line and distance show on the TV while dragging.
 
 **3. the fight (04)**
 1. Start a new session on 04, place 5 tokens.

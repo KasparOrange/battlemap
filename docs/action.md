@@ -109,7 +109,7 @@ the TV's view, no door boxes on the TV, map thumbnails — needs the box on ≥ 
 tv`); with the box's 1.1.6+16 the library shows map icons only and the ruler starts at the map's
 corner. Check on the tablet + TV:
 - landscape tablet: panel is a rail on the right, tabs unfold beside it; portrait/phone: bottom sheet
-- Fog tab: Brush | Room, Reveal | Hide, "Players see changes: Instantly | Preview first"
+- Fog tab: Brush | Room | Circle, Reveal | Hide, "Players see changes: Instantly | Preview first"
 - Reveal all / Hide all / Clear drawings → snackbar with Undo that really undoes on the TV
 - ruler: appears in the middle of what the TV shows, numbers upright after Rotate and after a TV
   rotation; rotates in place
@@ -119,6 +119,15 @@ corner. Check on the tablet + TV:
 - still open from the review: pinch/two-finger pan and the real Xiaomi remote (not testable on the bench)
 
 ## kept on purpose: direct TV connection (no relay)
+## circle reveal (2026-10-10, 1.1.14+24 on box + tablet) — needs a test at the table
+
+Fog tab ▸ Circle (`architecture.md` "Circle reveal"). Check with a Dungeondraft map:
+- radius − / + (1–30, starts at 4); a tap reveals the circle, walls and closed doors stop it,
+  an open door inside the circle lets it through; Hide works the same way
+- "Preview first": the circle is blue on the tablet only, the TV stays fogged until ✓; − / +
+  resizes the waiting circle on both; a brush stroke, room tap, new circle, ✓ or ✕ ends that
+- Room taps from the tablet now reach the TV (before 1.1.11 they changed only the tablet)
+
 ## DM layers (2026-10-10, 1.1.6+16) — partly device-tested
 
 Companion Layers tab: DM-only pictures over the map (archive 26-10-10 "DM-only picture

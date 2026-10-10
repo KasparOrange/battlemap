@@ -42,6 +42,7 @@ these make the map visually stunning and give the DM atmosphere tools. no game m
 - [x] fog of war with brush reveal/hide
 - [x] shadow/dry-edit fog mode (preview before commit)
 - [x] room reveal (flood-fill bounded by walls)
+- [x] circle reveal: radius in squares, tap reveals/hides a circle stopped by walls and closed doors; in the preview − / + resizes the waiting circle (2026-10-10, 1.1.14)
 - [x] door/portal toggling
 - [x] freehand drawing on the map
 - [x] measure tool (D&D distance)
