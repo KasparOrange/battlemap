@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 19:20 - 716236d4 - real devices: wireless ADB kept alive across sessions
+- Konrad: sessions kept losing the tablet's wireless ADB → find why, fix it in latrine so several sessions share the devices smoothly
+	- cause (both devices' logcat, 18:18): Android turns Wireless debugging off on any Wi-Fi BSSID change; the FRITZ!Box moving them between bands is enough
+	- fix in latrine (`5c3a6ee`): devices also kept on classic adb at IP:5555 (until reboot), one serial per device, adb verb refuses kill-server/usb/disconnect-all
+	- `setup.md` gotcha rewritten: fixed serials for box and tablet, what to do after a reboot
+
 ### 26-10-10 19:12 - 0f0ee4a5 - AI maps: doorway close-ups for the judge, run 4 (floor through the doorways)
 - Konrad: go on the doorway fix → prompt + per-doorway crops + one small keep run
 	- baseline prompt: a doorway is exactly as wide as its gap, floor straight through, no threshold, sill, beam, rail, bar, door frame or posts (it had allowed "a plain stone threshold at most")
