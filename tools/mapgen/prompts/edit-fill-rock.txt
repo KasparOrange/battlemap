@@ -1,5 +1,0 @@
-This is a photographed page of a printed top-down fantasy dungeon battlemap. Some areas are blanked out in flat magenta.
-
-Edit the image: fill every magenta area with solid rock that is impossible to tell apart from the rock directly around it. Copy the look of the neighboring stone exactly: the same small irregular masonry stones (each only about a quarter of a grid square across, never bigger), the same thin dark joints, the same grey tone and brightness, the same mix of masonry and gravelly rubble as right next to the area. Continue the surrounding pattern seamlessly across the area so nobody could tell a room was ever there: no outline, no edge, no change of texture or tone, no floor, no grid, no walls, no doors, no boulders, no objects, no magenta left. The dark walls of the neighboring rooms and corridors that touch these areas stay exactly as they are, straight and unbroken.
-
-Keep everything else exactly as it is: same framing, scale, position of every wall, room, corridor, door, grid line and object, same colors and photo texture. Do not straighten, crop, zoom or restyle the map.
