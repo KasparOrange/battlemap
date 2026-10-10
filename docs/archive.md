@@ -6,6 +6,10 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 20:26 - a9469a3d - Deploy 1.1.12+22: doors above the fog on the box
+- Konrad: deploy
+	- `tools/deploy.sh tv tablet` from a clean worktree of HEAD `0d25df0` (doors above the fog + the other sessions' committed tokens tab, circle reveal, grid editor): box and tablet 1.1.11+21 → 1.1.12+22, TV back in the "AI keep" game after 15 s, tablet relaunched into Companion Mode
+
 ### 26-10-10 20:35 - 9393ef96 - circle reveal: radius − / + resizes the circle waiting in the preview
 - Konrad: in preview mode, after putting a circle down and before applying it, the radius plus and minus should change that preview live
 	- `VttState.previewCircle(cells, center:, replaceLast:)` keeps the preview from before the circle; a radius change (`onRevealRadiusChanged` → `VttGame._resizeLiveCircle`) swaps in the circle at the new radius; apply, discard, any other fog change, a new circle or leaving the preview ends it (`liveCircleCell`); the tablet ignores an empty TV broadcast for 1.5 s after placing
