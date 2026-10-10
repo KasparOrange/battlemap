@@ -172,7 +172,7 @@ cut square at the screen's edge.
   grid is also remembered on the map (`MapLibraryEntry.drawGrid`, set by the upload dialog's
   "the picture has its own grid lines" and by every grid toggle), so the next game on the map
   starts the same way. Picture/PDF maps can be re-gridded in a game (Map tab ▸ "Fit the grid
-  on the picture" / "Map squares", `vtt.setMapGrid`; keeps drawings, tokens, layers, and the
+  on the picture" / "Map squares" under Settings ▸ Grid, `vtt.setMapGrid`; keeps drawings, tokens, layers, and the
   fog too when the counts stay — see "picture grid").
 - **Upload dialog** for picture/PDF maps (`showMapGridDialog`): the picture's size, columns with
   rows following for square squares, a warning when squares come out > 3 % off square, and how
@@ -224,16 +224,20 @@ tablet, below on portrait. Corrects what detection got wrong — or fits a gridl
 | Control | What it does | Precision |
 |---|---|---|
 | Look / Move grid / Stretch / 2 corners | one finger pans / slides the grid / stretches it (top-left corner stays, the line under the finger follows) / marks two grid corners; **two fingers always move the view** | magnifier (4×, crosshair) while dragging |
-| 2 corners | mark a corner, mark a far one, check "squares across / down" (auto-counted, ±), "Use these corners" | a mark's error ÷ the count: 1 px over 30 squares = 0.03 px |
+| 2 corners | mark a corner, mark a far one, check "squares across / down" (auto-counted as the pair both directions agree on, ±; with square squares down follows across; the implied size shown, a warning past 1 % disagreement), "Use these corners" | a mark's error ÷ the count: 1 px over 30 squares = 0.03 px |
 | Square size | −1 / −.1 / −.01 · value (tap to type) · +.01 / +.1 / +1; "Square squares" off → width and height rows | 0.01 px |
 | Position | arrows by 1 px or 0.1 px, x/y (tap to type), "lines on the picture edge" | 0.1 px |
 | ½ size, × 2 size, squares across ±, whole only / include partial | the detector's typical errors (half/double), the old fill-the-width count | — |
 | Check the fit | zoom to top left / right, centre, bottom left / right, whole picture | drift shows at the far corner |
 | Undo, redo, back to the start, detect again, detected | — | — |
 
+**Fingers:** one touch = first finger down to last finger up; only a one-finger touch edits —
+when a second finger lands, what the first did is undone and the touch only moves the view
+(the scale recogniser restarts per finger, so the editor counts fingers itself). The magnifier
+shows ~1.5 squares, marks left out. Re-gridding the same picture keeps the tablet's view.
 Keyboard: arrows nudge (Shift 10×), + / − size by 0.01. The readout shows counts, square size,
 how the map sits on the table, skew of non-square squares. Opened from the upload dialog ("Fit on
-the picture") and in a game (Map tab ▸ "Fit the grid on the picture"). In a game a fine
+the picture") and in a game (Settings tab ▸ Grid ▸ "Fit the grid on the picture"). In a game a fine
 adjustment with **the same counts keeps the fog**, shadow edits, the table window and undo
 (`VttState.regridRaster`); new counts clear them.
 

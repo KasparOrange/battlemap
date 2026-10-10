@@ -35,6 +35,14 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- 5 new tests in `drawn_doors_test.dart`, suite 508 green; checked on `bm_tv` (debug build): the keep's open south and east doors show over the fog, the corridor's far door (both sides fogged) stays hidden
 	- `architecture.md` render order, `ai-art.md` step 5 finding (a) fixed; not on the box yet
 
+### 26-10-10 21:30 - a494e8fa - grid editor: click-through fixes, 1.1.12+22 deployed
+- bench click-through by a helper (cave 32 px and lair 72 px via 2 corners exact, TV fit within a TV pixel, a 0.1 px adjustment keeps the fog) found:
+	- **a pinch edited**: the first finger's slide / mark stayed (the scale recogniser ends and restarts per added finger) → the editor counts fingers (`Listener`), reverts at the second finger, commits at the last finger up; drags follow from touch-down
+	- 2 corners trusted a wrong current size (16 × 12 instead of 17 × 12) → `RasterGrid.cornerCounts` takes the pair both directions agree on, down follows across, implied size + > 1 % warning
+	- detected line 0.49 px outside the edge opened as "partial edges" → threshold 15 % of a square; magnifier showed < 1 square → ~1.5; tool buttons 106 px high in portrait → 44 px; the tablet's view jumped after Apply → kept
+	- not ours: TV `LateInitializationError` for the thumbnails box when the listing goes out before the library opened
+- deployed HEAD as 1.1.12+22 (with the tokens list and circle radius) to box, tablet, web; TV back in its game after 15 s
+
 ### 26-10-10 20:40 - a494e8fa - picture grid + grid editor
 - Konrad: build user-friendly, capable, powerful but precise ways to scale the map by hand afterwards, to correct the grid detection's errors
 	- the grid became a property of the picture (`RasterGrid`: corner, square width/height, counts) mapped onto the map's squares by the renderer → no cropping (the detection's crop is gone), partial edge squares and non-square photo squares possible; library entry, `vtt.imageUploaded`/`vtt.setMapGrid` `grid`, `vtt.fullState` `rasterGrid`
