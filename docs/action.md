@@ -65,6 +65,23 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   decoded at most 4096 px on the long side. Still to check on the real Xiaomi: memory and look of
   the castle at TV scale (36 px per square after the shrink).
 
+## table view (2026-10-10, 1.1.9+19) — needs the box + tablet
+
+Every map at one square = one inch in a centred window of whole squares — Konrad's measured
+**34 × 19** is the target for all maps (`architecture.md` "table view"). Built and checked on the
+bench (relay probe: lair centred at 1 in, tavern 60 × 60 pans/clamps/rotates, whole map, free
+zoom, calibration 40 in → 40 × 22 and back, grid remembered, re-grid 50 × 50). On the real
+devices:
+- **measure once**: Settings ▸ Measure the TV… → the TV shows a 10-inch bar; type what it
+  measures (cm). The default 34.5 in is a guess from "34 × 19 with a bit of gap"; until measured
+  a square may be ~1 % off. Then check a 1-inch mini base on several squares across the table.
+- a map bigger than 34 × 19 (e.g. the castle, or a picture map with many squares): drag the gold
+  grip above the dashed frame, tap the Camera tab's overview, arrows; the TV follows in whole
+  squares; Whole map ↔ 1-inch table
+- upload a picture map: the squares dialog shows its size, rows follow columns, "own grid
+  lines" switches our grid off — and the next game on that map starts the same way
+- Settings ▸ Map squares on a picture map re-grids it (fog of that game cleared)
+
 ## tabletop UX polish (2026-10-10, since 1.1.7+17) — needs a device test
 
 The UX review's tabletop items are built (archive 26-10-10 "tabletop UX polish"; tokens/HP items

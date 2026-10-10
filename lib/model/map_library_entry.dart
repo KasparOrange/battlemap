@@ -83,6 +83,15 @@ class MapLibraryEntry {
   /// can fetch it directly via HTTP rather than chunked WebSocket transfer.
   String? vpsUrl;
 
+  /// Whether battlemap draws its grid over this map, or `null` = not known
+  /// yet (drawn).
+  ///
+  /// `false` when the picture has grid lines of its own: set from the
+  /// upload dialog ("the picture has its own grid lines") and whenever the
+  /// DM switches the grid in a game on this map, so the next game on it
+  /// starts the same way. The session records it too ([MapFit.drawGrid]).
+  bool? drawGrid;
+
   /// Creates a [MapLibraryEntry] with the required metadata fields.
   ///
   /// For PDF maps, set [isPdf] to `true`. For raster image maps, set
@@ -103,7 +112,28 @@ class MapLibraryEntry {
     this.pdfGridRows,
     this.thumbnailPath,
     this.vpsUrl,
+    this.drawGrid,
   });
+
+  /// A copy with a new grid of [cols] × [rows] squares — for raster maps
+  /// re-gridded in a game (`vtt.setMapGrid`), which sets both the listed
+  /// [gridCols]/[gridRows] and the user-configured [pdfGridCols]/[pdfGridRows].
+  MapLibraryEntry withGrid(int cols, int rows) => MapLibraryEntry(
+        id: id,
+        displayName: displayName,
+        fileSizeBytes: fileSizeBytes,
+        gridCols: cols,
+        gridRows: rows,
+        portalCount: portalCount,
+        addedAt: addedAt,
+        isPdf: isPdf,
+        isImage: isImage,
+        pdfGridCols: isPdf || isImage ? cols : pdfGridCols,
+        pdfGridRows: isPdf || isImage ? rows : pdfGridRows,
+        thumbnailPath: thumbnailPath,
+        vpsUrl: vpsUrl,
+        drawGrid: drawGrid,
+      );
 
   /// Serializes this entry to a JSON-compatible map.
   ///
@@ -124,6 +154,7 @@ class MapLibraryEntry {
         'pdfGridRows': pdfGridRows,
         'thumbnailPath': thumbnailPath,
         'vpsUrl': vpsUrl,
+        'drawGrid': drawGrid,
       };
 
   /// Deserializes a [MapLibraryEntry] from a JSON map.
@@ -148,5 +179,6 @@ class MapLibraryEntry {
         pdfGridRows: json['pdfGridRows'] as int?,
         thumbnailPath: json['thumbnailPath'] as String?,
         vpsUrl: json['vpsUrl'] as String?,
+        drawGrid: json['drawGrid'] as bool?,
       );
 }

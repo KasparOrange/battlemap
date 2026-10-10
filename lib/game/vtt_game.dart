@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 
 import '../model/aoe_template.dart';
 import '../model/draw_stroke.dart';
+import '../model/table_fit.dart';
 import '../model/uvtt_map.dart';
 import '../state/vtt_state.dart';
 import 'components/aoe_template_component.dart';
@@ -19,6 +20,7 @@ import 'components/live_stroke_component.dart';
 import 'components/map_image_component.dart';
 import 'components/portal_component.dart';
 import 'components/strokes_component.dart';
+import 'components/table_frame_component.dart';
 import 'components/measure_component.dart';
 import 'components/ruler_component.dart';
 import 'components/token_layer.dart';
@@ -44,9 +46,15 @@ export 'components/tv_viewport_component.dart' show CameraSnapshot;
 /// - **Tap** (no movement) → the tool's tap action.
 /// - **Scroll wheel** → zoom (desktop testing).
 ///
-/// The TV ([isDisplay] = `true`) enforces the calibrated minimum zoom; the
-/// phone does not, its minimum zoom is half the fit-to-screen zoom so the
-/// whole map can always be seen ([minZoom]).
+/// **Table view** ([tableDisplay], the TV): the camera follows
+/// [VttState.tvCameraMode]. In [TvCameraMode.table] one map square is one
+/// physical inch and the screen shows a centred window of whole squares
+/// ([TableGrid], [TableLayout]; leftover masked by [TableFrameComponent]);
+/// [TvCameraMode.fit] shows the whole map; [TvCameraMode.free] leaves the
+/// camera alone. The phone ([isDisplay] = `false`) draws the TV's window as
+/// a frame with a drag grip ([TvViewportComponent], [tvTableLayout],
+/// [onTvWindowDrag]). The minimum zoom is half the fit-to-screen zoom
+/// everywhere, so the whole map can always be seen ([minZoom]).
 ///
 /// See also:
 /// - [VttState], the shared state this game renders.
@@ -55,9 +63,16 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// The shared state rendered by this game.
   final VttState state;
 
-  /// Whether this instance is the TV display (enforces calibration) rather
-  /// than the phone preview (free camera, TV viewport overlay).
+  /// Whether this instance is a display (the TV, or the companion's local
+  /// mode) rather than the networked phone preview (free camera, TV viewport
+  /// overlay).
   final bool isDisplay;
+
+  /// Whether this game is the TV at the table: it lays out the camera from
+  /// [VttState.tvCameraMode] (one inch per square in [TvCameraMode.table])
+  /// and masks the leftover around the window of whole squares. `false` on
+  /// the phone and in the companion's local mode, whose screen is no table.
+  final bool tableDisplay;
 
   /// Picture cache for the DM-only layers ([VttState.dmOverlays]).
   ///
@@ -96,7 +111,34 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// Tracks previous open portals to detect changes and recompute wall grid.
   Set<int>? _lastOpenPortals;
 
-  double? _lastCalibratedZoom;
+  /// The TV's table frame (mask + calibration pattern), [tableDisplay] only.
+  TableFrameComponent? _tableFrame;
+
+  /// Whether a map picture is being decoded ([_loadMap] in flight).
+  bool _mapLoading = false;
+
+  /// Camera from [syncCamera] that arrived while a map was decoding; applied
+  /// when the load finishes instead of the default fit (session resume).
+  ({double x, double y, double zoom, double angle})? _pendingSync;
+
+  /// Map square the phone's drag of the TV frame grip started on, and the
+  /// window centre (squares) at that moment; `null` when not dragging.
+  Offset? _tvDragStartSquares;
+  Offset? _tvDragStartCenter;
+
+  /// Window start the phone shows while the DM moves the TV frame (grip or
+  /// overview map) until the TV confirms it, or `null`.
+  ({int col, int row})? _tvDragPreview;
+
+  /// When [_tvDragPreview] was last set.
+  DateTime? _tvDragPreviewAt;
+
+  /// Whether a move of the TV frame is in progress (finger still down).
+  bool _tvWindowDragging = false;
+
+  /// Bumped when the TV camera snapshot or the map picture changes — the
+  /// companion's overview map listens to repaint.
+  final ValueNotifier<int> viewRevision = ValueNotifier(0);
 
   /// Upper zoom bound (screen pixels per world pixel).
   static const double maxZoom = 10.0;
@@ -142,10 +184,22 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// phone" is on. `null` disables the check entirely.
   void Function(CameraSnapshot camera)? onCameraChanged;
 
+  /// Called on the phone while the DM drags the TV frame's grip or the
+  /// overview map's window: the window start the TV should show
+  /// ([TableLayout.col]/[TableLayout.row], clamped), with [done] `true` on
+  /// release. The companion forwards it as `vtt.setTableWindow`.
+  void Function(int col, int row, {required bool done})? onTvWindowDrag;
+
   /// Creates the game for [state]. [isDisplay] is `true` on the TV and in
-  /// the companion's local mode, `false` for the networked phone preview.
-  /// Pass [dmOverlayImages] on the DM's device only (see the field).
-  VttGame({required this.state, this.isDisplay = true, this.dmOverlayImages});
+  /// the companion's local mode, `false` for the networked phone preview;
+  /// [tableDisplay] is `true` on the TV only. Pass [dmOverlayImages] on the
+  /// DM's device only (see the field).
+  VttGame({
+    required this.state,
+    this.isDisplay = true,
+    this.tableDisplay = false,
+    this.dmOverlayImages,
+  });
 
   @override
   Color backgroundColor() => const Color(0xFF111111);
@@ -153,10 +207,27 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    if (tableDisplay) {
+      _tableFrame = TableFrameComponent(
+        grid: () => tableGrid,
+        masked: () =>
+            state.map != null && state.tvCameraMode == TvCameraMode.table,
+        calibrating: () => state.showCalibration,
+        background: backgroundColor(),
+      );
+      camera.viewport.add(_tableFrame!);
+    }
     if (state.map != null) {
       _loadedMap = state.map;
       _loadMap(state.map!);
     }
+  }
+
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    // The TV's screen size decides the table's whole squares.
+    if (tableDisplay && isMounted) _applyTvView();
   }
 
   /// Subscribes to [state] each time the game is attached to a GameWidget.
@@ -218,22 +289,14 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       _wallGrid = WallGrid.fromMap(state.map!, state.openPortals);
     }
 
-    // Enforce calibrated zoom on the display only (with scale slider factor)
-    if (isDisplay && state.calibratedBaseZoom != null) {
-      final effectiveZoom = state.calibratedBaseZoom! * state.scaleSliderFactor;
-      if (state.calibratedBaseZoom != _lastCalibratedZoom ||
-          camera.viewfinder.zoom < effectiveZoom) {
-        camera.viewfinder.zoom = effectiveZoom;
-        _lastCalibratedZoom = state.calibratedBaseZoom;
-      }
-    } else {
-      _lastCalibratedZoom = null;
-    }
+    // The TV frames the map as its camera mode says (table / whole map)
+    if (tableDisplay) _applyTvView();
   }
 
   Future<void> _loadMap(UvttMap map) async {
     final generation = ++_loadGeneration;
     _clearMap();
+    _mapLoading = true;
 
     // Decode image, shrunk to maxMapTextureSide if the map is bigger
     final longest = max(map.pixelWidth, map.pixelHeight);
@@ -250,6 +313,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       image.dispose();
       return;
     }
+    _mapLoading = false;
 
     final mapPixelW = map.pixelWidth;
     final mapPixelH = map.pixelHeight;
@@ -381,6 +445,8 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
         snapshot: () => _tvCamera,
         screenZoom: () => camera.viewfinder.zoom,
         mapSize: mapSizeVec,
+        tableWindow: () => _tvFrameRect(),
+        showHandle: () => tvTableLayout()?.pans ?? false,
       );
       world.add(_tvViewport!);
     }
@@ -400,11 +466,230 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     // Sync tokens from state
     _tokenLayer!.sync();
 
-    // Center camera on map
-    camera.viewfinder.position = Vector2(mapPixelW / 2, mapPixelH / 2);
+    final pending = _pendingSync;
+    _pendingSync = null;
+    if (pending != null) {
+      // A resumed session's camera arrived while the picture decoded
+      syncCamera(pending.x, pending.y, pending.zoom, pending.angle);
+    } else {
+      // Center camera on map and zoom to fit it in the viewport
+      camera.viewfinder.position = Vector2(mapPixelW / 2, mapPixelH / 2);
+      _zoomToFit(mapPixelW, mapPixelH);
+    }
+    if (tableDisplay) _applyTvView();
+    viewRevision.value++;
+  }
 
-    // Zoom to fit the map in the viewport
-    _zoomToFit(mapPixelW, mapPixelH);
+  // ===== Table view (TV) =====
+
+  /// The TV's table for its current screen and calibration, or `null`
+  /// before the viewport has a size. Meaningful on the TV ([tableDisplay]).
+  TableGrid? get tableGrid {
+    if (!isMounted) return null;
+    final v = camera.viewport.size;
+    return state.tableGridFor(Size(v.x, v.y));
+  }
+
+  /// The table layout for the loaded map on this screen at the current
+  /// rotation. The window starts at [col]/[row]; with [useState] a `null`
+  /// falls back to the state's window ([VttState.tableCol]/[tableRow]),
+  /// without it `null` means centred. `null` without a map or screen size.
+  /// TV side.
+  TableLayout? _tableLayout({int? col, int? row, bool useState = true}) {
+    final map = state.map;
+    final grid = tableGrid;
+    if (map == null || grid == null) return null;
+    return TableLayout.compute(
+      grid: grid,
+      mapCols: map.resolution.mapSize.dx.toInt(),
+      mapRows: map.resolution.mapSize.dy.toInt(),
+      cellPx: map.resolution.pixelsPerGrid.toDouble(),
+      quarterTurns: quarterTurnsOf(camera.viewfinder.angle),
+      col: useState ? (col ?? state.tableCol) : col,
+      row: useState ? (row ?? state.tableRow) : row,
+    );
+  }
+
+  /// Frames the map as [VttState.tvCameraMode] says. TV only, no-op while
+  /// the picture decodes (the load calls it when done).
+  void _applyTvView() {
+    if (!tableDisplay || state.map == null || _mapLoading || _mapImage == null) {
+      return;
+    }
+    switch (state.tvCameraMode) {
+      case TvCameraMode.table:
+        _layoutTable();
+      case TvCameraMode.fit:
+        _fitWholeMap();
+      case TvCameraMode.free:
+        break;
+    }
+  }
+
+  /// Puts the camera on the table layout: one square = one inch, the
+  /// window's edges on square boundaries, the angle snapped to 90°. Stores
+  /// the clamped window start (`null` on an axis that does not pan) and the
+  /// screen's whole squares in the state.
+  void _layoutTable() {
+    final layout = _tableLayout();
+    final grid = tableGrid;
+    if (layout == null || grid == null) return;
+    camera.viewfinder.angle = quarterTurnsOf(camera.viewfinder.angle) * pi / 2;
+    camera.viewfinder.zoom = layout.zoom;
+    camera.viewfinder.position = Vector2(layout.center.dx, layout.center.dy);
+    state.updateTableWindow(
+      col: layout.pansX ? layout.col : null,
+      row: layout.pansY ? layout.row : null,
+      cols: grid.cols,
+      rows: grid.rows,
+    );
+  }
+
+  /// Whole map on the screen, rotation-aware, centred.
+  void _fitWholeMap() {
+    final map = state.map;
+    if (map == null || !isMounted) return;
+    final v = camera.viewport.size;
+    if (v.x == 0 || v.y == 0) return;
+    final sideways = quarterTurnsOf(camera.viewfinder.angle).isOdd;
+    final w = sideways ? map.pixelHeight : map.pixelWidth;
+    final h = sideways ? map.pixelWidth : map.pixelHeight;
+    camera.viewfinder.zoom = min(v.x / w, v.y / h);
+    camera.viewfinder.position = Vector2(map.pixelWidth / 2, map.pixelHeight / 2);
+  }
+
+  /// TV: shows the table view (one inch per square), keeping the window
+  /// where it was.
+  void showTable() => state.setTvCameraMode(TvCameraMode.table);
+
+  /// TV: shows the whole map (squares are not one inch then).
+  void showWholeMap() {
+    state.setTvCameraMode(TvCameraMode.fit);
+    _applyTvView();
+  }
+
+  /// TV: moves the table window by [dCols] × [dRows] squares (map axes),
+  /// clamped to the map; switches to the table view first if needed.
+  void panTable(int dCols, int dRows) {
+    final layout = _tableLayout();
+    if (layout == null) return;
+    setTableWindow(
+      layout.pansX ? layout.col + dCols : null,
+      layout.pansY ? layout.row + dRows : null,
+    );
+  }
+
+  /// TV: puts the table window's first square at [col]/[row] (clamped; a
+  /// `null` or an axis that does not pan stays centred) and switches to the
+  /// table view.
+  void setTableWindow(int? col, int? row) {
+    final layout = _tableLayout(col: col, row: row, useState: false);
+    if (layout == null) return;
+    state.setTvCameraMode(TvCameraMode.table);
+    state.updateTableWindow(
+      col: layout.pansX ? layout.col : null,
+      row: layout.pansY ? layout.row : null,
+    );
+    _applyTvView();
+  }
+
+  /// TV: centres the table window on [squares] (map squares), snapped to
+  /// whole squares — used for a view sent from the tablet in table view.
+  void centerTableOn(Offset squares) {
+    final layout = _tableLayout();
+    if (layout == null) return;
+    final start = layout.startFor(squares);
+    setTableWindow(start.col, start.row);
+  }
+
+  /// Turns the camera by [quarters] × 90°. In the table view the window
+  /// keeps its centre (its width and height swap at 90°/270°).
+  void _rotateBy(int quarters) {
+    final before = tableDisplay && state.tvCameraMode == TvCameraMode.table
+        ? _tableLayout()
+        : null;
+    final q = quarterTurnsOf(camera.viewfinder.angle) + quarters;
+    camera.viewfinder.angle = ((q % 4) + 4) % 4 * pi / 2;
+    if (before != null) {
+      centerTableOn(before.center / before.cellPx);
+    } else if (tableDisplay) {
+      _applyTvView();
+    }
+  }
+
+  // ===== TV frame on the phone =====
+
+  /// The TV's table layout as the phone reconstructs it from the TV's last
+  /// camera snapshot (screen size, angle) and the synced state (calibration,
+  /// window start) — the same numbers the TV used. `null` when the TV is not
+  /// in table view, no snapshot arrived, or no map is loaded. Pass
+  /// [col]/[row] to ask where a different window start would land.
+  TableLayout? tvTableLayout({int? col, int? row, bool withPreview = true}) {
+    final cam = _tvCamera;
+    final map = state.map;
+    if (cam == null || map == null || cam.vw <= 0 || cam.vh <= 0) return null;
+    if (state.tvCameraMode != TvCameraMode.table) return null;
+    final grid = TableGrid.of(Size(cam.vw, cam.vh), state.tvWidthInches);
+    if (grid == null) return null;
+    final preview = withPreview ? _tvDragPreview : null;
+    return TableLayout.compute(
+      grid: grid,
+      mapCols: map.resolution.mapSize.dx.toInt(),
+      mapRows: map.resolution.mapSize.dy.toInt(),
+      cellPx: map.resolution.pixelsPerGrid.toDouble(),
+      quarterTurns: quarterTurnsOf(cam.angle),
+      col: col ?? preview?.col ?? state.tableCol,
+      row: row ?? preview?.row ?? state.tableRow,
+    );
+  }
+
+  /// The TV's table window in map pixels (phone side), or `null`.
+  Rect? _tvFrameRect() {
+    final layout = tvTableLayout();
+    if (layout == null) return null;
+    final sq = layout.windowSquares;
+    final c = layout.cellPx;
+    return Rect.fromLTRB(sq.left * c, sq.top * c, sq.right * c, sq.bottom * c);
+  }
+
+  /// Phone: moves the TV window so it is centred on [centerSquares]
+  /// (snapped and clamped) — shown at once as a preview and reported via
+  /// [onTvWindowDrag]. [done] `false` while the finger is still down (end
+  /// such a drag with [endTvWindowDrag]). Used by the frame's grip and the
+  /// overview map.
+  void previewTvWindow(Offset centerSquares, {required bool done}) {
+    final layout = tvTableLayout();
+    if (layout == null) return;
+    final start = layout.startFor(centerSquares);
+    final moved = tvTableLayout(col: start.col, row: start.row);
+    if (moved == null) return;
+    _tvDragPreview = (col: moved.col, row: moved.row);
+    _tvDragPreviewAt = DateTime.now();
+    _tvWindowDragging = !done;
+    viewRevision.value++;
+    onTvWindowDrag?.call(moved.col, moved.row, done: done);
+  }
+
+  /// Phone: the finger left the TV frame — reports the last previewed
+  /// window as final ([onTvWindowDrag] with `done: true`).
+  void endTvWindowDrag() {
+    final p = _tvDragPreview;
+    _tvWindowDragging = false;
+    if (p != null) onTvWindowDrag?.call(p.col, p.row, done: true);
+  }
+
+  /// Drops the move preview once the TV shows that window (or after 1.5 s,
+  /// if a command got lost), so the frame never jumps back mid-move.
+  void _settleTvPreview() {
+    final p = _tvDragPreview;
+    if (p == null || _tvWindowDragging) return;
+    final tv = tvTableLayout(withPreview: false);
+    final at = _tvDragPreviewAt;
+    final stale = at == null ||
+        DateTime.now().difference(at) > const Duration(milliseconds: 1500);
+    if (stale || tv == null || (tv.col == p.col && tv.row == p.row)) {
+      _tvDragPreview = null;
+    }
   }
 
   /// Zoom at which the whole map fits the viewport (0.1 if unknown).
@@ -416,18 +701,10 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     return min(viewSize.x / map.pixelWidth, viewSize.y / map.pixelHeight);
   }
 
-  /// Lower zoom bound.
-  ///
-  /// On the display with calibration: the calibrated base zoom times the
-  /// scale slider factor (grid squares never smaller than 1 inch).
-  /// Otherwise half of [fitZoom], so pinching out can always show the whole
-  /// map with a margin (a fixed 0.1 could not reach fit for large maps).
-  double get minZoom {
-    if (isDisplay && state.calibratedBaseZoom != null) {
-      return state.calibratedBaseZoom! * state.scaleSliderFactor;
-    }
-    return fitZoom * 0.5;
-  }
+  /// Lower zoom bound: half of [fitZoom], so pinching out can always show
+  /// the whole map with a margin (a fixed 0.1 could not reach fit for large
+  /// maps). The TV's one-inch scale is its table view, not a zoom clamp.
+  double get minZoom => fitZoom * 0.5;
 
   void _zoomToFit(double mapW, double mapH) {
     if (!isMounted) return;
@@ -477,19 +754,28 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
 
   // --- Public camera controls (called from DM panel / relay dispatch) ---
 
-  /// Zooms in one step (×1.3), clamped to [minZoom]..[maxZoom].
+  /// Zooms in one step (×1.3), clamped to [minZoom]..[maxZoom]. On the TV
+  /// this leaves the table view ([TvCameraMode.free]).
   void zoomIn() {
+    if (tableDisplay) state.setTvCameraMode(TvCameraMode.free);
     camera.viewfinder.zoom = (camera.viewfinder.zoom * 1.3).clamp(minZoom, maxZoom);
   }
 
-  /// Zooms out one step (÷1.3), clamped to [minZoom]..[maxZoom].
+  /// Zooms out one step (÷1.3), clamped to [minZoom]..[maxZoom]. On the TV
+  /// this leaves the table view ([TvCameraMode.free]).
   void zoomOut() {
+    if (tableDisplay) state.setTvCameraMode(TvCameraMode.free);
     camera.viewfinder.zoom = (camera.viewfinder.zoom / 1.3).clamp(minZoom, maxZoom);
   }
 
-  /// Fits the whole map into the viewport and centers it.
+  /// Fits the whole map into the viewport and centers it. On the TV this is
+  /// the whole-map view ([showWholeMap]).
   void zoomToFit() {
     if (state.map == null) return;
+    if (tableDisplay) {
+      showWholeMap();
+      return;
+    }
     _zoomToFit(state.map!.pixelWidth, state.map!.pixelHeight);
     camera.viewfinder.position = Vector2(
       state.map!.pixelWidth / 2,
@@ -497,20 +783,15 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     );
   }
 
-  /// Rotates the camera 90° clockwise.
-  void rotateCW() {
-    camera.viewfinder.angle += 1.5707963; // pi/2
-  }
+  /// Rotates the camera 90° clockwise (snapped to whole quarter turns).
+  void rotateCW() => _rotateBy(1);
 
-  /// Rotates the camera 90° counter-clockwise.
-  void rotateCCW() {
-    camera.viewfinder.angle -= 1.5707963; // pi/2
-  }
+  /// Rotates the camera 90° counter-clockwise (snapped to whole quarter
+  /// turns).
+  void rotateCCW() => _rotateBy(-1);
 
   /// Resets the camera rotation to 0.
-  void resetRotation() {
-    camera.viewfinder.angle = 0;
-  }
+  void resetRotation() => _rotateBy(-quarterTurnsOf(camera.viewfinder.angle));
 
   /// Current camera zoom.
   double get currentZoom => camera.viewfinder.zoom;
@@ -520,16 +801,39 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       (camera.viewfinder.angle * 180 / 3.14159265).roundToDouble();
 
   /// Sets the camera transform verbatim (session resume on the TV).
+  ///
+  /// While a map picture is still decoding (or not yet picked up by a
+  /// detached game) the transform is kept and applied when the load
+  /// finishes — it would otherwise be replaced by the load's fit-to-screen,
+  /// which made resumed sessions forget a free camera. In the TV's table view the angle is what counts — the
+  /// layout then sets position and zoom.
   void syncCamera(double x, double y, double zoom, double angle) {
+    camera.viewfinder.angle = angle;
+    // Still decoding, or the game has not started on the state's map yet
+    // (detached in the library, or not loaded) — the load would refit.
+    if (_mapLoading || (state.map != null && !identical(state.map, _loadedMap))) {
+      _pendingSync = (x: x, y: y, zoom: zoom, angle: angle);
+      return;
+    }
     camera.viewfinder.position = Vector2(x, y);
     camera.viewfinder.zoom = zoom;
-    camera.viewfinder.angle = angle;
+    if (tableDisplay) _applyTvView();
   }
 
   /// Sets the camera transform with [zoom] clamped to [minZoom]..[maxZoom].
   ///
-  /// Used for `vtt.setCamera` on the TV and "Jump to TV" on the phone.
+  /// Used for `vtt.setCamera` on the TV and "Jump to TV" on the phone. On
+  /// the TV in table view only the centre counts: the window moves there
+  /// (whole squares, one inch each) and the angle is kept; otherwise the TV
+  /// takes the transform as a free camera.
   void applyCamera(double x, double y, double zoom, double angle) {
+    final map = state.map;
+    if (tableDisplay && state.tvCameraMode == TvCameraMode.table && map != null) {
+      final ppg = map.resolution.pixelsPerGrid.toDouble();
+      centerTableOn(Offset(x / ppg, y / ppg));
+      return;
+    }
+    if (tableDisplay) state.setTvCameraMode(TvCameraMode.free);
     syncCamera(x, y, zoom.clamp(minZoom, maxZoom), angle);
   }
 
@@ -550,9 +854,20 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
 
   /// Stores the TV's camera (phone side) for the viewport outline and
   /// "Jump to TV". No-op on the display.
+  ///
+  /// Ends a finished frame move's preview once the TV shows that window
+  /// ([_settleTvPreview]).
   void setTvViewport(CameraSnapshot snapshot) {
     _tvCamera = snapshot;
+    _settleTvPreview();
+    viewRevision.value++;
   }
+
+  /// The loaded map picture (decoded, at most [maxMapTextureSide] on the
+  /// long side), or `null` while none is shown. Read it per paint and do
+  /// not keep it: it is disposed when the map changes. Used by the
+  /// companion's overview map.
+  ui.Image? get mapImage => _mapImage?.image;
 
   /// The last TV camera received via [setTvViewport], or `null`.
   CameraSnapshot? get tvCamera => _tvCamera;
@@ -711,6 +1026,14 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   // --- Tool drag dispatch ---
 
   void _toolDragStart(Vector2 worldPos) {
+    // The TV frame's grip (phone): drag moves what the players see
+    if (!isDisplay && _tvHandleHit(worldPos)) {
+      final layout = tvTableLayout()!;
+      final ppg = _getPixelsPerGrid();
+      _tvDragStartSquares = Offset(worldPos.x / ppg, worldPos.y / ppg);
+      _tvDragStartCenter = layout.center / layout.cellPx;
+      return;
+    }
     // The ruler is draggable in every mode while visible
     if (state.rulerVisible && _rulerHitTest(worldPos)) {
       _draggingRuler = true;
@@ -744,6 +1067,13 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   }
 
   void _toolDragUpdate(Vector2 worldPos) {
+    if (_tvDragStartSquares != null) {
+      final ppg = _getPixelsPerGrid();
+      final now = Offset(worldPos.x / ppg, worldPos.y / ppg);
+      previewTvWindow(_tvDragStartCenter! + (now - _tvDragStartSquares!),
+          done: false);
+      return;
+    }
     if (_draggingRuler) {
       final ppg = _getPixelsPerGrid();
       state.setRulerPosition(
@@ -774,6 +1104,12 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   }
 
   void _toolDragEnd() {
+    if (_tvDragStartSquares != null) {
+      _tvDragStartSquares = null;
+      _tvDragStartCenter = null;
+      endTvWindowDrag();
+      return;
+    }
     if (_draggingRuler) {
       _draggingRuler = false;
       return;
@@ -804,6 +1140,10 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// painted stay (they are undoable).
   void _toolCancel() {
     _draggingRuler = false;
+    _tvDragStartSquares = null;
+    _tvDragStartCenter = null;
+    _tvDragPreview = null;
+    _tvWindowDragging = false;
     _draggingTokenId = null;
     _lastBrushCell = null;
     if (_currentStrokePoints.isNotEmpty) {
@@ -1027,6 +1367,18 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// Updates the endpoint of the current measurement as the user drags.
   void _measureUpdate(Vector2 worldPos) {
     state.setMeasure(state.measureStart ?? worldPos.toOffset(), worldPos.toOffset());
+  }
+
+  /// Whether [worldPos] is on the TV frame's drag grip (phone, table view,
+  /// map bigger than the window). The hit area is wider than the drawn grip.
+  bool _tvHandleHit(Vector2 worldPos) {
+    final layout = tvTableLayout();
+    final rect = _tvFrameRect();
+    if (layout == null || rect == null || !layout.pans) return false;
+    final zoom = max(camera.viewfinder.zoom, 1e-4);
+    final h = TvViewportComponent.handleCenter(rect, zoom);
+    return (worldPos.toOffset() - h).distance <=
+        TvViewportComponent.handleRadius * 1.8 / zoom;
   }
 
   // ===== Ruler =====

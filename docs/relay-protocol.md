@@ -71,11 +71,15 @@ and pushes each `lib.thumbnail` unasked as soon as it's ready (`docs/sessions.md
 3. TV HTTP GETs the file from the URL
 
 ### upload PDF or image (phone → VPS → TV) — since 1.1.3
-1. phone shows grid config dialog (no embedded grid metadata)
-2. **PDF only:** phone renders page 1 to PNG itself (pdfrx PDFium-WASM, ≤ 4096 px) — the TV never
+1. **PDF only:** phone renders page 1 to PNG itself (pdfrx PDFium-WASM, ≤ 4096 px) — the TV never
    sees a PDF, so it needs no PDF engine (Apple TV has none)
+2. phone shows the map-squares dialog (no embedded grid metadata; since 1.1.9 with the picture's
+   size, rows following the columns, how the map sits on the 34 × 19 table, and "the picture has
+   its own grid lines")
 3. phone HTTP PUTs the PNG/JPG/WebP to `http://VPS:4242/upload/<name>.png`
-4. phone sends: `{"type": "vtt.imageUploaded", "url": "http://...", "displayName": "map.png", "gridCols": 20, "gridRows": 15}`
+4. phone sends: `{"type": "vtt.imageUploaded", "url": "http://...", "displayName": "map.png", "gridCols": 20, "gridRows": 15, "hasGrid": true}`
+   — `hasGrid` (since 1.1.9, optional): the picture has grid lines of its own, so the TV draws
+   none (remembered on the map entry as `drawGrid: false`)
 5. TV HTTP GETs the image, loads it as a map
 
 The grid lives only in the TV's library entry. The companion gets just the picture (chunks on
@@ -163,17 +167,33 @@ companion downloads from VPS via HTTP.
 {"type": "vtt.rotateCW"}
 {"type": "vtt.rotateCCW"}
 {"type": "vtt.resetRotation"}
-{"type": "vtt.calibrate", "tvWidthInches": 43.0}
-{"type": "vtt.resetCalibration"}
 {"type": "vtt.setCamera", "x": 1200.0, "y": 800.0, "zoom": 0.6, "angle": 0.0}   // since 1.1.5
-{"type": "vtt.setScaleFactor", "factor": 1.25}   // fine-tune on top of calibration, 0.5–2.0
 ```
 
-`vtt.setCamera` sets the TV camera to an absolute transform (world center, zoom clamped to the
-TV's calibrated minimum, angle in radians). The phone sends it once for "Show my view on the
-TV" and throttled (≥ 80 ms apart) while "TV follows the tablet" is on. **The phone camera is
-independent of the TV camera** — the phone never applies the broadcast camera to its own view,
-it draws it as a dashed frame (see `camera.vw`/`vh` below).
+`vtt.zoomIn`/`zoomOut` leave the table view (`tvCameraMode` → `free`); `vtt.zoomToFit` is the
+whole-map view (`fit`). Rotation snaps to quarter turns; in the table view the window keeps its
+centre. `vtt.setCamera` sets the TV camera to an absolute transform (world center, zoom
+clamped to `[fit × 0.5, 10]`, angle in radians) — **in the table view only the centre counts**:
+the window moves there in whole squares, one inch per square stays. The phone sends it once for
+"Show my view on the TV" and throttled (≥ 80 ms apart) while "TV follows the tablet" is on. **The
+phone camera is independent of the TV camera** — the phone never applies the broadcast camera
+to its own view, it draws it as a dashed frame (see `camera.vw`/`vh` below).
+
+### table view (companion → table) — since 1.1.9
+
+```
+{"type": "vtt.setTvCameraMode", "mode": "table"|"fit"|"free"}   // 1-inch table / whole map / leave alone
+{"type": "vtt.setTableWindow", "col": 12, "row": 4}   // window's first square (map axes); TV clamps, a fitting axis stays centred
+{"type": "vtt.panTable", "dx": 1, "dy": 0}            // move the window by whole squares
+{"type": "vtt.calibrate", "tvWidthInches": 34.5}      // the TV's picture is this wide → stored on the TV, every game
+{"type": "vtt.resetCalibration"}                      // back to 34.5 in = 34 × 19 squares
+{"type": "vtt.showCalibration", "on": true}           // the TV's one-inch squares + 10-inch measuring bar
+{"type": "vtt.setMapGrid", "cols": 50, "rows": 50}    // re-grid the open picture/PDF map (clears its fog)
+```
+
+`architecture.md` "table view" has the model. Before 1.1.9 `vtt.calibrate` set a per-session
+calibration (the value meant the same: the screen's width in inches) and `vtt.setScaleFactor`
+multiplied the zoom (0.5–2.0); the TV now ignores `vtt.setScaleFactor`.
 
 ## tool overlays (companion → table)
 
@@ -231,13 +251,20 @@ sent every 50ms when state changes:
   "canUndo": true,  "canRedo": false,                      // since 1.1.5 — the TV's undo stacks; the phone's buttons read these
   "measure": {"x1": 100.0, "y1": 200.0, "x2": 500.0, "y2": 200.0} | null,   // since 1.1.5
   "camera": {"x": 100.0, "y": 200.0, "zoom": 0.5, "angle": 0.0, "vw": 1920.0, "vh": 1080.0},  // vw/vh (viewport px) since 1.1.5
+  "tvWidthInches": 34.5,                // since 1.1.9: the TV's calibration (picture width)
+  "tvCameraMode": "table",              // table | fit | free
+  "tableCol": 13, "tableRow": null,     // window's first square; null = centred (map fits that axis)
+  "tableCols": 34, "tableRows": 19,     // whole one-inch squares on the TV screen
+  "showCalibration": false,
   "dmOverlays": [{"id": "...", "name": "...", "url": "...", "visible": true, "opacity": 0.6}],   // since 1.1.6 — see "DM layers"
   "dmOverlaysRev": 1760112000000
 }
 ```
 
 Older TV builds omit `canUndo`/`canRedo` (the phone then falls back to its local stack),
-`measure` and `vw`/`vh` (no TV frame is drawn).
+`measure` and `vw`/`vh` (no TV frame is drawn); before 1.1.9 the table fields (the phone then
+assumes the 1-inch table at 34 × 19). Since 1.1.9 a TV camera move alone (a map laid out on the
+table, a zoom) also triggers a broadcast.
 
 ## rolling deploy (since 1.1.6+16) — `tools/deploy.sh`
 

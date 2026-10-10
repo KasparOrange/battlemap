@@ -65,7 +65,6 @@ void main() {
         onClearAoe: rec('clearAoe'),
         onToggleRuler: rec('toggleRuler'),
         onRotateRuler: rec('rotateRuler'),
-        onSetScaleFactor: (_) => calls.add('scale'),
         onUpdateSessionSettings: (_) => calls.add('settings'),
         onTriggerEffect: (_) => calls.add('effect'),
       );

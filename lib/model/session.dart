@@ -282,15 +282,25 @@ class Session {
   /// `true` to reveal fog on paint, `false` to hide.
   bool revealMode;
 
-  /// Physical TV screen width in inches, used for calibration.
-  ///
-  /// `null` if calibration has not been performed.
-  double? tvWidthInches;
+  // --- Table view ---
 
-  /// Computed base zoom level that maps one grid square to one physical inch.
-  ///
-  /// `null` if calibration has not been performed.
-  double? calibratedBaseZoom;
+  /// How the TV framed the map ([TvCameraMode] name): `table` (one inch
+  /// per square, the default — also for sessions saved before 1.1.9),
+  /// `fit` or `free`.
+  String tvCameraMode;
+
+  /// First map column of the TV's table window, or `null` = centred.
+  int? tableCol;
+
+  /// First map row of the TV's table window, or `null` = centred.
+  int? tableRow;
+
+  /// How this game's map goes on the table: its scale, the TV calibration
+  /// it was computed for, and whether battlemap draws its own grid
+  /// ([MapFit.toJson]). Written by the TV on every save; informational —
+  /// the TV recomputes the scale on load. `null` in sessions saved before
+  /// 1.1.9.
+  Map<String, dynamic>? mapFit;
 
   // --- Token / drawing / interaction state ---
 
@@ -344,9 +354,6 @@ class Session {
   /// Ruler rotation in degrees (0, 90, 180, or 270).
   int rulerRotation;
 
-  /// Scale slider factor for fine-tune zoom adjustment (0.5 to 2.0).
-  double scaleSliderFactor;
-
   /// DM-only picture layers (list of [DmOverlay.toJson] maps, bottom layer
   /// first). The TV keeps them for the companion and never renders them.
   List<Map<String, dynamic>> dmOverlayData;
@@ -392,8 +399,10 @@ class Session {
     this.showWalls = false,
     this.brushRadius = 1,
     this.revealMode = true,
-    this.tvWidthInches,
-    this.calibratedBaseZoom,
+    this.tvCameraMode = 'table',
+    this.tableCol,
+    this.tableRow,
+    this.mapFit,
     this.tokenData = const [],
     this.strokeData = const [],
     this.drawColorValue = 0xFFE53935,
@@ -405,7 +414,6 @@ class Session {
     this.rulerX = 0,
     this.rulerY = 0,
     this.rulerRotation = 0,
-    this.scaleSliderFactor = 1.0,
     this.dmOverlayData = const [],
     SessionSettings? settings,
     this.cameraX = 0,
@@ -434,8 +442,10 @@ class Session {
         'showWalls': showWalls,
         'brushRadius': brushRadius,
         'revealMode': revealMode,
-        'tvWidthInches': tvWidthInches,
-        'calibratedBaseZoom': calibratedBaseZoom,
+        'tvCameraMode': tvCameraMode,
+        'tableCol': tableCol,
+        'tableRow': tableRow,
+        'mapFit': mapFit,
         'tokenData': tokenData,
         'strokeData': strokeData,
         'drawColorValue': drawColorValue,
@@ -447,7 +457,6 @@ class Session {
         'rulerX': rulerX,
         'rulerY': rulerY,
         'rulerRotation': rulerRotation,
-        'scaleSliderFactor': scaleSliderFactor,
         'dmOverlayData': dmOverlayData,
         'settings': settings.toJson(),
         'cameraX': cameraX,
@@ -460,8 +469,8 @@ class Session {
   ///
   /// Expects keys matching [toJson] output. Fields added after the initial
   /// schema ([tokenData], [strokeData], [drawColorValue], [drawWidth],
-  /// [interactionMode], [isPdfSession], [dmOverlayData]) fall back to
-  /// defaults if absent,
+  /// [interactionMode], [isPdfSession], [dmOverlayData], the table view
+  /// fields) fall back to defaults if absent,
   /// for backwards compatibility with older saved sessions.
   factory Session.fromJson(Map<String, dynamic> json) => Session(
         id: json['id'] as String,
@@ -479,8 +488,12 @@ class Session {
         showWalls: json['showWalls'] as bool,
         brushRadius: json['brushRadius'] as int,
         revealMode: json['revealMode'] as bool,
-        tvWidthInches: (json['tvWidthInches'] as num?)?.toDouble(),
-        calibratedBaseZoom: (json['calibratedBaseZoom'] as num?)?.toDouble(),
+        tvCameraMode: json['tvCameraMode'] as String? ?? 'table',
+        tableCol: (json['tableCol'] as num?)?.toInt(),
+        tableRow: (json['tableRow'] as num?)?.toInt(),
+        mapFit: json['mapFit'] != null
+            ? Map<String, dynamic>.from(json['mapFit'] as Map)
+            : null,
         tokenData: (json['tokenData'] as List?)
                 ?.map((e) => Map<String, dynamic>.from(e as Map))
                 .toList() ??
@@ -498,7 +511,6 @@ class Session {
         rulerX: (json['rulerX'] as num?)?.toDouble() ?? 0,
         rulerY: (json['rulerY'] as num?)?.toDouble() ?? 0,
         rulerRotation: json['rulerRotation'] as int? ?? 0,
-        scaleSliderFactor: (json['scaleSliderFactor'] as num?)?.toDouble() ?? 1.0,
         dmOverlayData: (json['dmOverlayData'] as List?)
                 ?.map((e) => Map<String, dynamic>.from(e as Map))
                 .toList() ??

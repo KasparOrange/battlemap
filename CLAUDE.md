@@ -76,6 +76,12 @@ Target TV device: **Xiaomi TV Box S 3rd Gen** (~$60-70)
 - Storage: 8 GB (~4-5 GB usable for maps + sessions)
 - Wi-Fi 6
 
+**The table: 34 × 19 one-inch squares** (Konrad's TV, measured 2026-10-10, a bit of gap both
+ways). That is the optimal result for **every** map: one map square = one physical inch, a
+centred window of whole squares, the leftover split evenly on both sides; bigger maps pan in
+whole squares from the tablet. The calibration belongs to the TV, not to a game.
+`docs/architecture.md` "table view".
+
 ## Development Workflow
 
 Outside: from the phone via SSH/mosh to the VPS. At home: on the Mac, against the Android bench
@@ -223,6 +229,7 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 43 | Tabletop UX polish (UX review 2026-10-10) | Code done (2026-10-10, since 1.1.7+17); tablet half on the tablet (1.1.8+18), TV half (ruler centring, no door boxes, thumbnails) waits for the box deploy; needs a device test | Side panel on landscape tablets, Fog tab Brush \| Room + "Players see changes", camera tab by screen, ruler centred + upright numbers, door markers DM-only, undo snackbars, library Continue card + thumbnails + dated names; `docs/archive.md` 26-10-10 "tabletop UX polish" |
 | 44 | Rolling deploy (mid-game patch) | Code done (2026-10-10), first real run pending — ask Konrad before restarting the TV while he plays | `tools/deploy.sh [tv] [tablet] [web]`: build while the old app runs, TV saves (`deploy.prepare`), install over the Wi-Fi, relaunch with `/restore` → same game again; tablet relaunched into Companion Mode (`/companion`). `docs/setup.md` "rolling deploy" |
 | 45 | Companion full screen (Android) | Done (2026-10-10, 1.1.8+18 on the tablet; the TV half waits for the box deploy) | Game view hides the system bars (sticky immersive), toggle at the map's top right, stored in Hive `companionSettings`; `lib/ui/system_bars.dart`, `docs/architecture.md` "Full screen" |
+| 46 | Table view: 1 square = 1 inch, 34 × 19 window | Code done (2026-10-10, 1.1.9+19), bench-checked (relay probe 25/25), needs the box + tablet | TV calibration on the TV (measuring bar dialog), every map at 1 inch in a centred window of whole squares (mask), big maps pan from the tablet (frame grip, overview map, arrows), whole-map view, `mapFit` record + window in the session, grid drawn or not remembered per map, picture maps re-griddable; `docs/architecture.md` "table view", `docs/archive.md` 26-10-10 "table view" |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |
 | 11 | Shape drawing tools | Not started | Circles, cones, area-of-effect markers |

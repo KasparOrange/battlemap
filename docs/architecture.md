@@ -57,14 +57,17 @@ single-finger gestures route to the active tool:
 two-finger gestures (any pointer count > 1, detected by pointer count — not by pinch scale)
 always control the camera (pinch zoom + pan); the tool only starts on the first single-finger
 move, so a late second finger never paints. Scroll wheel zooms (desktop). The ruler, when
-visible, is draggable in every mode. Zoom is clamped to `[fit × 0.5, 10]`; the TV additionally
-never goes below its calibrated zoom.
+visible, is draggable in every mode. Zoom is clamped to `[fit × 0.5, 10]`; the TV's one-inch
+scale is its table view (below), not a zoom clamp.
 
 **Phone camera vs TV camera (since 2026-09-06):** the phone's view is independent. The TV
-broadcasts its camera *and viewport size*; the phone draws it as a dashed gold frame. The
-Camera tab is split by the screen each button moves (2026-10-10): **Tablet** — "Fit on tablet",
-"Jump to TV" (match the TV's view); **TV** — "TV follows the tablet" (throttled
-`vtt.setCamera`), "Show my view on the TV", zoom with "Fit on TV", rotation.
+broadcasts its camera *and viewport size*; the phone draws what the players see as a dashed gold
+frame (in the table view: exactly the window of whole squares, with a drag grip). The Camera tab
+(2026-10-10): **Players see** — "1-inch table" | "Whole map", a line on what the TV shows, the
+overview map with the players' window (tap/drag it), arrows that move the window one square;
+**Tablet** — "Fit on tablet", "Jump to TV"; **TV** — "TV follows the tablet" (throttled
+`vtt.setCamera`), "Show my view on the TV" (in the table view only its centre counts); free zoom
+(leaves the table view); rotation.
 
 **DM panel** (`lib/ui/dm_control_panel.dart`): a bottom sheet — tab bar at the bottom edge
 (thumb reach), content above it, tap the active tab to collapse. On a **landscape tablet**
@@ -98,6 +101,48 @@ lives in the TV's session and comes back in `vtt.fullState`. Only the phone's `V
 `DmOverlayImages` cache (download, decode ≤ 4096 px while visible, free when hidden), so only
 the phone has a `DmOverlayComponent` — the TV cannot draw a layer whatever its state says.
 
+## table view — one square = one inch (since 2026-10-10)
+
+The TV lies flat under real miniatures on 1-inch bases, so **every map is shown at one map
+square = one physical inch**. Measured on Konrad's TV (2026-10-10): **34 × 19 one-inch squares
+fit, with a bit of gap both ways** — that is the optimal result for every map: a window of
+34 × 19 whole squares, centred, the leftover split evenly on both sides and masked dark, never a
+cut square at the screen's edge.
+
+- **Calibration belongs to the TV**, not to a game: the physical width of its picture
+  (`VttState.tvWidthInches`, Hive box `tvSettings` on the TV, `TvCalibrationStore`). Default
+  34.5 in = 34 × 19 squares with about ¼ in to spare per side. Companion ▸ Settings ▸ Table scale
+  ▸ "Measure the TV…": the TV shows its one-inch squares and a 10-inch bar
+  (`TableFrameComponent`, `vtt.showCalibration`); the DM types what the bar measures (cm or in),
+  or the picture width, or nudges ±¼ %; each change applies at once (`vtt.calibrate`). Before
+  1.1.9 each session carried its own `tvWidthInches`/`calibratedBaseZoom` and a 0.5–2× scale
+  slider — both gone (the slider broke the one-inch rule).
+- **Arithmetic** (`lib/model/table_fit.dart`, pure, tested): `TableGrid` = whole squares of the
+  screen (`cols = ⌊width / ppi⌋`) and the centred window; `TableLayout` = camera for a map:
+  zoom `ppi / cellPx`; per axis, a map that fits is centred, a bigger one shows the window from
+  square `col`/`row` (clamped, whole squares). Turned 90°/270° the screen's 34 columns run down
+  the map. The phone rebuilds the same layout from the TV's camera snapshot (`vw`, `vh`, angle)
+  and the synced state (`VttGame.tvTableLayout`).
+- **Camera modes** (`TvCameraMode`, synced + saved): `table` (default, also for older sessions),
+  `fit` (whole map for the players — squares not one inch), `free` (+/− zoom, or a view sent
+  outside the table view). The TV's `VttGame(tableDisplay: true)` lays out the camera on every
+  state change, resize and map load; rotation keeps the window's centre.
+- **Panning a big map**: the TV keeps the window start (`tableCol`/`tableRow`, `null` = centred
+  on an axis where the map fits). The tablet moves it with the frame's grip on the map, the
+  overview map in the Camera tab (`TvOverviewMap`, the game's own decoded picture), or arrows
+  (`vtt.setTableWindow`, `vtt.panTable`). A drag previews on the tablet at once, sends throttled
+  (80 ms), and the preview yields once the TV shows that window.
+- **Per game and per map**: the session file records the map's scale (`mapFit`: map px per
+  square, the TV zoom for one inch, the calibration, the table size, whether the whole map fits,
+  whether battlemap draws its grid — `MapFit`), plus mode and window. Whether battlemap draws its
+  grid is also remembered on the map (`MapLibraryEntry.drawGrid`, set by the upload dialog's
+  "the picture has its own grid lines" and by every grid toggle), so the next game on the map
+  starts the same way. Picture/PDF maps can be re-gridded in a game (Settings ▸ Map squares,
+  `vtt.setMapGrid`; clears that game's fog, keeps drawings, tokens, layers).
+- **Upload dialog** for picture/PDF maps (`showMapGridDialog`): the picture's size, columns with
+  rows following for square squares, a warning when squares come out > 3 % off square, and how
+  the map sits on the table (fits / fits turned / the TV pans).
+
 ## rendering order (flame engine)
 
 | priority | component | description |
@@ -111,3 +156,5 @@ the phone has a `DmOverlayComponent` — the TV cannot draw a layer whatever its
 | 6 | portals | door markers — DM tablet only, the TV shows the map's painted doors (`PortalComponent.showMarker`); on maps with `draw_doors` (AI maps) a top-down door leaf that swings open, on every screen |
 | 10 | fog of war | dark overlay with reveal cutouts (opaque on the TV, 70 % on the phone) |
 | 12 | DM layers | **phone only**: DM-only pictures, each with eye + opacity, fitted into the map (aspect kept, centered); above the fog so secrets stay readable |
+| 28 | TV frame | **phone only**: what the players see — the table window (with a drag grip when the TV can pan) or the TV's screen rectangle (`TvViewportComponent`) |
+| viewport | table frame | **TV only**, screen space: masks the leftover around the window of whole squares; the calibration pattern (`TableFrameComponent`) |

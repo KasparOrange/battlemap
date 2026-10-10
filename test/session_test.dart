@@ -18,8 +18,10 @@ void main() {
         showWalls: true,
         brushRadius: 3,
         revealMode: false,
-        tvWidthInches: 43.0,
-        calibratedBaseZoom: 2.5,
+        tvCameraMode: 'fit',
+        tableCol: 12,
+        tableRow: 4,
+        mapFit: {'cellPx': 140.0, 'tvZoom': 0.4, 'drawGrid': false},
         tokenData: [
           {'id': 'tk1', 'label': '1', 'color': 'ffe53935', 'gridX': 3, 'gridY': 4},
         ],
@@ -51,8 +53,10 @@ void main() {
       expect(restored.showWalls, original.showWalls);
       expect(restored.brushRadius, original.brushRadius);
       expect(restored.revealMode, original.revealMode);
-      expect(restored.tvWidthInches, original.tvWidthInches);
-      expect(restored.calibratedBaseZoom, original.calibratedBaseZoom);
+      expect(restored.tvCameraMode, 'fit');
+      expect(restored.tableCol, 12);
+      expect(restored.tableRow, 4);
+      expect(restored.mapFit, original.mapFit);
       expect(restored.tokenData.length, 1);
       expect(restored.tokenData.first['id'], 'tk1');
       expect(restored.strokeData.length, 1);
@@ -73,15 +77,38 @@ void main() {
         name: 'Quick Test',
         createdAt: DateTime.utc(2026, 1, 1),
         lastModifiedAt: DateTime.utc(2026, 1, 1),
-        // thumbnailPath, tvWidthInches, calibratedBaseZoom all null by default
+        // thumbnailPath, tableCol/Row (centred) and mapFit null by default
       );
 
       final json = original.toJson();
       final restored = Session.fromJson(json);
 
       expect(restored.thumbnailPath, isNull);
-      expect(restored.tvWidthInches, isNull);
-      expect(restored.calibratedBaseZoom, isNull);
+      expect(restored.tableCol, isNull);
+      expect(restored.tableRow, isNull);
+      expect(restored.mapFit, isNull);
+      expect(restored.tvCameraMode, 'table');
+    });
+
+    test('a session saved before 1.1.9 opens on the 1-inch table', () {
+      final json = Session(
+        id: 'old',
+        mapId: 'm',
+        name: 'Old',
+        createdAt: DateTime.utc(2026, 1, 1),
+        lastModifiedAt: DateTime.utc(2026, 1, 1),
+      ).toJson()
+        ..remove('tvCameraMode')
+        ..remove('tableCol')
+        ..remove('tableRow')
+        ..remove('mapFit')
+        ..['tvWidthInches'] = 43.0
+        ..['calibratedBaseZoom'] = 2.5
+        ..['scaleSliderFactor'] = 1.5;
+      final restored = Session.fromJson(json);
+      expect(restored.tvCameraMode, 'table');
+      expect(restored.tableCol, isNull);
+      expect(restored.mapFit, isNull);
     });
 
     test('default values match when using defaults', () {
@@ -138,8 +165,10 @@ void main() {
       expect(json.containsKey('showWalls'), true);
       expect(json.containsKey('brushRadius'), true);
       expect(json.containsKey('revealMode'), true);
-      expect(json.containsKey('tvWidthInches'), true);
-      expect(json.containsKey('calibratedBaseZoom'), true);
+      expect(json.containsKey('tvCameraMode'), true);
+      expect(json.containsKey('tableCol'), true);
+      expect(json.containsKey('tableRow'), true);
+      expect(json.containsKey('mapFit'), true);
       expect(json.containsKey('tokenData'), true);
       expect(json.containsKey('strokeData'), true);
       expect(json.containsKey('drawColorValue'), true);

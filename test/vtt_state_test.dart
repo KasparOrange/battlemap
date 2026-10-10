@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:battlemap/model/aoe_template.dart';
 import 'package:battlemap/model/draw_stroke.dart';
 import 'package:battlemap/model/map_token.dart';
+import 'package:battlemap/model/table_fit.dart';
 import 'package:battlemap/state/vtt_state.dart';
 
 /// Create minimal valid UVTT JSON bytes for testing.
@@ -58,7 +59,11 @@ void main() {
       state.brushRadius = 2;
       state.revealMode = false;
       state.tvWidthInches = 43.0;
-      state.calibratedBaseZoom = 2.5;
+      state.tvCameraMode = TvCameraMode.fit;
+      state.tableCol = 7;
+      state.tableRow = 3;
+      state.tableCols = 40;
+      state.tableRows = 22;
       state.interactionMode = InteractionMode.draw;
       state.drawColor = const Color(0xFF43A047);
       state.drawWidth = 5.0;
@@ -93,7 +98,11 @@ void main() {
       expect(restored.brushRadius, 2);
       expect(restored.revealMode, false);
       expect(restored.tvWidthInches, 43.0);
-      expect(restored.calibratedBaseZoom, 2.5);
+      expect(restored.tvCameraMode, TvCameraMode.fit);
+      expect(restored.tableCol, 7);
+      expect(restored.tableRow, 3);
+      expect(restored.tableCols, 40);
+      expect(restored.tableRows, 22);
       expect(restored.interactionMode, InteractionMode.draw);
       expect(restored.drawColor, const Color(0xFF43A047));
       expect(restored.drawWidth, 5.0);
@@ -108,16 +117,29 @@ void main() {
       expect(restored.strokes.first.points.length, 2);
     });
 
-    test('null calibration values survive round-trip', () {
+    test('table view defaults survive round-trip', () {
       final state = VttState();
-      // defaults: tvWidthInches=null, calibratedBaseZoom=null
       final json = state.toJson();
 
       final restored = VttState();
       restored.applyRemoteState(json);
 
-      expect(restored.tvWidthInches, isNull);
-      expect(restored.calibratedBaseZoom, isNull);
+      expect(restored.tvWidthInches, TableGrid.defaultScreenWidthInches);
+      expect(restored.tvCameraMode, TvCameraMode.table);
+      expect(restored.tableCol, isNull);
+      expect(restored.tableRow, isNull);
+      expect(restored.showCalibration, isFalse);
+    });
+
+    test('a TV before 1.1.9 (per-game calibration, may be null) gives the default table', () {
+      final restored = VttState();
+      restored.applyRemoteState({
+        ...VttState().toJson(),
+        'tvWidthInches': null,
+        'calibratedBaseZoom': null,
+      }..remove('tvCameraMode'));
+      expect(restored.tvWidthInches, TableGrid.defaultScreenWidthInches);
+      expect(restored.tvCameraMode, TvCameraMode.table);
     });
 
     test('backwards compatible with old state missing new fields', () {
@@ -366,7 +388,9 @@ void main() {
       expect(state.openPortals, isEmpty);
       expect(state.fogEnabled, true);
       expect(state.showWalls, false);
-      expect(state.calibratedBaseZoom, isNull);
+      expect(state.tableCol, isNull);
+      expect(state.tvWidthInches, TableGrid.defaultScreenWidthInches,
+          reason: 'the calibration belongs to the TV, not the map');
     });
   });
 
@@ -387,7 +411,9 @@ void main() {
       expect(json.containsKey('brushRadius'), true);
       expect(json.containsKey('revealMode'), true);
       expect(json.containsKey('tvWidthInches'), true);
-      expect(json.containsKey('calibratedBaseZoom'), true);
+      expect(json.containsKey('tvCameraMode'), true);
+      expect(json.containsKey('tableCol'), true);
+      expect(json.containsKey('tableCols'), true);
       expect(json.containsKey('interactionMode'), true);
       expect(json.containsKey('tokens'), true);
       expect(json.containsKey('strokes'), true);
@@ -1791,14 +1817,14 @@ void main() {
       expect(moved, isFalse);
     });
 
-    test('setScaleFactor() clamps to 0.5-2.0', () {
+    test('setTvWidthInches() clamps to a plausible screen', () {
       final state = VttState();
-      state.setScaleFactor(1.5);
-      expect(state.scaleSliderFactor, 1.5);
-      state.setScaleFactor(0.1);
-      expect(state.scaleSliderFactor, 0.5);
-      state.setScaleFactor(5.0);
-      expect(state.scaleSliderFactor, 2.0);
+      state.setTvWidthInches(36.2);
+      expect(state.tvWidthInches, 36.2);
+      state.setTvWidthInches(1);
+      expect(state.tvWidthInches, TableGrid.minScreenWidthInches);
+      state.setTvWidthInches(500);
+      expect(state.tvWidthInches, TableGrid.maxScreenWidthInches);
     });
 
     test('setRulerPosition() sets coordinates', () {
@@ -1815,14 +1841,12 @@ void main() {
       state.rulerX = 2.5;
       state.rulerY = 4.0;
       state.rulerRotation = 180;
-      state.scaleSliderFactor = 1.75;
 
       final json = state.toJson();
       expect(json['rulerVisible'], true);
       expect(json['rulerX'], 2.5);
       expect(json['rulerY'], 4.0);
       expect(json['rulerRotation'], 180);
-      expect(json['scaleSliderFactor'], 1.75);
 
       final restored = VttState();
       restored.applyRemoteState(json);
@@ -1830,7 +1854,6 @@ void main() {
       expect(restored.rulerX, 2.5);
       expect(restored.rulerY, 4.0);
       expect(restored.rulerRotation, 180);
-      expect(restored.scaleSliderFactor, 1.75);
     });
 
     test('applyRemoteState with missing ruler fields uses defaults', () {
@@ -1842,7 +1865,6 @@ void main() {
       json.remove('rulerX');
       json.remove('rulerY');
       json.remove('rulerRotation');
-      json.remove('scaleSliderFactor');
 
       final restored = VttState();
       restored.applyRemoteState(json);
@@ -1850,7 +1872,6 @@ void main() {
       expect(restored.rulerX, 0);
       expect(restored.rulerY, 0);
       expect(restored.rulerRotation, 0);
-      expect(restored.scaleSliderFactor, 1.0);
     });
   });
 

@@ -601,22 +601,48 @@ class VttRelayClient {
   /// Resets the TV camera rotation to 0 degrees.
   void sendResetRotation() => _send({'type': 'vtt.resetRotation'});
 
-  /// Calibrates the TV display so that grid squares match physical
-  /// inches on the TV surface.
-  ///
-  /// [tvWidthInches] is the measured diagonal or width of the TV screen
-  /// in inches, used to compute the correct base zoom level.
+  /// Calibrates the TV: its picture is [tvWidthInches] wide (the visible
+  /// image, not the diagonal). The TV keeps it on its own disk and shows
+  /// every map at one inch per square from then on ([TableGrid]).
   void sendCalibrate(double tvWidthInches) =>
       _send({'type': 'vtt.calibrate', 'tvWidthInches': tvWidthInches});
 
-  /// Resets the TV calibration, reverting to default zoom behaviour.
+  /// Resets the TV calibration to [TableGrid.defaultScreenWidthInches]
+  /// (34 × 19 squares).
   void sendResetCalibration() => _send({'type': 'vtt.resetCalibration'});
+
+  /// Shows ([on]) or hides the TV's calibration pattern: every one-inch
+  /// square of the table window and a 10-inch measuring bar.
+  void sendShowCalibration(bool on) =>
+      _send({'type': 'vtt.showCalibration', 'on': on});
+
+  /// Switches how the TV frames the map: [mode] is a [TvCameraMode] name —
+  /// `table` (one inch per square), `fit` (whole map) or `free`.
+  void sendSetTvCameraMode(String mode) =>
+      _send({'type': 'vtt.setTvCameraMode', 'mode': mode});
+
+  /// Moves the TV's table window by [dx] × [dy] squares (map axes); the TV
+  /// clamps it to the map and switches to the table view.
+  void sendPanTable(int dx, int dy) =>
+      _send({'type': 'vtt.panTable', 'dx': dx, 'dy': dy});
+
+  /// Puts the TV's table window's first square at [col]/[row] (map
+  /// squares; the TV clamps, an axis where the map fits stays centred).
+  void sendSetTableWindow(int col, int row) =>
+      _send({'type': 'vtt.setTableWindow', 'col': col, 'row': row});
+
+  /// Lays a new grid of [cols] × [rows] squares over the open picture or
+  /// PDF map (fog of the game is cleared; the library keeps the grid).
+  void sendSetMapGrid(int cols, int rows) =>
+      _send({'type': 'vtt.setMapGrid', 'cols': cols, 'rows': rows});
 
   /// Moves the TV camera to an absolute transform.
   ///
   /// [camera] holds `x`, `y` (world center), `zoom` and `angle` (radians)
   /// — the phone's own camera when "link TV to phone" is on or "send view"
-  /// is tapped. Extra keys (`vw`, `vh`) are ignored by the TV.
+  /// is tapped. Extra keys (`vw`, `vh`) are ignored by the TV. In the TV's
+  /// table view only the centre counts (the window moves there, one inch
+  /// per square stays).
   void sendSetCamera(Map<String, double> camera) => _send({
         'type': 'vtt.setCamera',
         'x': camera['x'],
@@ -766,10 +792,6 @@ class VttRelayClient {
 
   /// Rotates the ruler 90 degrees clockwise on the TV.
   void sendRotateRuler() => _send({'type': 'vtt.rotateRuler'});
-
-  /// Sets the scale slider factor on the TV for fine-tune zoom adjustment.
-  void sendSetScaleFactor(double factor) =>
-      _send({'type': 'vtt.setScaleFactor', 'factor': factor});
 
   /// Replaces the session's DM-only picture layer list on the TV
   /// (`vtt.setDmOverlays`). [overlays] are [DmOverlay.toJson] maps, bottom

@@ -16,6 +16,7 @@ import '../model/draw_stroke.dart';
 import '../model/map_library_entry.dart';
 import '../model/map_token.dart';
 import '../model/session.dart';
+import '../model/table_fit.dart';
 import '../network/http_download_stub.dart'
     if (dart.library.io) '../network/http_download.dart';
 import '../network/relay_config.dart';
@@ -27,6 +28,7 @@ import '../model/aoe_template.dart';
 import '../state/vtt_state.dart';
 import '../storage/map_library.dart';
 import '../storage/map_thumbnails.dart';
+import '../storage/tv_calibration_store.dart';
 import '../update/deploy_restore.dart';
 import '../update/update_service_stub.dart'
     if (dart.library.io) '../update/update_service.dart';
@@ -174,6 +176,10 @@ class _TvShellState extends State<TvShell> {
     WakelockPlus.enable(); // Keep TV screen on
     SystemBars.hide(); // no status or navigation bar on the table
     RemoteLog.sendDeviceInfo();
+    // The TV's one-inch calibration lives on the TV, not in each game
+    TvCalibrationStore.loadWidthInches().then((w) {
+      if (mounted) _state.setTvWidthInches(w);
+    });
     _library.init().then((_) {
       _log('Library loaded: ${_library.entries.length} maps');
       if (mounted) setState(() {});
@@ -278,6 +284,13 @@ class _TvShellState extends State<TvShell> {
 
   void _onStateChanged() {
     setState(() {});
+    _scheduleBroadcast();
+    _markDirtyForAutoSave();
+  }
+
+  /// Marks the state for the next throttled `vtt.fullState` (every 50 ms
+  /// while something changed).
+  void _scheduleBroadcast() {
     _dirty = true;
     _broadcastTimer ??= Timer.periodic(const Duration(milliseconds: 50), (_) {
       if (_dirty && _relayState == RelayConnectionState.paired) {
@@ -285,6 +298,16 @@ class _TvShellState extends State<TvShell> {
         _broadcastFullState();
       }
     });
+  }
+
+  /// The TV camera moved (table layout after a map load or resize, zoom,
+  /// a shake): the tablet needs the new camera for its players' frame, and
+  /// the session should keep it. Before 1.1.9 a camera change without a
+  /// state change was never broadcast, so a freshly opened small map showed
+  /// no frame on the tablet until the next edit.
+  void _onCameraMoved() {
+    if (_currentView != TvView.game) return;
+    _scheduleBroadcast();
     _markDirtyForAutoSave();
   }
 
@@ -400,8 +423,7 @@ class _TvShellState extends State<TvShell> {
         imageWidth: width.toDouble(),
         imageHeight: height.toDouble(),
       );
-      _ensureGame();
-      _game!.zoomToFit();
+      _ensureGame(); // frames the map on the table itself (table view)
 
       _activeMapId = entry.id;
       _activeSessionId = const Uuid().v4();
@@ -432,8 +454,9 @@ class _TvShellState extends State<TvShell> {
   // ─── Image download from VPS ─────────────────────────────
 
   Future<void> _downloadAndLoadImage(
-    String url, String displayName, int gridCols, int gridRows,
-  ) async {
+    String url, String displayName, int gridCols, int gridRows, {
+    bool? hasOwnGrid,
+  }) async {
     try {
       _log('Downloading image from VPS: $url');
       _safeSetTransferProgress(0.0);
@@ -456,6 +479,9 @@ class _TvShellState extends State<TvShell> {
         isImage: true, pdfGridCols: gridCols, pdfGridRows: gridRows,
       );
       entry.vpsUrl = url;
+      // From the upload dialog: a picture with its own grid lines gets none
+      // of ours (remembered for every game on this map)
+      if (hasOwnGrid != null) entry.drawGrid = !hasOwnGrid;
       await _library.updateEntry(entry);
       _sendLibraryListing();
 
@@ -473,8 +499,8 @@ class _TvShellState extends State<TvShell> {
         gridCols: gridCols, gridRows: gridRows,
         imageWidth: width.toDouble(), imageHeight: height.toDouble(),
       );
-      _ensureGame();
-      _game!.zoomToFit();
+      _state.showGrid = entry.drawGrid ?? true;
+      _ensureGame(); // frames the map on the table itself (table view)
 
       _activeMapId = entry.id;
       _activeSessionId = const Uuid().v4();
@@ -583,8 +609,9 @@ class _TvShellState extends State<TvShell> {
       } else {
         _state.loadMap(bytes);
       }
-      _ensureGame();
-      _game!.zoomToFit();
+      // Whether battlemap draws its grid is remembered per map
+      _state.showGrid = entry?.drawGrid ?? true;
+      _ensureGame(); // frames the map on the table itself (table view)
 
       _activeMapId = mapId;
       _activeSessionId = const Uuid().v4();
@@ -729,8 +756,11 @@ class _TvShellState extends State<TvShell> {
       _state.showWalls = session.showWalls;
       _state.brushRadius = session.brushRadius;
       _state.revealMode = session.revealMode;
-      _state.tvWidthInches = session.tvWidthInches;
-      _state.calibratedBaseZoom = session.calibratedBaseZoom;
+      // Table view: mode and window (the scale follows the TV's own
+      // calibration; the session's mapFit only records it)
+      _state.tvCameraMode = TvCameraMode.fromName(session.tvCameraMode);
+      _state.tableCol = session.tableCol;
+      _state.tableRow = session.tableRow;
 
       // Restore tokens and drawings
       _state.tokens = session.tokenData
@@ -745,7 +775,6 @@ class _TvShellState extends State<TvShell> {
       _state.rulerX = session.rulerX;
       _state.rulerY = session.rulerY;
       _state.rulerRotation = session.rulerRotation;
-      _state.scaleSliderFactor = session.scaleSliderFactor;
       _state.dmOverlays =
           session.dmOverlayData.map((o) => DmOverlay.fromJson(o)).toList();
       _state.sessionSettings = session.settings.copy();
@@ -803,7 +832,50 @@ class _TvShellState extends State<TvShell> {
   }
 
   void _ensureGame() {
-    _game ??= VttGame(state: _state);
+    _game ??= VttGame(state: _state, tableDisplay: true)
+      ..onCameraChanged = (_) => _onCameraMoved();
+  }
+
+  /// How the open game's map goes on the table — scale, calibration,
+  /// whether we draw a grid ([MapFit]) — for the session file, or `null`
+  /// before the TV knows its screen.
+  Map<String, dynamic>? _mapFitRecord() {
+    final map = _state.map;
+    final grid = _game?.tableGrid;
+    if (map == null || grid == null) return null;
+    return MapFit.of(
+      grid,
+      cellPx: map.resolution.pixelsPerGrid.toDouble(),
+      cols: map.resolution.mapSize.dx.toInt(),
+      rows: map.resolution.mapSize.dy.toInt(),
+      drawGrid: _state.showGrid,
+    ).toJson();
+  }
+
+  /// Remembers on the open map's library entry whether battlemap draws its
+  /// grid, so the next game on this map starts the same way.
+  Future<void> _rememberDrawGrid() async {
+    final id = _activeMapId;
+    final entry = id == null ? null : _library.getEntry(id);
+    if (entry == null || entry.drawGrid == _state.showGrid) return;
+    entry.drawGrid = _state.showGrid;
+    await _library.updateEntry(entry);
+  }
+
+  /// Lays a new grid over the open raster map (`vtt.setMapGrid`): the
+  /// library entry keeps it for later games, fog of this game is cleared
+  /// (its squares changed), drawings, tokens and layers stay.
+  Future<void> _setMapGrid(int cols, int rows) async {
+    final id = _activeMapId;
+    final entry = id == null ? null : _library.getEntry(id);
+    if (entry == null || !(entry.isImage || entry.isPdf)) {
+      _sendError('Only picture and PDF maps can be re-gridded');
+      return;
+    }
+    if (!_state.regridRaster(cols, rows)) return;
+    await _library.updateEntry(entry.withGrid(cols, rows));
+    _sendLibraryListing();
+    RemoteLog.info('session', 'Map re-gridded to ${cols}x$rows', {'cols': cols, 'rows': rows});
   }
 
   // ─── Auto-save ──────────────────────────────────────────
@@ -924,8 +996,10 @@ class _TvShellState extends State<TvShell> {
       showWalls: _state.showWalls,
       brushRadius: _state.brushRadius,
       revealMode: _state.revealMode,
-      tvWidthInches: _state.tvWidthInches,
-      calibratedBaseZoom: _state.calibratedBaseZoom,
+      tvCameraMode: _state.tvCameraMode.name,
+      tableCol: _state.tableCol,
+      tableRow: _state.tableRow,
+      mapFit: _mapFitRecord(),
       tokenData: _state.tokens.map((t) => t.toJson()).toList(),
       strokeData: _state.strokes.map((s) => s.toJson()).toList(),
       drawColorValue: _state.drawColor.toARGB32(),
@@ -935,7 +1009,6 @@ class _TvShellState extends State<TvShell> {
       rulerX: _state.rulerX,
       rulerY: _state.rulerY,
       rulerRotation: _state.rulerRotation,
-      scaleSliderFactor: _state.scaleSliderFactor,
       dmOverlayData: _state.dmOverlays.map((o) => o.toJson()).toList(),
       cameraX: (camera['x'] as num).toDouble(),
       cameraY: (camera['y'] as num).toDouble(),
@@ -971,7 +1044,10 @@ class _TvShellState extends State<TvShell> {
       'openPortals': _state.openPortals.length,
       'fogEnabled': _state.fogEnabled,
       'showGrid': _state.showGrid,
-      'calibrated': _state.calibratedBaseZoom != null,
+      'tvWidthInches': _state.tvWidthInches,
+      'tvCameraMode': _state.tvCameraMode.name,
+      'table': '${_state.tableCols}x${_state.tableRows}',
+      'tableWindow': [_state.tableCol, _state.tableRow],
     };
     _relay.sendRaw(jsonEncode(status));
     // Also log it
@@ -1159,6 +1235,7 @@ class _TvShellState extends State<TvShell> {
           type == 'vtt.togglePortal' || type == 'vtt.revealAll' ||
           type == 'vtt.hideAll' || type == 'vtt.calibrate' ||
           type == 'vtt.resetCalibration' || type == 'vtt.clearMap' ||
+          type == 'vtt.setTvCameraMode' || type == 'vtt.setMapGrid' ||
           type == 'vtt.pdfUploaded' || type == 'vtt.imageUploaded' ||
           type == 'vtt.updateSessionSettings' ||
           type == 'vtt.triggerEffect') {
@@ -1294,6 +1371,7 @@ class _TvShellState extends State<TvShell> {
             msg['displayName'] as String? ?? 'Image map',
             msg['gridCols'] as int? ?? 20,
             msg['gridRows'] as int? ?? 15,
+            hasOwnGrid: msg['hasGrid'] as bool?,
           );
 
         // Diagnostics — respond with TV state
@@ -1377,6 +1455,7 @@ class _TvShellState extends State<TvShell> {
           _state.togglePortal(msg['index'] as int);
         case 'vtt.toggleGrid':
           _state.toggleGrid();
+          _rememberDrawGrid();
         case 'vtt.toggleFog':
           _state.toggleFog();
         case 'vtt.toggleWalls':
@@ -1403,16 +1482,44 @@ class _TvShellState extends State<TvShell> {
         case 'vtt.resetRotation':
           _game?.resetRotation();
           _broadcastFullState();
+        // Table view: the TV's own calibration (kept on the TV's disk)
         case 'vtt.calibrate':
-          final screenWidth = MediaQueryData.fromView(
-            WidgetsBinding.instance.platformDispatcher.views.first,
-          ).size.width;
-          _state.calibrate(
-            (msg['tvWidthInches'] as num).toDouble(),
-            screenWidth,
-          );
+          _state.setTvWidthInches((msg['tvWidthInches'] as num).toDouble());
+          TvCalibrationStore.saveWidthInches(_state.tvWidthInches);
+          RemoteLog.info('table', 'Calibrated: picture ${_state.tvWidthInches} in wide',
+              {'tvWidthInches': _state.tvWidthInches});
         case 'vtt.resetCalibration':
-          _state.resetCalibration();
+          _state.setTvWidthInches(TableGrid.defaultScreenWidthInches);
+          TvCalibrationStore.saveWidthInches(null);
+        case 'vtt.showCalibration':
+          _state.setShowCalibration(msg['on'] as bool? ?? false);
+        case 'vtt.setTvCameraMode':
+          switch (TvCameraMode.fromName(msg['mode'] as String?)) {
+            case TvCameraMode.table:
+              _game?.showTable();
+            case TvCameraMode.fit:
+              _game?.showWholeMap();
+            case TvCameraMode.free:
+              _state.setTvCameraMode(TvCameraMode.free);
+          }
+          _broadcastFullState();
+        case 'vtt.panTable':
+          _game?.panTable(
+            (msg['dx'] as num?)?.toInt() ?? 0,
+            (msg['dy'] as num?)?.toInt() ?? 0,
+          );
+          _broadcastFullState();
+        case 'vtt.setTableWindow':
+          _game?.setTableWindow(
+            (msg['col'] as num?)?.toInt(),
+            (msg['row'] as num?)?.toInt(),
+          );
+          _broadcastFullState();
+        case 'vtt.setMapGrid':
+          _setMapGrid(
+            (msg['cols'] as num).toInt(),
+            (msg['rows'] as num).toInt(),
+          );
         case 'vtt.setCamera':
           _game?.applyCamera(
             (msg['x'] as num).toDouble(),
@@ -1471,8 +1578,8 @@ class _TvShellState extends State<TvShell> {
           );
         case 'vtt.rotateRuler':
           _state.rotateRulerCW();
-        case 'vtt.setScaleFactor':
-          _state.setScaleFactor((msg['factor'] as num).toDouble());
+        // vtt.setScaleFactor (companions before 1.1.9) is ignored: the TV
+        // shows one inch per square, the calibration is vtt.calibrate.
 
         // DM-only picture layers: stored with the session, never drawn here
         case 'vtt.setDmOverlays':

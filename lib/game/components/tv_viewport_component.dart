@@ -67,12 +67,20 @@ class CameraSnapshot {
       (vh - o.vh).abs() > 0.5;
 }
 
-/// Draws the TV's current viewport as a dashed gold rectangle on the phone.
+/// Draws what the players see as a dashed gold frame on the phone.
 ///
 /// The phone camera is independent of the TV camera (the DM pans and zooms
 /// the phone freely), so this overlay is the only indication of what the
-/// players see. The rectangle is `vw / zoom` by `vh / zoom` world pixels,
-/// centered on the TV camera position and rotated by its angle.
+/// players see.
+///
+/// - **Table view** ([tableWindow] not `null`): the TV's window of whole
+///   one-inch squares, in map pixels — exactly the squares the players
+///   have, not the masked leftover. When the TV can pan ([showHandle]), a
+///   gold grip sits above the frame's top edge; dragging it moves the TV's
+///   window ([VttGame] does the hit test via [handleCenter]).
+/// - **Whole map / free camera**: the TV's screen, `vw / zoom` by
+///   `vh / zoom` world pixels, centred on the TV camera position and rotated
+///   by its angle.
 ///
 /// Line width and dash length are divided by the phone's current zoom so
 /// the outline stays the same thickness on screen at any zoom level.
@@ -82,6 +90,7 @@ class CameraSnapshot {
 /// See also:
 /// - [CameraSnapshot], the data this component renders.
 /// - [VttGame.setTvViewport], which updates it on every state broadcast.
+/// - [VttGame.tvTableLayout], which computes the table window.
 class TvViewportComponent extends PositionComponent {
   /// Returns the latest TV camera snapshot, or `null` if none arrived yet.
   final CameraSnapshot? Function() snapshot;
@@ -89,25 +98,53 @@ class TvViewportComponent extends PositionComponent {
   /// Returns the phone camera's current zoom, for screen-constant line width.
   final double Function() screenZoom;
 
+  /// Returns the TV's table window in map pixels, or `null` when the TV is
+  /// not in table view (then the screen rectangle is drawn).
+  final Rect? Function() tableWindow;
+
+  /// Returns whether to draw the drag grip (table view, map bigger than
+  /// the window).
+  final bool Function() showHandle;
+
   static final _paint = Paint()
     ..color = const Color(0xFFD4A76A)
     ..style = PaintingStyle.stroke;
 
   static final _cornerPaint = Paint()..color = const Color(0xFFD4A76A);
 
+  /// Screen pixels between the frame's top edge and the grip's centre.
+  static const double handleGap = 24;
+
+  /// Radius of the drawn grip in screen pixels.
+  static const double handleRadius = 16;
+
   /// Creates the overlay; [mapSize] sets the component bounds.
   TvViewportComponent({
     required this.snapshot,
     required this.screenZoom,
     required Vector2 mapSize,
-  }) : super(size: mapSize, priority: 28);
+    Rect? Function()? tableWindow,
+    bool Function()? showHandle,
+  })  : tableWindow = tableWindow ?? (() => null),
+        showHandle = showHandle ?? (() => false),
+        super(size: mapSize, priority: 28);
+
+  /// Centre of the drag grip for a table [frame] (map pixels) at the
+  /// phone's [zoom]: above the middle of the top edge.
+  static Offset handleCenter(Rect frame, double zoom) =>
+      Offset(frame.center.dx, frame.top - handleGap / zoom);
 
   @override
   void render(Canvas canvas) {
+    final zoom = max(screenZoom(), 1e-4);
+    final table = tableWindow();
+    if (table != null) {
+      _renderTable(canvas, table, zoom);
+      return;
+    }
     final cam = snapshot();
     if (cam == null || cam.vw <= 0 || cam.vh <= 0 || cam.zoom <= 0) return;
 
-    final zoom = max(screenZoom(), 1e-4);
     final w = cam.vw / cam.zoom;
     final h = cam.vh / cam.zoom;
     _paint.strokeWidth = 2.5 / zoom;
@@ -128,6 +165,44 @@ class TvViewportComponent extends PositionComponent {
       canvas.drawCircle(c, r, _cornerPaint);
     }
     canvas.restore();
+  }
+
+  /// The table window (map axes, no rotation needed — [TableLayout] already
+  /// turned it), with corner dots and, when the TV can pan, the grip.
+  void _renderTable(Canvas canvas, Rect rect, double zoom) {
+    _paint.strokeWidth = 2.5 / zoom;
+    final dash = 14.0 / zoom;
+    final gap = 8.0 / zoom;
+    _dashedLine(canvas, rect.topLeft, rect.topRight, dash, gap);
+    _dashedLine(canvas, rect.topRight, rect.bottomRight, dash, gap);
+    _dashedLine(canvas, rect.bottomRight, rect.bottomLeft, dash, gap);
+    _dashedLine(canvas, rect.bottomLeft, rect.topLeft, dash, gap);
+    final r = 4.0 / zoom;
+    for (final c in [rect.topLeft, rect.topRight, rect.bottomRight, rect.bottomLeft]) {
+      canvas.drawCircle(c, r, _cornerPaint);
+    }
+    if (!showHandle()) return;
+    final h = handleCenter(rect, zoom);
+    final hr = handleRadius / zoom;
+    canvas.drawLine(Offset(h.dx, h.dy + hr), Offset(h.dx, rect.top),
+        _paint..strokeWidth = 2 / zoom);
+    canvas.drawCircle(h, hr, _cornerPaint);
+    // Four-way arrow: two bars with arrow heads
+    final arrow = Paint()
+      ..color = const Color(0xFF1A1A2E)
+      ..strokeWidth = 2 / zoom
+      ..style = PaintingStyle.stroke;
+    final a = hr * 0.6;
+    final head = hr * 0.25;
+    canvas.drawLine(h - Offset(a, 0), h + Offset(a, 0), arrow);
+    canvas.drawLine(h - Offset(0, a), h + Offset(0, a), arrow);
+    for (final d in [Offset(a, 0), Offset(-a, 0), Offset(0, a), Offset(0, -a)]) {
+      final tip = h + d;
+      final back = d / d.distance * head;
+      final side = Offset(-back.dy, back.dx);
+      canvas.drawLine(tip, tip - back + side, arrow);
+      canvas.drawLine(tip, tip - back - side, arrow);
+    }
   }
 
   void _dashedLine(Canvas canvas, Offset a, Offset b, double dash, double gap) {

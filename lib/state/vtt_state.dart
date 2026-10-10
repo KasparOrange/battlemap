@@ -9,6 +9,7 @@ import '../model/dm_overlay.dart';
 import '../model/draw_stroke.dart';
 import '../model/map_token.dart';
 import '../model/session.dart';
+import '../model/table_fit.dart';
 import '../model/undo_action.dart';
 import '../model/uvtt_map.dart';
 import '../model/uvtt_parser.dart';
@@ -57,7 +58,8 @@ enum InteractionMode {
 /// - **Fog of war** -- which cells are revealed, brush settings, reveal mode.
 /// - **Portals** -- which doors/gates are currently open.
 /// - **Display toggles** -- grid visibility, fog on/off, wall debug view.
-/// - **Calibration** -- physical TV size mapping for accurate grid scale.
+/// - **Table view** -- the TV's one-inch calibration and how it frames the
+///   map ([tvWidthInches], [tvCameraMode], the table window).
 /// - **Tokens** -- placed creatures/objects on the grid.
 /// - **Drawings** -- freehand strokes and the in-progress live stroke.
 /// - **Interaction mode** -- which tool is active (fog, draw, token).
@@ -119,21 +121,44 @@ class VttState extends ChangeNotifier {
   /// not in this set are rendered as closed (shut doors).
   Set<int> openPortals = {};
 
-  // --- Calibration ---
+  // --- Table view (one square = one inch on the TV) ---
 
-  /// Physical width of the TV screen in inches.
+  /// Physical width of the TV's picture in inches — the TV's calibration.
   ///
-  /// Set during calibration to compute [calibratedBaseZoom]. `null` if
-  /// calibration has not been performed.
-  double? tvWidthInches;
+  /// A property of the TV, not of a game: the TV keeps it on its own disk
+  /// (`TvCalibrationStore`) and broadcasts it; the companion's Table scale
+  /// dialog changes it (`vtt.calibrate`). Until measured it is
+  /// [TableGrid.defaultScreenWidthInches] (Konrad's 34 × 19 squares).
+  ///
+  /// See also: [TableGrid], which turns it into whole one-inch squares.
+  double tvWidthInches = TableGrid.defaultScreenWidthInches;
 
-  /// Computed base zoom level that maps one grid square to one physical inch.
+  /// How the TV frames the map — [TvCameraMode.table] (one inch per square,
+  /// the default), the whole map, or a free camera. Saved with the session.
+  TvCameraMode tvCameraMode = TvCameraMode.table;
+
+  /// First map column of the TV's table window, or `null` to centre the
+  /// window on the map (a new game).
   ///
-  /// Calculated as `(screenWidthPx / tvWidthInches) / pixelsPerGrid`.
-  /// When set, the camera zoom is clamped to never go below this value,
-  /// ensuring grid squares are always at least 1 inch on the physical TV.
-  /// `null` if calibration has not been performed.
-  double? calibratedBaseZoom;
+  /// Set by the TV only, already clamped ([VttGame] computes it with
+  /// [TableLayout]); the tablet asks with `vtt.setTableWindow` /
+  /// `vtt.panTable`. Saved with the session.
+  int? tableCol;
+
+  /// First map row of the TV's table window, see [tableCol].
+  int? tableRow;
+
+  /// Whole one-inch squares across the TV screen ([TableGrid.cols]),
+  /// reported by the TV for the tablet's frame and info line.
+  int tableCols = 34;
+
+  /// Whole one-inch squares down the TV screen ([TableGrid.rows]).
+  int tableRows = 19;
+
+  /// Whether the TV shows its calibration pattern (the one-inch grid and a
+  /// 10-inch measuring bar) over the game. On while the companion's Table
+  /// scale dialog is open; not saved.
+  bool showCalibration = false;
 
   // --- Brush reveal ---
 
@@ -329,12 +354,6 @@ class VttState extends ChangeNotifier {
   ///
   /// See also: [RulerComponent.armLengthSquares], which draws with it.
   static const double rulerArmSquares = 10;
-
-  /// Fine-tune zoom multiplier for scale calibration (0.5 to 2.0).
-  ///
-  /// Applied on top of [calibratedBaseZoom] to allow the DM to fine-tune
-  /// the physical grid size without re-calibrating.
-  double scaleSliderFactor = 1.0;
 
   // --- Session settings ---
 
@@ -533,6 +552,41 @@ class VttState extends ChangeNotifier {
     return true;
   }
 
+  /// Lays a new grid of [cols] × [rows] squares over the loaded raster map
+  /// (picture or PDF page) — the fitting tool for a picture whose grid was
+  /// counted wrong at upload (companion ▸ Map ▸ Map squares, TV side of
+  /// `vtt.setMapGrid`).
+  ///
+  /// Keeps what does not depend on square numbers — drawings, tokens, DM
+  /// layers, the ruler, settings — and clears what does: revealed fog,
+  /// shadow edits, the undo history and the table window (the cell indices
+  /// mean other squares now). Returns `false` (and changes nothing) for a
+  /// `.dd2vtt` map, no map, a non-positive grid or the same grid.
+  bool regridRaster(int cols, int rows) {
+    final current = map;
+    final size = rasterImageSize;
+    if (current == null || size == null || cols <= 0 || rows <= 0) return false;
+    final grid = current.resolution.mapSize;
+    if (grid.dx.toInt() == cols && grid.dy.toInt() == rows) return false;
+    final keepTokens = tokens;
+    final keepStrokes = strokes;
+    final keepOverlays = dmOverlays;
+    final keepOverlaysRev = dmOverlaysRev;
+    final keepRuler = rulerVisible;
+    final keepMode = tvCameraMode;
+    loadPdfAsMap(current.imageBytes,
+        gridCols: cols, gridRows: rows,
+        imageWidth: size.width, imageHeight: size.height);
+    tokens = keepTokens;
+    strokes = keepStrokes;
+    dmOverlays = keepOverlays;
+    dmOverlaysRev = keepOverlaysRev;
+    rulerVisible = keepRuler;
+    tvCameraMode = keepMode;
+    notifyListeners();
+    return true;
+  }
+
   /// Clears everything that belongs to one session rather than to the map:
   /// tokens, drawings, undo history, measure line, AoE template, ruler,
   /// shadow edits and DM picture layers.
@@ -556,6 +610,9 @@ class VttState extends ChangeNotifier {
     dmOverlaysRev = 0;
     _pendingDmOverlaysRev = null;
     _pendingDmOverlaysSince = null;
+    tvCameraMode = TvCameraMode.table;
+    tableCol = null;
+    tableRow = null;
   }
 
   // ===== Undo / Redo =====
@@ -909,29 +966,55 @@ class VttState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ===== Calibration =====
+  // ===== Table view =====
 
-  /// Calibrates the zoom level so that grid squares match physical inches.
+  /// Sets the TV's calibration: the picture is [inches] wide (clamped to
+  /// [TableGrid.minScreenWidthInches]..[TableGrid.maxScreenWidthInches]).
   ///
-  /// Given the physical [tvWidth] in inches and the screen's pixel width
-  /// [screenWidthPx], computes [calibratedBaseZoom] such that one grid
-  /// square equals one inch on the TV surface.
-  ///
-  /// Does nothing if no map is loaded.
-  void calibrate(double tvWidth, double screenWidthPx) {
-    if (map == null) return;
-    tvWidthInches = tvWidth;
-    final pxPerInch = screenWidthPx / tvWidth;
-    calibratedBaseZoom = pxPerInch / map!.resolution.pixelsPerGrid;
+  /// TV side; the caller also stores it on the TV's disk.
+  void setTvWidthInches(double inches) {
+    tvWidthInches = inches.clamp(
+        TableGrid.minScreenWidthInches, TableGrid.maxScreenWidthInches);
     notifyListeners();
   }
 
-  /// Clears calibration data, returning to default zoom behavior.
-  void resetCalibration() {
-    tvWidthInches = null;
-    calibratedBaseZoom = null;
+  /// Switches how the TV frames the map. See [TvCameraMode].
+  void setTvCameraMode(TvCameraMode mode) {
+    if (tvCameraMode == mode) return;
+    tvCameraMode = mode;
     notifyListeners();
   }
+
+  /// Stores the TV's table window start ([tableCol], [tableRow]) and the
+  /// screen's whole squares ([tableCols], [tableRows]); notifies only when
+  /// something changed.
+  ///
+  /// Called by the TV's [VttGame] after laying out the table, with values
+  /// it already clamped — so a layout pass that changes nothing ends here.
+  void updateTableWindow({int? col, int? row, int? cols, int? rows}) {
+    final newCols = cols ?? tableCols;
+    final newRows = rows ?? tableRows;
+    if (col == tableCol && row == tableRow &&
+        newCols == tableCols && newRows == tableRows) {
+      return;
+    }
+    tableCol = col;
+    tableRow = row;
+    tableCols = newCols;
+    tableRows = newRows;
+    notifyListeners();
+  }
+
+  /// Shows or hides the TV's calibration pattern ([showCalibration]).
+  void setShowCalibration(bool on) {
+    if (showCalibration == on) return;
+    showCalibration = on;
+    notifyListeners();
+  }
+
+  /// The table for a TV screen of [screen] logical pixels at the current
+  /// calibration ([tvWidthInches]), or `null` for an empty screen.
+  TableGrid? tableGridFor(Size screen) => TableGrid.of(screen, tvWidthInches);
 
   /// Sets the fog brush radius.
   ///
@@ -1110,8 +1193,9 @@ class VttState extends ChangeNotifier {
 
   /// Unloads the current map and resets all map-related state.
   ///
-  /// Clears revealed cells, open portals, fog settings, calibration,
-  /// wall debug view, shadow cells, and the undo/redo stacks.
+  /// Clears revealed cells, open portals, fog settings, the table window,
+  /// wall debug view, shadow cells, and the undo/redo stacks. Keeps the TV's
+  /// calibration ([tvWidthInches]) — it belongs to the TV, not the map.
   /// Does not clear tokens or drawings.
   void clearMap() {
     map = null;
@@ -1121,7 +1205,8 @@ class VttState extends ChangeNotifier {
     openPortals.clear();
     fogEnabled = true;
     showWalls = false;
-    calibratedBaseZoom = null;
+    tableCol = null;
+    tableRow = null;
     shadowRevealCells.clear();
     shadowHideCells.clear();
     _undoStack.clear();
@@ -1239,15 +1324,6 @@ class VttState extends ChangeNotifier {
     double r(double v) => (v * 1e9).roundToDouble() / 1e9;
     return Offset(r(h * (cos(a) + sin(a))),
         r(h * (sin(a) - cos(a))));
-  }
-
-  /// Sets the scale slider factor, clamped to the range `[0.5, 2.0]`.
-  ///
-  /// This multiplier is applied on top of [calibratedBaseZoom] to allow
-  /// the DM to fine-tune the physical grid size.
-  void setScaleFactor(double factor) {
-    scaleSliderFactor = factor.clamp(0.5, 2.0);
-    notifyListeners();
   }
 
   /// Replaces the active [sessionSettings] and notifies listeners.
@@ -1384,7 +1460,7 @@ class VttState extends ChangeNotifier {
   ///
   /// Excludes [rawMapBytes] (sent separately as a chunked binary transfer)
   /// and [liveStroke] (sent via dedicated live-stroke messages). Includes
-  /// all fog cells, portal states, display toggles, calibration, tokens,
+  /// all fog cells, portal states, display toggles, the table view, tokens,
   /// strokes, draw settings, the active interaction mode, and the DM layer
   /// list ([dmOverlays] — metadata only, the TV never loads the pictures).
   Map<String, dynamic> toJson() => {
@@ -1400,7 +1476,12 @@ class VttState extends ChangeNotifier {
         'brushRadius': brushRadius,
         'revealMode': revealMode,
         'tvWidthInches': tvWidthInches,
-        'calibratedBaseZoom': calibratedBaseZoom,
+        'tvCameraMode': tvCameraMode.name,
+        'tableCol': tableCol,
+        'tableRow': tableRow,
+        'tableCols': tableCols,
+        'tableRows': tableRows,
+        'showCalibration': showCalibration,
         'interactionMode': interactionMode.name,
         'tokens': tokens.map((t) => t.toJson()).toList(),
         'strokes': strokes.map((s) => s.toJson()).toList(),
@@ -1413,7 +1494,6 @@ class VttState extends ChangeNotifier {
         'rulerX': rulerX,
         'rulerY': rulerY,
         'rulerRotation': rulerRotation,
-        'scaleSliderFactor': scaleSliderFactor,
         'sessionSettings': sessionSettings.toJson(),
         'canUndo': canUndo,
         'canRedo': canRedo,
@@ -1451,8 +1531,16 @@ class VttState extends ChangeNotifier {
     showWalls = json['showWalls'] as bool;
     brushRadius = json['brushRadius'] as int;
     revealMode = json['revealMode'] as bool;
-    tvWidthInches = (json['tvWidthInches'] as num?)?.toDouble();
-    calibratedBaseZoom = (json['calibratedBaseZoom'] as num?)?.toDouble();
+    // Table view — absent from TV builds before 1.1.9 (they sent a per-game
+    // calibration that could be null)
+    tvWidthInches = (json['tvWidthInches'] as num?)?.toDouble() ??
+        TableGrid.defaultScreenWidthInches;
+    tvCameraMode = TvCameraMode.fromName(json['tvCameraMode'] as String?);
+    tableCol = (json['tableCol'] as num?)?.toInt();
+    tableRow = (json['tableRow'] as num?)?.toInt();
+    tableCols = (json['tableCols'] as num?)?.toInt() ?? 34;
+    tableRows = (json['tableRows'] as num?)?.toInt() ?? 19;
+    showCalibration = json['showCalibration'] as bool? ?? false;
 
     // New fields — backwards compatible with old state messages
     final modeName = json['interactionMode'] as String? ?? 'fogReveal';
@@ -1487,7 +1575,6 @@ class VttState extends ChangeNotifier {
     rulerX = (json['rulerX'] as num?)?.toDouble() ?? 0;
     rulerY = (json['rulerY'] as num?)?.toDouble() ?? 0;
     rulerRotation = json['rulerRotation'] as int? ?? 0;
-    scaleSliderFactor = (json['scaleSliderFactor'] as num?)?.toDouble() ?? 1.0;
 
     // Session settings — backwards compatible
     sessionSettings = json['sessionSettings'] != null

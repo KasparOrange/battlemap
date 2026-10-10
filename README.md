@@ -12,7 +12,9 @@ The same APK runs in two modes:
 
 - **TV Mode** -- the TV (a Xiaomi TV Box sideloaded via ADB) displays the
   battlemap fullscreen. It has no touch, no keyboard, no mouse. It connects to a
-  VPS WebSocket relay and waits for a companion phone to pair.
+  VPS WebSocket relay and waits for a companion phone to pair. Every map shows at
+  **one square = one inch** (the minis' bases) in a centred window of whole squares —
+  34 × 19 on our TV; bigger maps are moved across it from the tablet.
 - **Companion Mode** -- the DM's Android tablet or phone (same APK; the web
   build in a browser is a fallback) connects to the same relay. All map loading,
   fog reveal, door toggling, measuring, drawing, and camera control happens here —
@@ -41,7 +43,7 @@ lightweight Python WebSocket relay running on a VPS.
 | Component | File | Role |
 |-----------|------|------|
 | [VttGame] | `lib/game/vtt_game.dart` | Flame engine game -- renders map image, grid, fog of war, walls, portals, tokens, and drawing strokes; on the DM's device also the DM layers (only a game given [DmOverlayImages] can draw them). Routes single-finger input to the active tool; two-finger gestures control the camera. |
-| [VttState] | `lib/state/vtt_state.dart` | Central game state (ChangeNotifier) -- fog cells, portal states, tokens, strokes, calibration, interaction mode. Serializes to JSON for relay sync. |
+| [VttState] | `lib/state/vtt_state.dart` | Central game state (ChangeNotifier) -- fog cells, portal states, tokens, strokes, the table view (TV calibration, camera mode, window), interaction mode. Serializes to JSON for relay sync. |
 | [TvShell] | `lib/ui/tv_shell.dart` | TV entry point -- manages relay connection, map library, sessions, and view navigation. All interaction arrives via relay commands from the phone. |
 | [VttCompanionScreen] | `lib/ui/vtt_companion_screen.dart` | Phone DM controller -- file picker, DM control panel, local VttGame mirror. Sends commands to TV through the relay. |
 | [VttRelayClient] | `lib/network/vtt_relay_client.dart` | WebSocket client (web_socket_channel) -- works on both web and native. Handles registration, pairing, command/state forwarding, and chunked map transfers. |
@@ -49,6 +51,8 @@ lightweight Python WebSocket relay running on a VPS.
 | [MapThumbnails] | `lib/storage/map_thumbnails.dart` | Small PNG previews of library maps, made lazily on the TV while it shows the library and sent to the companion (`lib.thumbnail`). |
 | [ContinueSessionCard] | `lib/ui/library_cards.dart` | The companion library's top card (resume the last session), map thumbnails and dated default session names. |
 | [SystemBars] | `lib/ui/system_bars.dart` | Hides Android's status and navigation bars (sticky immersive): the companion during a game (toggle on the map, stored on the device), the TV always. No-op off Android. |
+| [TvOverviewMap] | `lib/ui/tv_overview_map.dart` | The companion's overview: the whole map with a box around what the players see; tap or drag to move the TV's window. |
+| [TvCalibrationStore] | `lib/storage/tv_calibration_store.dart` | The TV's own calibration (how wide its picture is), kept on the TV for every game. |
 | [DeployRestore] | `lib/update/deploy_restore.dart` | Rolling deploy: launch routes `/restore` (TV reopens its game) and `/companion`, plus the TV's restore snapshot. |
 
 ### Data Model
@@ -58,7 +62,8 @@ lightweight Python WebSocket relay running on a VPS.
 | [UvttMap] | `lib/model/uvtt_map.dart` | Parsed Universal VTT map -- resolution, walls, portals, lights, environment, and the embedded map image. |
 | [UvttParser] | `lib/model/uvtt_parser.dart` | Decodes `.dd2vtt` / `.uvtt` JSON files into [UvttMap] instances. |
 | [MapLibraryEntry] | `lib/model/map_library_entry.dart` | Metadata for a map stored in the TV's local library (grid size, file size, kind). |
-| [Session] | `lib/model/session.dart` | A saved gameplay session -- references a map and captures the full DM state snapshot (fog, portals, tokens, camera, DM layer list). |
+| [Session] | `lib/model/session.dart` | A saved gameplay session -- references a map and captures the full DM state snapshot (fog, portals, tokens, camera, table window, the map's scale record, DM layer list). |
+| [TableGrid] / [TableLayout] / [MapFit] | `lib/model/table_fit.dart` | The table view: whole one-inch squares on the TV (34 × 19 on Konrad's TV), the camera that shows a map at one inch per square in a centred window, and the per-game record of the map's scale. |
 | [DmOverlay] | `lib/model/dm_overlay.dart` | One DM-only picture layer (VPS url, visible, opacity); the TV stores the list, only the companion draws it. |
 | [MapToken] | `lib/model/map_token.dart` | A single token on the grid (position, color, label). JSON-serializable. |
 | [DrawStroke] | `lib/model/draw_stroke.dart` | A freehand drawing stroke (list of points, color, width). JSON-serializable. |

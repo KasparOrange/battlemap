@@ -2,7 +2,7 @@
 
 ## what is a session
 
-a session is a saved gameplay state on top of a map. it stores everything the DM has set up: revealed fog, open doors, placed tokens, drawings, camera position, calibration.
+a session is a saved gameplay state on top of a map. it stores everything the DM has set up: revealed fog, open doors, placed tokens, drawings, camera position, and how the map goes on the table (its scale, whether we draw a grid). the TV's own calibration (how wide its picture is) is not in the session — it belongs to the TV (`architecture.md` "table view").
 
 sessions are stored on the TV's local disk and survive app restarts and updates.
 
@@ -28,8 +28,9 @@ sessions are stored on the TV's local disk and survive app restarts and updates.
 | `showWalls` | wall debug view on/off |
 | `brushRadius` | fog brush size |
 | `revealMode` | reveal vs hide mode |
-| `tvWidthInches` | TV calibration |
-| `calibratedBaseZoom` | calculated zoom from calibration |
+| `tvCameraMode` | how the TV frames the map: `table` (1 inch per square, default), `fit` (whole map), `free` |
+| `tableCol` / `tableRow` | first square of the TV's table window on a map bigger than 34 × 19 (`null` = centred) |
+| `mapFit` | how this map goes on the table, written on every save: `cellPx` (map px per square), `cols`/`rows`, `tvZoom` (TV zoom for one inch), `screenWidthInches` + `pxPerInch` (the TV calibration it was computed for), `tableCols`/`tableRows` (34 × 19), `fitsTable`, `drawGrid` (false = the picture has its own grid lines). informational — the TV recomputes the scale from its current calibration on load |
 | `cameraX/Y/zoom/angle` | camera position and orientation |
 | `interactionMode` | active tool (fog/draw/token) |
 | `drawColor/drawWidth` | drawing tool settings |
@@ -43,8 +44,18 @@ auto-save fires 2 seconds after the last state change. this batches rapid change
 - door toggle
 - token add/move/remove
 - drawing stroke completion
-- calibration change
+- table window moved, TV view switched (1-inch table / whole map), any TV camera move
 - camera movement that settles
+
+sessions saved before 1.1.9 carried `tvWidthInches`, `calibratedBaseZoom` and `scaleSliderFactor`;
+they are ignored now and such sessions open on the 1-inch table.
+
+## per map, not per session
+
+the library entry remembers whether battlemap draws its grid over the map (`drawGrid`, from the
+upload dialog's "the picture has its own grid lines" and from every grid toggle) — a new session
+on the map starts that way. a picture/PDF map's square count (`pdfGridCols`/`pdfGridRows`) can be
+changed in a game (Settings ▸ Map squares) and stays on the map.
 
 ## thumbnails
 

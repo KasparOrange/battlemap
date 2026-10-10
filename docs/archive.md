@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 19:40 - battlemap-35 - table view: one square = one inch, 34 × 19 window (1.1.9+19)
+- Konrad: improve scaling/measuring/fitting on the TV; measured 34 × 19 one-inch squares with a bit of gap both ways → centre the map, split the leftover — the optimal result for all maps; bigger maps need pan/zoom from the tablet, an overview with the players' square; each game file saves the map's scale and whether we draw a grid
+	- found: calibration lived per session (`tvWidthInches` + `calibratedBaseZoom`, re-entered per game, its dialog offered TV *diagonals* as presets), the 0.5–2× scale slider broke the one-inch rule, no window snapping, no masking, a camera change alone was never broadcast (fresh small map → no frame on the tablet)
+	- built: `lib/model/table_fit.dart` (`TableGrid`, `TableLayout`, `MapFit`, `TvCameraMode`); calibration on the TV (`TvCalibrationStore`, default 34.5 in = 34 × 19); `VttGame(tableDisplay)` lays out table/whole map/free, masks the leftover and draws the calibration pattern (`TableFrameComponent`); tablet frame = the window with a drag grip, Camera tab "Players see" + overview map (`TvOverviewMap`) + arrows; "Measure the TV…" dialog (bar in cm/in, picture width, ±¼ %); session `tvCameraMode`/`tableCol`/`tableRow`/`mapFit`; `MapLibraryEntry.drawGrid`; upload dialog `showMapGridDialog`; `vtt.setMapGrid` + `VttState.regridRaster`; new relay commands in `relay-protocol.md` "table view"
+	- also fixed: a resumed free camera was overwritten by the load's fit (`syncCamera` now waits for the decode); debug builds showed a red screen on the `/restore` launch (`home` + `onGenerateInitialRoutes` assert, `main.dart`)
+	- 21 new tests, suite 452 green; bench probe over the relay 25/25 (lair, 60 × 60 tavern, rotation, calibration, re-grid)
+
 ### 26-10-10 19:20 - 716236d4 - real devices: wireless ADB kept alive across sessions
 - Konrad: sessions kept losing the tablet's wireless ADB → find why, fix it in latrine so several sessions share the devices smoothly
 	- cause (both devices' logcat, 18:18): Android turns Wireless debugging off on any Wi-Fi BSSID change; the FRITZ!Box moving them between bands is enough

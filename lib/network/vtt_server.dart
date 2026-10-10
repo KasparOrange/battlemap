@@ -3,8 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
 import '../game/vtt_game.dart';
+import '../model/table_fit.dart';
 import '../state/vtt_state.dart';
 
 /// WebSocket server for VTT table mode (runs on TV).
@@ -150,15 +150,9 @@ class VttServer {
         case 'vtt.resetRotation':
           game.resetRotation();
         case 'vtt.calibrate':
-          final screenWidth = MediaQueryData.fromView(
-            WidgetsBinding.instance.platformDispatcher.views.first,
-          ).size.width;
-          state.calibrate(
-            (msg['tvWidthInches'] as num).toDouble(),
-            screenWidth,
-          );
+          state.setTvWidthInches((msg['tvWidthInches'] as num).toDouble());
         case 'vtt.resetCalibration':
-          state.resetCalibration();
+          state.setTvWidthInches(TableGrid.defaultScreenWidthInches);
         case 'pong':
           break;
       }

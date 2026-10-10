@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../game/dm_overlay_images.dart';
@@ -5,7 +7,9 @@ import '../model/aoe_template.dart';
 import '../model/dm_overlay.dart';
 import '../model/map_token.dart';
 import '../model/session.dart';
+import '../model/table_fit.dart';
 import '../state/vtt_state.dart';
+import 'map_grid_dialog.dart';
 import 'session_settings_dialog.dart';
 
 // ─── Medieval warm color palette ────────────────────────────────────
@@ -95,7 +99,8 @@ class DmCallbacks {
   /// Zooms the TV camera out by one step.
   final VoidCallback onZoomOut;
 
-  /// Resets the TV camera zoom so the entire map fits on screen.
+  /// Fits the entire map on screen (local mode; the TV has "Whole map",
+  /// [onSetTvCameraMode]).
   final VoidCallback onZoomToFit;
 
   /// Rotates the TV camera 90 degrees clockwise.
@@ -107,12 +112,11 @@ class DmCallbacks {
   /// Resets the TV camera rotation to 0 degrees.
   final VoidCallback onResetRotation;
 
-  /// Calibrates the grid so squares match 1-inch miniature bases.
-  ///
-  /// `tvWidthInches` is the physical width of the TV screen in inches.
+  /// Calibrates the TV so a square is one inch: `tvWidthInches` is the
+  /// physical width of its picture (the TV keeps it, every game uses it).
   final void Function(double tvWidthInches) onCalibrate;
 
-  /// Resets calibration to the default zoom behaviour.
+  /// Resets the TV calibration to the default (34 × 19 squares).
   final VoidCallback onResetCalibration;
 
   // Interaction mode
@@ -210,11 +214,22 @@ class DmCallbacks {
   /// Rotates the ruler 90 degrees clockwise.
   final VoidCallback onRotateRuler;
 
-  /// Sets the scale slider factor for fine-tune zoom adjustment.
-  ///
-  /// Called once on slider release (the panel previews the value locally
-  /// while dragging).
-  final void Function(double factor) onSetScaleFactor;
+  // ── Table view (networked mode only) ──────────────────────────────
+
+  /// Shows (`true`) or hides the TV's calibration pattern — on while the
+  /// Measure the TV dialog is open. `null` hides that dialog (local mode).
+  final void Function(bool on)? onShowCalibration;
+
+  /// Switches what the players see: the one-inch table or the whole map
+  /// ([TvCameraMode]). `null` hides the switch (local mode).
+  final void Function(TvCameraMode mode)? onSetTvCameraMode;
+
+  /// Moves the TV's table window by `dx` × `dy` squares.
+  final void Function(int dx, int dy)? onPanTable;
+
+  /// Lays a new grid of `cols` × `rows` squares over the open picture or PDF
+  /// map (Map squares). `null` hides the button.
+  final void Function(int cols, int rows)? onSetMapGrid;
 
   /// Sends updated [SessionSettings] to the TV for the active session.
   ///
@@ -290,7 +305,10 @@ class DmCallbacks {
     required this.onClearAoe,
     required this.onToggleRuler,
     required this.onRotateRuler,
-    required this.onSetScaleFactor,
+    this.onShowCalibration,
+    this.onSetTvCameraMode,
+    this.onPanTable,
+    this.onSetMapGrid,
     required this.onUpdateSessionSettings,
     required this.onTriggerEffect,
     this.onSetCameraLink,
@@ -335,6 +353,14 @@ class DmControlPanel extends StatefulWidget {
   /// What the running layer upload is doing ("Uploading 2 of 3…").
   final String? dmOverlayUploadLabel;
 
+  /// The overview map with the players' window (Camera tab), built by the
+  /// host ([TvOverviewMap]); `null` = none (local mode).
+  final Widget? tvOverview;
+
+  /// The TV's table layout as the host's game sees it
+  /// ([VttGame.tvTableLayout]) — for the Camera tab's info line and arrows.
+  final TableLayout? Function()? tvTableLayout;
+
   /// Creates a DM control panel bound to [state] and [callbacks].
   const DmControlPanel({
     super.key,
@@ -343,6 +369,8 @@ class DmControlPanel extends StatefulWidget {
     this.dmOverlayImages,
     this.dmOverlayUploadProgress,
     this.dmOverlayUploadLabel,
+    this.tvOverview,
+    this.tvTableLayout,
   });
 
   @override
@@ -361,9 +389,6 @@ class DmControlPanel extends StatefulWidget {
 class _DmControlPanelState extends State<DmControlPanel> {
   bool _expanded = false;
   int _activeTab = 0;
-
-  /// Local preview of the scale slider while dragging (sent on release).
-  double? _scalePreview;
 
   /// Local preview of the draw width slider while dragging (sent on release).
   double? _widthPreview;
@@ -1467,16 +1492,66 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Camera Tab ──────────────────────────────────────────
 
-  /// Builds the Camera tab in two sections named after the screen they
-  /// move: **Tablet** (fit on tablet, jump to the TV's view) and **TV** (TV
-  /// follows the tablet, show my view on the TV, zoom with fit on TV,
-  /// rotation). Without a TV link (local mode) only zoom and rotation of
-  /// this screen remain.
+  /// Builds the Camera tab. Networked it starts with **Players see**: the
+  /// one-inch table or the whole map ([DmCallbacks.onSetTvCameraMode]), a
+  /// line on what the TV shows, the overview map with the players' window
+  /// ([DmControlPanel.tvOverview]; tap or drag it to move the window) and
+  /// arrows that move it by one square. Then **Tablet** (fit on tablet,
+  /// jump to the TV's view), **TV** (TV follows the tablet, show my view on
+  /// the TV — in the table view only its centre counts), free zoom and
+  /// rotation. Without a TV link (local mode) only zoom and rotation of this
+  /// screen remain.
   Widget _buildCameraTab() {
     final hasLink = cb.onSetCameraLink != null;
+    final mode = state.tvCameraMode;
+    final layout = widget.tvTableLayout?.call();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (cb.onSetTvCameraMode != null) ...[
+          const _GoldLabel('Players see'),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Expanded(
+                child: _GoldButton(
+                  icon: Icons.grid_on,
+                  label: '1-inch table',
+                  active: mode == TvCameraMode.table,
+                  onTap: () => cb.onSetTvCameraMode!(TvCameraMode.table),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _GoldButton(
+                  icon: Icons.map,
+                  label: 'Whole map',
+                  active: mode == TvCameraMode.fit,
+                  onTap: () => cb.onSetTvCameraMode!(TvCameraMode.fit),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            _tvViewLine(mode, layout),
+            style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+          ),
+          if (widget.tvOverview != null) ...[
+            const SizedBox(height: 8),
+            widget.tvOverview!,
+          ],
+          if (mode == TvCameraMode.table &&
+              layout != null &&
+              layout.pans &&
+              cb.onPanTable != null) ...[
+            const SizedBox(height: 8),
+            _buildPanPad(layout),
+          ],
+          const SizedBox(height: 12),
+          Container(height: 1, color: _kBorderGold),
+          const SizedBox(height: 10),
+        ],
         if (hasLink) ...[
           const _GoldLabel('Tablet'),
           const SizedBox(height: 4),
@@ -1524,24 +1599,33 @@ class _DmControlPanelState extends State<DmControlPanel> {
             label: 'Show my view on the TV',
             onTap: cb.onSendView ?? () {},
           ),
+          if (mode == TvCameraMode.table) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'On the 1-inch table the TV takes only the middle of your view.',
+              style: TextStyle(color: _kTextSecondary, fontSize: 12),
+            ),
+          ],
           const SizedBox(height: 10),
         ],
-        _GoldLabel(hasLink ? 'TV zoom' : 'Zoom'),
+        _GoldLabel(hasLink ? 'TV zoom (leaves the 1-inch table)' : 'Zoom'),
         const SizedBox(height: 4),
         Row(
           children: [
             Expanded(
               child: _GoldButton(icon: Icons.remove, label: '', onTap: cb.onZoomOut),
             ),
-            const SizedBox(width: 6),
-            Expanded(
-              flex: 2,
-              child: _GoldButton(
-                icon: Icons.fit_screen,
-                label: hasLink ? 'Fit on TV' : 'Fit map',
-                onTap: cb.onZoomToFit,
+            if (!hasLink) ...[
+              const SizedBox(width: 6),
+              Expanded(
+                flex: 2,
+                child: _GoldButton(
+                  icon: Icons.fit_screen,
+                  label: 'Fit map',
+                  onTap: cb.onZoomToFit,
+                ),
               ),
-            ),
+            ],
             const SizedBox(width: 6),
             Expanded(
               child: _GoldButton(icon: Icons.add, label: '', onTap: cb.onZoomIn),
@@ -1573,6 +1657,59 @@ class _DmControlPanelState extends State<DmControlPanel> {
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  /// One line on what the players see for [mode] (and the table [layout]).
+  String _tvViewLine(TvCameraMode mode, TableLayout? layout) {
+    final map = state.map;
+    final cols = map?.resolution.mapSize.dx.toInt() ?? 0;
+    final rows = map?.resolution.mapSize.dy.toInt() ?? 0;
+    switch (mode) {
+      case TvCameraMode.table:
+        if (layout == null) {
+          return 'One square = one inch; the TV holds ${state.tableCols} × ${state.tableRows} squares.';
+        }
+        if (!layout.pans) {
+          return 'The whole map ($cols × $rows squares) fits the table '
+              '(${state.tableCols} × ${state.tableRows}), centred, one inch per square.';
+        }
+        return 'The TV shows ${min(layout.winCols, cols)} × ${min(layout.winRows, rows)} '
+            'of the map\'s $cols × $rows squares. Tap or drag the box, the arrows, '
+            'or the gold grip on the map to move it.';
+      case TvCameraMode.fit:
+        return 'The whole map is on the TV — squares are not one inch. '
+            'Tap 1-inch table to play on it.';
+      case TvCameraMode.free:
+        return 'The TV is zoomed freely — squares are not one inch. '
+            'Tap 1-inch table to go back.';
+    }
+  }
+
+  /// Arrows that move the TV's table window by one square, only along the
+  /// axes where the map is bigger than the window.
+  Widget _buildPanPad(TableLayout layout) {
+    Widget arrow(IconData icon, int dx, int dy) => Expanded(
+          child: _GoldButton(
+            icon: icon,
+            label: '',
+            onTap: () => cb.onPanTable!(dx, dy),
+          ),
+        );
+    return Row(
+      children: [
+        if (layout.pansX) arrow(Icons.arrow_back, -1, 0),
+        if (layout.pansY) ...[
+          if (layout.pansX) const SizedBox(width: 6),
+          arrow(Icons.arrow_upward, 0, -1),
+          const SizedBox(width: 6),
+          arrow(Icons.arrow_downward, 0, 1),
+        ],
+        if (layout.pansX) ...[
+          const SizedBox(width: 6),
+          arrow(Icons.arrow_forward, 1, 0),
+        ],
       ],
     );
   }
@@ -1770,11 +1907,13 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Settings Tab ────────────────────────────────────────
 
-  /// Builds the Settings tab: load map, grid/walls toggles, calibrate,
-  /// scale slider (calibrated only), effects.
+  /// Builds the Settings tab: load map; **Table scale** (one inch per
+  /// square, the TV's squares, Measure the TV); **Grid** (draw battlemap's
+  /// grid — remembered per map —, Map squares for picture/PDF maps, walls);
+  /// effects.
   Widget _buildSettingsTab() {
-    final calibrated = state.calibratedBaseZoom != null;
-    final scale = _scalePreview ?? state.scaleSliderFactor;
+    final map = state.map;
+    final raster = state.rasterImageSize != null && map != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1783,13 +1922,49 @@ class _DmControlPanelState extends State<DmControlPanel> {
           label: 'Load Map',
           onTap: cb.onLoadMap,
         ),
+        const SizedBox(height: 12),
+        Container(height: 1, color: _kBorderGold),
         const SizedBox(height: 10),
+        const _GoldLabel('Table scale'),
+        const SizedBox(height: 4),
+        Text(
+          'One square = one inch on the TV. It holds ${state.tableCols} × ${state.tableRows} '
+          'squares (picture ${state.tvWidthInches.toStringAsFixed(1)} in wide), centred.',
+          style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+        ),
+        if (cb.onShowCalibration != null) ...[
+          const SizedBox(height: 6),
+          _GoldButton(
+            icon: Icons.straighten,
+            label: 'Measure the TV…',
+            onTap: () => _showCalibrationDialog(context),
+          ),
+        ],
+        const SizedBox(height: 12),
+        Container(height: 1, color: _kBorderGold),
+        const SizedBox(height: 10),
+        const _GoldLabel('Grid'),
+        const SizedBox(height: 4),
         _GoldToggle(
           icon: state.showGrid ? Icons.grid_on : Icons.grid_off,
-          label: 'Grid',
+          label: 'Draw a grid over the map',
           active: state.showGrid,
           onTap: cb.onToggleGrid,
         ),
+        const SizedBox(height: 4),
+        const Text(
+          'Off when the picture has its own grid lines — remembered for this map.',
+          style: TextStyle(color: _kTextSecondary, fontSize: 12),
+        ),
+        if (raster && cb.onSetMapGrid != null) ...[
+          const SizedBox(height: 6),
+          _GoldButton(
+            icon: Icons.grid_4x4,
+            label: 'Map squares: ${map.resolution.mapSize.dx.toInt()} × '
+                '${map.resolution.mapSize.dy.toInt()} — change',
+            onTap: () => _changeMapGrid(context),
+          ),
+        ],
         const SizedBox(height: 6),
         _GoldToggle(
           icon: Icons.line_style,
@@ -1797,37 +1972,6 @@ class _DmControlPanelState extends State<DmControlPanel> {
           active: state.showWalls,
           onTap: cb.onToggleWalls,
         ),
-        const SizedBox(height: 12),
-        Container(height: 1, color: _kBorderGold),
-        const SizedBox(height: 10),
-        const _GoldLabel('Physical scale'),
-        const SizedBox(height: 4),
-        _GoldButton(
-          icon: Icons.straighten,
-          label: calibrated
-              ? '${state.tvWidthInches!.round()}" TV — calibrated'
-              : 'Set TV size (calibrate)',
-          active: calibrated,
-          onTap: () => _showCalibrationDialog(context),
-        ),
-        const SizedBox(height: 6),
-        if (calibrated) ...[
-          _GoldLabel('Scale  ${scale.toStringAsFixed(2)}×'),
-          _goldSlider(
-            value: scale,
-            min: 0.5,
-            max: 2.0,
-            onChanged: (v) => setState(() => _scalePreview = v),
-            onChangeEnd: (v) {
-              setState(() => _scalePreview = null);
-              cb.onSetScaleFactor(v);
-            },
-          ),
-        ] else
-          const Text(
-            'Calibrate the TV size first, then fine-tune the grid scale here.',
-            style: TextStyle(color: _kTextSecondary, fontSize: 12),
-          ),
         const SizedBox(height: 12),
         Container(height: 1, color: _kBorderGold),
         const SizedBox(height: 10),
@@ -1911,131 +2055,217 @@ class _DmControlPanelState extends State<DmControlPanel> {
     );
   }
 
-  /// Shows a dialog for entering the physical TV width to calibrate
-  /// grid scale (1 grid square = 1 inch on the physical table).
-  void _showCalibrationDialog(BuildContext context) {
-    final controller = TextEditingController(
-      text: state.tvWidthInches?.toString() ?? '',
+  /// Re-grids the open picture/PDF map ([DmCallbacks.onSetMapGrid]) after
+  /// asking for the new square count ([showMapGridDialog]).
+  Future<void> _changeMapGrid(BuildContext context) async {
+    final map = state.map;
+    if (map == null) return;
+    final choice = await showMapGridDialog(
+      context,
+      title: 'Map squares',
+      imageSize: state.rasterImageSize,
+      initialCols: map.resolution.mapSize.dx.toInt(),
+      initialRows: map.resolution.mapSize.dy.toInt(),
+      askOwnGrid: false,
+      tableCols: state.tableCols,
+      tableRows: state.tableRows,
+      warning: 'The fog of this game is cleared (its squares change). '
+          'Drawings, layers and tokens stay; the map keeps the new grid.',
+      confirmLabel: 'Apply',
     );
+    if (choice == null) return;
+    cb.onSetMapGrid?.call(choice.cols, choice.rows);
+  }
+
+  /// "Measure the TV": calibrates one square = one inch.
+  ///
+  /// While open, the TV shows its calibration pattern
+  /// ([DmCallbacks.onShowCalibration]): every one-inch square of its window
+  /// and a 10-inch bar. The DM measures the bar (cm or inches) and applies —
+  /// the picture width becomes `width × measured / 10` — or types the
+  /// picture's width directly, or nudges the squares a quarter percent
+  /// bigger/smaller. Each change goes to the TV at once and the dialog stays
+  /// open, so the DM can measure again; the info line follows the TV.
+  void _showCalibrationDialog(BuildContext context) {
+    cb.onShowCalibration?.call(true);
+    final measured = TextEditingController();
+    final width = TextEditingController();
+    var metric = true;
+    String? error;
     ModalRoute<dynamic>? route;
     showDialog(
       context: context,
       builder: (ctx) {
         route ??= ModalRoute.of(ctx);
-        return AlertDialog(
-        backgroundColor: _kPanelBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: const BorderSide(color: _kBorderGold),
-        ),
-        title: const Text(
-          'Calibrate Grid',
-          style: TextStyle(color: _kTextPrimary),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Enter your TV screen width in inches\n'
-              'so grid squares match 1" miniature bases.',
-              style: TextStyle(
-                color: _kTextSecondary.withValues(alpha: 0.8),
-                fontSize: 13,
-              ),
+        return StatefulBuilder(builder: (ctx, setDialog) {
+          final bar = min(TableGrid.measuringBarInches, state.tableCols);
+          final unit = metric ? 'cm' : 'in';
+          double? read(TextEditingController c) {
+            final v = double.tryParse(c.text.trim().replaceAll(',', '.'));
+            if (v == null || v <= 0) return null;
+            return metric ? v / 2.54 : v;
+          }
+
+          void apply() {
+            final len = read(measured);
+            final w = read(width);
+            if (len != null) {
+              final ratio = len / bar;
+              if (ratio < 0.5 || ratio > 2) {
+                setDialog(() => error = 'That is far from $bar in — measure the bar again.');
+                return;
+              }
+              cb.onCalibrate(state.tvWidthInches * ratio);
+            } else if (w != null) {
+              cb.onCalibrate(w);
+            } else {
+              setDialog(() => error = 'Enter what the bar measures (or the picture width).');
+              return;
+            }
+            measured.clear();
+            width.clear();
+            setDialog(() => error = null);
+          }
+
+          return AlertDialog(
+            backgroundColor: _kPanelBg,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: _kBorderGold),
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 18,
-                color: _kTextPrimary,
-              ),
-              decoration: InputDecoration(
-                hintText: 'e.g. 43',
-                suffixText: 'inches',
-                suffixStyle: const TextStyle(color: _kTextSecondary),
-                hintStyle: TextStyle(
-                  color: _kTextSecondary.withValues(alpha: 0.4),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _kBorderGold),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: _kAccentGold),
-                ),
-              ),
-              autofocus: true,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 6,
-              children: [
-                for (final size in [32, 43, 50, 55, 65])
-                  ActionChip(
-                    label: Text('$size"'),
-                    onPressed: () => controller.text = '$size',
-                    backgroundColor: _kSurface,
-                    labelStyle:
-                        const TextStyle(color: _kTextSecondary, fontSize: 12),
-                    side: const BorderSide(color: _kBorderGold),
+            title: const Text('Measure the TV', style: TextStyle(color: _kTextPrimary)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'The TV shows its one-inch squares and a $bar-inch bar. '
+                    'Measure the bar with a ruler and type what you get.',
+                    style: TextStyle(color: _kTextSecondary.withValues(alpha: 0.9), fontSize: 13),
                   ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          if (state.calibratedBaseZoom != null)
-            TextButton(
-              onPressed: () {
-                cb.onResetCalibration();
-                Navigator.pop(ctx);
-              },
-              child: const Text(
-                'Reset',
-                style: TextStyle(color: _kTextSecondary),
+                  const SizedBox(height: 8),
+                  ListenableBuilder(
+                    listenable: state,
+                    builder: (_, _) => Text(
+                      'Now: ${state.tableCols} × ${state.tableRows} squares · picture '
+                      '${state.tvWidthInches.toStringAsFixed(2)} in '
+                      '(${(state.tvWidthInches * 2.54).toStringAsFixed(1)} cm) wide',
+                      style: const TextStyle(color: _kTextPrimary, fontSize: 13),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6,
+                    children: [
+                      for (final m in [true, false])
+                        ChoiceChip(
+                          label: Text(m ? 'cm' : 'inches'),
+                          selected: metric == m,
+                          onSelected: (_) => setDialog(() => metric = m),
+                          backgroundColor: _kSurface,
+                          selectedColor: _kSurfaceActive,
+                          labelStyle: const TextStyle(color: _kTextPrimary, fontSize: 12),
+                          side: const BorderSide(color: _kBorderGold),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  _calibrationField(measured, 'The bar measures',
+                      metric ? (bar * 2.54).toStringAsFixed(1) : '$bar', unit),
+                  const SizedBox(height: 8),
+                  _calibrationField(width, 'or: the picture is this wide',
+                      metric ? '87.6' : '34.5', unit),
+                  if (error != null) ...[
+                    const SizedBox(height: 8),
+                    Text(error!, style: const TextStyle(color: Colors.orangeAccent, fontSize: 13)),
+                  ],
+                  const SizedBox(height: 12),
+                  const _GoldLabel('Fine tune'),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _GoldButton(
+                          icon: Icons.zoom_out,
+                          label: 'Smaller',
+                          onTap: () => cb.onCalibrate(state.tvWidthInches * 1.0025),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _GoldButton(
+                          icon: Icons.zoom_in,
+                          label: 'Bigger',
+                          onTap: () => cb.onCalibrate(state.tvWidthInches / 1.0025),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: _kTextSecondary),
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              final inches = double.tryParse(controller.text.trim());
-              if (inches == null || inches <= 0) return;
-              cb.onCalibrate(inches);
-              Navigator.pop(ctx);
-            },
-            child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                color: _kAccentGold,
-                borderRadius: BorderRadius.circular(6),
+            actions: [
+              TextButton(
+                onPressed: cb.onResetCalibration,
+                child: const Text('Reset to 34 × 19', style: TextStyle(color: _kTextSecondary)),
               ),
-              child: const Text(
-                'Calibrate',
-                style: TextStyle(
-                  color: _kPanelBg,
-                  fontSize: _kText,
-                  fontWeight: FontWeight.w600,
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Done', style: TextStyle(color: _kTextSecondary)),
+              ),
+              GestureDetector(
+                onTap: apply,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: _kAccentGold,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    'Apply',
+                    style: TextStyle(
+                      color: _kPanelBg,
+                      fontSize: _kText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
-      );
+            ],
+          );
+        });
       },
-    ).whenComplete(() => _disposeAfterExit(route, [controller]));
+    ).whenComplete(() {
+      cb.onShowCalibration?.call(false);
+      _disposeAfterExit(route, [measured, width]);
+    });
+  }
+
+  /// A number field of the calibration dialog with a [unit] suffix.
+  static Widget _calibrationField(
+      TextEditingController c, String label, String hint, String unit) {
+    return TextField(
+      controller: c,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: const TextStyle(fontFamily: 'monospace', fontSize: 18, color: _kTextPrimary),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: _kTextSecondary),
+        hintText: hint,
+        suffixText: unit,
+        suffixStyle: const TextStyle(color: _kTextSecondary),
+        hintStyle: TextStyle(color: _kTextSecondary.withValues(alpha: 0.4)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: _kBorderGold),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: _kAccentGold),
+        ),
+      ),
+    );
   }
 }
 

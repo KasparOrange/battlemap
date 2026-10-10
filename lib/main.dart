@@ -43,8 +43,12 @@ class BattlemapApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: const Color(0xFF1A1A2E),
       ),
-      home: const ModeSelector(),
+      // No `home`: it asserts against onGenerateInitialRoutes in debug builds
+      // (the bench's restore launch showed a red screen). The selector comes
+      // from _initialRoutes; onGenerateRoute is the fallback Flutter needs.
       onGenerateInitialRoutes: _initialRoutes,
+      onGenerateRoute: (_) =>
+          MaterialPageRoute(builder: (_) => const ModeSelector()),
     );
   }
 

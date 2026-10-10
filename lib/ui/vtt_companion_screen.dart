@@ -20,12 +20,15 @@ import '../game/vtt_game.dart';
 import '../model/dm_overlay.dart';
 import '../model/map_library_entry.dart';
 import '../model/session.dart';
+import '../model/table_fit.dart';
 import '../network/vtt_relay_client.dart';
 import '../state/vtt_state.dart';
 import 'dev_log.dart';
 import 'dm_control_panel.dart';
 import 'library_cards.dart';
+import 'map_grid_dialog.dart';
 import 'session_settings_dialog.dart';
+import 'tv_overview_map.dart';
 import 'system_bars.dart';
 
 /// Companion Mode screen — the DM's phone-based control surface.
@@ -121,6 +124,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// Minimum interval between two `vtt.setCamera` messages while linked.
   static const Duration _cameraSendInterval = Duration(milliseconds: 80);
 
+  // Moving the TV's table window (frame grip / overview map), throttled
+  Timer? _windowSendTimer;
+  ({int col, int row})? _pendingWindow;
+
   /// The DM's full screen toggle: hide Android's system bars while the
   /// game view is up ([SystemBars]). Stored on this device.
   bool _fullscreen = true;
@@ -153,6 +160,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   void dispose() {
     _loadingTimeout?.cancel();
     _cameraSendTimer?.cancel();
+    _windowSendTimer?.cancel();
     _state.removeListener(_onStateChanged);
     _overlayImages.removeListener(_onOverlayImagesChanged);
     _relaySub?.cancel();
@@ -326,6 +334,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       if (!_cameraLinked) return;
       _queueCameraSend(snap);
     };
+    // Dragging the TV frame's grip or the overview's box moves the players'
+    // window (whole squares) — throttled while moving, final on release
+    _game.onTvWindowDrag = (col, row, {required bool done}) =>
+        _queueWindowSend(col, row, done: done);
     _relay!.onMapLoaded = (bytes) {
       DevLog.add('Companion: map received via chunks (${(bytes.length / 1024).round()} KB)');
       _loadMapBytes(bytes);
@@ -468,6 +480,30 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     });
   }
 
+  /// Sends `vtt.setTableWindow` for a moved TV frame, at most once per
+  /// [_cameraSendInterval] while moving; [done] sends the final window at
+  /// once.
+  void _queueWindowSend(int col, int row, {required bool done}) {
+    if (done) {
+      _windowSendTimer?.cancel();
+      _windowSendTimer = null;
+      _pendingWindow = null;
+      _relay?.sendSetTableWindow(col, row);
+      return;
+    }
+    if (_windowSendTimer != null) {
+      _pendingWindow = (col: col, row: row);
+      return;
+    }
+    _relay?.sendSetTableWindow(col, row);
+    _windowSendTimer = Timer(_cameraSendInterval, () {
+      _windowSendTimer = null;
+      final pending = _pendingWindow;
+      _pendingWindow = null;
+      if (pending != null) _queueWindowSend(pending.col, pending.row, done: false);
+    });
+  }
+
   /// Called when the map has been loaded (via chunks or HTTP download).
   /// Switches from library to game view if the TV is already in game mode.
   void _onMapReady() {
@@ -571,7 +607,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// `vtt.pdfUploaded` path on the TV stays for older phone builds.
   ///
   /// See also:
-  /// - [_showPdfGridDialog], which collects grid dimensions for PDF/image maps.
+  /// - [showMapGridDialog], which asks for the squares of PDF/image maps.
   /// - [TvShell._downloadAndLoadImage], the TV-side handler.
   Future<void> _pickAndUploadMap() async {
     // Use FileType.any because Safari doesn't recognize .dd2vtt/.uvtt extensions
@@ -621,18 +657,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       return;
     }
 
-    // For PDFs and images, show grid config dialog (no embedded grid metadata)
-    ({int cols, int rows})? gridConfig;
-    if (needsGridConfig) {
-      gridConfig = await _showPdfGridDialog();
-      if (gridConfig == null) return; // user cancelled
-    }
-
-    if (!_beginLoading()) return;
-
     // PDF: rasterize on the phone (roadmap #36). The TV never sees a PDF.
+    // Rendered before the grid dialog, which needs the picture's size.
     Uint8List uploadBytes = bytes;
     String uploadName = file.name;
+    Size? pictureSize;
     if (isPdf) {
       _showSnack('Rendering PDF page 1...');
       if (mounted) setState(() => _transferProgress = null);
@@ -640,15 +669,36 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       if (rendered == null) {
         DevLog.add('Companion: PDF render failed for "${file.name}"');
         _showSnack('Could not render this PDF', color: Colors.redAccent);
-        _endLoading();
         return;
       }
       uploadBytes = rendered['imageBytes'] as Uint8List;
       uploadName = '${file.name.substring(0, file.name.length - 4)}.png';
+      pictureSize = Size((rendered['width'] as num).toDouble(),
+          (rendered['height'] as num).toDouble());
       DevLog.add('Companion: PDF rendered to ${rendered['width']}x${rendered['height']} '
           'PNG (${(uploadBytes.length / 1024).round()} KB, '
           '${rendered['pageCount']} page(s), using page 1)');
+    } else if (isImage) {
+      pictureSize = await _pictureSize(bytes);
     }
+
+    // For PDFs and images: how many squares (no embedded grid metadata), and
+    // whether the picture has its own grid lines
+    MapGridChoice? gridConfig;
+    if (needsGridConfig) {
+      if (!mounted) return;
+      gridConfig = await showMapGridDialog(
+        context,
+        title: 'Map squares',
+        imageSize: pictureSize,
+        tableCols: _state.tableCols,
+        tableRows: _state.tableRows,
+        confirmLabel: 'Upload',
+      );
+      if (gridConfig == null) return; // user cancelled
+    }
+
+    if (!_beginLoading()) return;
 
     _showSnack('Uploading map...');
     DevLog.add('Companion: uploading ${isPdf ? "rasterized PDF" : isImage ? "image" : "map"} '
@@ -681,6 +731,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
               'displayName': uploadName,
               'gridCols': gridConfig!.cols,
               'gridRows': gridConfig.rows,
+              'hasGrid': gridConfig.hasOwnGrid,
             }));
           } else {
             // UVTT: send mapUploaded
@@ -814,137 +865,20 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     }
   }
 
-  /// Shows a dialog for configuring grid dimensions when uploading a PDF map.
-  ///
-  /// PDFs have no embedded grid metadata (unlike `.dd2vtt` files), so the DM
-  /// must specify how many grid columns and rows the map should have. Provides
-  /// preset buttons for common sizes (20x15, 30x20, 40x30) and text fields
-  /// for custom values.
-  ///
-  /// Returns `({int cols, int rows})` if the user confirms, or `null` if
-  /// they cancel.
-  ///
-  /// See also:
-  /// - [_pickAndUploadMap], which calls this for PDF files.
-  Future<({int cols, int rows})?> _showPdfGridDialog() async {
-    final colsController = TextEditingController(text: '20');
-    final rowsController = TextEditingController(text: '15');
+  /// Pixel size of an encoded picture, or `null` if it cannot be decoded
+  /// (the grid dialog then works without the size).
+  Future<Size?> _pictureSize(Uint8List bytes) async {
     try {
-      return await showDialog<({int cols, int rows})>(
-        context: context,
-        builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          void setPreset(int cols, int rows) {
-            setDialogState(() {
-              colsController.text = cols.toString();
-              rowsController.text = rows.toString();
-            });
-          }
-
-          return AlertDialog(
-            backgroundColor: const Color(0xFF1A1A2E),
-            title: const Text('PDF Grid Configuration'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'PDFs have no grid data. Set the number of grid squares:',
-                  style: TextStyle(color: Colors.white54, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                // Preset buttons
-                Row(
-                  children: [
-                    _gridPresetButton('20x15', () => setPreset(20, 15)),
-                    const SizedBox(width: 8),
-                    _gridPresetButton('30x20', () => setPreset(30, 20)),
-                    const SizedBox(width: 8),
-                    _gridPresetButton('40x30', () => setPreset(40, 30)),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Custom input
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: colsController,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Columns',
-                          labelStyle: TextStyle(color: Colors.white38),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white24),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.greenAccent),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Text('x', style: TextStyle(color: Colors.white38, fontSize: 16)),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextField(
-                        controller: rowsController,
-                        keyboardType: TextInputType.number,
-                        style: const TextStyle(color: Colors.white),
-                        decoration: const InputDecoration(
-                          labelText: 'Rows',
-                          labelStyle: TextStyle(color: Colors.white38),
-                          enabledBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.white24),
-                          ),
-                          focusedBorder: UnderlineInputBorder(
-                            borderSide: BorderSide(color: Colors.greenAccent),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  final cols = int.tryParse(colsController.text) ?? 20;
-                  final rows = int.tryParse(rowsController.text) ?? 15;
-                  Navigator.pop(ctx, (cols: cols.clamp(1, 200), rows: rows.clamp(1, 200)));
-                },
-                child: const Text('Upload'),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-    } finally {
-      colsController.dispose();
-      rowsController.dispose();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      final size = Size(frame.image.width.toDouble(), frame.image.height.toDouble());
+      frame.image.dispose();
+      codec.dispose();
+      return size;
+    } catch (e) {
+      DevLog.add('Companion: could not read the picture size: $e');
+      return null;
     }
-  }
-
-  /// Builds a small preset button for the grid config dialog.
-  Widget _gridPresetButton(String label, VoidCallback onTap) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.white54,
-        side: const BorderSide(color: Colors.white24),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      child: Text(label, style: const TextStyle(fontSize: 12)),
-    );
   }
 
   DmCallbacks _buildCallbacks() {
@@ -1025,7 +959,14 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         // Ruler
         onToggleRuler: c.sendToggleRuler,
         onRotateRuler: c.sendRotateRuler,
-        onSetScaleFactor: (f) => c.sendSetScaleFactor(f),
+        // Table view
+        onShowCalibration: c.sendShowCalibration,
+        onSetTvCameraMode: (mode) => c.sendSetTvCameraMode(mode.name),
+        onPanTable: c.sendPanTable,
+        onSetMapGrid: (cols, rows) {
+          c.sendSetMapGrid(cols, rows);
+          _showSnack('Map squares: $cols × $rows');
+        },
         // Session settings
         onUpdateSessionSettings: (settings) =>
             c.sendUpdateSessionSettings(settings.toJson()),
@@ -1083,11 +1024,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onRotateCW: _game.rotateCW,
       onRotateCCW: _game.rotateCCW,
       onResetRotation: _game.resetRotation,
-      onCalibrate: (inches) {
-        final screenWidth = MediaQuery.of(context).size.width;
-        _state.calibrate(inches, screenWidth);
-      },
-      onResetCalibration: _state.resetCalibration,
+      onCalibrate: _state.setTvWidthInches,
+      onResetCalibration: () =>
+          _state.setTvWidthInches(TableGrid.defaultScreenWidthInches),
       onSetFogMode: () => _state.setInteractionMode(InteractionMode.fogReveal),
       onSetDrawMode: () => _state.setInteractionMode(InteractionMode.draw),
       onSetTokenMode: () => _state.setInteractionMode(InteractionMode.token),
@@ -1125,7 +1064,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         if (_state.rulerVisible) _game.centerRulerInView();
       },
       onRotateRuler: _state.rotateRulerCW,
-      onSetScaleFactor: _state.setScaleFactor,
+      onSetMapGrid: (cols, rows) => _state.regridRaster(cols, rows),
       // Session settings
       onUpdateSessionSettings: _state.setSessionSettings,
       // Global effects
@@ -1721,6 +1660,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
             dmOverlayImages: _overlayImages,
             dmOverlayUploadProgress: _overlayUploadProgress,
             dmOverlayUploadLabel: _overlayUploadLabel,
+            tvOverview:
+                _isNetworked ? TvOverviewMap(game: _game, state: _state) : null,
+            tvTableLayout: _isNetworked ? () => _game.tvTableLayout() : null,
           ),
         ],
       ),
@@ -1788,8 +1730,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '${_state.map!.resolution.mapSize.dx.toInt()}x'
-                  '${_state.map!.resolution.mapSize.dy.toInt()} grid',
+                  _mapInfoLine(),
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 12,
@@ -1816,6 +1757,28 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
             ),
         ],
     );
+  }
+
+  /// The map chip's text: the map's squares and, networked, what the TV
+  /// does with them ("TV 1-inch table", or the window it shows of a bigger
+  /// map, or "TV whole map").
+  String _mapInfoLine() {
+    final map = _state.map!;
+    final cols = map.resolution.mapSize.dx.toInt();
+    final rows = map.resolution.mapSize.dy.toInt();
+    final squares = '$cols × $rows squares';
+    if (!_isNetworked) return squares;
+    switch (_state.tvCameraMode) {
+      case TvCameraMode.table:
+        final l = _game.tvTableLayout();
+        if (l == null || !l.pans) return '$squares · TV 1 in';
+        return '$squares · TV shows ${l.winCols < cols ? l.winCols : cols}'
+            ' × ${l.winRows < rows ? l.winRows : rows}';
+      case TvCameraMode.fit:
+        return '$squares · TV whole map';
+      case TvCameraMode.free:
+        return '$squares · TV zoomed';
+    }
   }
 
   // ─── Shared widgets ─────────────────────────────────────
