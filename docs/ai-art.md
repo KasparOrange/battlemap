@@ -295,6 +295,50 @@ eye on the TV:
 
 Winner becomes baseline v1 in this file.
 
+## Editing a published map: labels off, secrets hidden (2026-10-10)
+
+Juri's first real request: a photographed page of a printed dungeon (room keys B13–B26) as
+two pictures — the map for the players with every label, arrow, **S** (secret door) and **T**
+(trap) mark removed and the rooms behind secret doors hidden as solid rock, and a transparent
+overlay holding everything removed (a DM layer for the companion). Result on the horizon board
+`battlemap-mapgen` (zone "Juri's dungeon"); images and the one-off scripts in
+`tools/mapgen/out/juri-dungeon/` (gitignored, Mac only). 11 images at 2K, ~$0.55.
+
+Prompts: `tools/mapgen/prompts/edit-remove-labels.txt`, `edit-fill-rock.txt`,
+`edit-remove-leftovers.txt` (generic; name the map's own marks if they differ). The regions
+(label circles, marks, secret rooms) were measured by hand on zoomed crops.
+
+What we learned about editing with Nano Banana 2.1:
+
+- **Edits keep geometry to the pixel.** Padded to the requested aspect ourselves (1:1, edge
+  pixels repeated) and scaled back, the output lined up with the photo within 0.02 px (OpenCV
+  ECC homography). So pixels can be taken from an edit and put back into the original.
+- **Never take the whole edit.** The label pass removed every label on the first try — and in
+  one of two draws also dropped three doors elsewhere. Final = the original photo with the edit
+  pasted in only where a change was asked for (feathered 5–7 px).
+- **Match each patch's colour.** The edit's floor came back slightly lighter; pasted as is,
+  every removed label left a faint pale disc. Shift each patch by the mean colour difference on
+  a thin ring around it.
+- **"Turn this room into rock" fails while the room is visible.** With the room in the picture
+  (also with a red-tinted copy as a second image marking it), the model keeps the walls and
+  fills them with boulders — still obviously a room. **Blank the area in flat magenta and ask
+  to fill the hole**: then it paints rock.
+- **Name the texture scale.** The first hole fills used stones twice the neighbours' size — a
+  visible rectangle. "the same small stones, about a quarter of a grid square, never bigger" →
+  one of four draws was indistinguishable. Draw 3–4 and pick by eye; each is 5 cents.
+- **One job per call.** The hole-fill call ignored the label instructions in the same prompt
+  (S marks stayed). Take each region from the call that did it best; a last call on the
+  composite cleans leftovers; a fragment of a few pixels is quicker with an OpenCV inpaint.
+- **"Darkness around the dungeon" = the surrounding rock**, not black: a black patch would
+  stand out on grey rock.
+- **The overlay is the original's pixels.** Alpha = where original and clean map differ inside
+  the label regions (threshold, close, fill holes so the white discs come out solid, drop specks
+  under 60 px); hidden rooms = their whole rectangle. Map + overlay gives back the photo
+  exactly, so the overlay splits into layers (labels, secret rooms) for free.
+
+If this becomes routine: a `mapgen.py edit` command (pad → label pass → magenta hole pass →
+composite → overlay), with the regions marked on the phone instead of measured by hand.
+
 ## UX later (companion)
 
 Describe a map in words → layout spec → editable on the phone grid → "paint" → 1K drafts to

@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 18:08 - fb99b910 - Juri's dungeon: labels off, secret rooms hidden
+- Konrad: do Juri's Telegram request with Nano Banana → his photographed dungeon page as a clean map (labels, arrows, S/T marks gone, four secret rooms turned to rock) + a transparent overlay of everything removed; on the board `battlemap-mapgen` side by side and stacked
+	- learnings → `ai-art.md` "Editing a published map": edits keep geometry to the pixel, paste patches into the original with colour matching, blank a room in magenta before asking for rock, name the stone size, one job per call
+	- prompts kept as `tools/mapgen/prompts/edit-*.txt`; 11 images at 2K, ~$0.55
+	- horizon image nodes paint an opaque frame → the stacked view is a merged picture (`board.py`)
+
 ### 26-10-10 - battlemap docs sweep (bench + Android companion)
 - end-of-session sweep: companion = Android APK (web build = fallback) in `CLAUDE.md`, `README.md`, `architecture.md` diagram, `packages.md`; README gained "Android bench and bench robot"; `CLAUDE.md` tracker row 41; `setup.md` local-bench venv path + relay takeover caveat; `test-session.md` big-map result + tabletop note; `action.md` state/deploy lines (59/59, deploy deferred by Konrad)
 

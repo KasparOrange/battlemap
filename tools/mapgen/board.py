@@ -278,6 +278,41 @@ def zone_of(zid, title, summary, color, x, y, items, cols):
     return z
 
 
+JURI = OUT / "juri-dungeon"
+
+
+def juri_zone(x, y):
+    """Juri's printed dungeon page with the labels taken off: map and overlay side by side, then stacked."""
+    z = add("juri", "zone", x, y, 100, 100, {"title": "JURI'S DUNGEON · LABELS OFF · 2K", "color": AMBER, "titleSize": 64})
+    summary = ("Juri's photo of a printed dungeon page (rooms B13–B26). Nano Banana 2.1 removed the room "
+               "numbers, captions, arrows, **S** (secret door) and **T** (trap) marks, and turned the four rooms "
+               "behind secret doors into plain rock. The second image holds everything removed on a transparent "
+               "background: a DM layer to lay over the map on demand.\n\n"
+               "**Recipe:** blank the secret rooms in magenta before the call (asked to turn a room into rock, the "
+               "model keeps its walls); paste only the edited spots into the original photo, so the overlay lines "
+               "up to the pixel. 11 images at 2K, ~55 cents. Files: `tools/mapgen/out/juri-dungeon/`.")
+    sh = md_h(summary, TEXT_W * 2)
+    add("juri_sum", "markdown", PAD, 150, TEXT_W * 2, sh, {"md": summary, "scale": 1.4}, "juri")
+    msrc, mw, mh = media(JURI / "dungeon-map.png", "juri-map.jpg")
+    osrc, _, _ = media(JURI / "dungeon-overlay.png", "juri-overlay.png")
+    w = 960
+    h = round(w * mh / mw)
+    y0 = 150 + sh * 1.4 + 48
+    for i, (iid, src, label) in enumerate([("map", msrc, "Map for the players"),
+                                           ("overlay", osrc, "Overlay: everything removed")]):
+        ix = PAD + i * (w + 96)
+        add(f"juri_{iid}_t", "markdown", ix, y0, w, 48, {"md": f"**{label}**", "scale": 1.4}, "juri")
+        add(f"juri_{iid}", "image", ix, y0 + 80, w, h, {"src": src, "label": label}, "juri")
+    y1 = y0 + 80 + h + 96
+    add("juri_stack_t", "markdown", PAD, y1, w, 48, {"md": "**Overlaid: map + overlay**", "scale": 1.4}, "juri")
+    # horizon's image node paints an opaque frame, so two stacked images hide each other: merge them here
+    ssrc, _, _ = media(JURI / "dungeon-stacked.png", "juri-stacked.jpg")
+    add("juri_stack", "image", PAD, y1 + 80, w, h, {"src": ssrc, "label": "Map with the overlay laid on top"}, "juri")
+    z["w"] = PAD + 2 * w + 96 + PAD
+    z["h"] = y1 + 80 + h + PAD
+    return z
+
+
 def main():
     (BOARD / "media").mkdir(parents=True, exist_ok=True)
 
@@ -329,11 +364,13 @@ def main():
             "and battlemap draws a top-down door that swings open on the phone's tap. Shown here "
             "with the doors drawn on the way the TV draws them.",
             GREEN, rx2, 0, [p for p in PLATES if p["zone"] == "run2"], 2)
-    zone_of("run3", "RUN 3 · RUINS IN THE LAYOUT · 1K",
+    r3 = zone_of("run3", "RUN 3 · RUINS IN THE LAYOUT · 1K",
             "The courtyard is marked \"ruined\": true in the layout; the text has no ruin words and the "
             "prompt says every wall stays whole. Run 1 broke the courtyard walls in both draws; now "
             "all three keep them. One draw invented an exit instead.",
             GREEN, rx2, r2["h"] + 352, [p for p in PLATES if p["zone"] == "run3"], 2)
+
+    juri_zone(rx2 + max(r2["w"], r3["w"]) + 352, 0)
 
     nz = add("next", "zone", 0, left_h + 352, 100, 100, {"title": "NEXT IMAGES", "color": BLUE, "titleSize": 64})
     add("next_sum", "markdown", PAD, 150, CARD_W * 2 + 32, 130,
