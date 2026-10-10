@@ -240,4 +240,42 @@ void main() {
       expect(state.regridRaster(0, 10), isFalse);
     });
   });
+
+  group('calibration pivot', () {
+    // Konrad's TV: 960 × 540 logical px, 34.5 in wide.
+    final g = TableGrid.of(const Size(960, 540), 34.5)!;
+
+    test('corners sit inset from the screen edges, the centre in the middle', () {
+      final i = g.pivotInset;
+      expect(i, closeTo(43.2, 1e-9));
+      expect(g.pivotPoint(CalibrationPivot.bottomLeft), Offset(i, 540 - i));
+      expect(g.pivotPoint(CalibrationPivot.topRight), Offset(960 - i, i));
+      expect(g.pivotPoint(CalibrationPivot.center), const Offset(480, 270));
+    });
+
+    test('the pivot does not move when the calibration changes', () {
+      final wider = TableGrid.of(const Size(960, 540), 36)!;
+      for (final p in CalibrationPivot.values) {
+        expect(wider.pivotPoint(p), g.pivotPoint(p));
+      }
+    });
+
+    test('the bar runs into the screen and is 10 in where there is room', () {
+      expect(TableGrid.barRunsRight(CalibrationPivot.bottomLeft), isTrue);
+      expect(TableGrid.barRunsRight(CalibrationPivot.topRight), isFalse);
+      expect(TableGrid.barRunsRight(CalibrationPivot.center), isTrue);
+      for (final p in CalibrationPivot.values) {
+        expect(g.barInchesFrom(p), 10);
+      }
+      // A 15 in wide picture: 7 in from the centre, 10 from a corner.
+      expect(TableGrid.barInches(15, 15 * 9 / 16, CalibrationPivot.center), 7);
+      expect(TableGrid.barInches(15, 15 * 9 / 16, CalibrationPivot.bottomLeft), 10);
+    });
+
+    test('names parse, unknown ones give bottom left', () {
+      expect(CalibrationPivot.fromName('topLeft'), CalibrationPivot.topLeft);
+      expect(CalibrationPivot.fromName(null), CalibrationPivot.bottomLeft);
+      expect(CalibrationPivot.fromName('x'), CalibrationPivot.bottomLeft);
+    });
+  });
 }

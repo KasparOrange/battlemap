@@ -17,9 +17,11 @@ import '../../model/table_fit.dart';
 ///   gap split evenly — never a cut square at the screen's edge.
 /// - **Calibration pattern** ([calibrating] true, `vtt.showCalibration`):
 ///   every one-inch square of the window, the window's outline, and a
-///   10-inch measuring bar with inch ticks in the middle. The DM measures
-///   the bar with a ruler and types the length into the tablet, which
-///   corrects [VttState.tvWidthInches].
+///   10-inch measuring bar with inch ticks starting at the [pivot] — a
+///   screen corner or the centre, marked "0", that stays put while the
+///   calibration changes, so the ruler can lie there and only the bar's far
+///   end moves. The DM measures the bar and types the length into the
+///   tablet, which corrects [VttState.tvWidthInches].
 ///
 /// See also:
 /// - [TableGrid], the arithmetic behind the window.
@@ -34,6 +36,9 @@ class TableFrameComponent extends Component {
   /// Whether the calibration pattern is shown.
   final bool Function() calibrating;
 
+  /// Where the measuring bar starts ([CalibrationPivot]).
+  final CalibrationPivot Function() pivot;
+
   /// Colour of the mask (the game's background).
   final Color background;
 
@@ -42,8 +47,11 @@ class TableFrameComponent extends Component {
     required this.grid,
     required this.masked,
     required this.calibrating,
+    this.pivot = _defaultPivot,
     this.background = const Color(0xFF111111),
   }) : super(priority: 100);
+
+  static CalibrationPivot _defaultPivot() => CalibrationPivot.bottomLeft;
 
   @override
   void render(Canvas canvas) {
@@ -92,45 +100,65 @@ class TableFrameComponent extends Component {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 3);
 
-    // Measuring bar on square boundaries, centred
-    final bar = min(TableGrid.measuringBarInches, g.cols);
-    final startCol = ((g.cols - bar) / 2).floor();
-    final midRow = (g.rows / 2).floor();
-    final x0 = window.left + startCol * ppi;
-    final x1 = x0 + bar * ppi;
-    final y = window.top + midRow * ppi;
+    // Measuring bar from the pivot: its zero is fixed on the screen, so a
+    // ruler laid there stays right while the calibration changes.
+    final pv = pivot();
+    final origin = g.pivotPoint(pv);
+    final bar = g.barInchesFrom(pv);
+    final dir = TableGrid.barRunsRight(pv) ? 1.0 : -1.0;
+    final up = pv.isTop ? -1.0 : 1.0; // ticks point away from the near edge
+    final y = origin.dy;
+    final x0 = origin.dx;
+    final x1 = x0 + dir * bar * ppi;
     final barPaint = Paint()..color = const Color(0xFFFFFFFF);
-    canvas.drawRect(Rect.fromLTRB(x0, y - 4, x1, y + 4), barPaint);
+    canvas.drawRect(Rect.fromLTRB(min(x0, x1), y - 4, max(x0, x1), y + 4), barPaint);
     for (int i = 0; i <= bar; i++) {
-      final x = x0 + i * ppi;
+      final x = x0 + dir * i * ppi;
       final h = i == 0 || i == bar ? 0.9 * ppi : (i % 5 == 0 ? 0.6 * ppi : 0.35 * ppi);
-      canvas.drawRect(Rect.fromLTWH(x - 1.5, y - h, 3, h), barPaint);
+      canvas.drawRect(Rect.fromLTRB(x - 1.5, y - up * h, x + 1.5, y), barPaint);
       if (i % 5 == 0) {
-        _text(canvas, '$i', Offset(x, y + 10), 0.32 * ppi, center: true);
+        // Numbers on the near-edge side of the bar, the ticks on the other.
+        _text(canvas, '$i', Offset(x, up > 0 ? y + 10 : y - 10), 0.32 * ppi,
+            center: true, above: up < 0);
       }
     }
+    // The pivot: a gold ring + cross on the zero, "0" next to it.
+    final gold = Paint()
+      ..color = const Color(0xFFD4A76A)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+    canvas.drawCircle(origin, 0.3 * ppi, gold);
+    canvas.drawLine(origin - Offset(0, 0.5 * ppi), origin + Offset(0, 0.5 * ppi), gold);
+
+    // Caption on the far side of the ticks (above a bottom pivot's bar).
+    final captionY = up > 0 ? y - 0.9 * ppi - 14 : y + 0.9 * ppi + 14;
     _text(
       canvas,
-      'Measure this bar: it should be exactly $bar in '
+      'Ruler\'s zero on the gold ring — it stays put. The bar should be exactly $bar in '
       '(${(bar * 2.54).toStringAsFixed(1)} cm). Type what you measure into the tablet.',
-      Offset(window.center.dx, y + 0.7 * ppi + 0.32 * ppi + 14),
-      0.36 * ppi,
+      Offset((x0 + x1) / 2, captionY),
+      0.32 * ppi,
       center: true,
-      maxWidth: window.width - ppi,
+      maxWidth: max(bar * ppi, 6 * ppi),
+      above: up > 0,
     );
     _text(
       canvas,
       '${g.cols} × ${g.rows} squares of 1 inch · picture '
       '${g.screenWidthInches.toStringAsFixed(2)} × ${g.screenHeightInches.toStringAsFixed(2)} in',
-      Offset(window.center.dx, window.top + 0.6 * ppi),
+      // At the top — or the bottom when the bar runs along the top.
+      pv.isTop
+          ? Offset(window.center.dx, window.bottom - 0.6 * ppi)
+          : Offset(window.center.dx, window.top + 0.6 * ppi),
       0.4 * ppi,
       center: true,
       maxWidth: window.width - ppi,
+      above: pv.isTop,
     );
   }
 
   static void _text(Canvas canvas, String s, Offset at, double size,
-      {bool center = false, double maxWidth = 2000}) {
+      {bool center = false, double maxWidth = 2000, bool above = false}) {
     final tp = TextPainter(
       text: TextSpan(
         text: s,
@@ -144,7 +172,9 @@ class TableFrameComponent extends Component {
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: maxWidth);
-    final topLeft = center ? at - Offset(tp.width / 2, 0) : at;
+    // [above]: [at] is the text's bottom edge instead of its top.
+    final topLeft = (center ? at - Offset(tp.width / 2, 0) : at) -
+        Offset(0, above ? tp.height : 0);
     // A dark plate so the caption never sits on a bright grid line
     final pad = tp.height * 0.25;
     canvas.drawRRect(

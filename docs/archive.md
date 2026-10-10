@@ -6,6 +6,14 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:50 - 230ef3ba - Measure the TV: a fixed pivot for the ruler
+- Konrad: we couldn't tell which point stays put when the scale changes, so we couldn't lay the ruler there — assume a sensible pivot, and let us pick a corner or the centre
+	- before: the 10-inch bar sat centred on the window's square boundaries — every calibration change (and every change of the square count) slid its zero, the ruler had to be moved each time
+	- now the bar starts at a pivot fixed in screen pixels (`CalibrationPivot`, `TableGrid.pivotPoint`): a corner inset 8 % of the screen's height, or the centre; marked with a gold ring, numbers on the near-edge side, the caption on the far side; the title moves to the bottom when the bar runs along the top
+	- default bottom left: nearest the DM when the picture reads upright for them, and the bezel gives the ruler an edge; the dialog's small TV picture has five spots (corners + centre), a tap moves the TV's bar at once; the choice is kept while the app runs
+	- `vtt.showCalibration` carries `pivot` (missing = bottom left, older companions work); the bar's length is a pure function of the width (`TableGrid.barInches`) so the tablet divides by the same length the TV draws
+	- 596 tests green (pivot geometry, fixed under a changed calibration, picker sends the pivot); the pattern checked as rendered pictures for three pivots; not in a build yet
+
 ### 26-10-10 21:40 - 67d95074 - Template disc on box + tablet (1.1.17+27)
 - Konrad: deploy now → version 1.1.17+27, `deploy.sh` from a clean worktree of 93bda8a: TV back in its game after 15 s, tablet companion relaunched, web on the VPS
 

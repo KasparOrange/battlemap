@@ -176,6 +176,11 @@ class VttState extends ChangeNotifier {
   /// scale dialog is open; not saved.
   bool showCalibration = false;
 
+  /// Where the calibration pattern's measuring bar starts — the point the
+  /// ruler's zero goes on, fixed while the calibration changes. Chosen in
+  /// the Measure the TV dialog; not saved.
+  CalibrationPivot calibrationPivot = CalibrationPivot.bottomLeft;
+
   // --- Brush reveal ---
 
   /// Fog brush radius in grid cells.
@@ -1146,10 +1151,13 @@ class VttState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Shows or hides the TV's calibration pattern ([showCalibration]).
-  void setShowCalibration(bool on) {
-    if (showCalibration == on) return;
+  /// Shows or hides the TV's calibration pattern ([showCalibration]), its
+  /// bar starting at [pivot] (unchanged when `null`).
+  void setShowCalibration(bool on, {CalibrationPivot? pivot}) {
+    final p = pivot ?? calibrationPivot;
+    if (showCalibration == on && calibrationPivot == p) return;
     showCalibration = on;
+    calibrationPivot = p;
     notifyListeners();
   }
 
@@ -1756,6 +1764,7 @@ class VttState extends ChangeNotifier {
         'tableCols': tableCols,
         'tableRows': tableRows,
         'showCalibration': showCalibration,
+        'calibrationPivot': calibrationPivot.name,
         'interactionMode': interactionMode.name,
         'tokens': tokens.map((t) => t.toJson()).toList(),
         'strokes': strokes.map((s) => s.toJson()).toList(),
@@ -1816,6 +1825,7 @@ class VttState extends ChangeNotifier {
     tableCols = (json['tableCols'] as num?)?.toInt() ?? 34;
     tableRows = (json['tableRows'] as num?)?.toInt() ?? 19;
     showCalibration = json['showCalibration'] as bool? ?? false;
+    calibrationPivot = CalibrationPivot.fromName(json['calibrationPivot'] as String?);
 
     // New fields — backwards compatible with old state messages
     final modeName = json['interactionMode'] as String? ?? 'fogReveal';

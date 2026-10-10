@@ -214,7 +214,12 @@ cut square at the screen's edge.
   (`VttState.tvWidthInches`, Hive box `tvSettings` on the TV, `TvCalibrationStore`). Default
   34.5 in = 34 × 19 squares with about ¼ in to spare per side. Companion ▸ Settings ▸ Table scale
   ▸ "Measure the TV…": the TV shows its one-inch squares and a 10-inch bar
-  (`TableFrameComponent`, `vtt.showCalibration`); the DM types what the bar measures (cm or in),
+  (`TableFrameComponent`, `vtt.showCalibration`). The bar starts at a **pivot** — a screen
+  corner (inset 8 % of the screen's height, ~1½ in) or the centre, picked on a small TV picture in
+  the dialog, bottom left by default (`CalibrationPivot`, `TableGrid.pivotPoint`): it is fixed in
+  screen pixels, so the ruler's zero stays on the gold ring while the calibration changes and only
+  the far end moves (before, the bar sat centred on square boundaries and slid with every change).
+  The DM types what the bar measures (cm or in),
   or sets the picture width with a stepper (±1 / 2 / 5 / 10 mm or ±0.05–0.5 in, tap the number
   for a numpad); each change applies at once (`vtt.calibrate`). This is the **TV's** scale (an
   inch on this screen), set once per TV; how many squares a map has is the **map's** scale (upload

@@ -224,6 +224,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
         masked: () =>
             state.map != null && state.tvCameraMode == TvCameraMode.table,
         calibrating: () => state.showCalibration,
+        pivot: () => state.calibrationPivot,
         background: backgroundColor(),
       );
       camera.viewport.add(_tableFrame!);

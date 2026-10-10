@@ -31,6 +31,45 @@ enum TvCameraMode {
       );
 }
 
+/// Where the TV's measuring bar starts — the point the ruler's zero goes on.
+///
+/// The pivot is fixed in screen pixels (a screen corner, inset by
+/// [TableGrid.pivotInset], or the screen's centre), so it **stays put while
+/// the calibration changes**: the DM leaves the ruler lying there and only
+/// watches the bar's far end move. Sent with `vtt.showCalibration`
+/// (`pivot`), not saved on the TV.
+///
+/// See also:
+/// - [TableGrid.pivotPoint] and [TableGrid.barRunsRight] for the geometry.
+enum CalibrationPivot {
+  /// Bottom-left corner — the default: the edge nearest the DM when the
+  /// picture reads upright for them, and the TV's bezel gives the ruler
+  /// something straight to rest against.
+  bottomLeft,
+
+  /// Bottom-right corner.
+  bottomRight,
+
+  /// Top-left corner.
+  topLeft,
+
+  /// Top-right corner.
+  topRight,
+
+  /// The screen's centre (reachable from every side of the table).
+  center;
+
+  /// Parses a pivot name; unknown or `null` names give [bottomLeft].
+  static CalibrationPivot fromName(String? name) => CalibrationPivot.values.firstWhere(
+        (p) => p.name == name,
+        orElse: () => CalibrationPivot.bottomLeft,
+      );
+
+  /// Whether the pivot is on the screen's top edge (the bar's ticks and
+  /// caption then go below it).
+  bool get isTop => this == topLeft || this == topRight;
+}
+
 /// The table: how many whole one-inch squares the TV screen holds and where
 /// they sit.
 ///
@@ -101,6 +140,45 @@ class TableGrid {
     final h = rows * pxPerInch;
     return Rect.fromLTWH(
         (screen.width - w) / 2, (screen.height - h) / 2, w, h);
+  }
+
+  /// Distance of a corner [CalibrationPivot] from both screen edges, in
+  /// logical px: 8 % of the screen's shorter side (~1½ in on Konrad's TV),
+  /// clear of the bezel and inside the window of squares.
+  double get pivotInset => 0.08 * screen.shortestSide;
+
+  /// Where the measuring bar's zero sits for [pivot], in logical px — the
+  /// same point whatever the calibration (it depends on [screen] only).
+  Offset pivotPoint(CalibrationPivot pivot) {
+    final i = pivotInset;
+    return switch (pivot) {
+      CalibrationPivot.bottomLeft => Offset(i, screen.height - i),
+      CalibrationPivot.bottomRight => Offset(screen.width - i, screen.height - i),
+      CalibrationPivot.topLeft => Offset(i, i),
+      CalibrationPivot.topRight => Offset(screen.width - i, i),
+      CalibrationPivot.center => screen.center(Offset.zero),
+    };
+  }
+
+  /// Whether the bar runs from [pivot] to the right (left corners and the
+  /// centre) rather than to the left (right corners).
+  static bool barRunsRight(CalibrationPivot pivot) =>
+      pivot != CalibrationPivot.bottomRight && pivot != CalibrationPivot.topRight;
+
+  /// The measuring bar's length in whole inches from [pivot] on this
+  /// screen ([barInches]).
+  int barInchesFrom(CalibrationPivot pivot) =>
+      barInches(screenWidthInches, screenHeightInches, pivot);
+
+  /// The measuring bar's length in whole inches from [pivot] on a picture
+  /// of [widthInches] × [heightInches]: up to [measuringBarInches], shorter
+  /// when there is less room that way (a centre pivot on a screen under
+  /// ~20 in). Pure, so the tablet — which knows the width but not the
+  /// TV's pixels — computes the same bar (16:9 assumed for the height).
+  static int barInches(double widthInches, double heightInches, CalibrationPivot pivot) {
+    final inset = 0.08 * min(widthInches, heightInches);
+    final room = pivot == CalibrationPivot.center ? widthInches / 2 : widthInches - inset;
+    return max(1, min(measuringBarInches, (room - 0.1).floor()));
   }
 
   /// Leftover on the left and on the right edge, in inches (each side).

@@ -265,7 +265,7 @@ to its own view, it draws it as a dashed frame (see `camera.vw`/`vh` below).
 {"type": "vtt.panTable", "dx": 1, "dy": 0}            // move the window by whole squares
 {"type": "vtt.calibrate", "tvWidthInches": 34.5}      // the TV's picture is this wide → stored on the TV, every game
 {"type": "vtt.resetCalibration"}                      // back to 34.5 in = 34 × 19 squares
-{"type": "vtt.showCalibration", "on": true}           // the TV's one-inch squares + 10-inch measuring bar
+{"type": "vtt.showCalibration", "on": true, "pivot": "bottomLeft"}  // the TV's one-inch squares + 10-inch measuring bar from the pivot (bottomLeft | bottomRight | topLeft | topRight | center; missing = bottomLeft) — the ruler's zero, fixed on the screen
 {"type": "vtt.setMapGrid", "cols": 50, "rows": 50, "grid": {…}}  // re-grid the open picture/PDF map; optional grid = RasterGrid (upload above); same counts keep the fog
 ```
 
@@ -340,6 +340,7 @@ sent every 50ms when state changes:
   "tableCol": 13, "tableRow": null,     // window's first square; null = centred (map fits that axis)
   "tableCols": 34, "tableRows": 19,     // whole one-inch squares on the TV screen
   "showCalibration": false,
+  "calibrationPivot": "bottomLeft",     // where the measuring bar starts (see vtt.showCalibration)
   "dmOverlays": [{"id": "...", "name": "...", "url": "...", "visible": true, "opacity": 0.6}],   // since 1.1.6 — see "DM layers"
   "dmOverlaysRev": 1760112000000,
   "templateDisc": {"visible": false, "x": 0.0, "y": 0.0, "rotation": 0.0, ...}   // since 2026-10-10 — see vtt.setTemplateDisc

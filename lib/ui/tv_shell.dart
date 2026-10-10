@@ -1699,7 +1699,8 @@ class _TvShellState extends State<TvShell> {
           _state.setTvWidthInches(TableGrid.defaultScreenWidthInches);
           TvCalibrationStore.saveWidthInches(null);
         case 'vtt.showCalibration':
-          _state.setShowCalibration(msg['on'] as bool? ?? false);
+          _state.setShowCalibration(msg['on'] as bool? ?? false,
+              pivot: CalibrationPivot.fromName(msg['pivot'] as String?));
         case 'vtt.setTvCameraMode':
           switch (TvCameraMode.fromName(msg['mode'] as String?)) {
             case TvCameraMode.table:

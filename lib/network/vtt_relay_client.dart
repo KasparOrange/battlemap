@@ -10,6 +10,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import 'relay_config.dart';
 import 'remote_log_stub.dart' if (dart.library.io) 'remote_log.dart';
 import '../model/raster_grid.dart';
+import '../model/table_fit.dart';
 
 /// Connection lifecycle states for the [VttRelayClient].
 ///
@@ -893,9 +894,11 @@ class VttRelayClient {
   void sendResetCalibration() => _send({'type': 'vtt.resetCalibration'});
 
   /// Shows ([on]) or hides the TV's calibration pattern: every one-inch
-  /// square of the table window and a 10-inch measuring bar.
-  void sendShowCalibration(bool on) =>
-      _send({'type': 'vtt.showCalibration', 'on': on});
+  /// square of the table window and a 10-inch measuring bar starting at
+  /// [pivot] (a screen corner or the centre, where the ruler's zero goes).
+  void sendShowCalibration(bool on,
+          [CalibrationPivot pivot = CalibrationPivot.bottomLeft]) =>
+      _send({'type': 'vtt.showCalibration', 'on': on, 'pivot': pivot.name});
 
   /// Switches how the TV frames the map: [mode] is a [TvCameraMode] name —
   /// `table` (one inch per square), `fit` (whole map) or `free`.

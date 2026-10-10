@@ -248,8 +248,9 @@ class DmCallbacks {
   // ── Table view (networked mode only) ──────────────────────────────
 
   /// Shows (`true`) or hides the TV's calibration pattern — on while the
-  /// Measure the TV dialog is open. `null` hides that dialog (local mode).
-  final void Function(bool on)? onShowCalibration;
+  /// Measure the TV dialog is open, its measuring bar starting at the
+  /// chosen [CalibrationPivot]. `null` hides that dialog (local mode).
+  final void Function(bool on, CalibrationPivot pivot)? onShowCalibration;
 
   /// Switches what the players see: the one-inch table or the whole map
   /// ([TvCameraMode]). `null` hides the switch (local mode).
@@ -476,6 +477,10 @@ class DmControlPanel extends StatefulWidget {
 
 class _DmControlPanelState extends State<DmControlPanel> {
   bool _expanded = false;
+
+  /// Where the TV's measuring bar starts (Measure the TV); kept while the
+  /// app runs so the ruler can stay where it was last time.
+  static CalibrationPivot _pivot = CalibrationPivot.bottomLeft;
 
   /// ID of the active tab. Being on a tab IS its mode ([_modeFor]): the
   /// Draw tab draws, the Tokens tab places and moves tokens; tabs without
@@ -2542,11 +2547,16 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// dialog stays open, so the DM can measure again; the stepper follows
   /// the TV.
   ///
+  /// The bar starts at a **pivot** the DM picks on a small TV picture (a
+  /// corner — bottom left by default — or the centre, [CalibrationPivot]):
+  /// a point fixed on the screen, so the ruler lies there once and only the
+  /// bar's far end moves while the DM adjusts.
+  ///
   /// This is the TV's own scale (one inch per square on this screen), set
   /// once per TV; how many squares a map has is the map's scale
   /// ([showMapGridDialog], [showGridEditor]).
   void _showCalibrationDialog(BuildContext context) {
-    cb.onShowCalibration?.call(true);
+    cb.onShowCalibration?.call(true, _pivot);
     final measured = TextEditingController();
     var metric = true;
     String? error;
@@ -2556,7 +2566,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
       builder: (ctx) {
         route ??= ModalRoute.of(ctx);
         return StatefulBuilder(builder: (ctx, setDialog) {
-          final bar = min(TableGrid.measuringBarInches, state.tableCols);
+          final bar = TableGrid.barInches(
+              state.tvWidthInches, state.tvWidthInches * 9 / 16, _pivot);
           final unit = metric ? 'cm' : 'in';
           double? read(TextEditingController c) {
             final v = double.tryParse(c.text.trim().replaceAll(',', '.'));
@@ -2601,6 +2612,22 @@ class _DmControlPanelState extends State<DmControlPanel> {
                       '$bar-inch bar. Measure the bar with a ruler and type what you get. '
                       'Each map\'s own scale is set with the map (Map squares).',
                       style: TextStyle(color: _kTextSecondary.withValues(alpha: 0.9), fontSize: 13),
+                    ),
+                    const SizedBox(height: 10),
+                    const _GoldLabel('Ruler\'s zero on the TV'),
+                    const SizedBox(height: 4),
+                    _PivotPicker(
+                      pivot: _pivot,
+                      onChanged: (p) {
+                        setDialog(() => _pivot = p);
+                        cb.onShowCalibration?.call(true, p);
+                      },
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'The bar starts at the gold ring there. That point never moves while '
+                      'you adjust — lay the ruler\'s zero on it once, then watch the far end.',
+                      style: TextStyle(color: _kTextSecondary.withValues(alpha: 0.9), fontSize: 12),
                     ),
                     const SizedBox(height: 8),
                     ListenableBuilder(
@@ -2693,7 +2720,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
         });
       },
     ).whenComplete(() {
-      cb.onShowCalibration?.call(false);
+      cb.onShowCalibration?.call(false, _pivot);
       _disposeAfterExit(route, [measured]);
     });
   }
@@ -3209,6 +3236,69 @@ class _HpButton extends StatelessWidget {
           border: Border.all(color: _kBorderGold),
         ),
         child: Icon(icon, color: _kAccentGoldDim, size: _kIcon),
+      ),
+    );
+  }
+}
+
+/// A small picture of the TV with five spots — the corners and the centre —
+/// to choose where the measuring bar starts ([CalibrationPivot]). Each spot
+/// is a focusable button with a tooltip.
+class _PivotPicker extends StatelessWidget {
+  final CalibrationPivot pivot;
+  final ValueChanged<CalibrationPivot> onChanged;
+
+  const _PivotPicker({required this.pivot, required this.onChanged});
+
+  static const _spots = {
+    CalibrationPivot.topLeft: (Alignment.topLeft, 'Top left'),
+    CalibrationPivot.topRight: (Alignment.topRight, 'Top right'),
+    CalibrationPivot.center: (Alignment.center, 'Centre'),
+    CalibrationPivot.bottomLeft: (Alignment.bottomLeft, 'Bottom left'),
+    CalibrationPivot.bottomRight: (Alignment.bottomRight, 'Bottom right'),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 208,
+        height: 117,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: _kBorderGold, width: 2),
+        ),
+        child: Stack(children: [
+          for (final e in _spots.entries)
+            Align(
+              alignment: e.value.$1,
+              child: Tooltip(
+                message: 'Ruler\'s zero: ${e.value.$2.toLowerCase()}',
+                child: InkResponse(
+                  key: ValueKey('pivot-${e.key.name}'),
+                  radius: 24,
+                  onTap: () => onChanged(e.key),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: Center(
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: e.key == pivot ? _kAccentGold : Colors.transparent,
+                          border: Border.all(color: _kAccentGold, width: 2),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ]),
       ),
     );
   }

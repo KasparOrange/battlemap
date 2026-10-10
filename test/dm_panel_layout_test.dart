@@ -75,7 +75,7 @@ void main() {
         onSwitchMap: (id) => calls.add('switchMap:$id'),
         onAddMapFromDevice: rec('addFromDevice'),
         onOpenSharedLibrary: rec('sharedLibrary'),
-        onShowCalibration: (on) => calls.add('showCalibration $on'),
+        onShowCalibration: (on, pivot) => calls.add('showCalibration $on ${pivot.name}'),
       );
     }
 
@@ -323,9 +323,20 @@ void main() {
           .textSpan!
           .toPlainText();
       expect(shown, '${(state.tvWidthInches * 2.54).toStringAsFixed(1)} cm');
+      await tester.ensureVisible(find.byTooltip('Picture width +1'));
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Picture width +1'));
       await tester.pump();
-      expect(calls, ['showCalibration true', 'calibrate']);
+      expect(calls, ['showCalibration true bottomLeft', 'calibrate']);
+
+      // The ruler's zero: another spot moves the TV's bar there at once.
+      await tester.ensureVisible(find.byKey(const ValueKey('pivot-center')));
+      await tester.tap(find.byKey(const ValueKey('pivot-center')));
+      await tester.pump();
+      expect(calls.last, 'showCalibration true center');
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(calls.last, 'showCalibration false center');
     });
 
     testWidgets('without game maps (local mode) Settings keeps Load Map',
