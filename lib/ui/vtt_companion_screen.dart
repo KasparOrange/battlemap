@@ -300,6 +300,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _relay?.sendNewSession(mapId, name: name, settings: settings.toJson());
   }
 
+  /// When the last "not connected, not sent" snackbar showed
+  /// ([VttRelayClient.onCommandDropped]); throttles it to one per 3 s.
+  DateTime? _lastDropNotice;
+
   /// The TV's most recent `vtt.fullState`, re-applied in [_onMapReady]
   /// because loading a map resets the state the TV already sent.
   Map<String, dynamic>? _lastFullState;
@@ -307,6 +311,17 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   void _connectRelay() {
     _relay = VttRelayClient(role: 'companion');
     DevLog.add('Companion: connecting to relay');
+    _relay!.onCommandDropped = (_) {
+      // At most one notice per 3 s while the DM keeps tapping offline.
+      final now = DateTime.now();
+      if (_lastDropNotice != null &&
+          now.difference(_lastDropNotice!) < const Duration(seconds: 3)) {
+        return;
+      }
+      _lastDropNotice = now;
+      _showSnack('Not connected to the TV — that wasn\'t sent',
+          color: Colors.orange.shade800);
+    };
     _relay!.onStateSync = (msg) {
       _lastFullState = msg;
       try {
@@ -435,8 +450,6 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.onBrushPaint = (indices) => _relay!.sendBrushReveal(indices);
     _state.onPortalTap = (index) => _relay!.sendTogglePortal(index);
     _state.onRoomReveal = (cells) => _relay!.sendRoomReveal(cells);
-    _state.onCirclePreview = (cells, replaceLast) =>
-        _relay!.sendCirclePreview(cells, replaceLast: replaceLast);
     _state.onTokenAdded = (token) => _relay!.sendAddToken(token.gridX, token.gridY);
     _state.onTokenCreated = (token) => _relay!.sendCreateToken(token.name);
     _state.onTokenHiddenChanged = (id, hidden) => _relay!.sendSetTokenHidden(id, hidden);

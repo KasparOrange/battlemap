@@ -429,7 +429,6 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       gridRows: gridRows,
       mapSize: mapSizeVec,
       forPlayers: isDisplay,
-      showPreview: !tableDisplay, // the preview never reaches the players
     );
     _fogOfWar!.isVisible = state.fogEnabled;
     world.add(_fogOfWar!);

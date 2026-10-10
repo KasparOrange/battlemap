@@ -246,9 +246,9 @@ tag `relay`; the companion's DevLog lines go along as tag `devlog`.
 | src | message | means |
 |---|---|---|
 | tv, companion | `Connecting to relay` · `Socket open` (`connectMs`) · `Registered with relay` (`connectMs`, `outageMs`) | one connection attempt, and how long the outage before it was |
-| tv, companion | `Relay connection lost` (`closeCode`, `upS`, `lastDataAgoMs`) · `Forcing reconnect` (`reason`) · `Reconnect scheduled` (`delayS`) | why and when a connection died |
-| tv, companion | `Sent while offline, delivered late now` (`count`, `oldestAgeMs`, `types`) | commands made during the outage waited in the socket and reach the peer all at once |
-| tv, companion | `Dropped while offline (no socket)` · `Sent while the peer was away (dropped by relay)` | commands that never arrived |
+| tv, companion | `Relay connection lost` (`closeCode`, `upS`, `lastDataAgoMs`) · `Forcing reconnect` (`reason`: no data, no registration within 8 s, app resumed) · `Reconnect scheduled` (`delayS`: 1, 2, 3, then 5) | why and when a connection died, and how it came back |
+| tv, companion | `Dropped while offline` (`count`, `firstAgoMs`, `types`), logged on the next registration | commands made while not connected; the tablet showed "Not connected to the TV — that wasn't sent". Before 1.1.14 they waited in the socket and reached the TV all at once, late |
+| tv, companion | `Sent while the peer was away (dropped by relay)` | registered, but the other side was missing |
 | tv, companion | `Late message from peer` (`ageMs`) … `Late messages ended` (`count`, `maxAgeMs`) | the peer's `sent` stamp is > 1.5 s old (two clocks: seconds-scale only) |
 | tv, companion | `Round trip` (debug, `rttMs`) · `Slow round trip` (> 1 s) | every 15 s heartbeat, through relay and the peer's event loop |
 | tv, companion | `Slow message handler` (`type`, `ms` > 250) · `Event loop stalled (or app paused)` (`stallMs`) | the app itself was busy; nothing was sent or handled meanwhile |

@@ -43,9 +43,15 @@ enum RelayConnectionState {
 /// companion, forwarding JSON messages between them.
 ///
 /// Key features:
-/// - **Automatic reconnection** with exponential backoff (1 s, 3 s, 10 s,
-///   30 s, 60 s) after disconnects or send failures — except after the relay
-///   says `replaced` ([RelayConnectionState.replaced]).
+/// - **Automatic reconnection** with a short backoff (1 s, 2 s, 3 s, then
+///   every 5 s) after disconnects or send failures, an attempt that hasn't
+///   registered within 8 s is given up and retried, and the app coming back
+///   from the background reconnects at once — except after the relay says
+///   `replaced` ([RelayConnectionState.replaced]).
+/// - **No late replay** — a command sent while not connected is dropped
+///   (and reported via [onCommandDropped]) instead of waiting in the socket:
+///   before 2026-10-10 a minute of tablet commands reached the TV all at
+///   once after a reconnect.
 /// - **Heartbeat** — sends a `ping` every 15 seconds and forces a reconnect
 ///   if no data arrives within 30 seconds.
 /// - **Chunked map transfer** — large binary map files are base64-encoded,
@@ -55,8 +61,7 @@ enum RelayConnectionState {
 ///   [RelayConnectionState] transitions via [stateStream].
 /// - **Connection diagnostics** to MwLog (tag `relay`, both devices): every
 ///   attempt, drop (close code, how long it lived), outage length, commands
-///   sent while offline (they wait in the socket and reach the peer late, all
-///   at once), round-trip time per heartbeat, late messages from the peer
+///   dropped while offline, round-trip time per heartbeat, late messages from the peer
 ///   (their `sent` stamp), slow handlers and stalled event loops.
 ///   `docs/setup.md` "logs" → "relay diagnostics".
 ///
@@ -173,9 +178,20 @@ class VttRelayClient {
   /// Called when Shorebird patch download progress/completion is received.
   void Function(Map<String, dynamic> progress)? onPatchProgress;
 
+  /// Called when a command of [type] was dropped because the client is not
+  /// connected to the relay (connecting or waiting to reconnect). The
+  /// companion tells the DM it didn't reach the TV.
+  void Function(String type)? onCommandDropped;
+
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
   Timer? _reconnectTimer;
+
+  /// Gives up a connection attempt that hasn't registered within
+  /// [_connectTimeout] (a hanging TCP connect otherwise waits out the OS,
+  /// up to a minute or more).
+  Timer? _connectTimer;
+  static const Duration _connectTimeout = Duration(seconds: 8);
   Timer? _heartbeatTimer;
   bool _intentionalClose = false;
 
@@ -190,7 +206,7 @@ class VttRelayClient {
 
   // Reconnection backoff
   int _reconnectAttempt = 0;
-  static const List<int> _backoffSeconds = [1, 3, 10, 30, 60];
+  static const List<int> _backoffSeconds = [1, 2, 3, 5];
 
   // Send failure tracking
   int _consecutiveSendFailures = 0;
@@ -209,16 +225,12 @@ class VttRelayClient {
   /// The outage length is logged on the next `registered`.
   DateTime? _lostAt;
 
-  /// Messages sent while connecting (not yet registered), by type. They wait
-  /// in the socket's buffer and reach the peer all at once on reconnect —
-  /// the "delayed reaction" of 2026-10-10.
-  final Map<String, int> _sentWhileOffline = {};
+  /// Commands dropped while not connected (no socket, or connecting and not
+  /// yet registered), by type. Logged on the next `registered`.
+  final Map<String, int> _droppedOffline = {};
 
-  /// When the oldest message in [_sentWhileOffline] was sent.
-  DateTime? _firstOfflineSendAt;
-
-  /// Messages dropped because there was no socket at all.
-  int _droppedNoSocket = 0;
+  /// When the first command in [_droppedOffline] was dropped.
+  DateTime? _firstDropAt;
 
   /// Messages sent while registered but without a peer (the relay drops
   /// them), by type.
@@ -303,8 +315,17 @@ class VttRelayClient {
     _startStallWatch();
     try {
       _lifecycle ??= AppLifecycleListener(
-        onStateChange: (AppLifecycleState s) => RemoteLog.info('relay',
-            'App lifecycle: ${s.name}', {'role': role, 'state': _state.name}),
+        onStateChange: (AppLifecycleState s) {
+          RemoteLog.info('relay', 'App lifecycle: ${s.name}',
+              {'role': role, 'state': _state.name});
+          // Back from the background: don't wait out a backoff timer.
+          if (s == AppLifecycleState.resumed &&
+              (_state == RelayConnectionState.disconnected ||
+                  _state == RelayConnectionState.connecting)) {
+            _reconnectAttempt = 0;
+            _forceReconnect('app resumed', backoff: false);
+          }
+        },
       );
     } catch (_) {
       // No widgets binding (unit tests): no lifecycle log.
@@ -316,6 +337,12 @@ class VttRelayClient {
     if (_intentionalClose || _replaced) return;
     _setState(RelayConnectionState.connecting);
     _attemptStartedAt = DateTime.now();
+    _connectTimer?.cancel();
+    _connectTimer = Timer(_connectTimeout, () {
+      if (_state == RelayConnectionState.connecting) {
+        _forceReconnect('no registration within ${_connectTimeout.inSeconds}s');
+      }
+    });
     RemoteLog.info('relay', 'Connecting to relay',
         {'role': role, 'url': _wsUrl, 'attempt': _reconnectAttempt + 1});
 
@@ -354,8 +381,7 @@ class VttRelayClient {
   /// sends waiting for a connection or dropped without a socket or a peer,
   /// and the current burst of late messages from the peer.
   Map<String, int> get diagnostics => {
-        'sentWhileOffline': _total(_sentWhileOffline),
-        'droppedNoSocket': _droppedNoSocket,
+        'droppedOffline': _total(_droppedOffline),
         'sentWithoutPeer': _total(_sentWithoutPeer),
         'lateCount': _lateCount,
         'lateMaxMs': _lateMaxMs,
@@ -380,22 +406,17 @@ class VttRelayClient {
       'connectMs': _sinceMs(_attemptStartedAt),
       if (outageMs != null) 'outageMs': outageMs,
     });
-    final offline = _total(_sentWhileOffline);
-    if (offline > 0) {
-      RemoteLog.warn('relay', 'Sent while offline, delivered late now', {
+    final dropped = _total(_droppedOffline);
+    if (dropped > 0) {
+      RemoteLog.warn('relay', 'Dropped while offline', {
         'role': role,
-        'count': offline,
-        'oldestAgeMs': _sinceMs(_firstOfflineSendAt),
-        'types': _sentWhileOffline.toString(),
+        'count': dropped,
+        'firstAgoMs': _sinceMs(_firstDropAt),
+        'types': _droppedOffline.toString(),
       });
     }
-    if (_droppedNoSocket > 0) {
-      RemoteLog.warn('relay', 'Dropped while offline (no socket)',
-          {'role': role, 'count': _droppedNoSocket});
-    }
-    _sentWhileOffline.clear();
-    _firstOfflineSendAt = null;
-    _droppedNoSocket = 0;
+    _droppedOffline.clear();
+    _firstDropAt = null;
     _registeredAt = DateTime.now();
     _lostAt = null;
   }
@@ -468,6 +489,7 @@ class VttRelayClient {
       switch (type) {
         case 'registered':
           final paired = msg['paired'] as bool;
+          _connectTimer?.cancel();
           _logRegistered(paired);
           _setState(paired
               ? RelayConnectionState.paired
@@ -646,30 +668,41 @@ class VttRelayClient {
   /// socket and arrives late; registered without a peer means the relay
   /// drops it. Both are logged when the connection or the peer is back.
   void _countUnpaired(String type) {
-    if (type == 'register' || type == 'pong') return;
-    switch (_state) {
-      case RelayConnectionState.connecting:
-      case RelayConnectionState.disconnected:
-        _sentWhileOffline[type] = (_sentWhileOffline[type] ?? 0) + 1;
-        _firstOfflineSendAt ??= DateTime.now();
-      case RelayConnectionState.connected:
-        if (type != 'ping') {
-          _sentWithoutPeer[type] = (_sentWithoutPeer[type] ?? 0) + 1;
-        }
-      case RelayConnectionState.paired:
-      case RelayConnectionState.replaced:
-        break;
+    if (_state == RelayConnectionState.connected && type != 'ping' && type != 'pong') {
+      _sentWithoutPeer[type] = (_sentWithoutPeer[type] ?? 0) + 1;
     }
   }
 
+  /// Whether a message may go out now: the relay has registered this socket.
+  /// While still connecting, the socket would hold it and deliver it late,
+  /// all at once with everything else sent meanwhile.
+  bool get _canSend =>
+      _channel != null &&
+      (_state == RelayConnectionState.paired ||
+          _state == RelayConnectionState.connected);
+
+  /// Drops a message of [type] that can't go out now ([_canSend]), counts
+  /// it for the log and tells [onCommandDropped] (heartbeats aside).
+  ///
+  /// No send-failure tracking here: a reconnect is already under way, and
+  /// before 2026-10-10 every few taps during an outage pushed the
+  /// reconnect timer further out (up to a minute).
+  void _drop(String type) {
+    if (type == 'ping' || type == 'pong') return;
+    debugPrint('VTT relay: not connected, dropped $type');
+    _droppedOffline[type] = (_droppedOffline[type] ?? 0) + 1;
+    _firstDropAt ??= DateTime.now();
+    onCommandDropped?.call(type);
+  }
+
   /// Sends [msg] stamped with `sent` (epoch ms), which the peer uses to
-  /// notice late messages ([_checkLate]) and to answer pings.
+  /// notice late messages ([_checkLate]) and to answer pings. Only
+  /// `register` goes out before the relay has answered; anything else is
+  /// dropped while not connected ([_drop]).
   void _send(Map<String, dynamic> msg) {
     final type = msg['type'] as String? ?? '?';
-    if (_channel == null) {
-      debugPrint('VTT relay send skipped: no connection');
-      if (type != 'ping' && type != 'pong') _droppedNoSocket++;
-      _trackSendFailure();
+    if (type == 'register' ? _channel == null : !_canSend) {
+      _drop(type);
       return;
     }
     _countUnpaired(type);
@@ -692,9 +725,8 @@ class VttRelayClient {
   void sendRaw(String data) => _sendRaw(data);
 
   void _sendRaw(String data) {
-    if (_channel == null) {
-      debugPrint('VTT relay sendRaw skipped: no connection');
-      _trackSendFailure();
+    if (!_canSend) {
+      _drop('raw');
       return;
     }
     try {
@@ -716,8 +748,10 @@ class VttRelayClient {
     }
   }
 
-  /// Drops the socket and reconnects; [reason] goes to the log.
-  void _forceReconnect(String reason) {
+  /// Drops the socket and reconnects — after the backoff, or at once when
+  /// [backoff] is false; [reason] goes to the log.
+  void _forceReconnect(String reason, {bool backoff = true}) {
+    _connectTimer?.cancel();
     RemoteLog.warn('relay', 'Forcing reconnect', {
       'role': role,
       'reason': reason,
@@ -736,7 +770,12 @@ class VttRelayClient {
     _mapChunks = null;
     _mapChunksReceived = 0;
     _setState(RelayConnectionState.disconnected);
-    _scheduleReconnect();
+    if (backoff) {
+      _scheduleReconnect();
+    } else {
+      _reconnectTimer?.cancel();
+      _doConnect();
+    }
   }
 
   // --- Chunked map transfer ---
@@ -1029,14 +1068,6 @@ class VttRelayClient {
   void sendRoomReveal(List<int> cells) =>
       _send({'type': 'vtt.roomReveal', 'cells': cells});
 
-  /// Places a circle reveal in the TV's preview, or with [replaceLast]
-  /// redraws the last one at a new radius ([VttState.previewCircle]).
-  void sendCirclePreview(List<int> cells, {bool replaceLast = false}) => _send({
-        'type': 'vtt.roomReveal',
-        'cells': cells,
-        'circle': replaceLast ? 'replace' : 'new',
-      });
-
   // --- AoE templates (companion → table via relay) ---
 
   /// Places an area-of-effect template on the TV map.
@@ -1214,6 +1245,7 @@ class VttRelayClient {
     });
     if (wasRegistered) _lostAt ??= DateTime.now();
     _registeredAt = null;
+    _connectTimer?.cancel();
     _stopHeartbeat();
     _subscription?.cancel();
     _subscription = null;
@@ -1258,6 +1290,7 @@ class VttRelayClient {
     _intentionalClose = true;
     _stopHeartbeat();
     _stallTimer?.cancel();
+    _connectTimer?.cancel();
     _lifecycle?.dispose();
     _reconnectTimer?.cancel();
     _subscription?.cancel();

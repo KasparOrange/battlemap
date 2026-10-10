@@ -42,18 +42,35 @@ void main() {
     expect(client.diagnostics['lateCount'], 0);
   });
 
-  test('sends without a socket are counted, a registration clears them', () {
+  test('sends without a socket are dropped and reported, a registration clears them', () {
+    final dropped = <String>[];
+    client.onCommandDropped = dropped.add;
     client.sendToggleFog();
     client.sendRevealAll();
-    expect(client.diagnostics['droppedNoSocket'], 2);
+    expect(client.diagnostics['droppedOffline'], 2);
+    expect(dropped, ['vtt.toggleFog', 'vtt.revealAll']);
 
     client.handleIncomingMessage(jsonEncode({'type': 'registered', 'paired': true}));
-    expect(client.diagnostics['droppedNoSocket'], 0);
+    expect(client.diagnostics['droppedOffline'], 0);
   });
 
   test('a ping without a socket is answered without throwing', () {
     client.handleIncomingMessage(jsonEncode({'type': 'ping', 'sent': now()}));
     client.handleIncomingMessage(jsonEncode({'type': 'pong', 't': now() - 40}));
-    expect(client.diagnostics['droppedNoSocket'], 0); // pongs aren't commands
+    expect(client.diagnostics['droppedOffline'], 0); // pongs aren't commands
+  });
+
+  test('while connecting, commands are dropped instead of queued for later', () {
+    // Port 1 refuses; right after connect() the client is still connecting
+    // — the window in which commands used to wait in the socket.
+    final c = VttRelayClient(role: 'companion', host: '127.0.0.1', port: 1);
+    final dropped = <String>[];
+    c.onCommandDropped = dropped.add;
+    c.connect();
+    expect(c.connectionState, RelayConnectionState.connecting);
+    c.sendSetTableWindow(3, 4);
+    c.sendToggleFog();
+    expect(dropped, ['vtt.setTableWindow', 'vtt.toggleFog']);
+    c.dispose();
   });
 }
