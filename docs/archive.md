@@ -6,6 +6,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:00 - 9393ef96 - 1.1.14+24 on box + tablet
+- Konrad: deploy → `deploy.sh tv tablet` from a clean worktree of 4b29370 (no preview tint on the TV, live circle resize, token rename dialog); TV 1.1.12 → 1.1.14, back in its game after 16 s; tablet 1.1.13 → 1.1.14, companion relaunched
+
 ### 26-10-10 20:30 - 0d5d9ed1 - relay: no late replay, quicker reconnect
 - Konrad: go ahead (the two proposed fixes + deploy)
 	- found on the way: while the tablet had no socket, every 6th tap counted as a "send failure" and re-armed the reconnect timer with the next backoff step (1→3→10→30→60 s) — tapping during an outage pushed the reconnect out; likely most of the 65 s of 19:56
