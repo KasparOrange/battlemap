@@ -1655,7 +1655,7 @@ class VttState extends ChangeNotifier {
   }
 
   /// Removes the layer [id] and returns it with its former index (for an
-  /// undo snackbar, see [insertDmOverlay]), or `null` if it was not there.
+  /// undo notice, see [insertDmOverlay]), or `null` if it was not there.
   ({DmOverlay overlay, int index})? removeDmOverlay(String id) {
     final i = dmOverlays.indexWhere((o) => o.id == id);
     if (i < 0) return null;

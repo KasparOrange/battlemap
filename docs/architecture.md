@@ -116,6 +116,7 @@ close ×, and a hairline along the bottom that shrinks to the middle while the t
 | a finger on the card pauses the countdown | time to read a long one |
 | `Notice.show` returns an id; `Notice.dismiss(context, id)` closes only that one | "Another phone took over the TV" closes when the relay reconnects without killing a newer Undo |
 | the × has no tooltip | the host sits above the Navigator's Overlay, which tooltips need |
+| widget tests: `pump()` + `pump(duration)`, not `pumpAndSettle` | the countdown is an animation, so `pumpAndSettle` runs it out and the notice is gone (`test/notice_test.dart`) |
 
 ## interaction modes
 

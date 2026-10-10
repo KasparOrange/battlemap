@@ -174,7 +174,7 @@ tools/deploy.sh tv --here  # build the working tree instead of a clean worktree 
 2. `tools/tv_ctl.py status` (relay, `bot` role) asks the TV where it is: view, map, session
 3. `deploy.prepare`: the TV saves the session *now*, writes its restore snapshot, shows
    "Updating battlemap — back in a few seconds" and answers `deploy.ready` (the tablet shows a
-   snackbar). A TV build without it gets 3 s for its 2 s auto-save instead
+   notice). A TV build without it gets 3 s for its 2 s auto-save instead
 4. `latrine android install` (`install -r`, data kept) — this kills the old app
 5. relaunch with the initial route `/restore?session=…&map=…` (`am start --es route …`;
    FlutterActivity hands the `route` extra to Flutter) → `main.dart` opens `TvShell(restore:)`

@@ -167,7 +167,7 @@ class VttRelayClient {
   /// Called when a `tv.error` message arrives (companion side).
   ///
   /// Carries an error description from the TV, typically shown as a
-  /// snackbar on the companion UI.
+  /// notice on the companion UI.
   void Function(String msg)? onTvError;
 
   /// Called when the TV starts/stops a heavy rendering operation.

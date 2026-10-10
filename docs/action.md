@@ -109,13 +109,13 @@ devices:
 
 The UX review's tabletop items are built (archive 26-10-10 "tabletop UX polish"; tokens/HP items
 dropped as digital mode). The tablet half is on Konrad's tablet with 1.1.8+18 (panel, fog tab,
-camera labels, undo snackbars, Continue card, session names). The TV half — ruler centred in
+camera labels, undo notices, Continue card, session names). The TV half — ruler centred in
 the TV's view, no door boxes on the TV, map thumbnails — needs the box on ≥ 1.1.7 (`deploy.sh
 tv`); with the box's 1.1.6+16 the library shows map icons only and the ruler starts at the map's
 corner. Check on the tablet + TV:
 - landscape tablet: panel is a rail on the right, tabs unfold beside it; portrait/phone: bottom sheet
 - Fog tab: Brush | Room | Circle, Reveal | Hide, "Players see changes: Instantly | Preview first"
-- Reveal all / Hide all / Clear drawings → snackbar with Undo that really undoes on the TV
+- Reveal all / Hide all / Clear drawings → notice with Undo that really undoes on the TV
 - ruler: appears in the middle of what the TV shows, numbers upright after Rotate and after a TV
   rotation; rotates in place
 - TV shows no door boxes on Dungeondraft maps (tablet still does); AI-map doors on both

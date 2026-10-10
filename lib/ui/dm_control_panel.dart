@@ -2090,7 +2090,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// A master eye ([VttState.showDmOverlays]), "Add pictures"
   /// ([DmCallbacks.onAddDmOverlays]) with upload progress, and one card per
   /// layer, top layer first: eye, name + load status, move up/down, delete
-  /// (with an undo snackbar), and an opacity slider.
+  /// (with an undo notice), and an opacity slider.
   Widget _buildLayersTab() {
     final layers = state.dmOverlays;
     final uploading = widget.dmOverlayUploadProgress != null;
