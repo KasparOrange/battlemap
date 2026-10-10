@@ -101,6 +101,18 @@ The relay listens for WebSocket connections from both the TV and the companion
 phone, forwarding messages between them. Map files (`.dd2vtt`, images; PDFs are
 rasterized to PNG on the phone first) go through the HTTP server, not the relay.
 
+### AI-generated maps (experimental)
+
+```bash
+tools/mapgen/mapgen.py paint tools/mapgen/layouts/crypt.json --size 1K --n 2 --pack
+```
+
+A layout we write (rooms, walls, doors, lights) is drawn as a colour-coded guide,
+Nano Banana 2.1 paints over it, and the result is packed with our walls into a
+`.dd2vtt` the TV loads like any map. Needs a Gemini API key with billing. Design,
+state and next steps: `docs/ai-art.md`; test images on the horizon board
+`battlemap-mapgen` (`tools/mapgen/board.py`).
+
 ## Documentation
 
 Run `dart doc` to generate full API documentation from the source:

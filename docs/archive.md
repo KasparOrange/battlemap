@@ -6,6 +6,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - ai art doc sweep
+- End-of-session sweep: `ai-art.md` made true to v0 code (QA has no retry yet, upload is manual, `--refs` untested, prompt section points at `prompts/baseline.txt` instead of a drifting copy, money in €21.99 style) + setup gotchas (3-D Secure blocked in telescope, no PayPal, wrong Google account, 429 without billing); README gained "AI-generated maps (experimental)"
+
 ### 26-10-10 - paint the still, render what moves
 - Konrad likes "doors drawn by battlemap" and wants it as a direction: later also fire, light, water etc. as effect layers over a still painting → `ai-art.md` principle + Next step 7 (try list, once effects exist)
 

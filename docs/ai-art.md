@@ -34,7 +34,7 @@ There is no Claude-Code-like "one subscription with a usage limit" for API use:
 
 | | what it is | images | API? |
 |---|---|---|---|
-| Google AI Pro (21,99 €/month) | Gemini *app* subscription | ~100 Nano Banana images/day **in the app** | no key; includes **$10/month Google Cloud credit** (Google Developer Program, must be activated) usable on the Gemini API |
+| Google AI Pro (€21.99/month) | Gemini *app* subscription | ~100 Nano Banana images/day **in the app** | no key; includes **$10/month Google Cloud credit** (Google Developer Program, must be activated) usable on the Gemini API |
 | Gemini API (AI Studio key + billing) | pay per image | unlimited, rate-limited per project | yes — **image models have no free tier** |
 
 Nano Banana 2.1 (`gemini-nano-banana-2.1`) per image, standard / batch (batch = async,
@@ -72,6 +72,12 @@ paintings with numbered pins on the features they show (pins in grid squares), t
 overlays, and blue slots for the next images. Konrad's rule (2026-10-10): **every new image
 from this test project goes onto that board**, reorganised as needed — add a plate to
 `PLATES` in `tools/mapgen/board.py` (or move a slot out of `NEXT`) and re-run it.
+
+**Setup gotchas (2026-10-10):** the card's 3-D Secure check (Cardinal Commerce) is blocked
+by Cloudflare inside telescope → pay in a normal browser; Google Cloud in Germany takes card
+or bank debit, **no PayPal**; check which Google account a browser shows before paying (the €20
+landed on Bao's account by accident); a key on a project without billing answers 429
+`free_tier_requests, limit: 0`.
 
 **Account:** API key from 1Password `dev` → **Gemini API - battlemap (Bao billing)**
 (`$MAPGEN_OP_ITEM`, or `$GEMINI_API_KEY`). This is Bao's Google account (nico.zingerle),
@@ -157,7 +163,7 @@ flowchart LR
   B[style bible<br/>text + refs] --> P
   G --> N[Nano Banana 2.1<br/>API, VPS]
   P --> N
-  N --> Q[QA: wall alignment<br/>retry on drift]
+  N --> Q[QA: score + overlay<br/>retry: planned]
   Q --> R[resample to cols × ppg]
   R --> V[pack .dd2vtt<br/>walls/doors/lights from spec]
   V --> L[map library → TV]
@@ -183,19 +189,20 @@ flowchart LR
    | magenta `#FF00FF` | prop, described in the prompt by grid position |
 
    Faint grid lines in the guide or none: open question for tuning.
-3. **Model call** — guide + style references (≤ 14 images total, ≤ 10 objects for 2.1) +
-   prompt. Aspect ratio picked from the grid (16:9 → e.g. 32 × 18 squares fills the TV). Drafts
+3. **Model call** — guide + style references (≤ 14 images total, ≤ 10 objects for 2.1;
+   `--refs` exists but is untested) + prompt. Aspect ratio picked from the grid (16:9 → e.g. 32 × 18 squares fills the TV). Drafts
    at 1K, final at 4K; aim for ≥ ~100 output px per square or detail turns to mush.
-4. **QA** — compare the guide's wall mask with the output (dark-edge overlap score); below a
-   threshold → retry with a stricter prompt or a new seed. This is what makes "the model only
-   paints" safe.
+4. **QA** — v0 writes an edge-overlap score and an overlay (our walls and doors over the
+   painting) per image; `--pack` takes the best score. No automatic retry yet: the score does
+   not rank reliably, so the overlay is the check until the judge exists (Next, step 3).
 5. **Resample** to exactly `cols × ppg` by `rows × ppg` (the model's sizes are fixed, the grid
    is ours). Optional upscale on the Mac.
 6. **Pack `.dd2vtt`** — image (base64), `resolution` (`map_size`, `pixels_per_grid`),
    `line_of_sight` from the spec's walls, `portals` from its doors, `lights` from its lights.
    The TV needs **no change**: it already loads `.dd2vtt`
    (`lib/model/uvtt_map.dart`).
-7. **Upload** to the VPS map library through the dev server, like any map.
+7. **Upload** to the VPS map library through the dev server, like any map — by hand today
+   (companion map upload, or `PUT /upload/<name>` on the dev server); not automated yet.
 
 **Variants on the same geometry** — night, burning, flooded, after the battle: an edit of the
 final image (multi-turn, `previous_interaction_id`) with the same guide. Same walls, different
@@ -206,40 +213,17 @@ seams on our side.
 
 ### Prompt baseline v0 (untuned)
 
-```text
-Top-down orthographic battle map for a tabletop role-playing game, seen straight down
-from directly above: 90 degrees, no perspective, no isometric angle, no horizon.
+The template is the file `tools/mapgen/prompts/baseline.txt` (not copied here, so it can't
+drift). Placeholders: `{cols}` `{rows}` `{setting}` `{style}` `{areas}` (one line per area
+and prop with its columns/rows). Default style lives in `build_prompt` in `mapgen.py`. Its
+shape: straight-down orthographic view → "repaint the guide, keep every wall" → the legend →
+scale (5 ft squares) → style → even lighting, calm floors → no grid / text / creatures →
+details by area. **The legend text must match `COLORS` in `mapgen.py`** — change both
+together.
 
-Repaint the attached layout guide as a finished map. The guide is exact: keep every wall,
-door, room and corridor at exactly the same position and size. Do not add, move or remove
-walls or openings.
+### Tuning plan (≈ $1 at 1K)
 
-Guide legend: black = solid rock outside the map, render as dark textured stone;
-dark grey lines = walls; mid grey = floor; red bars = doors, render as closed wooden
-doors set in their wall; blue = water; brown = rubble; green = vegetation;
-yellow dots = light sources (braziers, torches); magenta = props described below.
-
-Scale: the map is {cols} by {rows} squares, each square is 5 feet. Size furniture and
-objects realistically for that scale: a door is one square wide, a table one by two.
-
-Style: {style_block}
-Lighting: even and neutral, soft baked shadows falling to the south-east, no vignette,
-contrast high enough to read on a TV in a lit room. Keep floors calm: miniatures stand
-on this map.
-
-Do not draw a grid, grid lines, text, labels, numbers, a compass, a frame, a legend,
-characters or creatures.
-
-Rooms:
-{per-room descriptions with grid coordinates}
-```
-
-Default `{style_block}`: "hand-painted fantasy battle map, rich stone and wood textures,
-muted earthy palette with warm light pools, crisp readable edges."
-
-### Tuning plan (first session with a key, ~1 € at 1K)
-
-3 layouts (dungeon rooms, outdoor clearing, tavern) × variants, scored by the QA step and by
+3 layouts (dungeon rooms, outdoor clearing, tavern) × variants, scored by the judge (Next, step 3) and by
 eye on the TV:
 
 - guide with vs without faint grid
