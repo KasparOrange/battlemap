@@ -184,6 +184,14 @@ Needs: box + tablet paired with this Mac (`latrine android devices`), the bench 
 (`~/.local/share/battlemap/venv`, created on first run), `~/.config/mwlog/battlemap.env`.
 Rule of thumb: batch changes — every TV deploy interrupts the table.
 
+Gotcha (2026-10-10): the clean worktree builds **HEAD**, so committing a whole file that another
+session is still editing in this checkout ships their half-done code — the build fails on
+symbols that exist only in their uncommitted files. Before committing a shared file, check
+`git diff --cached`; to keep only your hunks without touching their copy, stage a blob
+(`git hash-object -w <file>` + `git update-index --cacheinfo 100644,<hash>,<path>`).
+Whether the tablet's bars are hidden: `ANDROID_ADB_SERVER_PORT=5059 adb -s <tablet> shell dumpsys
+window | grep navigationBars` → `visible=false`.
+
 ## testing
 
 ```bash

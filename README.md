@@ -17,7 +17,8 @@ The same APK runs in two modes:
   build in a browser is a fallback) connects to the same relay. All map loading,
   fog reveal, door toggling, measuring, drawing, and camera control happens here —
   plus **DM layers**: any number of pictures (a DM version of the map, notes, secrets)
-  laid over the map on the DM's screen only; the TV never shows them.
+  laid over the map on the DM's screen only; the TV never shows them. On Android the
+  game view runs full screen (system bars hidden; a button on the map brings them back).
 
 The phone sends commands; the TV renders. Both communicate through a
 lightweight Python WebSocket relay running on a VPS.
@@ -47,6 +48,7 @@ lightweight Python WebSocket relay running on a VPS.
 | [MapLibrary] | `lib/storage/map_library.dart` | Persistent on-device storage (Hive) for map files, saved sessions and map thumbnails. Native-only (stubbed on web). |
 | [MapThumbnails] | `lib/storage/map_thumbnails.dart` | Small PNG previews of library maps, made lazily on the TV while it shows the library and sent to the companion (`lib.thumbnail`). |
 | [ContinueSessionCard] | `lib/ui/library_cards.dart` | The companion library's top card (resume the last session), map thumbnails and dated default session names. |
+| [SystemBars] | `lib/ui/system_bars.dart` | Hides Android's status and navigation bars (sticky immersive): the companion during a game (toggle on the map, stored on the device), the TV always. No-op off Android. |
 | [DeployRestore] | `lib/update/deploy_restore.dart` | Rolling deploy: launch routes `/restore` (TV reopens its game) and `/companion`, plus the TV's restore snapshot. |
 
 ### Data Model
