@@ -21,7 +21,10 @@ The same APK runs in two modes:
   plus **DM layers**: any number of pictures (a DM version of the map, notes, secrets)
   laid over the map on the DM's screen only; the TV never shows them. A picture map's drawn
   grid is found by itself, and a full-screen grid editor fits the squares by hand to a hundredth
-  of a pixel (slide, stretch, two corners with a magnifier). On Android the
+  of a pixel (slide, stretch, two corners with a magnifier). A game holds **several maps** (the
+  tower's floors, town and cellar), each with its own fog, doors and tokens — switched in the
+  Settings tab; maps come from the device or the **shared map library** on the VPS, which the
+  tablet browses and fills in a game and from the library. On Android the
   game view runs full screen (system bars hidden; a button on the map brings them back).
 
 The phone sends commands; the TV renders. Both communicate through a
@@ -54,6 +57,8 @@ lightweight Python WebSocket relay running on a VPS.
 | [ContinueSessionCard] | `lib/ui/library_cards.dart` | The companion library's top card (resume the last session), map thumbnails and dated default session names. |
 | [SystemBars] | `lib/ui/system_bars.dart` | Hides Android's status and navigation bars (sticky immersive): the companion during a game (toggle on the map, stored on the device), the TV always. No-op off Android. |
 | [GridEditorPage] | `lib/ui/grid_editor.dart` | The companion's full-screen grid editor (`showGridEditor`): fit a picture map's squares by hand — Move / Stretch / 2 corners, steps to 0.01 px, corner jumps, undo. |
+| [SharedLibrarySheet] | `lib/ui/shared_library_sheet.dart` | The companion's shared map library (`showSharedLibrarySheet`): the VPS's maps with thumbnails — add to the game / play, delete, upload from the device. |
+| [SharedLibraryClient] | `lib/network/shared_library.dart` | HTTP client for the VPS's shared map library (`/library` on the dev server). |
 | [TvOverviewMap] | `lib/ui/tv_overview_map.dart` | The companion's overview: the whole map with a box around what the players see; tap or drag to move the TV's window. |
 | [TvCalibrationStore] | `lib/storage/tv_calibration_store.dart` | The TV's own calibration (how wide its picture is), kept on the TV for every game. |
 | [DeployRestore] | `lib/update/deploy_restore.dart` | Rolling deploy: launch routes `/restore` (TV reopens its game) and `/companion`, plus the TV's restore snapshot. |
@@ -67,7 +72,8 @@ lightweight Python WebSocket relay running on a VPS.
 | [GridDetection] | `lib/model/grid_detect.dart` | Finds a grid drawn into a picture map (edge profile → autocorrelation → both axes agree → phase); pre-fills the upload dialog. |
 | [RasterGrid] | `lib/model/raster_grid.dart` | Where a picture map's squares lie on the picture (corner, square width/height, counts); the game maps it onto the squares, no cropping. Plus the editor's math (stretch, two corners). |
 | [MapLibraryEntry] | `lib/model/map_library_entry.dart` | Metadata for a map stored in the TV's local library (grid size, file size, kind). |
-| [Session] | `lib/model/session.dart` | A saved gameplay session -- references a map and captures the full DM state snapshot (fog, portals, tokens, camera, table window, the map's scale record, DM layer list). |
+| [Session] | `lib/model/session.dart` | A saved gameplay session -- the map on the table and the full DM state snapshot (fog, portals, tokens, camera, table window, the map's scale record, DM layer list); the game's other maps wait parked with their own state (`switchTo`). |
+| [SharedMap] | `lib/model/shared_map.dart` | One map of the shared map library on the VPS (name, kind, squares, file and thumbnail path). |
 | [TableGrid] / [TableLayout] / [MapFit] | `lib/model/table_fit.dart` | The table view: whole one-inch squares on the TV (34 × 19 on Konrad's TV), the camera that shows a map at one inch per square in a centred window, and the per-game record of the map's scale. |
 | [DmOverlay] | `lib/model/dm_overlay.dart` | One DM-only picture layer (VPS url, visible, opacity); the TV stores the list, only the companion draws it. |
 | [MapToken] | `lib/model/map_token.dart` | A single token on the grid (position, color, label). JSON-serializable. |
@@ -141,7 +147,7 @@ TV over the relay and checks both its state and its actual picture. Details: `do
 
 ```bash
 python3 tools/vtt_relay.py     # port 9090 — WebSocket hub between TV and phone
-python3 tools/dev_server.py    # port 4242 — web build, APK, map uploads (DM layer pictures kept)
+python3 tools/dev_server.py    # port 4242 — web build, APK, map uploads (DM layer pictures and the shared map library kept)
 ```
 
 The relay listens for WebSocket connections from both the TV and the companion

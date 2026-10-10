@@ -96,6 +96,10 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 **4. up the tower (05 → 06 → 05)**
 1. Session on 05: reveal half, place 2 tokens.
 2. Switch to 06, reveal a little, then back to 05: fog and tokens of 05 are exactly as left.
+3. The same inside one game (since 1.1.16): Settings ▸ Maps in this game ▸ Shared library ▸ add
+   06 (upload it there first if missing) — "Loading …" on the tablet, 06 fogged on the TV; tap 05
+   in the list: its fog and tokens are back; tap 06: its fog too. Back in the library the game is
+   listed under the map on the table; resuming it keeps both maps.
 
 **5. something goes wrong**
 1. Kill the TV app (`adb -s emulator-5556 shell am force-stop com.example.battlemap`), start it

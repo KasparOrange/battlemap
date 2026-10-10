@@ -65,12 +65,10 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   decoded at most 4096 px on the long side. Still to check on the real Xiaomi: memory and look of
   the castle at TV scale (36 px per square after the shrink).
 
-## games with several maps + shared map library (2026-10-10) — not in a build yet
+## games with several maps + shared map library (2026-10-10, 1.1.16+26) — needs a test at the table
 
-Built and checked on a throwaway TV emulator over the relay (archive 26-10-10 20:40). Before the
-first build with it reaches the tablet, **update the VPS dev server** (`git pull --ff-only` in
-`~/battlemap`, restart `dev_server.py`, `setup.md`): the new companion uploads to `/library`,
-which an old server doesn't have (uploads would fail). Then on the tablet + TV:
+On box + tablet + web since 21:15, VPS dev server serves `/library` (archive 26-10-10 21:05).
+Checked on a throwaway TV emulator over the relay, 20/20. On the tablet + TV:
 - Settings tab ▸ Maps in this game: one row ("On the table"); From device → a picture map joins
   the game, "Loading …" over the tablet's map until it's there; tap the first map → its fog and
   tokens are back; the second one's too
@@ -150,15 +148,12 @@ the TV hosts a WebSocket server on the LAN and the phone connects to its IP. Unr
 and behind the current protocol, but it is the starting point for **play without internet**
 (friend's place, hotspot). Roadmap #39. Not to be deleted as "dead code".
 
-## deploy state (2026-10-10 18:56)
+## deploy state (2026-10-10 21:15)
 
-- **box**: 1.1.6+16 (no rolling-deploy restore, no takeover fix yet — `tools/deploy.sh tv` waits
-  for Konrad's go). Open game: **"Juri's dungeon"** (image map 25×24, all revealed, TV grid off,
-  DM layers "Secret rooms" + "Labels"; `ai-art.md` "On the table"); "The Countess's Lair —
-  round 4" stays in the library.
-- **tablet**: native companion 1.1.8+18 (`deploy.sh tablet`), image maps take the TV's grid.
-- **VPS**: relay on current main (`bot` role), threaded dev server, web companion 1.1.6+16.
-- APKs are built on the Mac now (`tools/deploy.sh`, clean worktree of HEAD), not on the VPS.
+- **box** and **tablet**: 1.1.16+26 (`tools/deploy.sh`, the TV back in its open game after 16 s).
+- **VPS**: checkout on main (3003083), relay with the diagnostics, dev server with the shared map
+  library (`uploads/library/`, empty so far), web companion 1.1.16+26.
+- APKs are built on the Mac (`tools/deploy.sh`, clean worktree of HEAD), not on the VPS.
 
 ## other live work: AI map pipeline (#40)
 

@@ -95,7 +95,11 @@ push → `ssh … git pull --ff-only` → APK build as above → `cp` + `version
 Over ssh, start services detached — `(setsid nohup python3 tools/dev_server.py > /tmp/dev_server.log 2>&1 < /dev/null &)` —
 plain `nohup … &` dies with the ssh session, and `pkill -f dev_server.py` inside an
 `ssh host 'pkill -f dev_server.py; …'` command kills that command's own shell (its command
-line contains the pattern): run the pkill in a separate ssh call. The relay the same way
+line contains the pattern): run the pkill in a separate ssh call. Same trap with
+`kill $(pgrep -f "tools/dev_server.py")` — it also matches the ssh shell and killed it before the
+restart on 2026-10-10 (dev server down ~1 min); kill by `pgrep -a python3` PID instead. After a
+`dev_server.py` change the VPS needs `git pull --ff-only` + this restart — `deploy.sh web` only
+rsyncs the web build (the shared map library's `/library` arrived that way, 1.1.16). The relay the same way
 (`tools/vtt_relay.py`, log `/tmp/vtt_relay.out`) — and check `pgrep -af vtt_relay` afterwards:
 on 2026-10-10 the September relay survived SIGTERM, closed its listening socket but kept the
 TV's and tablet's live connections, so both stayed on the old code until `kill -9`.
