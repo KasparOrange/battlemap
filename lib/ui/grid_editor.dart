@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../model/grid_detect.dart';
 import '../model/raster_grid.dart';
+import 'number_stepper.dart';
 
 // The DM panel's warm palette (dm_control_panel.dart / map_grid_dialog.dart).
 const _bg = Color(0xFF1a1512);
@@ -38,6 +39,11 @@ enum GridTool {
 
   /// Two marked grid corners and the count between them set the squares.
   corners,
+
+  /// A line over something of known size (a door, a scale bar, a room) and
+  /// how many squares long it is set the squares — for maps with no grid
+  /// drawn in ([RasterGrid.fromLength]).
+  length,
 }
 
 /// Opens the grid editor full screen and returns the fitted grid, or `null`
@@ -45,9 +51,11 @@ enum GridTool {
 ///
 /// The DM sees [pictureBytes] (PNG/JPG/WebP) with battlemap's squares drawn
 /// over it, starting from [initial], and corrects them by hand: slide,
-/// stretch, mark two corners, or step the square size by 1 / 0.1 / 0.01 px
-/// and the position by 1 / 0.1 px — fine enough that a 60-square map ends
-/// within a pixel. Undo / redo, a magnifier while dragging, jumps to the
+/// stretch, mark two corners, step the square size by 0.01 / 0.1 / 1 / 5 px
+/// ([NumberStepper], tap the number to type it) and the position by 1 /
+/// 0.1 px — fine enough that a 60-square map ends within a pixel. A map
+/// with no grid drawn in gets its scale from a known length instead
+/// ([GridTool.length]: a door is one square); [initialTool] opens there. Undo / redo, a magnifier while dragging, jumps to the
 /// picture's corners to check drift, ½ / ×2, square or free squares,
 /// whole or partial edge squares, the TV table line (fits / pans) and
 /// [detected] (or a fresh detection) to start over from.
@@ -69,6 +77,7 @@ Future<RasterGrid?> showGridEditor(
   String confirmLabel = 'Apply',
   String? note,
   String? countsNote,
+  GridTool initialTool = GridTool.look,
 }) {
   return Navigator.of(context).push<RasterGrid>(MaterialPageRoute(
     fullscreenDialog: true,
@@ -82,6 +91,7 @@ Future<RasterGrid?> showGridEditor(
       confirmLabel: confirmLabel,
       note: note,
       countsNote: countsNote,
+      initialTool: initialTool,
     ),
   ));
 }
@@ -115,6 +125,9 @@ class GridEditorPage extends StatefulWidget {
   /// Line under the readout once the counts changed, see [showGridEditor].
   final String? countsNote;
 
+  /// The tool the editor opens with.
+  final GridTool initialTool;
+
   /// Creates the editor page; see [showGridEditor].
   const GridEditorPage({
     super.key,
@@ -127,6 +140,7 @@ class GridEditorPage extends StatefulWidget {
     this.confirmLabel = 'Apply',
     this.note,
     this.countsNote,
+    this.initialTool = GridTool.look,
   });
 
   @override
@@ -150,7 +164,7 @@ class GridEditorPageState extends State<GridEditorPage> {
   late bool partialEdges;
 
   /// What a one-finger drag does.
-  GridTool tool = GridTool.look;
+  late GridTool tool = widget.initialTool;
 
   /// Nudge step for the position arrows, in picture pixels.
   double step = 1;
@@ -188,6 +202,11 @@ class GridEditorPageState extends State<GridEditorPage> {
   Offset? _cornerB;
   int _nx = 0, _ny = 0;
   bool _countsByHand = false;
+
+  // Known-length tool (marks A and B are the line's ends).
+  double _lenSquares = 1;
+  bool _lenByHand = false;
+  bool _lenFeet = false;
 
   final FocusNode _focus = FocusNode(debugLabel: 'grid editor');
 
@@ -311,21 +330,6 @@ class GridEditorPageState extends State<GridEditorPage> {
     setGrid(g);
   }
 
-  Future<void> _typeSize({bool? width}) async {
-    final current = width == false ? grid.cellH : grid.cellW;
-    final v = await _askNumber(
-        width == null ? 'Square size (px)' : width ? 'Square width (px)' : 'Square height (px)',
-        current);
-    if (v == null || v < RasterGrid.minCell) return;
-    if (square || width == null) {
-      _setSize(v, square ? v : grid.cellH);
-    } else if (width) {
-      _setSize(v, grid.cellH);
-    } else {
-      _setSize(grid.cellW, v);
-    }
-  }
-
   Future<void> _typePosition() async {
     final x = await _askNumber('First vertical line at (px)', grid.x);
     if (x == null || !mounted) return;
@@ -372,6 +376,9 @@ class GridEditorPageState extends State<GridEditorPage> {
     final (nx, ny) = grid.cornerCounts(a, b, square: square);
     _nx = nx;
     _ny = ny;
+    if (!_lenByHand) {
+      _lenSquares = max(1, ((b - a).distance / grid.cellW).round()).toDouble();
+    }
   }
 
   /// Sets the across ([across] true) or down count; with square squares
@@ -410,7 +417,33 @@ class GridEditorPageState extends State<GridEditorPage> {
         _cornerA = null;
         _cornerB = null;
         _countsByHand = false;
+        _lenByHand = false;
       });
+
+  void _applyLength() {
+    final a = _cornerA, b = _cornerB;
+    if (a == null || b == null) return;
+    final g = RasterGrid.fromLength(
+        a: a, b: b, squares: _lenSquares, picture: _picture, partialEdges: partialEdges);
+    if (g == null) {
+      _snack('Draw a longer line, or fewer squares.', color: Colors.orangeAccent);
+      return;
+    }
+    setState(() => square = true);
+    setGrid(g);
+    _snack('Squares of ${g.cellW.toStringAsFixed(2)} px — ${g.cols} × ${g.rows} on the table.');
+  }
+
+  /// Whether the current tool works with the two marks.
+  bool get _marksTool => tool == GridTool.corners || tool == GridTool.length;
+
+  void _setTool(GridTool t) {
+    if (t == tool) return;
+    // Corner marks sit on grid corners, length marks anywhere: a mark
+    // never carries over from one meaning to the other.
+    if (_marksTool && (t == GridTool.corners || t == GridTool.length)) _clearCorners();
+    setState(() => tool = t);
+  }
 
   // ─── view ───────────────────────────────────────────────
 
@@ -464,7 +497,7 @@ class GridEditorPageState extends State<GridEditorPage> {
     _gesturePicStart = _touchStart?.pic ?? _toPic(d.localFocalPoint);
     _viewGesture = d.pointerCount >= 2 || _maxPointers >= 2 || tool == GridTool.look;
     _dragMarker = null;
-    if (!_viewGesture && tool == GridTool.corners) {
+    if (!_viewGesture && _marksTool) {
       _dragMarker = _markerAt(d.localFocalPoint);
       if (_dragMarker == null) {
         // A new mark where the finger is; the third tap restarts.
@@ -473,6 +506,7 @@ class GridEditorPageState extends State<GridEditorPage> {
             _cornerA = _gesturePicStart;
             _cornerB = null;
             _countsByHand = false;
+            _lenByHand = false;
             _dragMarker = 0;
           } else {
             _cornerB = _gesturePicStart;
@@ -519,7 +553,7 @@ class GridEditorPageState extends State<GridEditorPage> {
             record: false);
       case GridTool.stretch:
         setGrid(start.stretched(from, picNow, square: square), record: false);
-      case GridTool.corners:
+      case GridTool.corners || GridTool.length:
         setState(() {
           if (_dragMarker == 0) _cornerA = picNow;
           if (_dragMarker == 1) _cornerB = picNow;
@@ -761,10 +795,12 @@ class GridEditorPageState extends State<GridEditorPage> {
         pan: _pan,
         lineColor: _lineColors[_colorIndex],
         bold: _boldLines,
-        cornerA: tool == GridTool.corners ? _cornerA : null,
-        cornerB: tool == GridTool.corners ? _cornerB : null,
+        cornerA: _marksTool ? _cornerA : null,
+        cornerB: _marksTool ? _cornerB : null,
+        joinMarks: tool == GridTool.length,
       );
       return ClipRect(
+        key: const ValueKey('gridEditorCanvas'),
         child: Listener(
           onPointerDown: _pointerDown,
           onPointerUp: _pointerUp,
@@ -865,6 +901,10 @@ class GridEditorPageState extends State<GridEditorPage> {
           if (tool == GridTool.corners) ...[
             const SizedBox(height: 8),
             _cornerControls(),
+          ],
+          if (tool == GridTool.length) ...[
+            const SizedBox(height: 8),
+            _lengthControls(),
           ],
           const SizedBox(height: 14),
           _section('Square size — top-left corner stays put'),
@@ -1027,6 +1067,9 @@ class GridEditorPageState extends State<GridEditorPage> {
             'the line follows your finger. The farther out, the more precise.',
         GridTool.corners => 'Tap a grid corner, then another corner far away (opposite corners '
             'are best). Drag a mark to refine it with the magnifier, check the count, then use them.',
+        GridTool.length => 'No grid in the picture? Drag a line over something you know the size '
+            'of — a door is one square, a 10 ft corridor two, a scale bar says it — then say how '
+            'many squares it is. The longer the line, the more precise.',
       };
 
   Widget _toolPicker() {
@@ -1044,7 +1087,7 @@ class GridEditorPageState extends State<GridEditorPage> {
           ),
           icon: Icon(icon, size: 18),
           label: Text(label, overflow: TextOverflow.ellipsis),
-          onPressed: () => setState(() => tool = t),
+          onPressed: () => _setTool(t),
         ),
       );
     }
@@ -1061,6 +1104,10 @@ class GridEditorPageState extends State<GridEditorPage> {
         const SizedBox(width: 6),
         Expanded(child: b(GridTool.corners, Icons.control_point, '2 corners')),
       ]),
+      const SizedBox(height: 6),
+      SizedBox(
+          width: double.infinity,
+          child: b(GridTool.length, Icons.straighten, 'Known length (no grid in the picture)')),
     ]);
   }
 
@@ -1071,19 +1118,21 @@ class GridEditorPageState extends State<GridEditorPage> {
           style: const TextStyle(color: _ok, fontSize: 13));
     }
     final sx = b.dx < a.dx ? -1 : 1, sy = b.dy < a.dy ? -1 : 1;
-    Widget counter(String label, bool across, int value, int sign) => Row(children: [
-          SizedBox(width: 92, child: Text(label, style: const TextStyle(color: _gold, fontSize: 13))),
-          _iconBtn(Icons.remove, 'One square less $label',
-              () => _setCount(across, sign * max(0, value.abs() - 1))),
-          SizedBox(
-              width: 44,
-              child: Text('${value.abs()}',
-                  key: ValueKey(across ? 'gridEditorAcross' : 'gridEditorDown'),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: _gold, fontSize: 18))),
-          _iconBtn(Icons.add, 'One square more $label',
-              () => _setCount(across, sign * (value.abs() + 1))),
-        ]);
+    Widget counter(String label, bool across, int value, int sign) => Padding(
+          padding: const EdgeInsets.only(top: 4),
+          child: Row(children: [
+            SizedBox(width: 56, child: Text(label, style: const TextStyle(color: _gold, fontSize: 13))),
+            Expanded(
+              child: NumberStepper(
+                label: 'Squares $label between the marks',
+                value: value.abs().toDouble(),
+                max: 400,
+                valueKey: ValueKey(across ? 'gridEditorAcross' : 'gridEditorDown'),
+                onChanged: (v) => _setCount(across, sign * v.round()),
+              ),
+            ),
+          ]),
+        );
     final implied = RasterGrid.cornersAgree(a, b, _nx, _ny);
     String px(double? v) => v == null ? '—' : '${v.toStringAsFixed(2)} px';
     final sizeLine = square && implied.agree
@@ -1124,26 +1173,111 @@ class GridEditorPageState extends State<GridEditorPage> {
 
   Widget _sizeRow(bool? width) {
     final v = width == false ? grid.cellH : grid.cellW;
-    final label = width == null ? '' : width ? 'W ' : 'H ';
-    Widget s(String t, double d) => _stepBtn(t, () => _stepSize(d, width: width));
+    final label = width == null ? 'Square size' : width ? 'Square width' : 'Square height';
+    final stepper = NumberStepper(
+      label: label,
+      value: v,
+      steps: const [0.01, 0.1, 1, 5],
+      min: RasterGrid.minCell,
+      max: max(grid.pictureW, grid.pictureH),
+      decimals: 2,
+      unit: 'px',
+      valueKey: ValueKey(width == false ? 'gridEditorCellH' : 'gridEditorCellW'),
+      onChanged: (n) => _setSizeOf(n, width: width),
+    );
+    if (width == null) return stepper;
     return Row(children: [
-      s('−1', -1),
-      s('−.1', -0.1),
-      s('−.01', -0.01),
-      Expanded(
-        child: InkWell(
-          onTap: () => _typeSize(width: width),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            child: Text('$label${v.toStringAsFixed(2)}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: _gold, fontSize: 17, fontWeight: FontWeight.w600)),
-          ),
-        ),
+      SizedBox(width: 20, child: Text(width ? 'W' : 'H', style: const TextStyle(color: _goldDim))),
+      Expanded(child: stepper),
+    ]);
+  }
+
+  /// Sets the square size (both sides when square or [width] is `null`).
+  void _setSizeOf(double v, {bool? width}) {
+    if (square || width == null) {
+      _setSize(v, square ? v : grid.cellH);
+    } else if (width) {
+      _setSize(v, grid.cellH);
+    } else {
+      _setSize(grid.cellW, v);
+    }
+  }
+
+  Widget _lengthControls() {
+    final a = _cornerA, b = _cornerB;
+    if (a == null || b == null) {
+      return Text(a == null ? 'Tap one end of something you know the size of.' : 'Tap its other end.',
+          style: const TextStyle(color: _ok, fontSize: 13));
+    }
+    final len = (b - a).distance;
+    final cell = _lenSquares > 0 ? len / _lenSquares : 0.0;
+    final g = RasterGrid.fromLength(
+        a: a, b: b, squares: _lenSquares, picture: _picture, partialEdges: partialEdges);
+    final fits = g != null && g.cols <= widget.tableCols && g.rows <= widget.tableRows;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text('The line is ${len.toStringAsFixed(1)} px long. It is:',
+          style: const TextStyle(color: _goldDim, fontSize: 12.5)),
+      const SizedBox(height: 6),
+      SegmentedButton<bool>(
+        segments: const [
+          ButtonSegment(value: false, label: Text('Squares')),
+          ButtonSegment(value: true, label: Text('Feet (5 per square)')),
+        ],
+        selected: {_lenFeet},
+        onSelectionChanged: (s) => setState(() => _lenFeet = s.first),
+        showSelectedIcon: false,
+        style: _segStyle(),
       ),
-      s('+.01', 0.01),
-      s('+.1', 0.1),
-      s('+1', 1),
+      const SizedBox(height: 6),
+      _lenFeet
+          ? NumberStepper(
+              label: 'Length in feet',
+              value: _lenSquares * 5,
+              steps: const [5, 10, 25, 50],
+              min: 2.5,
+              max: 2000,
+              decimals: 1,
+              unit: 'ft',
+              valueKey: const ValueKey('gridEditorLength'),
+              onChanged: (v) => setState(() {
+                _lenSquares = v / 5;
+                _lenByHand = true;
+              }),
+            )
+          : NumberStepper(
+              label: 'Length in squares',
+              value: _lenSquares,
+              min: 0.5,
+              max: 400,
+              decimals: 1,
+              unit: 'sq',
+              valueKey: const ValueKey('gridEditorLength'),
+              onChanged: (v) => setState(() {
+                _lenSquares = v;
+                _lenByHand = true;
+              }),
+            ),
+      const SizedBox(height: 4),
+      Text(
+          g == null
+              ? 'Squares that small make no map — fewer squares or a longer line.'
+              : 'Gives squares of ${cell.toStringAsFixed(2)} px: the map is ${g.cols} × ${g.rows} '
+                  'squares, ${fits ? 'fits the TV' : 'bigger than the TV (it pans)'}.',
+          key: const ValueKey('gridEditorLengthResult'),
+          style: TextStyle(color: g == null ? Colors.orangeAccent : _gold, fontSize: 13)),
+      const SizedBox(height: 6),
+      Wrap(spacing: 8, runSpacing: 6, children: [
+        FilledButton.icon(
+          key: const ValueKey('gridEditorUseLength'),
+          style: FilledButton.styleFrom(backgroundColor: _gold, foregroundColor: _bg),
+          icon: const Icon(Icons.check, size: 18),
+          label: const Text('Use this length'),
+          onPressed: g == null ? null : _applyLength,
+        ),
+        TextButton(
+            onPressed: _clearCorners,
+            child: const Text('Clear line', style: TextStyle(color: _goldDim))),
+      ]),
     ]);
   }
 
@@ -1189,18 +1323,18 @@ class GridEditorPageState extends State<GridEditorPage> {
     final n = grid.cols;
     void set(int v) =>
         setGrid(grid.acrossWidth(max(1, v), square: square, partialEdges: partialEdges));
-    return Row(children: [
-      _iconBtn(Icons.remove, 'One square less across', () => set(n - 1)),
-      SizedBox(
-          width: 56,
-          child: Text('$n',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: _gold, fontSize: 18))),
-      _iconBtn(Icons.add, 'One square more across', () => set(n + 1)),
-      const SizedBox(width: 8),
-      const Expanded(
-          child: Text('Stretches the squares over the whole width, from the left edge.',
-              style: TextStyle(color: _goldDim, fontSize: 12))),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      NumberStepper(
+        label: 'Squares across the picture',
+        value: n.toDouble(),
+        min: 1,
+        max: 400,
+        valueKey: const ValueKey('gridEditorAcrossWidth'),
+        onChanged: (v) => set(v.round()),
+      ),
+      const SizedBox(height: 4),
+      const Text('Stretches the squares over the whole width, from the left edge.',
+          style: TextStyle(color: _goldDim, fontSize: 12)),
     ]);
   }
 
@@ -1217,23 +1351,6 @@ class GridEditorPageState extends State<GridEditorPage> {
         backgroundColor: _bg,
         labelStyle: const TextStyle(color: _gold, fontSize: 13),
         side: const BorderSide(color: _border),
-      );
-
-  Widget _stepBtn(String t, VoidCallback f) => SizedBox(
-        width: 44,
-        height: 44,
-        child: TextButton(
-          style: TextButton.styleFrom(
-            padding: EdgeInsets.zero,
-            foregroundColor: _gold,
-            backgroundColor: _bg,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: const BorderSide(color: _border)),
-          ),
-          onPressed: f,
-          child: Text(t, style: const TextStyle(fontSize: 12)),
-        ),
       );
 
   Widget _iconBtn(IconData i, String tip, VoidCallback f) => SizedBox(
@@ -1275,6 +1392,9 @@ class _GridPainter extends CustomPainter {
   final Offset? crosshair;
   final bool showMarks;
 
+  /// Draws a line from mark 1 to mark 2 (the Known length tool).
+  final bool joinMarks;
+
   _GridPainter({
     required this.image,
     required this.grid,
@@ -1286,6 +1406,7 @@ class _GridPainter extends CustomPainter {
     this.cornerB,
     this.crosshair,
     this.showMarks = true,
+    this.joinMarks = false,
   });
 
   _GridPainter copyWith({double? zoom, Offset? pan, Offset? crosshair, bool? showMarks}) =>
@@ -1300,6 +1421,7 @@ class _GridPainter extends CustomPainter {
         cornerB: cornerB,
         crosshair: crosshair ?? this.crosshair,
         showMarks: showMarks ?? this.showMarks,
+        joinMarks: joinMarks,
       );
 
   Offset _s(Offset p) => p * zoom + pan;
@@ -1351,6 +1473,16 @@ class _GridPainter extends CustomPainter {
     // The anchor: the top-left corner the size steppers keep.
     canvas.drawCircle(r.topLeft, 5, Paint()..color = lineColor);
 
+    final ja = cornerA, jb = cornerB;
+    if (joinMarks && showMarks && ja != null && jb != null) {
+      canvas.drawLine(_s(ja), _s(jb), Paint()
+        ..color = const Color(0xAA000000)
+        ..strokeWidth = 5);
+      canvas.drawLine(_s(ja), _s(jb), Paint()
+        ..color = Colors.white
+        ..strokeWidth = 2);
+    }
+
     for (final (label, m) in [('1', cornerA), ('2', cornerB)]) {
       if (m == null || !showMarks) continue;
       final p = _s(m);
@@ -1394,5 +1526,6 @@ class _GridPainter extends CustomPainter {
       old.cornerA != cornerA ||
       old.cornerB != cornerB ||
       old.crosshair != crosshair ||
-      old.showMarks != showMarks;
+      old.showMarks != showMarks ||
+      old.joinMarks != joinMarks;
 }

@@ -21,7 +21,9 @@ The same APK runs in two modes:
   plus **DM layers**: any number of pictures (a DM version of the map, notes, secrets)
   laid over the map on the DM's screen only; the TV never shows them. A picture map's drawn
   grid is found by itself, and a full-screen grid editor fits the squares by hand to a hundredth
-  of a pixel (slide, stretch, two corners with a magnifier). A game holds **several maps** (the
+  of a pixel (slide, stretch, two corners with a magnifier); a map with no grid gets its scale
+  from something of known size (a door is one square) or from a file name like `Tavern_30x40`.
+  Counts and lengths use steppers (±1/2/5/10, tap the number for a numpad). A game holds **several maps** (the
   tower's floors, town and cellar), each with its own fog, doors and tokens — switched in the
   Settings tab; maps come from the device or the **shared map library** on the VPS, which the
   tablet browses and fills in a game and from the library. On Android the
@@ -56,7 +58,8 @@ lightweight Python WebSocket relay running on a VPS.
 | [MapThumbnails] | `lib/storage/map_thumbnails.dart` | Small PNG previews of library maps, made lazily on the TV while it shows the library and sent to the companion (`lib.thumbnail`). |
 | [ContinueSessionCard] | `lib/ui/library_cards.dart` | The companion library's top card (resume the last session), map thumbnails and dated default session names. |
 | [SystemBars] | `lib/ui/system_bars.dart` | Hides Android's status and navigation bars (sticky immersive): the companion during a game (toggle on the map, stored on the device), the TV always. No-op off Android. |
-| [GridEditorPage] | `lib/ui/grid_editor.dart` | The companion's full-screen grid editor (`showGridEditor`): fit a picture map's squares by hand — Move / Stretch / 2 corners, steps to 0.01 px, corner jumps, undo. |
+| [GridEditorPage] | `lib/ui/grid_editor.dart` | The companion's full-screen grid editor (`showGridEditor`): fit a picture map's squares by hand — Move / Stretch / 2 corners / Known length (gridless maps), steps to 0.01 px, corner jumps, undo. |
+| [NumberStepper] | `lib/ui/number_stepper.dart` | `−10 −5 −2 −1 [n] +1 +2 +5 +10` with a numpad behind the number (`showNumpad`) — every count and length in the grid dialogs and Measure the TV. |
 | [SharedLibrarySheet] | `lib/ui/shared_library_sheet.dart` | The companion's shared map library (`showSharedLibrarySheet`): the VPS's maps with thumbnails — add to the game / play, delete, upload from the device. |
 | [SharedLibraryClient] | `lib/network/shared_library.dart` | HTTP client for the VPS's shared map library (`/library` on the dev server). |
 | [TvOverviewMap] | `lib/ui/tv_overview_map.dart` | The companion's overview: the whole map with a box around what the players see; tap or drag to move the TV's window. |

@@ -95,6 +95,11 @@ devices:
 - upload a picture map: a drawn grid is detected (green line, counts pre-filled, "own grid
   lines" ticked — our grid off, also for the next game on that map); "Fit on the picture" opens
   the grid editor (Move / Stretch / 2 corners, steps to 0.01 px) — check it on the real tablet
+- a picture map with **no grid** (08b, any gridless export): the dialog says so, "Measure on the
+  picture" opens Known length — a line over a door or a room you know, its squares (or feet) on
+  the stepper, "Use this length"; then a mini on a door on the TV. A name like `Tavern_30x40.jpg`
+  pre-fills the counts. All counts are steppers now (±1/2/5/10, tap the number → numpad); Measure
+  the TV's fine tune is the picture width in mm (not built into a release yet)
 - Settings ▸ Grid ▸ "Fit the grid on the picture" in a game: the same counts keep the fog, new
   counts clear it; "Map squares" is the quick count-only dialog
 

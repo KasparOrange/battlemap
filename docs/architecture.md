@@ -194,7 +194,10 @@ cut square at the screen's edge.
   34.5 in = 34 × 19 squares with about ¼ in to spare per side. Companion ▸ Settings ▸ Table scale
   ▸ "Measure the TV…": the TV shows its one-inch squares and a 10-inch bar
   (`TableFrameComponent`, `vtt.showCalibration`); the DM types what the bar measures (cm or in),
-  or the picture width, or nudges ±¼ %; each change applies at once (`vtt.calibrate`). Before
+  or sets the picture width with a stepper (±1 / 2 / 5 / 10 mm or ±0.05–0.5 in, tap the number
+  for a numpad); each change applies at once (`vtt.calibrate`). This is the **TV's** scale (an
+  inch on this screen), set once per TV; how many squares a map has is the **map's** scale (upload
+  dialog, grid editor — below), stored with the map. Before
   1.1.9 each session carried its own `tvWidthInches`/`calibratedBaseZoom` and a 0.5–2× scale
   slider — both gone (the slider broke the one-inch rule).
 - **Arithmetic** (`lib/model/table_fit.dart`, pure, tested): `TableGrid` = whole squares of the
@@ -220,9 +223,17 @@ cut square at the screen's edge.
   starts the same way. Picture/PDF maps can be re-gridded in a game (Settings ▸ Grid ▸
   "Fit the grid on the picture" or "Map squares", `vtt.setMapGrid`; keeps drawings, tokens, layers, and the
   fog too when the counts stay — see "picture grid").
-- **Upload dialog** for picture/PDF maps (`showMapGridDialog`): the picture's size, columns with
-  rows following for square squares, a warning when squares come out > 3 % off square, and how
-  the map sits on the table (fits / fits turned / the TV pans).
+- **Upload dialog** for picture/PDF maps (`showMapGridDialog`): the picture's size, squares
+  across and down as steppers (rows follow for square squares), a warning when squares come out
+  > 3 % off square, and how the map sits on the table (fits / fits turned / the TV pans). A
+  picture with no grid drawn in says so and offers "Measure on the picture" (the grid editor's
+  Known length tool) instead of "Fit on the picture".
+
+**Number stepper** (`NumberStepper`, `lib/ui/number_stepper.dart`, since 2026-10-10): the one
+control for every count and length in these dialogs, after MitWare's — `−10 −5 −2 −1 [ n ] +1 +2
++5 +10` (the steps vary: 0.01–5 px for a square size, 1–10 mm for the TV), the biggest steps
+dropped where the row is too narrow, and a tap on the number opens a numpad (`showNumpad`; first
+key replaces, out-of-range keeps OK off, a hardware keyboard works too).
 
 ## embedded grid detection (since 2026-10-10)
 
@@ -231,7 +242,11 @@ companion looks for it (`detectGridInPicture` in `lib/model/grid_detect.dart`, �
 grid pre-fills columns × rows, ticks "the picture has its own grid lines" (battlemap then draws
 none) and shows a green "Found a drawn grid: 40 × 30 squares of 32 px". A grid that does not
 start at the picture's edge becomes a **picture grid** (below) — nothing is cropped. Nothing
-found → the old defaults, box unticked. Either way "Fit on the picture" opens the grid editor.
+found → the **file name** is read for the squares (`gridCountsFromName`: `Tavern_30x40.jpg`,
+`[22 x 30]`; only counts that give square squares of ≥ 20 px on this picture, either order),
+else 20 across; the box stays unticked and the dialog offers "Measure on the picture" — the grid
+editor in its Known length tool, because a map with no squares to count gets its scale from
+something of known size. With a grid, "Fit on the picture" opens the editor as before.
 
 The formula, per axis (x shown; rows are the same), on the picture averaged down to ≤ 3072 px:
 
@@ -270,10 +285,11 @@ tablet, below on portrait. Corrects what detection got wrong — or fits a gridl
 | Control | What it does | Precision |
 |---|---|---|
 | Look / Move grid / Stretch / 2 corners | one finger pans / slides the grid / stretches it (top-left corner stays, the line under the finger follows) / marks two grid corners; **two fingers always move the view** | magnifier (4×, crosshair) while dragging |
+| Known length (no grid in the picture) | drag/tap a line over something of known size — a door (1 square), a 10 ft corridor, a scale bar — and say its length in squares or feet (5 ft per square), "Use this length": square squares of `length ÷ squares`, grid lines through the line's start (`RasterGrid.fromLength`) | a mark's error ÷ the squares; a long line (a room, a scale bar) beats a door |
 | 2 corners | mark a corner, mark a far one, check "squares across / down" (auto-counted as the pair both directions agree on, ±; with square squares down follows across; the implied size shown, a warning past 1 % disagreement), "Use these corners" | a mark's error ÷ the count: 1 px over 30 squares = 0.03 px |
-| Square size | −1 / −.1 / −.01 · value (tap to type) · +.01 / +.1 / +1; "Square squares" off → width and height rows | 0.01 px |
+| Square size | number stepper ±.01 / .1 / 1 / 5 px, tap the number for a numpad; "Square squares" off → width and height rows | 0.01 px |
 | Position | arrows by 1 px or 0.1 px, x/y (tap to type), "lines on the picture edge" | 0.1 px |
-| ½ size, × 2 size, squares across ±, whole only / include partial | the detector's typical errors (half/double), the old fill-the-width count | — |
+| ½ size, × 2 size, squares across (stepper ±1/2/5/10), whole only / include partial | the detector's typical errors (half/double), the old fill-the-width count | — |
 | Check the fit | zoom to top left / right, centre, bottom left / right, whole picture | drift shows at the far corner |
 | Undo, redo, back to the start, detect again, detected | — | — |
 
@@ -283,7 +299,9 @@ when a second finger lands, what the first did is undone and the touch only move
 shows ~1.5 squares, marks left out. Re-gridding the same picture keeps the tablet's view.
 Keyboard: arrows nudge (Shift 10×), + / − size by 0.01. The readout shows counts, square size,
 how the map sits on the table, skew of non-square squares. Opened from the upload dialog ("Fit on
-the picture") and in a game (Settings tab ▸ Grid ▸ "Fit the grid on the picture"). In a game a fine
+the picture", or "Measure on the picture" in Known length for a gridless picture) and in a game
+(Settings tab ▸ Grid ▸ "Fit the grid on the picture"; on a map battlemap draws the grid over,
+"Set this map's scale on the picture", opening in Known length). In a game a fine
 adjustment with **the same counts keeps the fog**, shadow edits, the table window and undo
 (`VttState.regridRaster`); new counts clear them.
 

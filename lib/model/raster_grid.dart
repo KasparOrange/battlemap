@@ -311,6 +311,37 @@ class RasterGrid {
     return (dx < 0 ? -nx : nx, dy < 0 ? -ny : ny);
   }
 
+  /// Square squares from a known length on the picture — the editor's
+  /// Known length tool, for maps with **no grid drawn in**: the DM drags a
+  /// line from [a] to [b] over something whose size they know (a door is
+  /// one square, a scale bar says 50 ft = 10 squares) and says it is
+  /// [squares] squares long (fractions allowed). One square is then
+  /// `|b − a| / squares` picture pixels, in any direction of the line.
+  ///
+  /// Grid lines run through [a], so the squares line up with what was
+  /// measured (mark a door's edge and the door sits in a square); the
+  /// squares cover [picture] as [RasterGrid.fromLines] does. Returns `null`
+  /// when [squares] ≤ 0 or the square would be smaller than [minCell].
+  static RasterGrid? fromLength({
+    required Offset a,
+    required Offset b,
+    required double squares,
+    required Size picture,
+    bool partialEdges = false,
+  }) {
+    if (squares <= 0) return null;
+    final cell = (b - a).distance / squares;
+    if (cell < minCell) return null;
+    return RasterGrid.fromLines(
+      lineX: a.dx,
+      lineY: a.dy,
+      cellW: cell,
+      cellH: cell,
+      picture: picture,
+      partialEdges: partialEdges,
+    );
+  }
+
   /// The count on the other axis that agrees with [n] squares over
   /// [distance] for square squares across [otherDistance] (signed like
   /// [otherDistance]) — "down follows across" in the two-corner tool.

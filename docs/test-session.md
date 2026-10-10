@@ -109,8 +109,11 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 
 **6. improvised maps**
 1. Upload 08a and 08b: 08a's drawn grid is detected (green line, 19 × 14 of 72 px pre-filled),
-   08b has none (count by hand, rows follow: 16 → 18). "Fit on the picture" opens the grid
-   editor: 2 corners on 08b's room corners, ±0.01 px steps, a pinch never moves the grid. With
+   08b has none: the dialog says "no grid lines found" and offers "Measure on the picture" — the
+   grid editor in Known length: a line over a room or door of known size, its squares (or feet,
+   5 per square) on the stepper, "Use this length" (or count by hand on the steppers, rows follow:
+   16 → 18). On 08a "Fit on the picture" opens the grid editor: 2 corners on the room corners,
+   ±0.01 px steps, a pinch never moves the grid. Tapping a stepper's number opens a numpad. With
    "the picture has its own grid lines" ticked the TV draws no grid, and
    the next game on that map neither. The tablet's chip (top right) shows the same squares as the
    TV, also after switching from another map and after a reconnect (before 1.1.8 it kept the

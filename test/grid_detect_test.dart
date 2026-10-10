@@ -146,4 +146,24 @@ void main() {
       expect(detectEmbeddedGrid(Uint8List(8 * 8 * 4), 8, 8), isNull);
     });
   });
+
+  group('gridCountsFromName', () {
+    const pic = Size(3000, 4000); // 30 × 40 squares of 100 px
+    test('reads the squares from the file name', () {
+      expect(gridCountsFromName('Tavern_30x40.jpg', pic), (cols: 30, rows: 40));
+      expect(gridCountsFromName('tavern [30 X 40] gridless.png', pic), (cols: 30, rows: 40));
+      expect(gridCountsFromName('Tavern 30×40.webp', pic), (cols: 30, rows: 40));
+    });
+
+    test('rows first in the name are turned round', () {
+      expect(gridCountsFromName('Tavern_40x30.jpg', pic), (cols: 30, rows: 40));
+    });
+
+    test('pixel sizes and counts that do not fit are skipped', () {
+      expect(gridCountsFromName('Tavern_3000x4000_30x40.jpg', pic), (cols: 30, rows: 40));
+      expect(gridCountsFromName('Tavern_20x40.jpg', pic), isNull);
+      expect(gridCountsFromName('Tavern.jpg', pic), isNull);
+      expect(gridCountsFromName('Tavern_30x40.jpg', null), isNull);
+    });
+  });
 }

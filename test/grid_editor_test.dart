@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -25,6 +26,14 @@ Future<Uint8List> gridPng() async {
 }
 
 const picture = Size(640, 480);
+
+/// The screen point of picture point [pic] (the canvas sits below the app bar).
+Offset canvasAt(WidgetTester tester, GridEditorPageState s, Offset pic) =>
+    tester.getTopLeft(find.byKey(const ValueKey('gridEditorCanvas'))) + s.screenOf(pic);
+
+/// The number a [NumberStepper] shows, found by its value key.
+String stepperText(WidgetTester tester, String key) =>
+    tester.widget<Text>(find.byKey(ValueKey(key))).textSpan!.toPlainText();
 
 void main() {
   late Uint8List png;
@@ -78,8 +87,8 @@ void main() {
     await tester.tap(find.text('Square squares'));
     await tester.pump();
     expect(s.square, isFalse);
-    expect(find.text('W 32.00'), findsOneWidget);
-    expect(find.text('H 32.00'), findsOneWidget);
+    expect(stepperText(tester, 'gridEditorCellW'), '32.00 px');
+    expect(stepperText(tester, 'gridEditorCellH'), '32.00 px');
     await tester.tap(find.text('+.1').last); // the height row
     await tester.pump();
     expect(s.grid.cellW, 32);
@@ -170,16 +179,67 @@ void main() {
     await tester.pump();
     await tester.tapAt(s.screenOf(const Offset(32 + 320, 32 + 256)));
     await tester.pump();
-    String across() => tester.widget<Text>(find.byKey(const ValueKey('gridEditorAcross'))).data!;
-    String down() => tester.widget<Text>(find.byKey(const ValueKey('gridEditorDown'))).data!;
+    String across() => stepperText(tester, 'gridEditorAcross');
+    String down() => stepperText(tester, 'gridEditorDown');
     expect((across(), down()), ('10', '8'));
-    await tester.ensureVisible(find.byTooltip('One square more across'));
-    await tester.tap(find.byTooltip('One square more across'));
-    await tester.pump();
-    await tester.tap(find.byTooltip('One square more across'));
+    const plus2 = 'Squares across between the marks +2';
+    await tester.ensureVisible(find.byTooltip(plus2));
+    await tester.tap(find.byTooltip(plus2));
     await tester.pump();
     // 12 across over 320 px = 26.7 px → 256 px down = 9.6 → 10.
     expect((across(), down()), ('12', '10'));
+  });
+
+  testWidgets('Known length: a line and its squares set the scale', (tester) async {
+    final s = await open(tester, RasterGrid.whole(20, 15, picture));
+    await tester.tap(find.text('Known length (no grid in the picture)'));
+    await tester.pump();
+    expect(s.tool, GridTool.length);
+    // A 4-square door frame of 50 px squares: 200 px from (100, 60).
+    await tester.tapAt(canvasAt(tester, s, const Offset(100, 60)));
+    await tester.pump();
+    await tester.tapAt(canvasAt(tester, s, const Offset(300, 60)));
+    await tester.pump();
+    // Starts from the current 32 px squares: 200 / 32 ≈ 6.
+    expect(stepperText(tester, 'gridEditorLength'), '6.0 sq');
+    const minus2 = 'Length in squares −2';
+    await tester.ensureVisible(find.byTooltip(minus2));
+    await tester.tap(find.byTooltip(minus2));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('gridEditorUseLength')));
+    await tester.tap(find.byKey(const ValueKey('gridEditorUseLength')));
+    await tester.pump();
+    // Taps land on whole screen pixels (~0.4 picture px here).
+    expect(s.grid.cellW, closeTo(50, 0.3));
+    expect(s.grid.cellH, s.grid.cellW);
+    // Lines through the line's start (100, 60): off a multiple by < 0.6 px.
+    double off(double v, double at) {
+      final r = (v - at) % s.grid.cellW;
+      return min(r, s.grid.cellW - r);
+    }
+
+    expect(off(s.grid.x, 100), lessThan(0.6));
+    expect(off(s.grid.y, 60), lessThan(0.6));
+  });
+
+  testWidgets('Known length in feet: 5 ft per square', (tester) async {
+    final s = await open(tester, RasterGrid.whole(20, 15, picture));
+    await tester.tap(find.text('Known length (no grid in the picture)'));
+    await tester.pump();
+    await tester.tapAt(canvasAt(tester, s, const Offset(100, 60)));
+    await tester.pump();
+    await tester.tapAt(canvasAt(tester, s, const Offset(100, 460)));
+    await tester.pump();
+    await tester.ensureVisible(find.text('Feet (5 per square)'));
+    await tester.tap(find.text('Feet (5 per square)'));
+    await tester.pump();
+    expect(stepperText(tester, 'gridEditorLength'), '65.0 ft'); // 400 / 32 = 12.5 → 13 squares
+    await tester.tap(find.byTooltip('Length in feet +10'));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(const ValueKey('gridEditorUseLength')));
+    await tester.tap(find.byKey(const ValueKey('gridEditorUseLength')));
+    await tester.pump();
+    expect(s.grid.cellW, closeTo(400 / 15, 0.3)); // 75 ft
   });
 
   testWidgets('the arrows nudge by the chosen step', (tester) async {

@@ -6,6 +6,15 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:20 - 230ef3ba - Map scale for gridless maps + number stepper
+- Konrad: the measuring should be the scale of each map (building on the grid detection), also for maps with no grid drawn in — not something of the TV or the app; and the step buttons should be MitWare's: the number in the middle, −1 −2 −5 −10 left, +1 +2 +5 +10 right, a tap on the number opens a numpad
+	- what existed: the map's scale was already per map (`RasterGrid`, stored with the map); "Measure the TV" is the TV's own inch, set once per TV — both stay, the dialogs now say which is which. Missing was a way to scale a map with **no squares to count**: the upload dialog asked to "count the squares along the top edge"
+	- grid editor tool **Known length**: a line over something of known size (door, corridor, scale bar), its length in squares or feet (5 per square) → square squares, lines through the line's start (`RasterGrid.fromLength`); the upload dialog says "no grid lines found" and offers "Measure on the picture" (opens there); in a game "Set this map's scale on the picture" when battlemap draws the grid
+	- squares read from the file name when no grid is detected (`gridCountsFromName`: `Tavern_30x40`, `[22 x 30]`, either order, only counts giving square squares ≥ 20 px)
+	- `NumberStepper` + `showNumpad` (`lib/ui/number_stepper.dart`): map squares across/down, editor square size (±.01/.1/1/5 px), corner counts, squares across; Measure the TV's Smaller/Bigger and "picture width" field became one stepper on the width (±1/2/5/10 mm); steps that don't fit a narrow row are left off
+	- found: the editor tests tapped canvas-local points as screen points (y off by the app bar) — the corners test only checked x; tests now use the canvas's position (`gridEditorCanvas` key)
+	- 566 tests green (new: stepper + numpad, map squares dialog gridless, `fromLength`, file-name counts, Known length in squares and feet, Measure the TV stepper); not in a build yet, no device test
+
 ### 26-10-10 21:05 - ef2b737d - Games with several maps + shared map library
 - Konrad: a session holds several maps — switch between them in the tablet's DM settings, and add maps not only from the device but from a shared map library on the server, filled from there and from outside a game
 	- model: `Session.mapIds` + `parkedMaps` (per-map fields `Session.perMapKeys`), `switchTo` / `withoutMap` (pure, tested); old sessions load with one map; deleting a map drops it from every game, deletes games where it was the only one

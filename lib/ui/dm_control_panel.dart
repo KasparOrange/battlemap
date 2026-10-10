@@ -13,6 +13,7 @@ import '../model/table_fit.dart';
 import '../state/vtt_state.dart';
 import 'grid_editor.dart';
 import 'map_grid_dialog.dart';
+import 'number_stepper.dart';
 import 'session_settings_dialog.dart';
 
 // ─── Medieval warm color palette ────────────────────────────────────
@@ -2347,8 +2348,10 @@ class _DmControlPanelState extends State<DmControlPanel> {
         if (raster && cb.onSetMapGrid != null) ...[
           const SizedBox(height: 6),
           _GoldButton(
-            icon: Icons.grid_on,
-            label: 'Fit the grid on the picture',
+            icon: state.showGrid ? Icons.straighten : Icons.grid_on,
+            label: state.showGrid
+                ? 'Set this map\'s scale on the picture'
+                : 'Fit the grid on the picture',
             onTap: () => _fitGrid(context),
           ),
           const SizedBox(height: 6),
@@ -2470,6 +2473,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
       initialGrid: state.rasterGrid,
       editorNote: _fineNote,
       editorCountsNote: _countsNote,
+      gridless: state.showGrid,
     );
     if (choice == null) return;
     cb.onSetMapGrid?.call(choice.cols, choice.rows, choice.grid);
@@ -2481,6 +2485,9 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   /// Opens the grid editor ([showGridEditor]) on the open picture/PDF map
   /// and re-grids it with what the DM applies ([DmCallbacks.onSetMapGrid]).
+  ///
+  /// A map battlemap draws the grid over (its picture has none) opens in
+  /// the Known length tool: its scale comes from something of known size.
   Future<void> _fitGrid(BuildContext context) async {
     final map = state.map;
     final size = state.rasterImageSize;
@@ -2496,6 +2503,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
       tableRows: state.tableRows,
       note: _fineNote,
       countsNote: _countsNote,
+      initialTool: state.showGrid ? GridTool.length : GridTool.look,
     );
     if (g == null || g.closeTo(start)) return;
     cb.onSetMapGrid?.call(g.cols, g.rows, g.isWhole ? null : g);
@@ -2506,14 +2514,18 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// While open, the TV shows its calibration pattern
   /// ([DmCallbacks.onShowCalibration]): every one-inch square of its window
   /// and a 10-inch bar. The DM measures the bar (cm or inches) and applies —
-  /// the picture width becomes `width × measured / 10` — or types the
-  /// picture's width directly, or nudges the squares a quarter percent
-  /// bigger/smaller. Each change goes to the TV at once and the dialog stays
-  /// open, so the DM can measure again; the info line follows the TV.
+  /// the picture width becomes `width × measured / 10` — or sets the
+  /// picture's width with a [NumberStepper] (±1/2/5/10 mm or ±0.05–0.5 in,
+  /// tap the number to type it). Each change goes to the TV at once and the
+  /// dialog stays open, so the DM can measure again; the stepper follows
+  /// the TV.
+  ///
+  /// This is the TV's own scale (one inch per square on this screen), set
+  /// once per TV; how many squares a map has is the map's scale
+  /// ([showMapGridDialog], [showGridEditor]).
   void _showCalibrationDialog(BuildContext context) {
     cb.onShowCalibration?.call(true);
     final measured = TextEditingController();
-    final width = TextEditingController();
     var metric = true;
     String? error;
     ModalRoute<dynamic>? route;
@@ -2532,22 +2544,17 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
           void apply() {
             final len = read(measured);
-            final w = read(width);
-            if (len != null) {
-              final ratio = len / bar;
-              if (ratio < 0.5 || ratio > 2) {
-                setDialog(() => error = 'That is far from $bar in — measure the bar again.');
-                return;
-              }
-              cb.onCalibrate(state.tvWidthInches * ratio);
-            } else if (w != null) {
-              cb.onCalibrate(w);
-            } else {
-              setDialog(() => error = 'Enter what the bar measures (or the picture width).');
+            if (len == null) {
+              setDialog(() => error = 'Enter what the bar measures.');
               return;
             }
+            final ratio = len / bar;
+            if (ratio < 0.5 || ratio > 2) {
+              setDialog(() => error = 'That is far from $bar in — measure the bar again.');
+              return;
+            }
+            cb.onCalibrate(state.tvWidthInches * ratio);
             measured.clear();
-            width.clear();
             setDialog(() => error = null);
           }
 
@@ -2558,75 +2565,78 @@ class _DmControlPanelState extends State<DmControlPanel> {
               side: const BorderSide(color: _kBorderGold),
             ),
             title: const Text('Measure the TV', style: TextStyle(color: _kTextPrimary)),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'The TV shows its one-inch squares and a $bar-inch bar. '
-                    'Measure the bar with a ruler and type what you get.',
-                    style: TextStyle(color: _kTextSecondary.withValues(alpha: 0.9), fontSize: 13),
-                  ),
-                  const SizedBox(height: 8),
-                  ListenableBuilder(
-                    listenable: state,
-                    builder: (_, _) => Text(
-                      'Now: ${state.tableCols} × ${state.tableRows} squares · picture '
-                      '${state.tvWidthInches.toStringAsFixed(2)} in '
-                      '(${(state.tvWidthInches * 2.54).toStringAsFixed(1)} cm) wide',
-                      style: const TextStyle(color: _kTextPrimary, fontSize: 13),
+            // A fixed width: the stepper measures its room (LayoutBuilder),
+            // which AlertDialog's intrinsic sizing cannot ask through.
+            content: SizedBox(
+              width: (MediaQuery.sizeOf(ctx).width - 96).clamp(240.0, 420.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'This TV only, once: the TV shows its one-inch squares and a '
+                      '$bar-inch bar. Measure the bar with a ruler and type what you get. '
+                      'Each map\'s own scale is set with the map (Map squares).',
+                      style: TextStyle(color: _kTextSecondary.withValues(alpha: 0.9), fontSize: 13),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 6,
-                    children: [
-                      for (final m in [true, false])
-                        ChoiceChip(
-                          label: Text(m ? 'cm' : 'inches'),
-                          selected: metric == m,
-                          onSelected: (_) => setDialog(() => metric = m),
-                          backgroundColor: _kSurface,
-                          selectedColor: _kSurfaceActive,
-                          labelStyle: const TextStyle(color: _kTextPrimary, fontSize: 12),
-                          side: const BorderSide(color: _kBorderGold),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _calibrationField(measured, 'The bar measures',
-                      metric ? (bar * 2.54).toStringAsFixed(1) : '$bar', unit),
-                  const SizedBox(height: 8),
-                  _calibrationField(width, 'or: the picture is this wide',
-                      metric ? '87.6' : '34.5', unit),
-                  if (error != null) ...[
                     const SizedBox(height: 8),
-                    Text(error!, style: const TextStyle(color: Colors.orangeAccent, fontSize: 13)),
-                  ],
-                  const SizedBox(height: 12),
-                  const _GoldLabel('Fine tune'),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _GoldButton(
-                          icon: Icons.zoom_out,
-                          label: 'Smaller',
-                          onTap: () => cb.onCalibrate(state.tvWidthInches * 1.0025),
-                        ),
+                    ListenableBuilder(
+                      listenable: state,
+                      builder: (_, _) => Text(
+                        'Now: ${state.tableCols} × ${state.tableRows} squares · picture '
+                        '${state.tvWidthInches.toStringAsFixed(2)} in '
+                        '(${(state.tvWidthInches * 2.54).toStringAsFixed(1)} cm) wide',
+                        style: const TextStyle(color: _kTextPrimary, fontSize: 13),
                       ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: _GoldButton(
-                          icon: Icons.zoom_in,
-                          label: 'Bigger',
-                          onTap: () => cb.onCalibrate(state.tvWidthInches / 1.0025),
-                        ),
-                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 6,
+                      children: [
+                        for (final m in [true, false])
+                          ChoiceChip(
+                            label: Text(m ? 'cm' : 'inches'),
+                            selected: metric == m,
+                            onSelected: (_) => setDialog(() => metric = m),
+                            backgroundColor: _kSurface,
+                            selectedColor: _kSurfaceActive,
+                            labelStyle: const TextStyle(color: _kTextPrimary, fontSize: 12),
+                            side: const BorderSide(color: _kBorderGold),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _calibrationField(measured, 'The bar measures',
+                        metric ? (bar * 2.54).toStringAsFixed(1) : '$bar', unit),
+                    if (error != null) ...[
+                      const SizedBox(height: 8),
+                      Text(error!, style: const TextStyle(color: Colors.orangeAccent, fontSize: 13)),
                     ],
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    const _GoldLabel('Fine tune: the picture is this wide'),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Wider = smaller squares. Tap the number to type it.',
+                      style: TextStyle(color: _kTextSecondary.withValues(alpha: 0.9), fontSize: 12),
+                    ),
+                    const SizedBox(height: 6),
+                    ListenableBuilder(
+                      listenable: state,
+                      builder: (_, _) => NumberStepper(
+                        key: const ValueKey('tvWidthStepper'),
+                        label: 'Picture width',
+                        value: metric ? state.tvWidthInches * 2.54 : state.tvWidthInches,
+                        steps: metric ? const [0.1, 0.2, 0.5, 1] : const [0.05, 0.1, 0.2, 0.5],
+                        min: metric ? 25 : 10,
+                        max: metric ? 500 : 200,
+                        decimals: metric ? 1 : 2,
+                        unit: unit,
+                        onChanged: (v) => cb.onCalibrate(metric ? v / 2.54 : v),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             actions: [
@@ -2662,7 +2672,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
       },
     ).whenComplete(() {
       cb.onShowCalibration?.call(false);
-      _disposeAfterExit(route, [measured, width]);
+      _disposeAfterExit(route, [measured]);
     });
   }
 

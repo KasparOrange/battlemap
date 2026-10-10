@@ -266,4 +266,32 @@ void main() {
       expect(phone.rasterGrid!.isWhole, isTrue);
     });
   });
+
+  group('fromLength', () {
+    test('a known length sets square squares, lines through its start', () {
+      // A 30 ft hall (6 squares) measured over 300 px, starting at (105, 47).
+      final g = RasterGrid.fromLength(
+          a: const Offset(105, 47), b: const Offset(405, 47), squares: 6,
+          picture: const Size(1000, 700))!;
+      expect((g.cellW, g.cellH), (50, 50));
+      expect(g.x % 50, closeTo(5, 1e-9));
+      expect(g.y % 50, closeTo(47, 1e-9));
+      expect((g.cols, g.rows), (20, 14));
+    });
+
+    test('a diagonal line counts its length', () {
+      final g = RasterGrid.fromLength(
+          a: Offset.zero, b: const Offset(300, 400), squares: 10,
+          picture: const Size(1000, 1000))!;
+      expect(g.cellW, closeTo(50, 1e-9));
+    });
+
+    test('no squares or too small squares give null', () {
+      const pic = Size(1000, 700);
+      expect(RasterGrid.fromLength(a: Offset.zero, b: const Offset(100, 0), squares: 0, picture: pic),
+          isNull);
+      expect(RasterGrid.fromLength(a: Offset.zero, b: const Offset(10, 0), squares: 5, picture: pic),
+          isNull);
+    });
+  });
 }

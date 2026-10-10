@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../model/grid_detect.dart';
 import '../model/raster_grid.dart';
 import 'grid_editor.dart';
+import 'number_stepper.dart';
 
 // The DM panel's warm palette (dm_control_panel.dart), so this dialog looks
 // like the Measure the TV dialog next to it.
@@ -32,17 +33,21 @@ typedef MapGridChoice = ({int cols, int rows, bool hasOwnGrid, RasterGrid? grid}
 ///   and whether it fits the TV's [tableCols] × [tableRows] window or the TV
 ///   pans across it.
 ///
-/// [askOwnGrid] adds "the picture has its own grid lines" (battlemap then
-/// draws none, remembered for the map); [warning] is shown above the
-/// buttons once the counts differ from the initial ones (e.g. that
-/// re-gridding clears the fog); [detectedNote] says what
-/// [detectGridInPicture] found (the counts then start from it). Returns
-/// `null` on cancel.
+/// The counts are [NumberStepper]s (±1/2/5/10, tap the number for a
+/// numpad). [askOwnGrid] adds "the picture has its own grid lines"
+/// (battlemap then draws none, remembered for the map); [warning] is shown
+/// above the buttons once the counts differ from the initial ones (e.g.
+/// that re-gridding clears the fog); [detectedNote] says what
+/// [detectGridInPicture] (or [gridCountsFromName]) found — the counts then
+/// start from it. Returns `null` on cancel.
 ///
-/// With [pictureBytes] a "Fit on the picture" button opens the grid editor
-/// ([showGridEditor]) from [initialGrid] (or the typed counts) and returns
-/// what it applies. [initialGrid] (a detected grid) is returned as the
-/// choice's grid while the counts stay its counts.
+/// With [pictureBytes] a button opens the grid editor ([showGridEditor])
+/// from [initialGrid] (or the counts) and returns what it applies: "Fit on
+/// the picture" when the picture has a grid, "Measure on the picture" (the
+/// editor's Known length tool) when [gridless] — a map with no squares to
+/// count gets its scale from something of known size instead. [initialGrid]
+/// (a detected grid) is returned as the choice's grid while the counts stay
+/// its counts.
 ///
 /// See also:
 /// - [VttState.regridRaster], the in-game re-grid.
@@ -65,6 +70,7 @@ Future<MapGridChoice?> showMapGridDialog(
   GridDetection? detected,
   String? editorNote,
   String? editorCountsNote,
+  bool gridless = false,
 }) {
   return showDialog<MapGridChoice>(
     context: context,
@@ -85,6 +91,7 @@ Future<MapGridChoice?> showMapGridDialog(
       detected: detected,
       editorNote: editorNote,
       editorCountsNote: editorCountsNote,
+      gridless: gridless,
     ),
   );
 }
@@ -114,6 +121,7 @@ class _MapGridDialog extends StatefulWidget {
   final GridDetection? detected;
   final String? editorNote;
   final String? editorCountsNote;
+  final bool gridless;
 
   const _MapGridDialog({
     required this.title,
@@ -132,6 +140,7 @@ class _MapGridDialog extends StatefulWidget {
     required this.detected,
     required this.editorNote,
     required this.editorCountsNote,
+    required this.gridless,
   });
 
   @override
@@ -139,48 +148,37 @@ class _MapGridDialog extends StatefulWidget {
 }
 
 class _MapGridDialogState extends State<_MapGridDialog> {
-  late final TextEditingController _cols;
-  late final TextEditingController _rows;
+  late int _colCount;
+  late int _rowCount;
   late bool _ownGrid;
 
-  /// Whether the DM typed the rows; until then they follow the columns.
+  /// Whether the DM set the rows; until then they follow the columns.
   bool _rowsByHand = false;
 
   @override
   void initState() {
     super.initState();
-    _cols = TextEditingController(text: '${widget.initialCols}');
-    final rows = widget.initialRows ??
-        squareRowsFor(widget.initialCols, widget.imageSize) ?? 15;
-    _rows = TextEditingController(text: '$rows');
+    _colCount = widget.initialCols.clamp(1, 400);
+    _rowCount = (widget.initialRows ??
+            squareRowsFor(widget.initialCols, widget.imageSize) ?? 15)
+        .clamp(1, 400);
     _rowsByHand = widget.initialRows != null &&
         widget.initialRows != squareRowsFor(widget.initialCols, widget.imageSize);
     _ownGrid = widget.initialOwnGrid;
   }
 
-  @override
-  void dispose() {
-    _cols.dispose();
-    _rows.dispose();
-    super.dispose();
-  }
+  void _setCols(int cols) => setState(() {
+        _colCount = cols.clamp(1, 400);
+        if (!_rowsByHand) {
+          final r = squareRowsFor(_colCount, widget.imageSize);
+          if (r != null) _rowCount = r;
+        }
+      });
 
-  int get _colCount => (int.tryParse(_cols.text.trim()) ?? 0).clamp(0, 400);
-  int get _rowCount => (int.tryParse(_rows.text.trim()) ?? 0).clamp(0, 400);
-
-  void _setCols(int cols) {
-    final c = cols.clamp(1, 400);
-    _cols.text = '$c';
-    _colsChanged();
-  }
-
-  void _colsChanged() {
-    if (!_rowsByHand) {
-      final r = squareRowsFor(_colCount, widget.imageSize);
-      if (r != null) _rows.text = '$r';
-    }
-    setState(() {});
-  }
+  void _setRows(int rows) => setState(() {
+        _rowCount = rows.clamp(1, 400);
+        _rowsByHand = true;
+      });
 
   /// The table line and the squareness warning for the current counts.
   (String, String?) _describe() {
@@ -223,67 +221,66 @@ class _MapGridDialogState extends State<_MapGridDialog> {
         side: const BorderSide(color: _border),
       ),
       title: Text(widget.title, style: const TextStyle(color: _gold)),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              size != null
-                  ? 'Picture ${size.width.round()} × ${size.height.round()} px. '
-                      'Count the squares along the top edge; the rows follow.'
-                  : 'How many squares does the map have?',
-              style: const TextStyle(color: _goldDim, fontSize: 13),
-            ),
-            if (widget.detectedNote != null) ...[
-              const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.grid_on, color: Colors.lightGreenAccent, size: 18),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(widget.detectedNote!,
-                        style: const TextStyle(color: Colors.lightGreenAccent, fontSize: 13)),
-                  ),
-                ],
+      // A fixed width: the steppers measure their room (LayoutBuilder),
+      // which AlertDialog's intrinsic sizing cannot ask through.
+      content: SizedBox(
+        width: (MediaQuery.sizeOf(context).width - 96).clamp(240.0, 420.0),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                size == null
+                    ? 'How many squares does the map have?'
+                    : widget.gridless
+                        ? 'Picture ${size.width.round()} × ${size.height.round()} px, no grid lines '
+                            'found. This sets the scale of this map only: tap "Measure on the '
+                            'picture" and mark something you know the size of (a door is one '
+                            'square) — or set the squares across if you know them.'
+                        : 'Picture ${size.width.round()} × ${size.height.round()} px. '
+                            'Count the squares along the top edge; the rows follow.',
+                style: const TextStyle(color: _goldDim, fontSize: 13),
               ),
+              if (widget.detectedNote != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.grid_on, color: Colors.lightGreenAccent, size: 18),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(widget.detectedNote!,
+                          style: const TextStyle(color: Colors.lightGreenAccent, fontSize: 13)),
+                    ),
+                  ],
+                ),
             ],
             const SizedBox(height: 12),
-            Row(
-              children: [
-                IconButton(
-                  tooltip: 'One column less',
-                  icon: const Icon(Icons.remove, color: _gold),
-                  onPressed: () => _setCols(_colCount - 1),
-                ),
-                Expanded(
-                  child: TextField(
-                    controller: _cols,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: _gold, fontSize: 18),
-                    decoration: _field('Columns'),
-                    onChanged: (_) => _colsChanged(),
-                  ),
-                ),
-                IconButton(
-                  tooltip: 'One column more',
-                  icon: const Icon(Icons.add, color: _gold),
-                  onPressed: () => _setCols(_colCount + 1),
-                ),
-                const SizedBox(width: 8),
-                const Text('×', style: TextStyle(color: _goldDim, fontSize: 18)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _rows,
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(color: _gold, fontSize: 18),
-                    decoration: _field(_rowsByHand || size == null ? 'Rows' : 'Rows (auto)'),
-                    onChanged: (_) => setState(() => _rowsByHand = true),
-                  ),
-                ),
-              ],
+            const Text('Squares across', style: _label),
+            const SizedBox(height: 4),
+            NumberStepper(
+              key: const ValueKey('mapGridCols'),
+              label: 'Squares across',
+              value: _colCount.toDouble(),
+              min: 1,
+              max: 400,
+              onChanged: (v) => _setCols(v.round()),
+            ),
+            const SizedBox(height: 10),
+            Text(
+                _rowsByHand || size == null
+                    ? 'Squares down'
+                    : 'Squares down — follow across (square squares)',
+                style: _label),
+            const SizedBox(height: 4),
+            NumberStepper(
+              key: const ValueKey('mapGridRows'),
+              label: 'Squares down',
+              value: _rowCount.toDouble(),
+              min: 1,
+              max: 400,
+              onChanged: (v) => _setRows(v.round()),
             ),
             if (cell != null) ...[
               const SizedBox(height: 6),
@@ -316,14 +313,17 @@ class _MapGridDialogState extends State<_MapGridDialog> {
               Text(widget.warning!,
                   style: const TextStyle(color: Colors.orangeAccent, fontSize: 13)),
             ],
-          ],
+            ],
+          ),
         ),
       ),
       actions: [
         if (widget.pictureBytes != null && widget.imageSize != null)
           TextButton.icon(
-            icon: const Icon(Icons.grid_on, color: _gold, size: 18),
-            label: const Text('Fit on the picture', style: TextStyle(color: _gold)),
+            icon: Icon(widget.gridless ? Icons.straighten : Icons.grid_on,
+                color: _gold, size: 18),
+            label: Text(widget.gridless ? 'Measure on the picture' : 'Fit on the picture',
+                style: const TextStyle(color: _gold)),
             onPressed: _fineTune,
           ),
         TextButton(
@@ -377,6 +377,7 @@ class _MapGridDialogState extends State<_MapGridDialog> {
       confirmLabel: widget.confirmLabel,
       note: widget.editorNote,
       countsNote: widget.editorCountsNote,
+      initialTool: widget.gridless ? GridTool.length : GridTool.look,
     );
     if (g == null || !mounted) return;
     Navigator.pop<MapGridChoice>(context, (
@@ -387,14 +388,5 @@ class _MapGridDialogState extends State<_MapGridDialog> {
     ));
   }
 
-  static InputDecoration _field(String label) => InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: _goldDim),
-        enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: _border),
-        ),
-        focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: _gold),
-        ),
-      );
+  static const _label = TextStyle(color: _goldDim, fontSize: 12);
 }

@@ -668,9 +668,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   ///
   /// For images and PDFs: looks for a grid drawn into the picture
   /// ([detectGridInPicture]: a found one pre-fills the counts and its
-  /// position on the picture) and asks for the squares
-  /// ([showMapGridDialog], with the grid editor behind "Fit on the picture",
-  /// [showGridEditor]).
+  /// position on the picture; without one, squares named in the file name,
+  /// [gridCountsFromName]) and asks for the squares ([showMapGridDialog],
+  /// with the grid editor behind "Fit on the picture" — or, for a picture
+  /// with no grid, "Measure on the picture" — [showGridEditor]).
   /// **PDFs are rasterized here on the phone** ([PdfHelper.renderPdfPage],
   /// pdfrx's PDFium WASM build, first page, ≤ 4096 px) and become a PNG
   /// named `<file>.png` — the TV only ever receives an image map, so it needs
@@ -769,6 +770,15 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       }
       DevLog.add('Companion: grid detection on "$uploadName": ${detected ?? 'none'}');
     }
+    // No grid drawn in: the file name often states the squares
+    // ("Tavern_30x40.jpg"); otherwise the DM measures something known.
+    final named = needsGridConfig && detected == null
+        ? gridCountsFromName(file.name, pictureSize)
+        : null;
+    if (named != null) {
+      detectedNote = 'The file name says ${named.cols} × ${named.rows} squares. '
+          'Check it with "Measure on the picture" (a door is one square).';
+    }
 
     // For PDFs and images: how many squares (no embedded grid metadata), and
     // whether the picture has its own grid lines
@@ -779,9 +789,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         context,
         title: 'Map squares',
         imageSize: pictureSize,
-        initialCols: detected?.cols ?? 20,
-        initialRows: detected?.rows,
+        initialCols: detected?.cols ?? named?.cols ?? 20,
+        initialRows: detected?.rows ?? named?.rows,
         initialOwnGrid: detected != null,
+        gridless: detected == null,
         detectedNote: detectedNote,
         pictureBytes: uploadBytes,
         initialGrid: detected?.toRasterGrid(),

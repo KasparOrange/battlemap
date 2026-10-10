@@ -75,6 +75,7 @@ void main() {
         onSwitchMap: (id) => calls.add('switchMap:$id'),
         onAddMapFromDevice: rec('addFromDevice'),
         onOpenSharedLibrary: rec('sharedLibrary'),
+        onShowCalibration: (on) => calls.add('showCalibration $on'),
       );
     }
 
@@ -305,6 +306,26 @@ void main() {
       await tester.tap(find.text('From device'));
       await tester.tap(find.text('Shared library'));
       expect(calls, ['switchMap:cellar', 'addFromDevice', 'sharedLibrary']);
+    });
+
+    testWidgets('Measure the TV: the picture width is a stepper', (tester) async {
+      final state = await pump(tester, const Size(1280, 800));
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Measure the TV…'));
+      await tester.tap(find.text('Measure the TV…'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final shown = tester
+          .widget<Text>(find.descendant(
+              of: find.byKey(const ValueKey('tvWidthStepper')),
+              matching: find.byType(Text)).at(4)) // after −1 −.5 −.2 −.1
+          .textSpan!
+          .toPlainText();
+      expect(shown, '${(state.tvWidthInches * 2.54).toStringAsFixed(1)} cm');
+      await tester.tap(find.byTooltip('Picture width +1'));
+      await tester.pump();
+      expect(calls, ['showCalibration true', 'calibrate']);
     });
 
     testWidgets('without game maps (local mode) Settings keeps Load Map',

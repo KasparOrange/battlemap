@@ -236,6 +236,36 @@ Future<GridDetection?> detectGridInPicture(Uint8List bytes,
   }
 }
 
+/// The squares a map's file name states, for maps with no grid drawn in.
+///
+/// Map makers name gridless exports by their size: `Tavern_30x40.jpg`,
+/// `cave [22 x 30] gridless.png`, `Ruins 24×36.webp`. Reads every
+/// `<a> x <b>` (x, X or ×) in [fileName] and returns the first one that
+/// fits [picture]: both counts 1..200, squares of at least 20 px (a pixel
+/// size like `1920x1080` gives ~1 px squares and is skipped), and square
+/// within 3 % — read as columns × rows, or the other way round when only
+/// that fits (the name gave rows first). Returns `null` when none fits or
+/// [picture] is unknown.
+///
+/// See also:
+/// - [detectGridInPicture], tried first (a drawn grid wins).
+({int cols, int rows})? gridCountsFromName(String fileName, Size? picture) {
+  if (picture == null || picture.isEmpty) return null;
+  final re = RegExp(r'(?<!\d)(\d{1,3})\s*[xX×]\s*(\d{1,3})(?!\d)');
+  bool fits(int c, int r) {
+    if (c < 1 || r < 1 || c > 200 || r > 200) return false;
+    final w = picture.width / c, h = picture.height / r;
+    return w >= _minCellOriginalPx && (h / w - 1).abs() <= 0.03;
+  }
+
+  for (final m in re.allMatches(fileName)) {
+    final a = int.parse(m.group(1)!), b = int.parse(m.group(2)!);
+    if (fits(a, b)) return (cols: a, rows: b);
+    if (fits(b, a)) return (cols: b, rows: a);
+  }
+  return null;
+}
+
 /// Smallest square the detector reports, in original picture pixels.
 /// Finer periods are stone or wood texture, and a map that coarse would be
 /// useless at one inch per square anyway.
