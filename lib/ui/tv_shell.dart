@@ -200,6 +200,9 @@ class _TvShellState extends State<TvShell> {
     TvCalibrationStore.loadWidthInches().then((w) {
       if (mounted) _state.setTvWidthInches(w);
     });
+    TvCalibrationStore.loadOverscanPercent().then((o) {
+      if (mounted) _state.setTvOverscanPercent(o);
+    });
     _library.init().then((_) {
       _log('Library loaded: ${_library.entries.length} maps');
       if (mounted) setState(() {});
@@ -1409,7 +1412,8 @@ class _TvShellState extends State<TvShell> {
           type == 'vtt.toggleWalls' || type == 'vtt.toggleRevealMode' ||
           type == 'vtt.togglePortal' || type == 'vtt.revealAll' ||
           type == 'vtt.hideAll' || type == 'vtt.calibrate' ||
-          type == 'vtt.resetCalibration' || type == 'vtt.clearMap' ||
+          type == 'vtt.resetCalibration' || type == 'vtt.setOverscan' ||
+          type == 'vtt.clearMap' ||
           type == 'vtt.setTvCameraMode' || type == 'vtt.setMapGrid' ||
           type == 'vtt.switchMap' ||
           type == 'vtt.pdfUploaded' || type == 'vtt.imageUploaded' ||
@@ -1695,9 +1699,16 @@ class _TvShellState extends State<TvShell> {
           TvCalibrationStore.saveWidthInches(_state.tvWidthInches);
           RemoteLog.info('table', 'Calibrated: picture ${_state.tvWidthInches} in wide',
               {'tvWidthInches': _state.tvWidthInches});
+        case 'vtt.setOverscan':
+          _state.setTvOverscanPercent((msg['percent'] as num).toDouble());
+          TvCalibrationStore.saveOverscanPercent(_state.tvOverscanPercent);
+          RemoteLog.info('table', 'Overscan: ${_state.tvOverscanPercent} % per edge',
+              {'overscanPercent': _state.tvOverscanPercent});
         case 'vtt.resetCalibration':
-          _state.setTvWidthInches(TableGrid.defaultScreenWidthInches);
+          _state.resetTvCalibration();
           TvCalibrationStore.saveWidthInches(null);
+          TvCalibrationStore.saveOverscanPercent(null);
+          RemoteLog.info('table', 'Calibration back to auto', {});
         case 'vtt.showCalibration':
           _state.setShowCalibration(msg['on'] as bool? ?? false,
               pivot: CalibrationPivot.fromName(msg['pivot'] as String?));

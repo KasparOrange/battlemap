@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import '../game/vtt_game.dart';
-import '../model/table_fit.dart';
 import '../state/vtt_state.dart';
 
 /// WebSocket server for VTT table mode (runs on TV).
@@ -151,8 +150,10 @@ class VttServer {
           game.resetRotation();
         case 'vtt.calibrate':
           state.setTvWidthInches((msg['tvWidthInches'] as num).toDouble());
+        case 'vtt.setOverscan':
+          state.setTvOverscanPercent((msg['percent'] as num).toDouble());
         case 'vtt.resetCalibration':
-          state.setTvWidthInches(TableGrid.defaultScreenWidthInches);
+          state.resetTvCalibration();
         case 'pong':
           break;
       }

@@ -1174,6 +1174,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         onResetRotation: c.sendResetRotation,
         onCalibrate: c.sendCalibrate,
         onResetCalibration: c.sendResetCalibration,
+        onSetOverscan: c.sendSetOverscan,
         onSetFogMode: () => c.sendSetInteractionMode('fogReveal'),
         onSetDrawMode: () => c.sendSetInteractionMode('draw'),
         onSetTokenMode: () => c.sendSetInteractionMode('token'),
@@ -1300,8 +1301,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onRotateCCW: _game.rotateCCW,
       onResetRotation: _game.resetRotation,
       onCalibrate: _state.setTvWidthInches,
-      onResetCalibration: () =>
-          _state.setTvWidthInches(TableGrid.defaultScreenWidthInches),
+      onResetCalibration: _state.resetTvCalibration,
+      onSetOverscan: _state.setTvOverscanPercent,
       onSetFogMode: () => _state.setInteractionMode(InteractionMode.fogReveal),
       onSetDrawMode: () => _state.setInteractionMode(InteractionMode.draw),
       onSetTokenMode: () => _state.setInteractionMode(InteractionMode.token),

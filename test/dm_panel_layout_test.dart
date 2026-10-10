@@ -76,6 +76,7 @@ void main() {
         onAddMapFromDevice: rec('addFromDevice'),
         onOpenSharedLibrary: rec('sharedLibrary'),
         onShowCalibration: (on, pivot) => calls.add('showCalibration $on ${pivot.name}'),
+        onSetOverscan: (v) => calls.add('overscan $v'),
       );
     }
 
@@ -356,6 +357,41 @@ void main() {
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
       expect(calls.last, 'showCalibration false center');
+    });
+
+    testWidgets('Measure the TV: pattern switch, cut-off edges, back to auto',
+        (tester) async {
+      await pump(tester, const Size(1280, 800));
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Measure the TV…'));
+      await tester.tap(find.text('Measure the TV…'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      calls.clear();
+
+      // The pattern goes off and on again on the TV, the dialog stays.
+      await tester.tap(find.text('Pattern and ruler on the TV'));
+      await tester.pump();
+      expect(calls.last, startsWith('showCalibration false'));
+      await tester.tap(find.text('Pattern and ruler on the TV'));
+      await tester.pump();
+      expect(calls.last, startsWith('showCalibration true'));
+
+      await tester.ensureVisible(find.byTooltip('Cut off each edge +1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Cut off each edge +1'));
+      await tester.pump();
+      expect(calls.last, 'overscan 1.0');
+
+      await tester.ensureVisible(find.text('Back to auto (34 × 19)'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Back to auto (34 × 19)'));
+      await tester.pump();
+      expect(calls.last, 'resetCalibration');
+      expect(find.text('Reset to 34 × 19'), findsNothing);
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
     });
 
     testWidgets('without game maps (local mode) Settings keeps Load Map',

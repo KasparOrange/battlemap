@@ -883,14 +883,20 @@ class VttRelayClient {
   /// Resets the TV camera rotation to 0 degrees.
   void sendResetRotation() => _send({'type': 'vtt.resetRotation'});
 
-  /// Calibrates the TV: its picture is [tvWidthInches] wide (the visible
-  /// image, not the diagonal). The TV keeps it on its own disk and shows
+  /// Calibrates the TV: its picture is [tvWidthInches] wide (the whole
+  /// image the app draws, not the diagonal). The TV keeps it on its own disk and shows
   /// every map at one inch per square from then on ([TableGrid]).
   void sendCalibrate(double tvWidthInches) =>
       _send({'type': 'vtt.calibrate', 'tvWidthInches': tvWidthInches});
 
-  /// Resets the TV calibration to [TableGrid.defaultScreenWidthInches]
-  /// (34 × 19 squares).
+  /// Tells the TV how much of its picture the set cuts off at each edge
+  /// ([percent], overscan): only the squares it really shows count
+  /// ([TableGrid.overscanPercent]). The TV keeps it on its own disk.
+  void sendSetOverscan(double percent) =>
+      _send({'type': 'vtt.setOverscan', 'percent': percent});
+
+  /// Resets the TV calibration to auto: [TableGrid.defaultScreenWidthInches]
+  /// (34 × 19 squares) and no overscan.
   void sendResetCalibration() => _send({'type': 'vtt.resetCalibration'});
 
   /// Shows ([on]) or hides the TV's calibration pattern: every one-inch

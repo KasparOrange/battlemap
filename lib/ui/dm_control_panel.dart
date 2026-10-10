@@ -123,8 +123,13 @@ class DmCallbacks {
   /// physical width of its picture (the TV keeps it, every game uses it).
   final void Function(double tvWidthInches) onCalibrate;
 
-  /// Resets the TV calibration to the default (34 × 19 squares).
+  /// Resets the TV calibration to auto: the default width (34 × 19
+  /// squares) and no overscan.
   final VoidCallback onResetCalibration;
+
+  /// Sets how much of the picture the TV cuts off at each edge, in percent
+  /// ([VttState.tvOverscanPercent]). `null` hides the edges stepper.
+  final void Function(double percent)? onSetOverscan;
 
   // Interaction mode
 
@@ -360,6 +365,7 @@ class DmCallbacks {
     required this.onRotateRuler,
     this.onSetTemplateDisc,
     this.onShowCalibration,
+    this.onSetOverscan,
     this.onSetTvCameraMode,
     this.onPanTable,
     this.onSetMapGrid,
@@ -2576,7 +2582,14 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// The bar starts at a **pivot** the DM picks on a small TV picture (a
   /// corner — bottom left by default — or the centre, [CalibrationPivot]):
   /// a point fixed on the screen, so the ruler lies there once and only the
-  /// bar's far end moves while the DM adjusts.
+  /// bar's far end moves while the DM adjusts. A switch turns the pattern
+  /// on the TV off and on again without closing the dialog.
+  ///
+  /// **Edges the TV cuts off** ([DmCallbacks.onSetOverscan]): a stepper in
+  /// percent per edge; the TV draws a blue line around what it believes it
+  /// shows, and only squares inside count ([TableGrid.overscanPercent]).
+  /// **Back to auto** resets width and edges (34 × 19, nothing cut off),
+  /// with undo.
   ///
   /// This is the TV's own scale (one inch per square on this screen), set
   /// once per TV; how many squares a map has is the map's scale
@@ -2585,6 +2598,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
     cb.onShowCalibration?.call(true, _pivot);
     final measured = TextEditingController();
     var metric = true;
+    var patternOn = true;
     String? error;
     ModalRoute<dynamic>? route;
     showDialog(
@@ -2593,7 +2607,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
         route ??= ModalRoute.of(ctx);
         return StatefulBuilder(builder: (ctx, setDialog) {
           final bar = TableGrid.barInches(
-              state.tvWidthInches, state.tvWidthInches * 9 / 16, _pivot);
+              state.tvWidthInches, state.tvWidthInches * 9 / 16, _pivot,
+              overscanPercent: state.tvOverscanPercent);
           final unit = metric ? 'cm' : 'in';
           double? read(TextEditingController c) {
             final v = double.tryParse(c.text.trim().replaceAll(',', '.'));
@@ -2615,6 +2630,21 @@ class _DmControlPanelState extends State<DmControlPanel> {
             cb.onCalibrate(state.tvWidthInches * ratio);
             measured.clear();
             setDialog(() => error = null);
+          }
+
+          void backToAuto() {
+            final width = state.tvWidthInches;
+            final overscan = state.tvOverscanPercent;
+            cb.onResetCalibration();
+            Notice.show(
+              ctx,
+              'TV scale back to auto: 34 × 19 squares, no edges cut off.',
+              actionLabel: 'Undo',
+              onAction: () {
+                cb.onCalibrate(width);
+                cb.onSetOverscan?.call(overscan);
+              },
+            );
           }
 
           return AlertDialog(
@@ -2639,13 +2669,43 @@ class _DmControlPanelState extends State<DmControlPanel> {
                       'Each map\'s own scale is set with the map (Map squares).',
                       style: TextStyle(color: _kTextSecondary.withValues(alpha: 0.9), fontSize: 13),
                     ),
+                    const SizedBox(height: 8),
+                    ListenableBuilder(
+                      listenable: state,
+                      builder: (_, _) => Text(
+                        'Now: ${state.tableCols} × ${state.tableRows} squares · picture '
+                        '${state.tvWidthInches.toStringAsFixed(2)} in '
+                        '(${(state.tvWidthInches * 2.54).toStringAsFixed(1)} cm) wide'
+                        '${state.tvOverscanPercent > 0 ? ' · ${state.tvOverscanPercent.toStringAsFixed(2)} % cut off each edge' : ''}',
+                        style: const TextStyle(color: _kTextPrimary, fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _GoldButton(
+                      icon: Icons.restart_alt,
+                      label: 'Back to auto (34 × 19)',
+                      onTap: backToAuto,
+                    ),
+                    const SizedBox(height: 6),
+                    _GoldToggle(
+                      icon: patternOn ? Icons.grid_on : Icons.grid_off,
+                      label: 'Pattern and ruler on the TV',
+                      active: patternOn,
+                      onTap: () {
+                        setDialog(() => patternOn = !patternOn);
+                        cb.onShowCalibration?.call(patternOn, _pivot);
+                      },
+                    ),
                     const SizedBox(height: 10),
                     const _GoldLabel('Ruler\'s zero on the TV'),
                     const SizedBox(height: 4),
                     _PivotPicker(
                       pivot: _pivot,
                       onChanged: (p) {
-                        setDialog(() => _pivot = p);
+                        setDialog(() {
+                          _pivot = p;
+                          patternOn = true;
+                        });
                         cb.onShowCalibration?.call(true, p);
                       },
                     ),
@@ -2654,16 +2714,6 @@ class _DmControlPanelState extends State<DmControlPanel> {
                       'The bar starts at the gold ring there. That point never moves while '
                       'you adjust — lay the ruler\'s zero on it once, then watch the far end.',
                       style: TextStyle(color: _kTextSecondary.withValues(alpha: 0.9), fontSize: 12),
-                    ),
-                    const SizedBox(height: 8),
-                    ListenableBuilder(
-                      listenable: state,
-                      builder: (_, _) => Text(
-                        'Now: ${state.tableCols} × ${state.tableRows} squares · picture '
-                        '${state.tvWidthInches.toStringAsFixed(2)} in '
-                        '(${(state.tvWidthInches * 2.54).toStringAsFixed(1)} cm) wide',
-                        style: const TextStyle(color: _kTextPrimary, fontSize: 13),
-                      ),
                     ),
                     const SizedBox(height: 12),
                     Wrap(
@@ -2710,15 +2760,38 @@ class _DmControlPanelState extends State<DmControlPanel> {
                         onChanged: (v) => cb.onCalibrate(metric ? v / 2.54 : v),
                       ),
                     ),
+                    if (cb.onSetOverscan != null) ...[
+                      const SizedBox(height: 12),
+                      const _GoldLabel('Edges the TV cuts off'),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Many TVs cut a few percent off every edge. Raise this until the blue '
+                        'line shows along all four edges of the screen, no further — only the '
+                        'squares you can see then count. 0 when the TV is set to "Just scan" '
+                        'or "Screen fit".',
+                        style: TextStyle(color: _kTextSecondary.withValues(alpha: 0.9), fontSize: 12),
+                      ),
+                      const SizedBox(height: 6),
+                      ListenableBuilder(
+                        listenable: state,
+                        builder: (_, _) => NumberStepper(
+                          key: const ValueKey('tvOverscanStepper'),
+                          label: 'Cut off each edge',
+                          value: state.tvOverscanPercent,
+                          steps: const [0.25, 0.5, 1, 2],
+                          min: 0,
+                          max: TableGrid.maxOverscanPercent,
+                          decimals: 2,
+                          unit: '%',
+                          onChanged: (v) => cb.onSetOverscan!(v),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             ),
             actions: [
-              TextButton(
-                onPressed: cb.onResetCalibration,
-                child: const Text('Reset to 34 × 19', style: TextStyle(color: _kTextSecondary)),
-              ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text('Done', style: TextStyle(color: _kTextSecondary)),

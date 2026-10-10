@@ -4,7 +4,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../model/table_fit.dart';
 
 /// The TV's own calibration on its disk: the physical width of its picture
-/// in inches ([VttState.tvWidthInches]).
+/// in inches ([VttState.tvWidthInches]) and how much the TV cuts off each
+/// edge ([VttState.tvOverscanPercent]).
 ///
 /// It belongs to the TV (the screen does not change with the map or the
 /// game), so it lives in its own Hive box instead of in each session; every
@@ -19,6 +20,7 @@ class TvCalibrationStore {
 
   static const String _boxName = 'tvSettings';
   static const String _widthKey = 'screenWidthInches';
+  static const String _overscanKey = 'overscanPercent';
 
   static Box<double>? _box;
 
@@ -50,6 +52,33 @@ class TvCalibrationStore {
       }
     } catch (e) {
       debugPrint('TvCalibrationStore.save failed: $e');
+    }
+  }
+
+  /// The stored overscan in percent per edge, or `0` when never set (or
+  /// the box cannot be read).
+  static Future<double> loadOverscanPercent() async {
+    try {
+      final box = await _open();
+      return box.get(_overscanKey) ?? 0;
+    } catch (e) {
+      debugPrint('TvCalibrationStore.loadOverscan failed: $e');
+      return 0;
+    }
+  }
+
+  /// Stores the overscan; `null` removes it (back to `0`). Errors are
+  /// logged, never thrown.
+  static Future<void> saveOverscanPercent(double? percent) async {
+    try {
+      final box = await _open();
+      if (percent == null) {
+        await box.delete(_overscanKey);
+      } else {
+        await box.put(_overscanKey, percent);
+      }
+    } catch (e) {
+      debugPrint('TvCalibrationStore.saveOverscan failed: $e');
     }
   }
 }

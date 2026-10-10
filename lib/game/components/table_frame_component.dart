@@ -22,6 +22,10 @@ import '../../model/table_fit.dart';
 ///   calibration changes, so the ruler can lie there and only the bar's far
 ///   end moves. The DM measures the bar and types the length into the
 ///   tablet, which corrects [VttState.tvWidthInches].
+/// - **Edges** (also while calibrating): a blue line around what the TV is
+///   believed to show ([TableGrid.visible]) and red stripes beyond it. The
+///   DM raises "Edges the TV cuts off" ([VttState.tvOverscanPercent]) until
+///   the blue line shows along all four edges of the glass.
 ///
 /// See also:
 /// - [TableGrid], the arithmetic behind the window.
@@ -76,6 +80,25 @@ class TableFrameComponent extends Component {
     final ppi = g.pxPerInch;
     // Dim the map so the pattern reads on any picture
     canvas.drawRect(window, Paint()..color = const Color(0xB3000000));
+
+    // Edges: red beyond what the TV is believed to show, a blue line on its
+    // border — the line must show on all four edges of the glass.
+    final screen = Offset.zero & g.screen;
+    final visible = g.visible;
+    if (visible != screen) {
+      canvas.drawPath(
+          Path()
+            ..fillType = PathFillType.evenOdd
+            ..addRect(screen)
+            ..addRect(visible),
+          Paint()..color = const Color(0xFFB3261E));
+    }
+    canvas.drawRect(
+        visible.deflate(2),
+        Paint()
+          ..color = const Color(0xFF4FC3F7)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4);
 
     final thin = Paint()
       ..color = const Color(0x59FFFFFF)
@@ -145,7 +168,9 @@ class TableFrameComponent extends Component {
     _text(
       canvas,
       '${g.cols} × ${g.rows} squares of 1 inch · picture '
-      '${g.screenWidthInches.toStringAsFixed(2)} × ${g.screenHeightInches.toStringAsFixed(2)} in',
+      '${g.screenWidthInches.toStringAsFixed(2)} × ${g.screenHeightInches.toStringAsFixed(2)} in'
+      '${g.overscanPercent > 0 ? ' · ${_pct(g.overscanPercent)} % cut off each edge' : ''}'
+      ' · the blue line should show on all four edges',
       // At the top — or the bottom when the bar runs along the top.
       pv.isTop
           ? Offset(window.center.dx, window.bottom - 0.6 * ppi)
@@ -156,6 +181,10 @@ class TableFrameComponent extends Component {
       above: pv.isTop,
     );
   }
+
+  /// A percentage without trailing zeros (`5`, `2.5`).
+  static String _pct(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2).replaceFirst(RegExp(r'0$'), '');
 
   static void _text(Canvas canvas, String s, Offset at, double size,
       {bool center = false, double maxWidth = 2000, bool above = false}) {

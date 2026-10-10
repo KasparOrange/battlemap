@@ -73,10 +73,20 @@ enum CalibrationPivot {
 /// The table: how many whole one-inch squares the TV screen holds and where
 /// they sit.
 ///
-/// Built from the screen's size in logical pixels and the physical width of
+/// Built from the screen's size in logical pixels, the physical width of
 /// the picture ([screenWidthInches], a TV-wide calibration, not a per-game
-/// one). The window of [cols] × [rows] squares is centred, so the leftover
-/// (less than one square per axis) is split evenly between both edges.
+/// one) and how much of the picture the TV itself cuts off at each edge
+/// ([overscanPercent]). The window of [cols] × [rows] squares is centred
+/// in what the TV shows ([visible]), so the leftover (less than one square
+/// per axis) is split evenly between both edges.
+///
+/// **Overscan**: many TVs enlarge the picture they get and cut a few
+/// percent off every edge. The app still draws the whole picture, so
+/// counting squares over all of it (as before 1.1.20) counts squares nobody
+/// sees: found 2026-10-10 on the Thomson used that night, stepped to a
+/// picture 39 in wide — 38 × 21 squares by the numbers, 35 × 19 on the
+/// glass. [screenWidthInches] stays the width of the whole picture (what
+/// the bar calibrates); [overscanPercent] only decides which squares count.
 ///
 /// Measured 2026-10-10 on Konrad's TV: 34 × 19 squares of one inch fit, with
 /// a bit of gap both ways — [defaultScreenWidthInches] reproduces that until
@@ -99,40 +109,68 @@ class TableGrid {
   /// when the screen has less room from the pivot, [barInches]).
   static const int measuringBarInches = 10;
 
+  /// Largest [overscanPercent] the TV accepts (TVs cut 0–5 % per edge,
+  /// a few up to 8 %).
+  static const double maxOverscanPercent = 12;
+
   /// Screen size in logical pixels.
   final Size screen;
 
-  /// Physical width of the screen's picture in inches.
+  /// Physical width of the screen's picture in inches — the whole picture
+  /// the app draws, edges the TV cuts off included.
   final double screenWidthInches;
+
+  /// How much of the picture the TV cuts off at each edge, in percent of
+  /// the picture's width (left and right) and height (top and bottom).
+  /// `0` = the TV shows every pixel ("Just scan" / "Screen fit").
+  final double overscanPercent;
 
   /// Logical pixels per physical inch (`screen.width / screenWidthInches`).
   final double pxPerInch;
 
-  /// Whole one-inch squares across the screen.
+  /// Whole one-inch squares across what the TV shows ([visible]).
   final int cols;
 
-  /// Whole one-inch squares down the screen.
+  /// Whole one-inch squares down what the TV shows ([visible]).
   final int rows;
 
-  const TableGrid._(this.screen, this.screenWidthInches, this.pxPerInch,
-      this.cols, this.rows);
+  const TableGrid._(this.screen, this.screenWidthInches, this.overscanPercent,
+      this.pxPerInch, this.cols, this.rows);
 
   /// The table for a [screen] (logical px) whose picture is
-  /// [screenWidthInches] wide. Returns `null` for an empty screen or a
-  /// non-positive width.
-  static TableGrid? of(Size screen, double screenWidthInches) {
+  /// [screenWidthInches] wide, of which the TV cuts [overscanPercent] off
+  /// each edge (clamped to 0..[maxOverscanPercent]). Returns `null` for an
+  /// empty screen or a non-positive width.
+  static TableGrid? of(Size screen, double screenWidthInches,
+      {double overscanPercent = 0}) {
     if (screen.width <= 0 || screen.height <= 0 || screenWidthInches <= 0) {
       return null;
     }
+    final o = overscanPercent.clamp(0.0, maxOverscanPercent);
     final ppi = screen.width / screenWidthInches;
+    final shown = 1 - 2 * o / 100;
     // A hair of tolerance so 34.0 inches of picture still count 34 squares.
-    final cols = max(1, (screen.width / ppi + 1e-6).floor());
-    final rows = max(1, (screen.height / ppi + 1e-6).floor());
-    return TableGrid._(screen, screenWidthInches, ppi, cols, rows);
+    final cols = max(1, (screen.width * shown / ppi + 1e-6).floor());
+    final rows = max(1, (screen.height * shown / ppi + 1e-6).floor());
+    return TableGrid._(screen, screenWidthInches, o, ppi, cols, rows);
   }
 
   /// Physical height of the picture in inches.
   double get screenHeightInches => screen.height / pxPerInch;
+
+  /// The part of the picture the TV shows (logical px): the screen minus
+  /// [overscanPercent] at every edge. The whole screen without overscan.
+  Rect get visible {
+    final dx = screen.width * overscanPercent / 100;
+    final dy = screen.height * overscanPercent / 100;
+    return Rect.fromLTRB(dx, dy, screen.width - dx, screen.height - dy);
+  }
+
+  /// Width of what the TV shows, in inches.
+  double get visibleWidthInches => visible.width / pxPerInch;
+
+  /// Height of what the TV shows, in inches.
+  double get visibleHeightInches => visible.height / pxPerInch;
 
   /// The window of whole squares on the screen, centred (logical px).
   Rect get window {
@@ -142,21 +180,23 @@ class TableGrid {
         (screen.width - w) / 2, (screen.height - h) / 2, w, h);
   }
 
-  /// Distance of a corner [CalibrationPivot] from both screen edges, in
-  /// logical px: 8 % of the screen's shorter side (~1½ in on Konrad's TV),
-  /// clear of the bezel and inside the window of squares.
-  double get pivotInset => 0.08 * screen.shortestSide;
+  /// Distance of a corner [CalibrationPivot] from both edges of what the
+  /// TV shows, in logical px: 8 % of [visible]'s shorter side (~1½ in on
+  /// Konrad's TV), clear of the bezel and inside the window of squares.
+  double get pivotInset => 0.08 * visible.shortestSide;
 
   /// Where the measuring bar's zero sits for [pivot], in logical px — the
-  /// same point whatever the calibration (it depends on [screen] only).
+  /// same point whatever the width calibration (it depends on [screen] and
+  /// [overscanPercent] only), always inside what the TV shows.
   Offset pivotPoint(CalibrationPivot pivot) {
     final i = pivotInset;
+    final v = visible;
     return switch (pivot) {
-      CalibrationPivot.bottomLeft => Offset(i, screen.height - i),
-      CalibrationPivot.bottomRight => Offset(screen.width - i, screen.height - i),
-      CalibrationPivot.topLeft => Offset(i, i),
-      CalibrationPivot.topRight => Offset(screen.width - i, i),
-      CalibrationPivot.center => screen.center(Offset.zero),
+      CalibrationPivot.bottomLeft => Offset(v.left + i, v.bottom - i),
+      CalibrationPivot.bottomRight => Offset(v.right - i, v.bottom - i),
+      CalibrationPivot.topLeft => Offset(v.left + i, v.top + i),
+      CalibrationPivot.topRight => Offset(v.right - i, v.top + i),
+      CalibrationPivot.center => v.center,
     };
   }
 
@@ -167,25 +207,33 @@ class TableGrid {
 
   /// The measuring bar's length in whole inches from [pivot] on this
   /// screen ([barInches]).
-  int barInchesFrom(CalibrationPivot pivot) =>
-      barInches(screenWidthInches, screenHeightInches, pivot);
+  int barInchesFrom(CalibrationPivot pivot) => barInches(
+      screenWidthInches, screenHeightInches, pivot,
+      overscanPercent: overscanPercent);
 
   /// The measuring bar's length in whole inches from [pivot] on a picture
-  /// of [widthInches] × [heightInches]: up to [measuringBarInches], shorter
-  /// when there is less room that way (a centre pivot on a screen under
-  /// ~20 in). Pure, so the tablet — which knows the width but not the
-  /// TV's pixels — computes the same bar (16:9 assumed for the height).
-  static int barInches(double widthInches, double heightInches, CalibrationPivot pivot) {
+  /// of [widthInches] × [heightInches] with [overscanPercent] cut off each
+  /// edge: up to [measuringBarInches], shorter when there is less room that
+  /// way (a centre pivot on a screen under ~20 in). Pure, so the tablet —
+  /// which knows the width but not the TV's pixels — computes the same bar
+  /// (16:9 assumed for the height).
+  static int barInches(double widthInches, double heightInches, CalibrationPivot pivot,
+      {double overscanPercent = 0}) {
+    final shown = 1 - 2 * overscanPercent.clamp(0.0, maxOverscanPercent) / 100;
+    widthInches *= shown;
+    heightInches *= shown;
     final inset = 0.08 * min(widthInches, heightInches);
     final room = pivot == CalibrationPivot.center ? widthInches / 2 : widthInches - inset;
     return max(1, min(measuringBarInches, (room - 0.1).floor()));
   }
 
-  /// Leftover on the left and on the right edge, in inches (each side).
-  double get marginXInches => (screen.width / pxPerInch - cols) / 2;
+  /// Leftover on the left and on the right edge of what the TV shows, in
+  /// inches (each side).
+  double get marginXInches => (visibleWidthInches - cols) / 2;
 
-  /// Leftover on the top and on the bottom edge, in inches (each side).
-  double get marginYInches => (screen.height / pxPerInch - rows) / 2;
+  /// Leftover on the top and on the bottom edge of what the TV shows, in
+  /// inches (each side).
+  double get marginYInches => (visibleHeightInches - rows) / 2;
 }
 
 /// The TV camera for [TvCameraMode.table]: one square = one inch, the

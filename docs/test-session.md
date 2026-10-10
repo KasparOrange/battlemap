@@ -70,8 +70,10 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
    from the gold ring in the bottom-left corner (pick another corner or the centre on the
    dialog's TV picture; the ring never moves, so lay the ruler's zero on it once);
    it must measure 25.4 cm (type what you measure, Apply, measure again; the width stepper below
-   fine-tunes by 1–10 mm, a tap on its number opens a numpad). A 1-inch mini base then
-   fits one square at every edge of the table.
+   fine-tunes by 1–10 mm, a tap on its number opens a numpad). Then "Edges the TV cuts off":
+   raise it until the blue line shows on all four edges of the glass (0 if the TV is set to
+   "Just scan"); the count drops to the squares really visible. A 1-inch mini base then
+   fits one square at every edge of the table. "Back to auto" undoes it all (34 × 19).
 
 **1. the tavern (03)**
 1. Start a session on 03. The TV shows the whole map fogged, centred, one inch per square (it fits

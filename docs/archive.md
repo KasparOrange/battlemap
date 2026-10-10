@@ -1,7 +1,20 @@
 # Battlemap — archive (history, newest on top)
 
 Rule: **one entry per prompt that changed something** — in `docs/`, or in the code it
-governs. Never per session. Heading = `### 26-10-10 22:05 - fog edge trim - docs sweep
+governs. Never per session. Heading = `### YY-MM-DD HH:MM - <session id>`; body = nested
+bullets. What was learned goes into the docs it belongs to (`architecture.md`, `setup.md`,
+`packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
+**above** the first heading.
+
+### 26-10-10 22:40 - TV overscan - Measure the TV: edges the set cuts off, pattern switch, back to auto
+- Konrad: Measure the TV misbehaves — the pivot does not show on the TV (show it, switch it on and off); the TV should hold 35 × 19 squares but says 38 × 21, and no fine-tuning hits it; look for logic errors; a button back to auto (34 × 19)
+	- pivot: the box still ran 1.1.17+27, built before the pivot commit (tablet had 1.1.18) — fixed by deploying
+	- 38 × 21: MwLog shows the width stepped in 1 cm steps up to ~39 in; 35 × 19 visible at that scale means the Thomson cuts ~5 % off each edge (overscan), so the app counted squares nobody sees. Logic gap: `TableGrid` assumed every pixel is on the glass. The Thomson's EDID (58 × 32 cm, 2011, "DTV") is generic, no help
+	- `TableGrid.overscanPercent` + `visible`: squares counted in what the set shows, inch unchanged, pivot inside; `VttState.tvOverscanPercent` stored on the TV (`TvCalibrationStore`), `vtt.setOverscan`, in `vtt.fullState`; the pattern paints cut-off strips red with a blue border line
+	- dialog: "Edges the TV cuts off" stepper (0–12 %), "Pattern and ruler on the TV" switch, "Back to auto (34 × 19)" button (resets width + overscan, undo) replacing the small Reset action; 1.1.20+30, 624 tests green
+	- also repaired this file's header: an earlier insert had split the rule line and left a fragment between entries
+
+### 26-10-10 22:05 - fog edge trim - docs sweep
 - Konrad (/ty): docs sweep after "trim revealed edges" — test steps in `action.md` + `test-session.md` (house map), feature list, number stepper note (side rail fits only ±1/±2), and a CLAUDE.md rule against the read-after-truncate script after it struck twice today
 
 ### 26-10-10 21:58 - fog edge trim - Fog tab: trim revealed edges
@@ -22,11 +35,6 @@ governs. Never per session. Heading = `### 26-10-10 22:05 - fog edge trim - docs
 	- the box was fine (awake, 4 h uptime, not rebooted): at 21:40:02 the box logged the HDMI link lost — the old Thomson (TCL-built, EDID says TCL) hit its own 4 h auto standby; 6 s later a red-button press put the box to sleep. The TV NACKs every CEC message, so the box remote cannot wake it
 	- box: stay on while powered, screen timeout max, screensaver off, no CEC standby to the TV on sleep — set over latrine, `deploy.sh tv` reapplies it; `setup.md` "box asleep mid-game" + "TV set off, box fine"
 	- Juri on Telegram: switch off auto standby / no-signal power off / sleep timer from the TV's buttons, optional power-on-after-power-loss and T-Link
-
-### YY-MM-DD HH:MM - <session id>`; body = nested
-bullets. What was learned goes into the docs it belongs to (`architecture.md`, `setup.md`,
-`packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
-**above** the first heading.
 
 ### 26-10-10 21:55 - 4c6e75db - docs sweep: notices
 - Konrad (/ty): docs sweep after the notices — every "snackbar" in the docs and doc comments now says notice (action, feature ideas, setup, tracker #43, DM panel, state, relay client; the companion's few go with the link-import session's edit); `architecture.md` "notices" gains the `pumpAndSettle` test gotcha

@@ -682,7 +682,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     final map = state.map;
     if (cam == null || map == null || cam.vw <= 0 || cam.vh <= 0) return null;
     if (state.tvCameraMode != TvCameraMode.table) return null;
-    final grid = TableGrid.of(Size(cam.vw, cam.vh), state.tvWidthInches);
+    final grid = state.tableGridFor(Size(cam.vw, cam.vh));
     if (grid == null) return null;
     final preview = withPreview ? _tvDragPreview : null;
     return TableLayout.compute(

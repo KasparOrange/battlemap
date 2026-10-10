@@ -88,7 +88,9 @@ zoom, calibration 40 in → 40 × 22 and back, grid remembered, re-grid 50 × 50
 devices:
 - **measure once**: Settings ▸ Measure the TV… → the TV shows a 10-inch bar from a gold ring
   (bottom-left corner by default; another corner or the centre on the dialog's TV picture) — the
-  ring never moves, so the ruler's zero stays on it; type what the bar measures (cm). The default 34.5 in is a guess from "34 × 19 with a bit of gap"; until measured
+  ring never moves, so the ruler's zero stays on it; type what the bar measures (cm). Then
+  "Edges the TV cuts off" until the blue line shows on all four edges (1.1.20: the Thomson
+  seems to overscan ~5 % per edge — at ~39 in it showed 35 × 19 while the app counted 38 × 21). The default 34.5 in is a guess from "34 × 19 with a bit of gap"; until measured
   a square may be ~1 % off. Then check a 1-inch mini base on several squares across the table.
 - a map bigger than 34 × 19 (e.g. the castle, or a picture map with many squares): drag the gold
   grip above the dashed frame, tap the Camera tab's overview, arrows; the TV follows in whole
@@ -123,7 +125,6 @@ corner. Check on the tablet + TV:
   new sessions named "Session N · <day>"
 - still open from the review: pinch/two-finger pan and the real Xiaomi remote (not testable on the bench)
 
-## kept on purpose: direct TV connection (no relay)
 ## template disc (2026-10-10, 1.1.17+27 on the box, 1.1.18+28 on tablet + web) — needs a test at the table
 
 Measure tab ▸ Template disc (`architecture.md` "Template disc"). Check on the table: size against
@@ -165,6 +166,7 @@ run restores through the relay (session from `diag.status`, route `/restore?sess
 then on `deploy.prepare` + the snapshot work too. The same deploy ships the takeover fix (a
 companion replacing another got no map — until then: `tools/tv_ctl.py resume MAP SESSION`).
 
+## kept on purpose: direct TV connection (no relay)
 
 `lib/network/vtt_server.dart` + `vtt_server_stub.dart` are the original pre-relay design:
 the TV hosts a WebSocket server on the LAN and the phone connects to its IP. Unreferenced

@@ -274,11 +274,22 @@ cut square at the screen's edge.
   the far end moves (before, the bar sat centred on square boundaries and slid with every change).
   The DM types what the bar measures (cm or in),
   or sets the picture width with a stepper (±1 / 2 / 5 / 10 mm or ±0.05–0.5 in, tap the number
-  for a numpad); each change applies at once (`vtt.calibrate`). This is the **TV's** scale (an
+  for a numpad); each change applies at once (`vtt.calibrate`). A switch in the dialog turns the
+  pattern on the TV off and on; **Back to auto (34 × 19)** resets width and overscan (undo in
+  the notice). This is the **TV's** scale (an
   inch on this screen), set once per TV; how many squares a map has is the **map's** scale (upload
   dialog, grid editor — below), stored with the map. Before
   1.1.9 each session carried its own `tvWidthInches`/`calibratedBaseZoom` and a 0.5–2× scale
   slider — both gone (the slider broke the one-inch rule).
+- **Overscan** (since 1.1.20, `TableGrid.overscanPercent`, `VttState.tvOverscanPercent`, stored
+  on the TV next to the width, `vtt.setOverscan`): many TV sets — likely the Thomson used on
+  2026-10-10 — enlarge the picture and cut a few percent off every edge. Squares are counted only
+  in what the set shows (`TableGrid.visible`); the inch (`pxPerInch`) is untouched, and the pivot
+  sits inside that area. Found 2026-10-10: the width was stepped to ~39 in, where the app said
+  38 × 21 squares while the glass showed 35 × 19 — about 5 % per edge cut off. The pattern
+  paints the cut-off strips red with a blue line on their border; the DM raises "Edges the TV
+  cuts off" until the blue line shows on all four edges. A set switched to "Just scan" /
+  "Screen fit" needs 0. (That Thomson's EDID claims 58 × 32 cm — generic, useless for sizing.)
 - **Arithmetic** (`lib/model/table_fit.dart`, pure, tested): `TableGrid` = whole squares of the
   screen (`cols = ⌊width / ppi⌋`) and the centred window; `TableLayout` = camera for a map:
   zoom `ppi / cellPx`; per axis, a map that fits is centred, a bigger one shows the window from

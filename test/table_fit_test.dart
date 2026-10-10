@@ -241,6 +241,51 @@ void main() {
     });
   });
 
+  group('overscan (edges the TV cuts off)', () {
+    // Konrad's TV, 2026-10-10: the bar measured right at a picture 39 in
+    // wide, the app said 38 × 21 squares, the glass showed 35 × 19.
+    const screen = Size(960, 540);
+
+    test('without overscan every square of the picture counts', () {
+      final g = TableGrid.of(screen, 38.97)!;
+      expect((g.cols, g.rows), (38, 21));
+      expect(g.visible, Offset.zero & screen);
+    });
+
+    test('only the squares the TV shows count, the inch stays the same', () {
+      final g = TableGrid.of(screen, 38.97, overscanPercent: 5)!;
+      expect((g.cols, g.rows), (35, 19));
+      expect(g.pxPerInch, TableGrid.of(screen, 38.97)!.pxPerInch);
+      expect(g.visibleWidthInches, closeTo(35.07, 0.01));
+      // The window is centred and inside what the TV shows.
+      expect((g.window.center - const Offset(480, 270)).distance, lessThan(1e-9));
+      expect(g.visible.contains(g.window.topLeft), isTrue);
+      expect(g.visible.contains(g.window.bottomRight), isTrue);
+      expect(g.marginXInches, closeTo(0.035, 0.01));
+    });
+
+    test('overscan is clamped and the default reproduces 34 × 19', () {
+      final g = TableGrid.of(screen, 34.5, overscanPercent: 40)!;
+      expect(g.overscanPercent, TableGrid.maxOverscanPercent);
+      final auto = TableGrid.of(screen, TableGrid.defaultScreenWidthInches)!;
+      expect((auto.cols, auto.rows), (34, 19));
+    });
+
+    test('the state keeps it, sends it, and back to auto clears it', () {
+      final state = VttState()
+        ..setTvWidthInches(38.97)
+        ..setTvOverscanPercent(5);
+      expect(state.tableGridFor(screen)!.cols, 35);
+      final copy = VttState()..applyRemoteState(state.toJson());
+      expect(copy.tvOverscanPercent, 5);
+      state.resetTvCalibration();
+      expect(state.tvWidthInches, TableGrid.defaultScreenWidthInches);
+      expect(state.tvOverscanPercent, 0);
+      state.setTvOverscanPercent(-3);
+      expect(state.tvOverscanPercent, 0);
+    });
+  });
+
   group('calibration pivot', () {
     // Konrad's TV: 960 × 540 logical px, 34.5 in wide.
     final g = TableGrid.of(const Size(960, 540), 34.5)!;
@@ -270,6 +315,16 @@ void main() {
       // A 15 in wide picture: 7 in from the centre, 10 from a corner.
       expect(TableGrid.barInches(15, 15 * 9 / 16, CalibrationPivot.center), 7);
       expect(TableGrid.barInches(15, 15 * 9 / 16, CalibrationPivot.bottomLeft), 10);
+    });
+
+    test('the pivot sits inside what the TV shows when it cuts edges off', () {
+      final cut = TableGrid.of(const Size(960, 540), 34.5, overscanPercent: 5)!;
+      final v = cut.visible;
+      expect(v, const Rect.fromLTRB(48, 27, 912, 513));
+      final i = cut.pivotInset;
+      expect(i, closeTo(0.08 * 486, 1e-9));
+      expect(cut.pivotPoint(CalibrationPivot.bottomLeft), Offset(48 + i, 513 - i));
+      expect(cut.pivotPoint(CalibrationPivot.center), const Offset(480, 270));
     });
 
     test('names parse, unknown ones give bottom left', () {

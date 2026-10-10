@@ -149,6 +149,13 @@ class VttState extends ChangeNotifier {
   /// See also: [TableGrid], which turns it into whole one-inch squares.
   double tvWidthInches = TableGrid.defaultScreenWidthInches;
 
+  /// How much of the picture the TV cuts off at each edge, in percent —
+  /// the TV's second calibration value next to [tvWidthInches]. Only the
+  /// squares the TV really shows count ([TableGrid.overscanPercent]). Kept
+  /// on the TV's disk like the width; set with `vtt.setOverscan`. `0` until
+  /// set (a TV in "Just scan" / "Screen fit" needs nothing else).
+  double tvOverscanPercent = 0;
+
   /// How the TV frames the map — [TvCameraMode.table] (one inch per square,
   /// the default), the whole map, or a free camera. Saved with the session.
   TvCameraMode tvCameraMode = TvCameraMode.table;
@@ -1124,6 +1131,24 @@ class VttState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Sets how much of the picture the TV cuts off at each edge
+  /// ([tvOverscanPercent]), clamped to 0..[TableGrid.maxOverscanPercent].
+  ///
+  /// TV side; the caller also stores it on the TV's disk.
+  void setTvOverscanPercent(double percent) {
+    tvOverscanPercent = percent.clamp(0.0, TableGrid.maxOverscanPercent);
+    notifyListeners();
+  }
+
+  /// Puts the TV's calibration back to the automatic values: the default
+  /// picture width ([TableGrid.defaultScreenWidthInches], 34 × 19 squares)
+  /// and no overscan. TV side; the caller also clears the TV's disk.
+  void resetTvCalibration() {
+    tvWidthInches = TableGrid.defaultScreenWidthInches;
+    tvOverscanPercent = 0;
+    notifyListeners();
+  }
+
   /// Switches how the TV frames the map. See [TvCameraMode].
   void setTvCameraMode(TvCameraMode mode) {
     if (tvCameraMode == mode) return;
@@ -1162,8 +1187,10 @@ class VttState extends ChangeNotifier {
   }
 
   /// The table for a TV screen of [screen] logical pixels at the current
-  /// calibration ([tvWidthInches]), or `null` for an empty screen.
-  TableGrid? tableGridFor(Size screen) => TableGrid.of(screen, tvWidthInches);
+  /// calibration ([tvWidthInches], [tvOverscanPercent]), or `null` for an
+  /// empty screen.
+  TableGrid? tableGridFor(Size screen) =>
+      TableGrid.of(screen, tvWidthInches, overscanPercent: tvOverscanPercent);
 
   /// Sets the fog brush radius.
   ///
@@ -1758,6 +1785,7 @@ class VttState extends ChangeNotifier {
         'brushRadius': brushRadius,
         'revealMode': revealMode,
         'tvWidthInches': tvWidthInches,
+        'tvOverscanPercent': tvOverscanPercent,
         'tvCameraMode': tvCameraMode.name,
         'tableCol': tableCol,
         'tableRow': tableRow,
@@ -1819,6 +1847,7 @@ class VttState extends ChangeNotifier {
     // calibration that could be null)
     tvWidthInches = (json['tvWidthInches'] as num?)?.toDouble() ??
         TableGrid.defaultScreenWidthInches;
+    tvOverscanPercent = (json['tvOverscanPercent'] as num?)?.toDouble() ?? 0;
     tvCameraMode = TvCameraMode.fromName(json['tvCameraMode'] as String?);
     tableCol = (json['tableCol'] as num?)?.toInt();
     tableRow = (json['tableRow'] as num?)?.toInt();
