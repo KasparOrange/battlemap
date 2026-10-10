@@ -401,6 +401,15 @@ What we learned about editing with Nano Banana 2.1:
   under 60 px); hidden rooms = their whole rectangle. Map + overlay gives back the photo
   exactly, so the overlay splits into layers (labels, secret rooms) for free.
 
+**On the table (2026-10-10):** session "Juri's dungeon" on the box, all revealed, TV grid off
+(the map has its own); the two overlay layers are DM layers on the tablet ("Secret rooms",
+"Labels: room numbers, S and T", full opacity). The photo's grid is 51–52 px and drifts with
+the camera's perspective, so before upload the map and overlays were warped onto an exact
+25 × 24 grid of 52 px (grid lines measured on room floors, quadratic fit, ≤ 2 px residual) —
+the TV's fog squares need width ÷ columns to be the printed square. Files in
+`juri-dungeon/table/`, scripts `recipe/grid_warp.py` (warp) and `recipe/juri_table.py` (upload,
+session, layers over the relay as the `bot` role).
+
 If this becomes routine: a `mapgen.py edit` command (pad → label pass → magenta hole pass →
 composite → overlay), with the regions marked on the phone instead of measured by hand.
 

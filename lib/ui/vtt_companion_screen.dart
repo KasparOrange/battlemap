@@ -260,6 +260,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _relay!.onStateSync = (msg) {
       _lastFullState = msg;
       try {
+        // A raster map arrives without its grid; the TV's state names it.
+        _state.applyRemoteGrid(msg);
         _state.applyRemoteState(msg);
       } catch (e) {
         DevLog.add('ERROR: state sync failed: $e');
@@ -294,32 +296,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     };
     _relay!.onMapLoaded = (bytes) {
       DevLog.add('Companion: map received via chunks (${(bytes.length / 1024).round()} KB)');
-      try {
-        _state.loadMap(bytes); // Try UVTT first
-      } catch (e) {
-        // Not valid UVTT — treat as raw image (rendered PDF or image map).
-        // Use grid info from the TV's last fullState if available.
-        DevLog.add('Companion: not UVTT (parse: $e), trying as image');
-        final gridCols = _state.map?.resolution.mapSize.dx.toInt() ?? 20;
-        final gridRows = _state.map?.resolution.mapSize.dy.toInt() ?? 15;
-        DevLog.add('Companion: not UVTT, loading as image (${gridCols}x$gridRows grid)');
-        // Decode image to get dimensions
-        ui.instantiateImageCodec(bytes).then((codec) async {
-          final frame = await codec.getNextFrame();
-          final w = frame.image.width.toDouble();
-          final h = frame.image.height.toDouble();
-          frame.image.dispose();
-          _state.loadPdfAsMap(bytes,
-            gridCols: gridCols, gridRows: gridRows,
-            imageWidth: w, imageHeight: h,
-          );
-          _onMapReady();
-        }).catchError((e) {
-          DevLog.add('Companion: image decode failed: $e');
-        });
-        return; // _onMapReady called in the then() above
-      }
-      _onMapReady();
+      _loadMapBytes(bytes);
     };
     _relay!.onMapDownloadUrl = (url, name) {
       DevLog.add('Companion: downloading map "$name" from VPS');
@@ -480,6 +457,48 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     setState(() => _tvView = 'game');
   }
 
+  /// Loads a map the TV sent (chunks or `vtt.downloadMap`), then calls
+  /// [_onMapReady].
+  ///
+  /// Tries [bytes] as a `.dd2vtt` file first; anything else is a raster map
+  /// (image or rendered PDF page). Its grid comes from the TV's last
+  /// `vtt.fullState` ([_lastFullState]), falling back to the previous map's
+  /// grid and then 20×15; [VttState.applyRemoteGrid] corrects it when a
+  /// later state names a different grid.
+  ///
+  /// Before 2026-10-10 a downloaded image map failed the `.dd2vtt` parse and
+  /// left the companion without a map (the TV sends a reconnecting companion
+  /// a URL even for image maps), and chunked image maps took the previous
+  /// map's grid.
+  void _loadMapBytes(Uint8List bytes) {
+    try {
+      _state.loadMap(bytes);
+      _onMapReady();
+      return;
+    } catch (e) {
+      DevLog.add('Companion: not UVTT (parse: $e), loading as image');
+    }
+    final last = _lastFullState;
+    final gridCols = (last?['gridCols'] as num?)?.toInt() ??
+        _state.map?.resolution.mapSize.dx.toInt() ?? 20;
+    final gridRows = (last?['gridRows'] as num?)?.toInt() ??
+        _state.map?.resolution.mapSize.dy.toInt() ?? 15;
+    DevLog.add('Companion: image map, ${gridCols}x$gridRows grid');
+    ui.instantiateImageCodec(bytes).then((codec) async {
+      final frame = await codec.getNextFrame();
+      final w = frame.image.width.toDouble();
+      final h = frame.image.height.toDouble();
+      frame.image.dispose();
+      _state.loadPdfAsMap(bytes,
+        gridCols: gridCols, gridRows: gridRows,
+        imageWidth: w, imageHeight: h,
+      );
+      _onMapReady();
+    }).catchError((Object e) {
+      DevLog.add('Companion: image decode failed: $e');
+    });
+  }
+
   Future<void> _downloadMapFromVps(String url) async {
     try {
       if (mounted) setState(() => _transferProgress = 0.0);
@@ -490,8 +509,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       if (mounted) setState(() => _transferProgress = null);
       if (bytes != null) {
         DevLog.add('Companion: map downloaded (${(bytes.length / 1024).round()} KB)');
-        _state.loadMap(bytes);
-        _onMapReady();
+        _loadMapBytes(bytes);
       } else {
         DevLog.add('Companion: map download failed');
         if (mounted) {

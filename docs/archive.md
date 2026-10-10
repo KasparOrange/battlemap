@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 18:52 - beb74b6e - Juri's dungeon on the table, image maps keep their grid on the companion (1.1.8+18)
+- Konrad: replace the test map in the open game with Juri's map (labels removed by Nano Banana), on the TV and the tablet, with the overlay as a DM layer to show or hide
+	- map + overlays warped onto an exact 25 × 24 grid of 52 px (the photo's grid drifts 51–52 px) → `ai-art.md` "On the table"
+	- over the relay as `bot`: image upload → `nav.newSession` "Juri's dungeon" (tabletop settings), the upload's own "Session 1" deleted, reveal all, TV grid off, two DM layers (secret rooms, labels) in `uploads/dm/`; the Countess's Lair session stays in the library
+	- **found: the tablet stretched the image map to the vampire lair's 19×14** — the companion guessed a raster map's grid from the map it showed before, and a `vtt.downloadMap` of an image (a reconnect) failed the `.dd2vtt` parse → `VttState.applyRemoteGrid` (+ `rasterImageSize`) re-grids from `vtt.fullState`, one loader `_loadMapBytes` for chunks and downloads; `relay-protocol.md` "upload PDF or image"; 5 tests, suite 429 green
+	- companion-only fix → tablet deployed, the box stays on 1.1.6+16
+
 ### 26-10-10 18:28 - 0f0ee4a5 - AI maps: board from run data, pack follows the judge (ai-art step 4)
 - Konrad: continue the map pipeline → step 4
 	- `board.py` builds the run zones from the run folders: `meta.json` (`round`, `why`, `finding`, `packed`, `draw_doors`) + `judge_N.json` (`good` → green pins, issues by severity, rejected checks grey); hand-written only the layouts, `NOTES` (by-eye pins, keeping the walk's plate ids), `NEXT`, Juri's zone; zones packed into columns under 6,400 px

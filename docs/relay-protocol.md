@@ -78,6 +78,12 @@ and pushes each `lib.thumbnail` unasked as soon as it's ready (`docs/sessions.md
 4. phone sends: `{"type": "vtt.imageUploaded", "url": "http://...", "displayName": "map.png", "gridCols": 20, "gridRows": 15}`
 5. TV HTTP GETs the image, loads it as a map
 
+The grid lives only in the TV's library entry. The companion gets just the picture (chunks on
+a new or resumed session, `vtt.downloadMap` on a reconnect) and takes the grid from
+`vtt.fullState` `gridCols`/`gridRows`; when a later state names a different grid it re-grids
+the picture (`VttState.applyRemoteGrid`, since 1.1.8 — before, it kept the previous map's grid
+and a downloaded image map failed to load at all).
+
 Legacy (phone builds < 1.1.3): `vtt.pdfUploaded` with the raw PDF; the TV renders page 1 with
 pdfrx. Still handled by the TV; fails on tvOS.
 

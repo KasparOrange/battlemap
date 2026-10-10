@@ -1888,4 +1888,61 @@ void main() {
       expect(state.tokens, isEmpty);
     });
   });
+
+  group('applyRemoteGrid (raster map grid from the TV)', () {
+    test('re-grids an image map to the TV\'s grid, keeping the picture', () {
+      final state = VttState();
+      final picture = Uint8List.fromList([1, 2, 3]);
+      // Loaded with the previous map's grid, as the companion used to guess.
+      state.loadPdfAsMap(picture,
+          gridCols: 19, gridRows: 14, imageWidth: 1300, imageHeight: 1248);
+
+      final changed = state.applyRemoteGrid({'gridCols': 25, 'gridRows': 24});
+
+      expect(changed, isTrue);
+      expect(state.map!.resolution.mapSize, const Offset(25, 24));
+      expect(state.map!.resolution.pixelsPerGrid, 52);
+      expect(state.map!.imageBytes, same(picture));
+      expect(state.rasterImageSize, const Size(1300, 1248));
+    });
+
+    test('does nothing when the grid already matches', () {
+      final state = VttState();
+      state.loadPdfAsMap(Uint8List(0),
+          gridCols: 25, gridRows: 24, imageWidth: 1300, imageHeight: 1248);
+      state.revealAll(600);
+
+      expect(state.applyRemoteGrid({'gridCols': 25, 'gridRows': 24}), isFalse);
+      expect(state.revealedCells, hasLength(600));
+    });
+
+    test('never touches a .dd2vtt map, whose grid is in the file', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes(gridCols: 10, gridRows: 8));
+
+      expect(state.rasterImageSize, isNull);
+      expect(state.applyRemoteGrid({'gridCols': 25, 'gridRows': 24}), isFalse);
+      expect(state.map!.resolution.mapSize, const Offset(10, 8));
+    });
+
+    test('ignores a state without a map grid (TV in the library)', () {
+      final state = VttState();
+      state.loadPdfAsMap(Uint8List(0),
+          gridCols: 20, gridRows: 15, imageWidth: 2000, imageHeight: 1500);
+
+      expect(state.applyRemoteGrid({'gridCols': null, 'gridRows': null}), isFalse);
+      expect(state.applyRemoteGrid({}), isFalse);
+      expect(state.map!.resolution.mapSize, const Offset(20, 15));
+    });
+
+    test('clearMap forgets the picture size', () {
+      final state = VttState();
+      state.loadPdfAsMap(Uint8List(0),
+          gridCols: 20, gridRows: 15, imageWidth: 2000, imageHeight: 1500);
+      state.clearMap();
+
+      expect(state.rasterImageSize, isNull);
+      expect(state.applyRemoteGrid({'gridCols': 25, 'gridRows': 24}), isFalse);
+    });
+  });
 }

@@ -80,6 +80,13 @@ class VttState extends ChangeNotifier {
   /// connected companion phones without re-reading from disk.
   Uint8List? rawMapBytes;
 
+  /// Pixel size of the picture behind a raster map (PDF page or image), or
+  /// `null` when the loaded map is a `.dd2vtt` file or nothing is loaded.
+  ///
+  /// Kept so [applyRemoteGrid] can lay a different grid over the same
+  /// picture without decoding it again.
+  Size? rasterImageSize;
+
   /// Whether the grid overlay is visible on the map.
   bool showGrid = true;
 
@@ -424,6 +431,7 @@ class VttState extends ChangeNotifier {
   /// Notifies all listeners after loading.
   void loadMap(Uint8List fileBytes) {
     rawMapBytes = fileBytes;
+    rasterImageSize = null;
     final jsonString = utf8.decode(fileBytes);
     map = UvttParser.parse(jsonString);
     // Initialize portal states from file defaults
@@ -483,12 +491,46 @@ class VttState extends ChangeNotifier {
       imageBytes: imageBytes,
     );
     rawMapBytes = null; // PDF bytes stored separately in library
+    rasterImageSize = Size(imageWidth, imageHeight);
     openPortals.clear();
     revealedCells.clear();
     _resetSessionState();
     debugPrint('Loaded PDF as map: ${gridCols}x$gridRows grid, '
         '${pixelsPerGrid.round()}ppg');
     notifyListeners();
+  }
+
+  /// Lays the TV's grid over the loaded raster map when it differs.
+  ///
+  /// A raster map (PDF page or image) carries no grid of its own: the TV
+  /// knows it from the library entry, but the companion receives only the
+  /// picture (`vtt.mapStart` chunks or `vtt.downloadMap`). The TV's
+  /// `vtt.fullState` names the grid (`gridCols`, `gridRows`); when that
+  /// differs from the loaded raster map's, the picture is reloaded with it
+  /// through [loadPdfAsMap] — which resets the session state, so the caller
+  /// applies the same state with [applyRemoteState] right after.
+  ///
+  /// Before 2026-10-10 the companion guessed an image map's grid from the
+  /// map it showed before, so a new image map came out stretched to the old
+  /// grid (Juri's 25×24 dungeon as 19×14).
+  ///
+  /// Returns `true` if the map was reloaded. Does nothing for `.dd2vtt` maps
+  /// (their grid is in the file), without a map, or without grid fields.
+  bool applyRemoteGrid(Map<String, dynamic> json) {
+    final current = map;
+    final size = rasterImageSize;
+    final cols = (json['gridCols'] as num?)?.toInt();
+    final rows = (json['gridRows'] as num?)?.toInt();
+    if (current == null || size == null || cols == null || rows == null ||
+        cols <= 0 || rows <= 0) {
+      return false;
+    }
+    final grid = current.resolution.mapSize;
+    if (grid.dx.toInt() == cols && grid.dy.toInt() == rows) return false;
+    loadPdfAsMap(current.imageBytes,
+        gridCols: cols, gridRows: rows,
+        imageWidth: size.width, imageHeight: size.height);
+    return true;
   }
 
   /// Clears everything that belongs to one session rather than to the map:
@@ -1074,6 +1116,7 @@ class VttState extends ChangeNotifier {
   void clearMap() {
     map = null;
     rawMapBytes = null;
+    rasterImageSize = null;
     revealedCells.clear();
     openPortals.clear();
     fogEnabled = true;
