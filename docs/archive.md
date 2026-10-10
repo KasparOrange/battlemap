@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 20:21 - a9469a3d - AI keep on the table (box + tablet)
+- Konrad: put the generated map on the TV, open on both devices
+	- the fixed keep (run 5) uploaded to the VPS and sent as `bot` (`vtt.mapUploaded`, "AI keep"), then `nav.newSession` "AI keep" in table view, fully fogged; the upload's own "Session 1" deleted
+	- found: a `vtt.mapUploaded` from the bot opens the map on the TV only — the TV assumes the uploader is the companion (`sendMapToCompanion: false`), so the tablet kept Juri's picture under the new grid; `nav.newSession` afterwards sends it the map
+	- the box runs 1.1.11+21: drawn doors still under the fog there (the fix `8277fb4` is not deployed)
+
 ### 26-10-10 20:17 - a9469a3d - Drawn doors above the TV fog
 - Konrad: follow up on the recommendation from step 5 — a door opened into a fogged room vanished under the fog
 	- `PortalComponent.forPlayers` (TV): a drawn door renders at priority 11, above the fog (10), and only while the fog is off or a square on either side of the doorway is revealed (`visibleToPlayers`); the DM tablet and marker doors unchanged
