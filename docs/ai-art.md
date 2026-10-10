@@ -166,7 +166,7 @@ rank images — the free checks and the judge do (`pack` follows the judge when 
 no automatic redraw on a high issue; the doorway fix is its own command, not part of `paint`
 (crypt untried); `est_cost` ignores thought tokens; style refs (`--refs`),
 2K/4K and the batch tier untried; packed maps checked on the TV emulator only, not on the box
-yet (step 5); an opened door that swings into a fogged room hides under the fog.
+yet (step 5).
 
 ## Learned so far — Nano Banana 2.1 for battle maps (runs 1–5, 2026-10-10)
 
@@ -306,7 +306,8 @@ new map: `paint --why "…" --n 3 --judge`, then `fix <run> --judge --pack` on t
    the painted walls; the drawn doors read at table size and swing, the crypt's double door opens
    from the middle; no errors, ~420 MB on the TV. **Found:** (a) a door that swings into a fogged
    room is drawn under the fog, so an opened door looks like a black gap until the next room is
-   revealed — fix: draw a leaf above the fog when a cell beside it is revealed; (b) the keep
+   revealed — **fixed** the same day: on the TV a drawn door sits above the fog while a square
+   beside it is revealed (`PortalComponent.forPlayers`); (b) the keep
    corridor's north wall, painted half a square high, lies under the fog when only the corridor
    is revealed (the known wall drift). Screenshots `tv_bench_*.jpg` in both run folders, on the
    board; the real box is still open.

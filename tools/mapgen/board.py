@@ -343,13 +343,14 @@ JOURNEY = [
      "**Tried:** the fixed keep and the crypt on the Android TV emulator at one square = one inch, "
      "rooms revealed and doors toggled over the relay.\n\n**Worked:** the fog edge sits on the painted "
      "walls, the drawn doors read at table size and swing; the double door opens from the middle."
-     "\n\n**Found:** a door that swings into a **fogged** room disappears under the fog, and the "
-     "corridor's north wall, half a square high, hides under the fog."),
+     "\n\n**Found:** a door that swings into a **fogged** room disappeared under the fog — **fixed**: "
+     "on the TV a door is drawn above the fog once a square beside it is revealed. The corridor's "
+     "north wall, half a square high, still hides under the fog."),
     ("j_now", "WHERE WE ARE", BLUE, J / "261010-192835-fix-doorways/doors_1.jpg",
      "**Test map:** the fixed keep. Doorways empty and one square, every wall standing, judge **use 8 "
      "of 10**. About **$1.35 of the €20** spent.\n\n**Still open:** the corridor's north wall sits "
      "**half a square off**, lights are painted a square or two from the layout's, and the judge's "
-     "scores drift.\n\n**Next:** doors drawn above the fog, then 4K finals and a tuning grid, and the fix "
+     "scores drift.\n\n**Next:** the keep on the real box, then 4K finals and a tuning grid, and the fix "
      "pass folded into every paint."),
 ]
 
@@ -375,7 +376,6 @@ def journey_zone(x, y):
 
 
 NEXT = [
-    ("Doors above the fog", "Bench finding: an open door into a fogged room vanishes. Draw a door leaf over the fog when a cell beside it is revealed.", BLUE),
     ("4K finals", "Both maps at 4K (~11 cents each): enough pixels per square for the table?", BLUE),
     ("Tuning grid", "Same layouts × variants, aimed at the open failures: walls half a square off, lights moved, extra fireplaces.", BLUE),
     ("Fix inside paint", "Every draw gets the doorway fix pass before the judge (+3 cents each); try it on the crypt.", BLUE),

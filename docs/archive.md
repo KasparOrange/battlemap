@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 20:17 - a9469a3d - Drawn doors above the TV fog
+- Konrad: follow up on the recommendation from step 5 — a door opened into a fogged room vanished under the fog
+	- `PortalComponent.forPlayers` (TV): a drawn door renders at priority 11, above the fog (10), and only while the fog is off or a square on either side of the doorway is revealed (`visibleToPlayers`); the DM tablet and marker doors unchanged
+	- 5 new tests in `drawn_doors_test.dart`, suite 508 green; checked on `bm_tv` (debug build): the keep's open south and east doors show over the fog, the corridor's far door (both sides fogged) stays hidden
+	- `architecture.md` render order, `ai-art.md` step 5 finding (a) fixed; not on the box yet
+
 ### 26-10-10 20:40 - a494e8fa - picture grid + grid editor
 - Konrad: build user-friendly, capable, powerful but precise ways to scale the map by hand afterwards, to correct the grid detection's errors
 	- the grid became a property of the picture (`RasterGrid`: corner, square width/height, counts) mapped onto the map's squares by the renderer → no cropping (the detection's crop is gone), partial edge squares and non-square photo squares possible; library entry, `vtt.imageUploaded`/`vtt.setMapGrid` `grid`, `vtt.fullState` `rasterGrid`

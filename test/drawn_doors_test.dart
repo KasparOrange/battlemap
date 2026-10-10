@@ -59,7 +59,8 @@ void main() {
   });
 
   group('PortalComponent look', () {
-    PortalComponent portalFor(String uvtt, {bool showMarker = true}) {
+    PortalComponent portalFor(String uvtt,
+        {bool showMarker = true, bool forPlayers = false}) {
       final state = VttState()..loadMap(Uint8List.fromList(utf8.encode(uvtt)));
       return PortalComponent(
         portalIndex: 0,
@@ -67,6 +68,7 @@ void main() {
         state: state,
         pixelsPerGrid: state.map!.resolution.pixelsPerGrid,
         showMarker: showMarker,
+        forPlayers: forPlayers,
       );
     }
 
@@ -88,6 +90,41 @@ void main() {
       final portal =
           portalFor(_uvtt(battlemap: {'draw_doors': true}), showMarker: false);
       expect(drawCalls(portal), greaterThan(0));
+    });
+
+    group('drawn door on the players\' display', () {
+      // The door runs along y = 2 from x = 1 to 2 on a 4-wide map: the
+      // squares beside it are (1,1) = 5 and (1,2) = 9.
+      PortalComponent tvDoor() => portalFor(_uvtt(battlemap: {'draw_doors': true}),
+          showMarker: false, forPlayers: true);
+
+      test('sits above the fog', () {
+        expect(tvDoor().priority, PortalComponent.abovePlayersFogPriority);
+        expect(portalFor(_uvtt(battlemap: {'draw_doors': true})).priority, 6);
+        expect(portalFor(_uvtt(), showMarker: false, forPlayers: true).priority, 6);
+      });
+
+      test('is hidden while both sides are fogged', () {
+        final door = tvDoor()..state.revealedCells = {0, 15};
+        expect(drawCalls(door), 0);
+      });
+
+      test('shows once a square on either side is revealed', () {
+        for (final cell in [5, 9]) {
+          final door = tvDoor()..state.revealedCells = {cell};
+          expect(drawCalls(door), greaterThan(0), reason: 'cell $cell');
+        }
+      });
+
+      test('shows with the fog off', () {
+        final door = tvDoor()..state.fogEnabled = false;
+        expect(drawCalls(door), greaterThan(0));
+      });
+
+      test('the DM tablet always draws it', () {
+        final door = portalFor(_uvtt(battlemap: {'draw_doors': true}));
+        expect(drawCalls(door), greaterThan(0));
+      });
     });
 
     test('Dungeondraft-style map keeps the marker', () {

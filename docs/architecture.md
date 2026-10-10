@@ -233,7 +233,7 @@ adjustment with **the same counts keeps the fog**, shadow edits, the table windo
 | 3 | live stroke | in-progress stroke preview |
 | 4 | token layer | colored numbered circles |
 | 5 | walls | DM debug lines |
-| 6 | portals | door markers — DM tablet only, the TV shows the map's painted doors (`PortalComponent.showMarker`); on maps with `draw_doors` (AI maps) a top-down door leaf that swings open, on every screen |
+| 6 | portals | door markers — DM tablet only, the TV shows the map's painted doors (`PortalComponent.showMarker`); on maps with `draw_doors` (AI maps) a top-down door leaf that swings open, on every screen — on the TV at priority 11, **above the fog**, drawn only while the fog is off or a square beside the doorway is revealed (`PortalComponent.forPlayers`), so a door opened into a fogged room stays visible and doors deep in the fog give nothing away |
 | 10 | fog of war | dark overlay with reveal cutouts (opaque on the TV, 70 % on the phone) |
 | 12 | DM layers | **phone only**: DM-only pictures, each with eye + opacity, fitted into the map (aspect kept, centered); above the fog so secrets stay readable |
 | 28 | TV frame | **phone only**: what the players see — the table window (with a drag grip when the TV can pan) or the TV's screen rectangle (`TvViewportComponent`) |

@@ -377,7 +377,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     _wallComponent!.isVisible = state.showWalls;
     world.add(_wallComponent!);
 
-    // Portals (priority 6)
+    // Portals (priority 6; a drawn door on the TV 11 — above the fog)
     for (int i = 0; i < map.portals.length; i++) {
       final portal = PortalComponent(
         portalIndex: i,
@@ -386,6 +386,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
         pixelsPerGrid: map.resolution.pixelsPerGrid,
         // Door markers are for the DM; the TV shows the map's own doors.
         showMarker: !isDisplay,
+        forPlayers: isDisplay,
       );
       _portalComponents.add(portal);
       world.add(portal);

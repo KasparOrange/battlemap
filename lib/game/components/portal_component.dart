@@ -20,6 +20,10 @@ import '../../state/vtt_state.dart';
 ///   It always opens to the south of an east–west wall and to the east of a
 ///   north–south wall ([swingSign]), so the two leaves of a double door
 ///   (hinges at the outer ends, written so by `tools/mapgen`) open together.
+///   On the players' display ([forPlayers]) a drawn door sits **above** the
+///   fog, so a door opened into a still-fogged room stays visible; it is drawn
+///   only while the fog is off or a square beside the doorway is revealed
+///   ([visibleToPlayers]), so doors deep in the fog don't give rooms away.
 ///
 /// Input handling (tap-to-toggle) is in VttGame's input router.
 ///
@@ -48,6 +52,20 @@ class PortalComponent extends PositionComponent {
   /// the painted doors only distracted. Drawn doors ignore it: they are the
   /// door itself and show everywhere.
   final bool showMarker;
+
+  /// Whether this door is drawn on the players' display (the TV) — then a
+  /// drawn door renders above the fog (priority [abovePlayersFogPriority])
+  /// and only when [visibleToPlayers]. `false` on the DM's tablet, whose
+  /// fog is see-through anyway.
+  final bool forPlayers;
+
+  /// Render priority of a drawn door on the players' display: above the fog
+  /// (10), below the DM layers (12).
+  static const int abovePlayersFogPriority = 11;
+
+  /// Fog cell indices (`row * cols + col`) on both sides of the doorway —
+  /// a square of either side revealed makes the door visible to players.
+  late final List<int> _sideCells;
 
   static const double _padding = 8.0;
 
@@ -85,15 +103,20 @@ class PortalComponent extends PositionComponent {
   ///
   /// Position and size are the doorway's bounding box (plus padding), in
   /// world pixels; [pixelsPerGrid] converts the grid-coordinate [portal].
-  /// [showMarker] hides the marker look on the players' display.
+  /// [showMarker] hides the marker look on the players' display;
+  /// [forPlayers] lifts a drawn door above the players' fog.
   PortalComponent({
     required this.portalIndex,
     required this.portal,
     required this.state,
     required this.pixelsPerGrid,
     this.showMarker = true,
+    this.forPlayers = false,
   })  : drawn = state.map?.drawDoors ?? false,
-        super(priority: 6) {
+        super(
+            priority: forPlayers && (state.map?.drawDoors ?? false)
+                ? abovePlayersFogPriority
+                : 6) {
     // Compute position and size from portal bounds
     final ppg = pixelsPerGrid.toDouble();
     final p0x = portal.bounds[0].x * ppg;
@@ -114,7 +137,42 @@ class PortalComponent extends PositionComponent {
     size = Vector2(w, h);
 
     if (drawn) _layoutDoor(p0x, p0y, p1x, p1y, ppg);
+    _sideCells = _cellsBeside();
   }
+
+  /// The fog cells on both sides of the doorway: for each square along the
+  /// door line, the cells half a square to either side of its midpoint.
+  /// Cells outside the map are left out.
+  List<int> _cellsBeside() {
+    final map = state.map;
+    if (map == null) return const [];
+    final cols = map.resolution.mapSize.dx.toInt();
+    final rows = map.resolution.mapSize.dy.toInt();
+    final a = portal.bounds[0], b = portal.bounds[1];
+    final dx = b.x - a.x, dy = b.y - a.y;
+    final len = sqrt(dx * dx + dy * dy);
+    if (len == 0) return const [];
+    final nx = -dy / len * 0.5, ny = dx / len * 0.5;
+    final steps = max(1, len.round());
+    final cells = <int>{};
+    for (int i = 0; i < steps; i++) {
+      final f = (i + 0.5) / steps;
+      final mx = a.x + dx * f, my = a.y + dy * f;
+      for (final side in const [-1, 1]) {
+        final cx = (mx + side * nx).floor(), cy = (my + side * ny).floor();
+        if (cx >= 0 && cx < cols && cy >= 0 && cy < rows) cells.add(cy * cols + cx);
+      }
+    }
+    return cells.toList();
+  }
+
+  /// Whether the players may see this door: the fog is off, or a square on
+  /// either side of the doorway is revealed. Always `true` off the players'
+  /// display ([forPlayers] false).
+  bool get visibleToPlayers =>
+      !forPlayers ||
+      !state.fogEnabled ||
+      _sideCells.any(state.revealedCells.contains);
 
   /// Lays out the drawn door: a leaf lying along +x from the hinge (local
   /// coordinates, rotated onto the wall line at render time), thinner than
@@ -162,7 +220,7 @@ class PortalComponent extends PositionComponent {
   @override
   void render(Canvas canvas) {
     if (drawn) {
-      _renderDoor(canvas);
+      if (visibleToPlayers) _renderDoor(canvas);
       return;
     }
     if (!showMarker) return;
