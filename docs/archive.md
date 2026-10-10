@@ -6,6 +6,21 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - battlemap focus: tabletop mode
+- Konrad: the focus is **tabletop mode** (real miniatures on the TV, no tokens/HP bars); the digital mode is a stretch goal far down the roadmap → written into `CLAUDE.md` (vision), `README.md`, `feature-ideas.md` "play modes" (tabletop = the "Pen & Paper" preset), `action.md` (token/NPC UX findings dropped)
+	- `bench_bot.py prep` now starts a tokenless tabletop game (preset settings sent with `nav.newSession`)
+	- found doing that: **after the TV went back to the library once, its renderer stopped following state** (stale tokens, stale map pictures): `VttGame` subscribed in `onLoad` (runs once) but unsubscribed in `onRemove` (runs on every detach) → subscribe in `onMount` + catch up
+	- bot: `start()` now goes through the library like a DM, and checks the TV picture actually changed (fog lifted for that screenshot) — caught the bug on the old build; run 59/59 green after the fix
+
+### 26-10-10 18:05 - DM-only picture layers (1.1.6+16)
+- Konrad: upload any number of DM-only pictures and overlay them on the map as switchable layers, visible only to the DM → companion **Layers** tab
+	- model `DmOverlay` (id, name, VPS url, visible, opacity); `VttState.dmOverlays` + edit methods; list order = draw order
+	- phone draws them (`DmOverlayComponent`, priority 12 — above the fog, which hid exactly the secrets the DM needs); the TV's `VttGame` gets no `DmOverlayImages`, so it has no layer component at all
+	- the TV stores the list in the session (`dmOverlayData`) and echoes it in `vtt.fullState`; new `vtt.setDmOverlays` carries the phone's whole list + a revision so stale broadcasts don't flash old lists back (`relay-protocol.md` "DM layers")
+	- pictures: PUT `/upload/dm/<name>`, kept in `uploads/dm/` (dev server; the 7-day cleanup would have broken saved sessions); PDFs rasterized like map PDFs; decoded ≤ 4096 px only while visible
+	- old TV build: ignores the command, layers work on the phone in memory only
+	- `test/dm_overlay_test.dart` (14 tests), full suite 391 green, analyze clean; not tested on a device yet
+
 ### 26-10-10 - battlemap UX review fixes
 - helper agent played a DM session on the bench (14 findings, open ones in `action.md` "UX review 2026-10-10"); the broken ones fixed:
 	- **companion crashed to an error screen closing the token editor / calibration dialog**: controllers were disposed in `showDialog().whenComplete` while the exit animation still built the text fields → `_disposeAfterExit` waits for `TransitionRoute.completed`

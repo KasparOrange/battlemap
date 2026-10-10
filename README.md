@@ -2,6 +2,10 @@
 
 A Flutter app that turns a TV into a D&D digital battlemap, controlled from a phone.
 
+The TV lies flat on the table and players put their **real miniatures** on it (tabletop mode — the
+focus). The app makes the map come alive: fog of war, doors, measuring, drawing, atmosphere. Dice,
+HP and initiative stay on paper; a fully digital mode with tokens is a far-off stretch goal.
+
 ## How It Works
 
 The same APK runs in two modes:

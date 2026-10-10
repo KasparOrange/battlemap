@@ -11,7 +11,7 @@ Usage (bench running, TV in TV Mode, tablet connected as companion):
   tools/bench_bot.py run         # play docs/test-session.md, write a report
   tools/bench_bot.py run --stress  # also load the 30 MB castle (may crash the TV)
   tools/bench_bot.py all         # seed + run
-  tools/bench_bot.py prep        # leave a game in progress on the TV to play with by hand
+  tools/bench_bot.py prep        # leave a tabletop game in progress to play with by hand
 
 The report lands in build/bench-report/<time>/report.md (+ screenshots); `--open`
 also shows it in flagship's ledger pane (never by default: a run mustn't take
@@ -60,6 +60,28 @@ def screenshot(serial: str, path: Path) -> None:
     """Saves the TV screen as PNG."""
     png = subprocess.run([ADB, "-s", serial, "exec-out", "screencap", "-p"], capture_output=True).stdout
     path.write_bytes(png)
+
+
+def _small_bgr(png: Path) -> list[tuple[int, int, int]]:
+    """The screenshot shrunk to 64 px wide, as a flat list of (b, g, r) pixels."""
+    bmp = png.with_suffix(".sig.bmp")
+    subprocess.run(["sips", "-s", "format", "bmp", "-Z", "64", str(png), "--out", str(bmp)],
+                   capture_output=True)
+    data = bmp.read_bytes()
+    bmp.unlink()
+    offset = int.from_bytes(data[10:14], "little")
+    width = int.from_bytes(data[18:22], "little", signed=True)
+    height = abs(int.from_bytes(data[22:26], "little", signed=True))
+    bpp = int.from_bytes(data[28:30], "little") // 8
+    row = (width * bpp + 3) & ~3
+    return [tuple(data[offset + y * row + x * bpp: offset + y * row + x * bpp + 3])
+            for y in range(height) for x in range(width)]
+
+
+def screen_change(a: Path, b: Path) -> float:
+    """Mean per-channel difference (0–255) between two screenshots."""
+    pa, pb = _small_bgr(a), _small_bgr(b)
+    return sum(abs(x - y) for p, q in zip(pa, pb) for x, y in zip(p, q)) / (3 * len(pa))
 
 
 def map_coverage(png: Path) -> float:
@@ -273,14 +295,33 @@ def rect(cols: int, x0: int, y0: int, w: int, h: int) -> list[int]:
 
 
 async def start(bot: Bot, rep: Report, prefix: str, name: str) -> bool:
-    """Starts a new session on the map [prefix]; waits until the TV shows it."""
+    """Starts a new session on the map [prefix] the way a DM does — back to the
+    library first, then open the map — and checks the TV really shows a new
+    picture (state alone can be right while the screen is stale)."""
     mid = map_id(bot, prefix)
     if not rep.check(mid is not None, f"map {prefix} is in the library"):
         return False
+    before = rep.dir / f".before-{prefix}.png"
+    screenshot(rep.serial, before)
+    await bot.send("nav.goToLibrary")
+    await bot.until(lambda: bot.state.get("tvView") == "library", 5)
     await bot.send("nav.newSession", mapId=mid, name=name)
     ok = await bot.until(lambda: bot.state.get("activeMapId") == mid and bot.state.get("hasMap"), 30)
     rep.check(ok, f"TV opens {prefix} in game view", f"view={bot.state.get('tvView')}")
     await asyncio.sleep(1.5)  # let it render before the screenshot
+    after = rep.dir / f".after-{prefix}.png"
+    fog = bot.state.get("fogEnabled")
+    if fog:  # a fresh map is fully fogged (black) — compare the picture itself
+        await bot.send("vtt.toggleFog")
+        await asyncio.sleep(0.8)
+    screenshot(rep.serial, after)
+    if fog:
+        await bot.send("vtt.toggleFog")
+        await bot.until(lambda: bot.state.get("fogEnabled"), 5)
+    change = screen_change(before, after)
+    rep.check(change > 6, f"TV screen changed to {prefix}", f"difference {change:.0f}")
+    before.unlink()
+    after.unlink()
     return ok
 
 
@@ -452,33 +493,31 @@ async def run(bot: Bot, rep: Report, stress: bool) -> None:
         rep.lines += [f"- `{e}`" for e in bot.errors]
 
 
-HEROES = [  # (name, hp, x, y) — a level-3 party walking into the tavern
-    ("Brakka", 31, 6, 9), ("Lirael", 18, 7, 9), ("Tobin", 22, 8, 10), ("Sefa", 24, 9, 9),
-]
-NPCS = [("Barkeep Ulm", 9, 10, 3), ("Hooded stranger", 27, 13, 4)]
+# The "Pen & Paper" preset (SessionSettings.penAndPaper) — tabletop mode, the focus:
+# real miniatures on the TV, no digital tokens/HP/conditions/initiative.
+TABLETOP = {
+    "fogOfWar": True, "shadowMode": False, "drawingTools": True, "tokens": False,
+    "measureTool": True, "ruler": False, "doorToggles": True, "hpBars": False,
+    "conditions": False, "aoeTemplates": False, "initiativeTracker": False,
+    "fogMode": "standard", "fogAnimation": True, "globalEffects": True,
+}
 
 
 async def prep(bot: Bot) -> None:
-    """Leaves a realistic game in progress: the tavern, a party at the door, the
-    common room revealed, the barkeep and a stranger inside."""
+    """Leaves a tabletop game in progress: the tavern with the tabletop preset,
+    the common room revealed (the players' miniatures would stand at the door)."""
     await bot.send("lib.requestList")
     await bot.until(lambda: bot.listing.get("maps"), 5)
     mid = map_id(bot, "03-")
     if not mid:
         sys.exit("tavern map missing — run `bench_bot.py seed` first")
-    await bot.send("nav.newSession", mapId=mid, name="Game night — the tavern")
+    await bot.send("nav.newSession", mapId=mid, name="Game night — the tavern", settings=TABLETOP)
     await bot.until(lambda: bot.state.get("activeMapId") == mid and bot.state.get("hasMap"), 30)
     cols = bot.state["gridCols"]
-    for name, hp, x, y in HEROES + NPCS:
-        before = len(bot.state.get("tokens", []))
-        await bot.send("vtt.addToken", gridX=x, gridY=y)
-        await bot.until(lambda: len(bot.state["tokens"]) > before)
-        tok = bot.state["tokens"][-1]
-        await bot.send("vtt.editToken", id=tok["id"], name=name, maxHp=hp, currentHp=hp)
     await bot.send("vtt.brushReveal", indices=rect(cols, 1, 1, 14, 6))  # common room
     await bot.send("vtt.zoomToFit")
     await asyncio.sleep(2.5)  # let auto-save write it
-    print(f"game in progress: {len(HEROES)} heroes, {len(NPCS)} NPCs, common room revealed")
+    print("tabletop game in progress: the tavern, common room revealed")
 
 
 async def main() -> int:

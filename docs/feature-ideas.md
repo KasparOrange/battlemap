@@ -2,17 +2,24 @@
 
 ## play modes
 
-the app supports two composable play modes, selected via session settings. individual features can be toggled on/off — the modes are just presets.
+two play modes, selected via session settings (presets over individual feature toggles).
 
-### pen & paper mode (default)
+> **Focus (decided 2026-10-10, Konrad): tabletop mode only.** All current work — features, UX,
+> tests — targets tabletop mode. No digital tokens, HP bars, conditions or initiative are used.
+> Digital mode is a stretch goal far down the roadmap; its existing code (tokens, Combat tab) stays
+> dormant behind the session settings, is not polished and not extended.
 
-the TV is a living, breathing map surface. all game mechanics (HP, initiative, conditions) happen at the real table with dice, paper, and pencils. the app's job is to make the MAP amazing and give the DM tools to create atmosphere.
+### tabletop mode (default, the focus) — preset "Pen & Paper" in code
 
-players place real miniatures on the TV. the DM controls the spectacle from the phone.
+the TV lies flat as the table; players put **real miniatures** on it. all game mechanics (HP,
+initiative, conditions) happen at the real table with dice, paper and pencils. the app's job is to
+make the MAP amazing and give the DM tools for reveal and atmosphere: fog, doors, measure, drawing,
+effects, light. the TV view must stay put under the miniatures (calibrated 1-inch grid).
 
-### digital mode
+### digital mode (stretch goal, far down the roadmap)
 
-full virtual tabletop. everything from pen & paper PLUS digital game mechanics — HP tracking, initiative order, conditions, dice rolling, automated combat.
+full virtual tabletop. everything from tabletop mode PLUS digital game mechanics — tokens, HP
+tracking, initiative order, conditions, dice rolling, automated combat. not worked on now.
 
 ## session settings
 
@@ -27,7 +34,7 @@ all settings saved per session and restored on resume.
 
 ---
 
-## pen & paper features
+## tabletop mode features (pen & paper)
 
 these make the map visually stunning and give the DM atmosphere tools. no game mechanics.
 
@@ -65,7 +72,7 @@ these make the map visually stunning and give the DM atmosphere tools. no game m
 
 ---
 
-## digital mode features
+## digital mode features (stretch goal — not worked on now)
 
 these add game mechanics on top of the pen & paper visuals.
 

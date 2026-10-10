@@ -142,11 +142,25 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    state.addListener(_onStateChanged);
     if (state.map != null) {
       _loadedMap = state.map;
       _loadMap(state.map!);
     }
+  }
+
+  /// Subscribes to [state] each time the game is attached to a GameWidget.
+  ///
+  /// The TV drops its GameWidget whenever it leaves the game view (back to the
+  /// library) and builds a new one for the next game; Flame then calls
+  /// [onRemove] and later [onMount] again, but never [onLoad] a second time.
+  /// The listener used to be added in [onLoad] only, so after the first trip
+  /// to the library the TV stopped following state — a new map, tokens and
+  /// doors stayed stale (found 2026-10-10). Catches up on attach.
+  @override
+  void onMount() {
+    super.onMount();
+    state.addListener(_onStateChanged);
+    _onStateChanged();
   }
 
   @override
