@@ -59,11 +59,12 @@ the Gemini app is also wanted for hand exploration.
 |---|---|---|
 | `guide layouts/<name>.json` | renders the guide PNG only | free |
 | `paint layouts/<name>.json --size 1K\|2K\|4K --n N [--thinking …] [--refs …] [--tag …] [--pack]` | guide + prompt → model → QA overlay per image → `meta.json`; `--pack` packs the best | per image, see prices |
-| `pack layouts/<name>.json <image> [--ppg N] [--png]` | writes `<name>.dd2vtt` (WebP image, walls/doors/lights from the layout) | free |
+| `pack layouts/<name>.json <image> [--ppg N] [--png]` | writes `<name>.dd2vtt` (WebP image, walls/doors/lights from the layout, `"battlemap": {"draw_doors": true}`) | free |
+| `doors layouts/<name>.json <image> [--open]` | the painting with battlemap's doors drawn on (`doors_N[_open].jpg`) — the TV look without a TV | free |
 
 Runs land in `tools/mapgen/out/<name>/<timestamp>-<tag>/` (gitignored): `guide.png`,
 `prompt.txt`, `out_N.jpg`, `overlay_N.jpg` (our walls cyan, doors red over the painting),
-`meta.json` (model, size, QA, token usage, estimated cost). Prompt template:
+`doors_N.jpg` (painting + battlemap's doors, shut), `meta.json` (model, size, QA, token usage, estimated cost). Prompt template:
 `tools/mapgen/prompts/baseline.txt`. Sample layouts: `crypt` (16 × 16) and `keep` (32 × 18,
 16:9).
 
@@ -109,9 +110,26 @@ model paints doors where the red bars are, uses the `desc` text per room, keeps 
 Thinking `high` adds ~2.4k thought tokens (billed as text output, a fraction of a cent) and
 ~30 s; no visible gain at 1K. 1K gives only 50–64 px per square — finals need 4K.
 
+**Run 2 — doorways (2026-10-10, 4 images at 1K, ~14 cents):** guide without red bars,
+prompt "open doorways, no doors": all four paintings show empty openings, no red, no
+side-on doors. Battlemap's drawn doors sit cleanly in the wall line (board, zone "run 2").
+Still open: ruin text breaks the courtyard walls (step 2); one keep draw painted the guide's
+black rock gap and walls as flat black bars.
+
+**Doors are battlemap's** (since run 2): the guide leaves a doorway as a gap, the `.dd2vtt`
+carries `"battlemap": {"draw_doors": true}` (other VTTs ignore it), and battlemap's
+`PortalComponent` draws a top-down wooden leaf in the wall line that swings open (~85°, 0.4 s,
+eased) when the DM toggles it. The leaf hinges at `bounds[0]`; `pack` writes a double door's
+second leaf hinge-last so the pair opens from the middle, and a leaf always opens to the south
+of an east–west wall / east of a north–south wall. Maps without the flag (Dungeondraft) keep
+the old marker. `mapgen.py doors` draws the same leaf in Python for the board — keep the two
+in step (size, colours) when either changes.
+
 **Known gaps:** the QA score (edge strength on wall lines ÷ inside rooms, 0.9–1.3 so far)
 does not yet separate good from bad — the overlay is the real check; `est_cost` ignores
-thought tokens; style refs (`--refs`) untested; no packed map loaded on the TV yet.
+thought tokens; style refs (`--refs`) untested; no packed map loaded on the TV yet (drawn
+doors are checked by unit tests and an offscreen render of the real component, not on a
+device).
 
 ## Next — pick up here (hand-off 2026-10-10)
 
@@ -119,6 +137,9 @@ thought tokens; style refs (`--refs`) untested; no packed map loaded on the TV y
 (`horizon open battlemap-mapgen`, walk: `horizon present battlemap-mapgen overview`), check
 the budget (prepaid €20 on Bao's account, ≈ $0.30 used by 2026-10-10 — AI Studio → Ausgaben,
 signed in as nico.zingerle). Every new image goes onto the board (rule above).
+
+**Where it stands (2026-10-10, end of the second session):** step 1 is done (run 2 on the
+board); ≈ $0.45 of the €20 used. Next is step 2, ruins in the layout.
 
 **Findings from run 1 that set the order** (Konrad, 2026-10-10):
 
@@ -129,7 +150,8 @@ signed in as nico.zingerle). Every new image goes onto the board (rule above).
 
 **Steps, in order** (one at a time, each onto the board before the next):
 
-1. **Doors drawn by battlemap, not by the model.** Guide: a door edge becomes a gap (floor
+1. ✅ **Done 2026-10-10 (run 2) — see "Doors are battlemap's" above.** Doors drawn by
+   battlemap, not by the model. Guide: a door edge becomes a gap (floor
    runs through), no red bar; prompt: "open doorways, no doors". Battlemap draws a top-down
    door sprite on each portal (position + rotation already in the `.dd2vtt`), closed ↔ open
    on toggle — this is also the "door animations" idea in `feature-ideas.md`. One sprite per
@@ -181,7 +203,7 @@ flowchart LR
    | black `#000000` | outside the map, solid rock |
    | mid grey `#808080` | floor |
    | near-black `#202020`, ¼ square thick | walls |
-   | red `#FF0000` bar in the wall gap | door |
+   | gap in the wall, floor runs through | doorway — battlemap draws the door (since run 2; run 1 used a red bar) |
    | blue `#2060FF` | water |
    | brown `#A07040` | rubble / difficult terrain |
    | green `#30A030` | vegetation |
@@ -198,9 +220,9 @@ flowchart LR
 5. **Resample** to exactly `cols × ppg` by `rows × ppg` (the model's sizes are fixed, the grid
    is ours). Optional upscale on the Mac.
 6. **Pack `.dd2vtt`** — image (base64), `resolution` (`map_size`, `pixels_per_grid`),
-   `line_of_sight` from the spec's walls, `portals` from its doors, `lights` from its lights.
-   The TV needs **no change**: it already loads `.dd2vtt`
-   (`lib/model/uvtt_map.dart`).
+   `line_of_sight` from the spec's walls, `portals` from its doors, `lights` from its lights,
+   plus `"battlemap": {"draw_doors": true}`. The TV loads it like any `.dd2vtt`
+   (`lib/model/uvtt_map.dart`) and draws the doors itself.
 7. **Upload** to the VPS map library through the dev server, like any map — by hand today
    (companion map upload, or `PUT /upload/<name>` on the dev server); not automated yet.
 

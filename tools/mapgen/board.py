@@ -74,6 +74,8 @@ CRYPT_GRID, KEEP_GRID = (16, 16), (32, 18)
 CRYPT_RUN = OUT / "crypt/261010-163411-v0"
 CRYPT_HIGH = OUT / "crypt/261010-163623-high"
 KEEP_RUN = OUT / "keep/261010-163503-v0"
+CRYPT_DW = OUT / "crypt/261010-171713-doorways"
+KEEP_DW = OUT / "keep/261010-171818-doorways"
 
 # pin: (number, grid x, grid y, colour, title, text)
 PLATES = [
@@ -82,8 +84,8 @@ PLATES = [
      "intro": "**Why this layout:** small and square (16 × 16, 1:1), one room plus two side spaces, "
               "and every legend colour exactly once — the smallest map that tests the whole legend.",
      "pins": [
-         (1, 3, 6.5, PURPLE, "Door on a side wall", "Red bar on a vertical edge: the ossuary door. Tests a door the model must turn sideways."),
-         (2, 8, 11, PURPLE, "Double door", "Two door edges side by side: the corridor opens into the hall two squares wide."),
+         (1, 3, 6.5, PURPLE, "Door on a side wall", "A gap on a vertical edge: the ossuary door (a red bar in run 1). Battlemap draws the door."),
+         (2, 8, 11, PURPLE, "Double door", "Two door edges side by side: the corridor opens into the hall two squares wide; hinges at the outer ends."),
          (3, 11.5, 9.5, PURPLE, "Terrain inside a room", "Blue water marked as lying IN the hall: no walls around it. Tests the \"in\" rule."),
          (4, 8, 6.5, PURPLE, "Prop", "Magenta block = a prop described in words: \"carved sarcophagus of a knight\"."),
          (5, 5, 3.3, PURPLE, "Light sources", "Yellow dots on the north wall; the packed map also carries them as lights."),
@@ -148,12 +150,45 @@ PLATES = [
          (5, 25, 16, RED, "And in the south wall", "A second opening. Ruin text breaks walls in both draws."),
          (6, 24.5, 8, AMBER, "Door: red with hinges", "Half door, half marker — better than run 1 image 1, still red."),
      ]},
+    # run 2: doorways empty in the guide and prompt; battlemap draws the doors (mapgen.py doors)
+    {"id": "d_crypt1", "zone": "run2", "title": "CRYPT · RUN 2 · IMAGE 1 · DOORS SHUT", "img": CRYPT_DW / "doors_1.jpg",
+     "name": "crypt-dw-1.jpg", "grid": CRYPT_GRID, "width": 672,
+     "side": CRYPT_DW / "doors_1_open.jpg", "side_label": "Same map, doors open",
+     "intro": "Guide without red bars, prompt \"open doorways, no doors\". 29 s, ~3 cents. The brown "
+              "leaves are battlemap's doors, drawn on top exactly as the TV draws them.",
+     "pins": [
+         (1, 3, 6.5, GREEN, "Empty doorway, door on top", "The model painted an opening; the door leaf sits in the wall line, seen from above."),
+         (2, 8, 11, GREEN, "Double door", "Two leaves hinged at the outer ends; both swing south into the corridor (small picture)."),
+         (3, 8, 14, GREEN, "No red anywhere", "Nothing of the old marker is left to leak into the art."),
+     ]},
+    {"id": "d_crypt2", "zone": "run2", "title": "CRYPT · RUN 2 · IMAGE 2", "img": CRYPT_DW / "doors_2.jpg",
+     "name": "crypt-dw-2.jpg", "grid": CRYPT_GRID, "width": 672, "overlay": CRYPT_DW / "overlay_2.jpg",
+     "intro": "Second draw, 29 s. Same result: open doorways, battlemap's doors drawn on.",
+     "pins": [
+         (1, 8, 11, GREEN, "Threshold only", "A thin stone sill across the corridor mouth — the prompt allows it, it reads as a doorway."),
+         (2, 11.5, 9.5, GREEN, "Water with stones", "Flooded corner in its 3 × 3 squares."),
+     ]},
+    {"id": "d_keep1", "zone": "run2", "title": "KEEP · RUN 2 · IMAGE 1", "img": KEEP_DW / "doors_1.jpg",
+     "name": "keep-dw-1.jpg", "grid": KEEP_GRID, "width": 960,
+     "side": KEEP_DW / "doors_1_open.jpg", "side_label": "Same map, doors open",
+     "intro": "16:9, 31 s. All five doors drawn by battlemap; packed as keep.dd2vtt with draw_doors.",
+     "pins": [
+         (1, 14, 7, GREEN, "Corridor doors", "Both ends of the corridor: openings in the art, leaves on top."),
+         (2, 24.5, 8, GREEN, "Was red in run 1", "The armory door that stayed a red bar is now a clean doorway."),
+         (3, 28, 12, RED, "Ruin still opens walls", "\"Ruin\" text breaks the courtyard walls again — next step: ruins in the layout."),
+     ]},
+    {"id": "d_keep2", "zone": "run2", "title": "KEEP · RUN 2 · IMAGE 2", "img": KEEP_DW / "doors_2.jpg",
+     "name": "keep-dw-2.jpg", "grid": KEEP_GRID, "width": 960, "overlay": KEEP_DW / "overlay_2.jpg",
+     "intro": "Second draw, 32 s.",
+     "pins": [
+         (1, 10.5, 13.5, RED, "Guide colours taken literally", "The rock gap between kitchen and barracks became a flat black bar, walls near-black."),
+         (2, 6, 10.5, GREEN, "Kitchen doorway", "Open gap, door drawn on top."),
+     ]},
 ]
 
 NEXT = [
     ("On the TV", "The packed crypt on the Android TV emulator: do fog, doors and room reveal line up with the painted walls?", BLUE),
     ("4K finals", "Both maps at 4K (~11 cents each): enough pixels per square for the table?", BLUE),
-    ("Door marker fix", "Doors leak red into the art. Try: door as a gap + a word list, a less loud marker colour, or a legend image.", AMBER),
     ("Tuning grid", "Same layouts × variants: faint grid in the guide, legend as image, thinking minimal/medium/high, 1:1 vs 16:9.", BLUE),
     ("Style references", "3 reference images in one style: do maps from different layouts look like one campaign?", BLUE),
     ("Variants, same walls", "Edit a final into night, burning, flooded — the geometry must not move.", BLUE),
@@ -188,11 +223,12 @@ def plate(p, parent, x, y):
         add(nid, "card", nx, ny, CARD_W, nh, {"title": f"{num} · {title}", "text": text, "color": color}, p["id"])
         ED.append({"id": f"e_{nid}", "from": nid, "to": pid})
         ny += nh + GAP
-    if p.get("overlay"):
-        osrc, ow, oh = media(p["overlay"], p["name"].rsplit(".", 1)[0] + "-overlay.jpg")
+    if p.get("overlay") or p.get("side"):
+        side = p.get("side") or p["overlay"]
+        osrc, ow, oh = media(side, p["name"].rsplit(".", 1)[0] + ("-side.jpg" if p.get("side") else "-overlay.jpg"))
         lh = round(CARD_W * oh / ow)
         add(f"{p['id']}_ovl", "image", nx, ny + GAP, CARD_W, lh,
-            {"src": osrc, "label": "QA overlay: our walls cyan, doors red"}, p["id"])
+            {"src": osrc, "label": p.get("side_label", "QA overlay: our walls cyan, doors red")}, p["id"])
         ny += GAP + lh + GAP
     z["w"] = nx + CARD_W + PAD
     z["h"] = max(iy + h, ny) + PAD
@@ -229,7 +265,8 @@ def main():
         "**green** worked · **red** problem · **amber** open question · **purple** explains · "
         "**blue** planned · **grey** reference.\n\n"
         "**State 2026-10-10:** run 1 done (prompt v0, 1K, 6 images, ~20 cents). Geometry held; "
-        "door markers leak red into the art. Next images are the blue slots at the bottom.\n\n"
+        "door markers leak red into the art. **Run 2** (right): doorways stay empty, battlemap "
+        "draws the doors — no red left. Next images are the blue slots at the bottom.\n\n"
         "Source: `battlemap/docs/ai-art.md` · rebuilt by `tools/mapgen/board.py`.")
     add("intro", "markdown", 0, 0, TEXT_W, md_h(intro), {"md": intro, "color": PURPLE})
 
@@ -260,6 +297,13 @@ def main():
                   "the problems are door markers showing through and text that overrides a wall.",
                   GREEN, rx, lay["h"] + 352, [p for p in PLATES if p["zone"] == "run1"], 2)
 
+    rx2 = rx + max(lay["w"], run["w"]) + 352
+    zone_of("run2", "RUN 2 · DOORWAYS · 1K",
+            "Doors are no longer painted: the guide leaves a gap, the prompt asks for empty doorways, "
+            "and battlemap draws a top-down door that swings open on the phone's tap. Shown here "
+            "with the doors drawn on the way the TV draws them.",
+            GREEN, rx2, 0, [p for p in PLATES if p["zone"] == "run2"], 2)
+
     nz = add("next", "zone", 0, left_h + 352, 100, 100, {"title": "NEXT IMAGES", "color": BLUE, "titleSize": 64})
     add("next_sum", "markdown", PAD, 150, CARD_W * 2 + 32, 130,
         {"md": "Slots for the images this test project makes next. A slot becomes a plate on the right when its run is done.", "scale": 1.4}, "next")
@@ -275,6 +319,7 @@ def main():
 
     ED.append({"id": "e_lay_run", "from": "layouts", "to": "run1", "label": "painted into"})
     ED.append({"id": "e_run_next", "from": "run1", "to": "next", "label": "leads to"})
+    ED.append({"id": "e_run1_run2", "from": "run1", "to": "run2", "label": "doors fixed in"})
 
     for i, e in enumerate(ED):  # a PUT stores edges as sent; the app needs id + props on each
         e.setdefault("id", f"e{i}")

@@ -48,6 +48,15 @@ class UvttMap {
   /// Decoded from the base64 `"image"` field in the `.dd2vtt` file.
   final Uint8List imageBytes;
 
+  /// Whether battlemap draws the doors itself, on top of the map image.
+  ///
+  /// `true` for maps whose image shows empty doorways — the AI map pipeline
+  /// (`tools/mapgen`) writes `"battlemap": {"draw_doors": true}` into the
+  /// `.dd2vtt`. [PortalComponent] then renders a top-down door leaf that
+  /// swings open and shut. `false` (the default, e.g. Dungeondraft exports,
+  /// whose doors are painted into the image) keeps the plain portal marker.
+  final bool drawDoors;
+
   /// Creates a [UvttMap] with all parsed components.
   UvttMap({
     required this.format,
@@ -58,6 +67,7 @@ class UvttMap {
     required this.lights,
     required this.environment,
     required this.imageBytes,
+    this.drawDoors = false,
   });
 
   /// Total map width in pixels.

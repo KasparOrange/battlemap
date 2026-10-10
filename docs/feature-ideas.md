@@ -51,7 +51,7 @@ these make the map visually stunning and give the DM atmosphere tools. no game m
 - [ ] **ambient soundscapes** — layered audio from TV speakers. base atmosphere (dungeon echo, forest, tavern) + triggered SFX (door slam, sword clash, thunder). controlled from phone.
 - [ ] **day/night cycle** — gradually dim the map, shift lighting color temperature. DM controls time-of-day slider.
 - [ ] **animated fog edges** — fog rolls in/out with particle wisps instead of hard cell edges. soft gradient fog boundary.
-- [ ] **door animations** — doors visually swing open/shut instead of instant toggle.
+- [ ] **door animations** — doors visually swing open/shut instead of instant toggle. *Done for AI maps (`draw_doors`, 2026-10-10): battlemap draws the leaf and swings it; Dungeondraft maps paint their doors into the image, so they still toggle instantly.*
 - [ ] **narrative text overlay** — DM pushes text that fades in on the TV: "You enter the throne room..." dramatic reveal moments.
 - [ ] **timer/countdown** — visible countdown on the TV for timed puzzles or dramatic tension. DM sets duration from phone.
 - [ ] **miniature spotlight** — dramatic light cone on a specific grid area. useful for "a beam of moonlight falls on the altar."

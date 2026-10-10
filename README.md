@@ -109,7 +109,8 @@ tools/mapgen/mapgen.py paint tools/mapgen/layouts/crypt.json --size 1K --n 2 --p
 
 A layout we write (rooms, walls, doors, lights) is drawn as a colour-coded guide,
 Nano Banana 2.1 paints over it, and the result is packed with our walls into a
-`.dd2vtt` the TV loads like any map. Needs a Gemini API key with billing. Design,
+`.dd2vtt` the TV loads like any map. The painting shows empty doorways; battlemap draws
+the doors itself and swings them open when the DM taps. Needs a Gemini API key with billing. Design,
 state and next steps: `docs/ai-art.md`; test images on the horizon board
 `battlemap-mapgen` (`tools/mapgen/board.py`).
 

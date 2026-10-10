@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - drawn doors (ai art step 1)
+- Konrad: continue the AI map hand-off → step 1 done: doors are no longer painted
+	- mapgen: guide leaves doorways as gaps (no red bar), prompt asks for empty doorways, `pack` writes `"battlemap": {"draw_doors": true}` and hinges a double door's second leaf at its far end; new `doors` command / `doors_N.jpg` previews
+	- battlemap: `UvttMap.drawDoors` (parser reads the extension, default false); `PortalComponent` draws a top-down wooden leaf that swings open ~85° in 0.4 s (`DoorSwing`), always to the south/east side; Dungeondraft maps keep the marker; `test/drawn_doors_test.dart` (12 tests), full suite 377 green
+	- run 2 (crypt + keep, 1K × 4, ~14 cents): no red, no side-on doors; ruins still break walls (step 2); board zone "run 2"
+	- not deployed to a device yet (TV check = step 5)
+
 ### 26-10-10 - battlemap bench robot
 - Konrad: "make it just work, I don't want to test manually" → `tools/bench_bot.py` (seed the library + play `test-session.md` over the relay, assertions on the TV's broadcasts, adb screenshots with a pixel-coverage check, report in `build/bench-report/`, opened in ledger); relay gets a `bot` role (forwarded table traffic, no pairing)
 - bugs the robot found and that are fixed (all TV side, `flutter test` 375 green, run 51/51):

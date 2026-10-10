@@ -82,5 +82,6 @@ phone undo stays greyed, no TV frame is drawn, and measure/`vtt.setCamera` are i
 ## other live work: AI map pipeline (#40)
 
 Separate sub-project, own hand-off: `ai-art.md` § "Next — pick up here" (doors drawn by
-battlemap, ruins in the layout, Claude helper as judge, board from data, TV test, 4K + tuning).
+battlemap — done 2026-10-10; next: ruins in the layout, Claude helper as judge, board from
+data, TV test, 4K + tuning).
 Test images live on the horizon board `battlemap-mapgen`.

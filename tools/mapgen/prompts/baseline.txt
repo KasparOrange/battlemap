@@ -3,16 +3,18 @@ from directly above: 90 degrees, no perspective, no isometric angle, no horizon.
 Setting: {setting}.
 
 Repaint the attached layout guide (the first image) as a finished map. The guide is exact:
-keep every wall, door, room and corridor at exactly the same position and size. Do not
+keep every wall, doorway, room and corridor at exactly the same position and size. Do not
 add, move or remove walls or openings. Fill the whole frame edge to edge.
 
 Guide legend: black = solid rock outside the map, render as dark textured stone;
-dark grey bands = walls; mid grey = floor; red bars = doors, render as closed wooden
-doors set in their wall; blue = water; brown = rubble; green = vegetation;
+dark grey bands = walls; mid grey = floor; a gap in a wall = an open doorway: paint
+it as an empty opening with the floor running through, a plain stone threshold at most;
+no doors, door leaves, gates, portcullises or curtains anywhere on the map;
+blue = water; brown = rubble; green = vegetation;
 yellow dots = light sources (braziers, torches); magenta = props described below.
 
 Scale: the map is {cols} squares wide and {rows} squares tall, each square is 5 feet.
-Size furniture and objects realistically for that scale: a door is one square wide,
+Size furniture and objects realistically for that scale: a doorway is one square wide,
 a table one by two squares.
 
 Style: {style}.

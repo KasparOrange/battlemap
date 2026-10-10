@@ -12,6 +12,8 @@ import 'uvtt_map.dart';
 /// - Interactive portals / doors (`"portals"`)
 /// - Light sources (`"lights"`)
 /// - Environment settings (`"environment"`)
+/// - battlemap's own extension (`"battlemap"`, ignored by other VTTs):
+///   `draw_doors` → [UvttMap.drawDoors]
 ///
 /// Usage:
 /// ```dart
@@ -28,7 +30,8 @@ class UvttParser {
   /// format. The `"image"` field is decoded from base64 into raw image bytes.
   ///
   /// Missing optional sections (`line_of_sight`, `objects_line_of_sight`,
-  /// `portals`, `lights`, `environment`) are treated as empty/default.
+  /// `portals`, `lights`, `environment`, `battlemap`) are treated as
+  /// empty/default.
   ///
   /// Throws [FormatException] if the JSON is malformed or required fields
   /// are missing.
@@ -50,6 +53,9 @@ class UvttParser {
       environment: UvttEnvironment.fromJson(
           json['environment'] as Map<String, dynamic>? ?? {}),
       imageBytes: Uint8List.fromList(imageBytes),
+      drawDoors: (json['battlemap'] as Map<String, dynamic>?)?['draw_doors']
+              as bool? ??
+          false,
     );
   }
 

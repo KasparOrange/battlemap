@@ -4,12 +4,15 @@
 Our layout is the truth (grid, walls, doors, lights); the image model only paints
 over a color-coded guide. The packed .dd2vtt carries walls/doors/lights from the
 layout, so fog, doors and room reveal work like on a Dungeondraft map.
+Doors are not painted: the guide shows a doorway as a gap in the wall, and the
+.dd2vtt asks battlemap to draw the door itself ("battlemap": {"draw_doors": true}).
 Design: docs/ai-art.md.
 
 Usage:
   tools/mapgen/mapgen.py guide  layouts/crypt.json            # guide PNG only, free
   tools/mapgen/mapgen.py paint  layouts/crypt.json --size 1K --n 2
   tools/mapgen/mapgen.py pack   layouts/crypt.json out/crypt/<run>/out_1.jpg
+  tools/mapgen/mapgen.py doors  layouts/crypt.json out/crypt/<run>/out_1.jpg [--open]
 
 Options for paint: --size 1K|2K|4K, --n N, --thinking minimal|medium|high,
 --refs img... (style references), --prompt file (template), --pack (pack the best).
@@ -49,7 +52,6 @@ COLORS = {
     "solid": (0, 0, 0),
     "floor": (128, 128, 128),
     "wall": (32, 32, 32),
-    "door": (255, 0, 0),
     "water": (32, 96, 255),
     "rubble": (160, 112, 64),
     "vegetation": (48, 160, 48),
@@ -181,8 +183,7 @@ def render_guide(spec):
     t = WALL_THICKNESS * s
     for (x0, y0), (x1, y1) in wall_segments(spec):
         d.rectangle([x0 * s - t / 2, y0 * s - t / 2, x1 * s + t / 2, y1 * s + t / 2], COLORS["wall"])
-    for (x0, y0), (x1, y1) in door_edges(spec):
-        d.rectangle([x0 * s - t / 2, y0 * s - t / 2, x1 * s + t / 2, y1 * s + t / 2], COLORS["door"])
+    # Doors: nothing drawn — the floor runs through the gap (battlemap draws the door).
     for l in spec["lights"]:
         r = 0.15 * s
         d.ellipse([l["x"] * s - r, l["y"] * s - r, l["x"] * s + r, l["y"] * s + r], COLORS["light"])
@@ -316,11 +317,64 @@ def qa(spec, guide, out_img):
     return score, overlay
 
 
+def door_preview(spec, out_img, size, open_=False):
+    """The painting with doors drawn the way battlemap draws them (PortalComponent).
+
+    Same geometry and colours as lib/game/components/portal_component.dart: a wooden
+    leaf 0.14 squares thick hinged at bounds[0], two iron straps, a south-east shadow;
+    open = turned 85° toward the south / east side of the wall. Keep the two in step.
+    """
+    img = out_img.convert("RGB").resize(size, Image.LANCZOS)
+    s = size[0] / spec["grid"][0]
+    d = ImageDraw.Draw(img, "RGBA")
+
+    def poly(hx, hy, ang, x0, x1, y0, y1, off=0.0):
+        c, n = math.cos(ang), math.sin(ang)
+        return [(hx + off + x * c - y * n, hy + off + x * n + y * c)
+                for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1))]
+
+    for (ax, ay), (bx, by) in door_bounds(spec):
+        hx, hy = ax * s, ay * s
+        wall = math.atan2(by - ay, bx - ax)
+        sign = 1 if -math.sin(wall) + math.cos(wall) >= 0 else -1
+        ang = wall + sign * math.radians(85) * open_
+        length, t = s * (1 - 0.04), 0.14 * s
+        d.polygon(poly(hx, hy, ang, 0, length, -t / 2, t / 2, 0.035 * s), fill=(0, 0, 0, 102))
+        d.polygon(poly(hx, hy, ang, 0, length, -t / 2, t / 2), fill=(0x6E, 0x4B, 0x2C),
+                  outline=(0x2F, 0x1F, 0x12), width=max(1, round(0.014 * s)))
+        for at in (0.2, 0.8):
+            m, w = length * at, 0.025 * s
+            d.polygon(poly(hx, hy, ang, m - w, m + w, -t / 2 - 0.01 * s, t / 2 + 0.01 * s),
+                      fill=(0x3A, 0x3A, 0x3C))
+    return img
+
+
 # ---------------------------------------------------------------- pack
 
 
+def door_bounds(spec):
+    """Door edges as .dd2vtt bounds, hinge first: battlemap hinges a drawn door at bounds[0].
+
+    A door edge runs from its top/left end; a door whose neighbour in the same wall line
+    sits on its hinge side (and none on the other) is the second leaf of a double door
+    and gets its hinge on the far end, so the pair opens from the middle.
+    """
+    edges = door_edges(spec)
+    out = []
+    for a, b in sorted(edges):
+        horizontal = a[1] == b[1]
+        before = ((a[0] - 1, a[1]), a) if horizontal else ((a[0], a[1] - 1), a)
+        after = (b, (b[0] + 1, b[1])) if horizontal else (b, (b[0], b[1] + 1))
+        out.append((b, a) if before in edges and after not in edges else (a, b))
+    return out
+
+
 def pack(spec, image_path, out_path, ppg=None, fmt="WEBP"):
-    """Writes a .dd2vtt: the painting resampled to exact squares + walls/doors/lights from the spec."""
+    """Writes a .dd2vtt: the painting resampled to exact squares + walls/doors/lights from the spec.
+
+    The file carries battlemap's extension {"draw_doors": true}: the painting has empty
+    doorways, battlemap draws the doors (other VTTs ignore the key).
+    """
     cols, rows = spec["grid"]
     img = Image.open(image_path).convert("RGB")
     ppg = ppg or max(50, img.width // cols)
@@ -329,7 +383,7 @@ def pack(spec, image_path, out_path, ppg=None, fmt="WEBP"):
     img.save(buf, fmt, quality=90) if fmt != "PNG" else img.save(buf, "PNG")
     pt = lambda x, y: {"x": x, "y": y}
     portals = []
-    for (x0, y0), (x1, y1) in door_edges(spec):
+    for (x0, y0), (x1, y1) in door_bounds(spec):
         portals.append({"position": pt((x0 + x1) / 2, (y0 + y1) / 2), "bounds": [pt(x0, y0), pt(x1, y1)],
                         "rotation": 0.0 if y0 == y1 else math.pi / 2, "closed": True, "freestanding": False})
     data = {
@@ -342,6 +396,7 @@ def pack(spec, image_path, out_path, ppg=None, fmt="WEBP"):
         "lights": [{"position": pt(l["x"], l["y"]), "range": l.get("range", 4), "intensity": l.get("intensity", 1),
                     "color": "ff" + l.get("color", "ffb060"), "shadows": True} for l in spec["lights"]],
         "image": base64.b64encode(buf.getvalue()).decode(),
+        "battlemap": {"draw_doors": True},
     }
     Path(out_path).write_text(json.dumps(data))
     print(f"packed {out_path}  {cols}×{rows} squares @ {ppg} px, {len(data['line_of_sight'])} walls, "
@@ -365,6 +420,8 @@ def main():
     p.add_argument("--pack", action="store_true")
     k = sub.add_parser("pack"); k.add_argument("spec"); k.add_argument("image")
     k.add_argument("--ppg", type=int); k.add_argument("--png", action="store_true")
+    o = sub.add_parser("doors", help="the painting with battlemap's doors drawn on (preview)")
+    o.add_argument("spec"); o.add_argument("image"); o.add_argument("--open", action="store_true")
     a = ap.parse_args()
 
     spec = load_spec(a.spec)
@@ -374,6 +431,12 @@ def main():
         path = OUT / name / "guide.png"
         render_guide(spec).save(path)
         print(f"{path}  walls {len(wall_segments(spec))}, doors {len(spec['doors'])}, aspect {pick_aspect(spec)}")
+    elif a.cmd == "doors":
+        img = Image.open(a.image)
+        path = Path(a.image).with_name(Path(a.image).stem.replace("out_", "doors_")
+                                       + ("_open" if a.open else "") + ".jpg")
+        door_preview(spec, img, img.size, a.open).save(path, quality=88)
+        print(path)
     elif a.cmd == "pack":
         pack(spec, a.image, OUT / name / f"{name}.dd2vtt", a.ppg, "PNG" if a.png else "WEBP")
     else:
@@ -395,6 +458,7 @@ def main():
             out_img = Image.open(path)
             score, overlay = qa(spec, guide, out_img)
             overlay.save(run / f"overlay_{i}.jpg", quality=85)
+            door_preview(spec, out_img, out_img.size).save(run / f"doors_{i}.jpg", quality=88)
             results.append({"file": path.name, "qa": round(score, 3), "size": out_img.size,
                             "seconds": round(time.time() - t0, 1), "usage": usage})
             print(f"{path}  {out_img.size[0]}×{out_img.size[1]}  qa {score:.2f}  {time.time() - t0:.0f}s")

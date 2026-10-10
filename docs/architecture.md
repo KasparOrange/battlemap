@@ -82,5 +82,5 @@ Sliders (draw width, scale) preview locally and send on release.
 | 3 | live stroke | in-progress stroke preview |
 | 4 | token layer | colored numbered circles |
 | 5 | walls | DM debug lines |
-| 6 | portals | door indicators |
+| 6 | portals | door markers; on maps with `draw_doors` (AI maps) a top-down door leaf that swings open |
 | 10 | fog of war | dark overlay with reveal cutouts |
