@@ -797,10 +797,12 @@ class _DmControlPanelState extends State<DmControlPanel> {
         text: token.maxHp > 0 ? '${token.currentHp}' : '');
     final selectedConditions = Set<String>.from(token.conditions);
 
+    ModalRoute<dynamic>? route;
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
+          route ??= ModalRoute.of(ctx);
           return AlertDialog(
             backgroundColor: _kPanelBg,
             shape: RoundedRectangleBorder(
@@ -966,11 +968,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
           );
         },
       ),
-    ).whenComplete(() {
-      nameCtrl.dispose();
-      maxHpCtrl.dispose();
-      currentHpCtrl.dispose();
-    });
+    ).whenComplete(
+        () => _disposeAfterExit(route, [nameCtrl, maxHpCtrl, currentHpCtrl]));
   }
 
   /// Helper to build a gold-themed [TextField] for the edit dialog.
@@ -1560,9 +1559,12 @@ class _DmControlPanelState extends State<DmControlPanel> {
     final controller = TextEditingController(
       text: state.tvWidthInches?.toString() ?? '',
     );
+    ModalRoute<dynamic>? route;
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) {
+        route ??= ModalRoute.of(ctx);
+        return AlertDialog(
         backgroundColor: _kPanelBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1673,8 +1675,30 @@ class _DmControlPanelState extends State<DmControlPanel> {
             ),
           ),
         ],
-      ),
-    ).whenComplete(controller.dispose);
+      );
+      },
+    ).whenComplete(() => _disposeAfterExit(route, [controller]));
+  }
+}
+
+/// Disposes [controllers] once [route]'s exit animation has finished.
+///
+/// `showDialog(...).whenComplete` fires when the dialog is *popped*, while its
+/// closing animation still builds the text fields — disposing their
+/// controllers there threw and turned the companion into an error screen
+/// (found 2026-10-10: Save in the token editor, Cancel in calibration).
+/// [TransitionRoute.completed] completes only after the animation is done.
+void _disposeAfterExit(ModalRoute<dynamic>? route, List<ChangeNotifier> controllers) {
+  void disposeAll() {
+    for (final c in controllers) {
+      c.dispose();
+    }
+  }
+
+  if (route is TransitionRoute<dynamic>) {
+    (route as TransitionRoute<dynamic>).completed.whenComplete(disposeAll);
+  } else {
+    disposeAll();
   }
 }
 

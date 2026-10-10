@@ -175,10 +175,15 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _relay?.sendNewSession(mapId, name: name, settings: settings.toJson());
   }
 
+  /// The TV's most recent `vtt.fullState`, re-applied in [_onMapReady]
+  /// because loading a map resets the state the TV already sent.
+  Map<String, dynamic>? _lastFullState;
+
   void _connectRelay() {
     _relay = VttRelayClient(role: 'companion');
     DevLog.add('Companion: connecting to relay');
     _relay!.onStateSync = (msg) {
+      _lastFullState = msg;
       try {
         _state.applyRemoteState(msg);
       } catch (e) {
@@ -366,6 +371,18 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// Switches from library to game view if the TV is already in game mode.
   void _onMapReady() {
     if (!mounted) return;
+    // Loading the map reset fog, doors and tokens to the file's defaults; the
+    // TV's state usually arrived *before* the download finished, so apply it
+    // again (before 2026-10-10 the tablet showed everything fogged after a
+    // reconnect or resume until some unrelated change).
+    final last = _lastFullState;
+    if (last != null) {
+      try {
+        _state.applyRemoteState(last);
+      } catch (e) {
+        DevLog.add('ERROR: re-applying state after map load failed: $e');
+      }
+    }
     _loadingSessionId = null;
     // If TV is in game view, switch companion to game view now
     setState(() => _tvView = 'game');
@@ -736,7 +753,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         // AoE
         onSetAoeMode: c.sendSetAoeMode,
         onSetAoe: (t) => c.sendSetAoe(t.toJson()),
-        onClearAoe: c.sendClearAoe,
+        // Clear locally too — onAoeChanged forwards the clear to the TV.
+        onClearAoe: _state.clearAoe,
         // Ruler
         onToggleRuler: c.sendToggleRuler,
         onRotateRuler: c.sendRotateRuler,

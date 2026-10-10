@@ -64,6 +64,24 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   decoded at most 4096 px on the long side. Still to check on the real Xiaomi: memory and look of
   the castle at TV scale (36 px per square after the shrink).
 
+## UX review 2026-10-10 — open design decisions (Konrad picks)
+
+A helper played a session on the bench as a first-time DM (14 findings). The 4 broken ones are
+fixed (archive 26-10-10 "UX review fixes"). Open, with the recommendation:
+
+1. **What players see**: NPC names + HP bars are drawn on the TV for every token → per-token
+   "show to players", NPCs hidden by default.
+2. **Door markers on the TV**: loud green/orange boxes over the map's own doors → tablet only.
+3. **Tokens**: drag a token in any mode, tap opens its editor, refuse occupied squares.
+4. **Camera wording/framing**: "Fit on tablet" / "Fit on TV"; linked camera frames for the TV's screen.
+5. **Ruler**: appears at the TV view's centre, numbers stay upright.
+6. **Panel layout**: bottom panel eats 40–65 % of the tablet → side panel in landscape; Fog tab
+   "Brush | Room" segmented control, "Live mode" → "Players see changes instantly / Preview first".
+7. Smaller: "Continue last session" card + thumbnails + dated default names in the library; minimum
+   on-screen size for TV token labels; undo snackbar for Reveal all / Hide all / Clear all tokens.
+
+Not testable on the bench: pinch/two-finger pan, the real Xiaomi remote.
+
 ## kept on purpose: direct TV connection (no relay)
 
 `lib/network/vtt_server.dart` + `vtt_server_stub.dart` are the original pre-relay design:

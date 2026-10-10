@@ -6,6 +6,14 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - battlemap UX review fixes
+- helper agent played a DM session on the bench (14 findings, open ones in `action.md` "UX review 2026-10-10"); the broken ones fixed:
+	- **companion crashed to an error screen closing the token editor / calibration dialog**: controllers were disposed in `showDialog().whenComplete` while the exit animation still built the text fields → `_disposeAfterExit` waits for `TransitionRoute.completed`
+	- **tablet showed everything fogged after reconnect/resume**: the TV's state arrived before the map download finished and `loadMap` reset it → companion keeps `_lastFullState` and re-applies it in `_onMapReady`
+	- **AoE "Clear" only cleared the TV**: networked `onClearAoe` now `_state.clearAoe` (forwards via `onAoeChanged`)
+	- **TV remote dead during a game**: Flame's `GameWidget` (autofocus) returns `handled` for every key → `autofocus: false`, focus parked on the back button (stronger focus look); one remote press arrived twice (key event + system back) → 400 ms debounce in `_navigateBack`
+	- verified: bench run 48/48, remote back goes game → library once, tablet shows the revealed room after prep
+
 ### 26-10-10 17:58 - 93f94292 - TV app 1.1.5+15 on the Xiaomi box from the Mac
 - Konrad: "deploy the current version of the TV app to the TV that is connected via wireless debugging" → release APK of `34d7c92` (VPS relay, MwLog on), built in a temporary worktree, `install -r` over 1.1.1+11; app started (mode selector)
 	- the box's app is signed with the Mac's debug key (same SHA-256), so the update kept its data

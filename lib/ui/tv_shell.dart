@@ -87,6 +87,10 @@ class _TvShellState extends State<TvShell> {
   /// Focus of the "Take over" button shown after [RelayConnectionState.replaced],
   /// so the remote's select key hits it right away (not the back arrow).
   final FocusNode _takeOverFocus = FocusNode(debugLabel: 'takeOver');
+
+  /// Focus of the always-visible back button — where the remote lands in the
+  /// game view (see [_setView]).
+  final FocusNode _backFocus = FocusNode(debugLabel: 'back');
   StreamSubscription<RelayConnectionState>? _relaySub;
   double? _transferProgress;
 
@@ -137,12 +141,22 @@ class _TvShellState extends State<TvShell> {
   void _setView(TvView view) {
     setState(() => _currentView = view);
     RemoteLog.info('nav', 'View: ${view.name}', {'view': view.name});
+    if (view == TvView.game) {
+      // The game has no focusable controls; park focus on the back button so
+      // the remote's back/select keys keep working.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _backFocus.requestFocus();
+      });
+    }
   }
 
   @override
   void initState() {
     super.initState();
     _state.isInteractive = false; // TV has no touch
+    _backFocus.addListener(() {
+      if (mounted) setState(() {}); // repaint the back arrow's focus look
+    });
     WakelockPlus.enable(); // Keep TV screen on
     RemoteLog.sendDeviceInfo();
     _library.init().then((_) {
@@ -161,6 +175,7 @@ class _TvShellState extends State<TvShell> {
     _relaySub?.cancel();
     _relay.dispose();
     _takeOverFocus.dispose();
+    _backFocus.dispose();
     _state.dispose();
     super.dispose();
   }
@@ -1359,9 +1374,12 @@ class _TvShellState extends State<TvShell> {
                 left: 16,
                 child: IconButton(
                   autofocus: true,
-                  icon: const Icon(Icons.arrow_back, color: Colors.white38),
+                  focusNode: _backFocus,
+                  icon: Icon(Icons.arrow_back,
+                      color: _backFocus.hasFocus ? Colors.white : Colors.white38),
                   onPressed: _navigateBack,
-                  focusColor: Colors.white.withValues(alpha: 0.2),
+                  // Clearly visible from the couch when the remote lands here.
+                  focusColor: Colors.white.withValues(alpha: 0.35),
                 ),
               ),
 
@@ -1387,7 +1405,16 @@ class _TvShellState extends State<TvShell> {
     );
   }
 
+  /// When [_navigateBack] last ran — see the debounce there.
+  DateTime _lastBack = DateTime.fromMillisecondsSinceEpoch(0);
+
   void _navigateBack() {
+    // One remote press arrives twice on Android TV: as a key event (the shell's
+    // Focus) and as a system back (PopScope). Without this the TV jumped two
+    // screens per press (game → library → waiting).
+    final now = DateTime.now();
+    if (now.difference(_lastBack) < const Duration(milliseconds: 400)) return;
+    _lastBack = now;
     _log('navigateBack from ${_currentView.name}');
     if (_currentView == TvView.game) {
       _flushPendingSave();
@@ -1411,7 +1438,10 @@ class _TvShellState extends State<TvShell> {
         return _buildLibraryView();
       case TvView.game:
         if (_game != null) {
-          return GameWidget(game: _game!);
+          // autofocus off: with focus, Flame's GameWidget marks every key as
+          // handled (the game has no KeyboardEvents), so the TV remote was dead
+          // during a game until 2026-10-10.
+          return GameWidget(game: _game!, autofocus: false);
         }
         return _buildWaitingView();
       case TvView.settings:
