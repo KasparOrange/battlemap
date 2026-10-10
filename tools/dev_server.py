@@ -16,7 +16,7 @@ import json
 import os
 import time
 import uuid
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 WEB_DIR = os.environ.get("BATTLEMAP_WEB_DIR", "/home/kaspar/battlemap/build/web")
 UPLOAD_DIR = os.path.join(WEB_DIR, "uploads")
@@ -135,6 +135,8 @@ class DevHandler(SimpleHTTPRequestHandler):
 if __name__ == "__main__":
     os.chdir(WEB_DIR)
     cleanup_old_uploads()
-    server = HTTPServer(("0.0.0.0", 4242), DevHandler)
+    # One thread per connection: a single stalled client (a browser keep-alive, a dropped
+    # download) hung the single-threaded server for everyone on 2026-10-10.
+    server = ThreadingHTTPServer(("0.0.0.0", 4242), DevHandler)
     print(f"Dev server on :4242 (uploads dir: {UPLOAD_DIR}, max upload: {MAX_UPLOAD_SIZE // (1024*1024)} MB)")
     server.serve_forever()
