@@ -116,6 +116,11 @@ inside the circle lets it through. A map without walls (picture maps) gets the p
 door tap still opens/closes the door. The tablet works out the squares and sends them like a
 room (`vtt.roomReveal`), so "Preview first" stages them for the DM to correct before applying.
 The radius is local to the tablet (`VttState.revealRadius`, not synced or saved).
+In the preview the last circle stays **live**: − / + on the radius redraws it in place
+(`VttState.previewCircle` keeps the preview from before the circle and swaps the circle), until
+it is applied, discarded, or another fog change, a new circle or leaving the preview ends it
+(`liveCircleCell`). Without the preview a circle is revealed at once and the radius only
+affects the next tap.
 
 **Ruler:** shown via `vtt.toggleRuler`, the TV places it in the middle of its own view, square
 to its screen (`VttGame.centerRulerInView`); rotating turns it around the middle of the L

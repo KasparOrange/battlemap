@@ -1029,6 +1029,14 @@ class VttRelayClient {
   void sendRoomReveal(List<int> cells) =>
       _send({'type': 'vtt.roomReveal', 'cells': cells});
 
+  /// Places a circle reveal in the TV's preview, or with [replaceLast]
+  /// redraws the last one at a new radius ([VttState.previewCircle]).
+  void sendCirclePreview(List<int> cells, {bool replaceLast = false}) => _send({
+        'type': 'vtt.roomReveal',
+        'cells': cells,
+        'circle': replaceLast ? 'replace' : 'new',
+      });
+
   // --- AoE templates (companion → table via relay) ---
 
   /// Places an area-of-effect template on the TV map.

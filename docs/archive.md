@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 20:35 - 9393ef96 - circle reveal: radius − / + resizes the circle waiting in the preview
+- Konrad: in preview mode, after putting a circle down and before applying it, the radius plus and minus should change that preview live
+	- `VttState.previewCircle(cells, center:, replaceLast:)` keeps the preview from before the circle; a radius change (`onRevealRadiusChanged` → `VttGame._resizeLiveCircle`) swaps in the circle at the new radius; apply, discard, any other fog change, a new circle or leaving the preview ends it (`liveCircleCell`); the tablet ignores an empty TV broadcast for 1.5 s after placing
+	- relay: `vtt.roomReveal` gains `circle: new | replace` (old TVs treat it as a room); Fog tab hint "− / + resizes the circle waiting in the preview."
+	- 9 new tests (`test/circle_preview_test.dart`); not in a build yet
+
 ### 26-10-10 20:21 - 303b3806 - Tokens tab: off-map tokens, place, jump, hide, delete
 - Konrad: create tokens without putting them on the map; the list shows whether each is on the map, jumps the DM view to it, hides/shows it for the players, deletes it with one tap
 	- `MapToken.placed` / `hidden` (JSON, old data = placed + visible); `VttState.createToken`, `setTokenHidden`, `placingTokenId` (tablet-local) + `setPlacingToken`; `moveToken` places an off-map token, its undo takes it off again (`TokenMoveAction.fromPlaced`); labels stay unique

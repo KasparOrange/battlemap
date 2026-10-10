@@ -140,6 +140,11 @@ companion downloads from VPS via HTTP.
 hides them by its Reveal | Hide setting, staged when "Preview first" is on. The circle's radius
 never travels — it is the tablet's own setting.
 
+A circle placed in the preview carries `"circle": "new"`; a radius change while it waits sends
+the redrawn circle with `"circle": "replace"`, and the TV swaps it for the last one instead of
+adding (`VttState.previewCircle`; a `replace` with no live circle is ignored). Without the field
+the cells are a plain room reveal.
+
 ## door commands (companion → table)
 
 ```

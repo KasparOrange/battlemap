@@ -1618,7 +1618,14 @@ class _TvShellState extends State<TvShell> {
         // Room reveal
         case 'vtt.roomReveal':
           final cells = (msg['cells'] as List).cast<int>().toSet();
-          _state.revealRoom(cells);
+          switch (msg['circle']) {
+            case 'new':
+              _state.previewCircle(cells);
+            case 'replace':
+              _state.previewCircle(cells, replaceLast: true);
+            default:
+              _state.revealRoom(cells);
+          }
 
         // AoE templates
         case 'vtt.setAoe':

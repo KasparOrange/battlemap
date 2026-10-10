@@ -196,6 +196,27 @@ class VttState extends ChangeNotifier {
   /// the radius. Not part of [toJson].
   int revealRadius = 4;
 
+  /// The tapped square of the circle that is still waiting in the preview
+  /// ([shadowMode]) — `null` when there is none. While set, changing
+  /// [revealRadius] redraws that circle in place ([previewCircle] with
+  /// `replaceLast`). Any other fog change, apply or discard ends it.
+  int? liveCircleCell;
+
+  /// The preview's squares from just before the live circle was placed, so
+  /// [previewCircle] can swap that circle for a bigger or smaller one.
+  Set<int>? _circleBaseReveal;
+
+  /// See [_circleBaseReveal] — the hide half of the preview.
+  Set<int>? _circleBaseHide;
+
+  /// When the live circle was placed. For 1.5 s a TV broadcast with an
+  /// empty preview (sent before the TV got the circle) doesn't end it.
+  DateTime? _liveCircleAt;
+
+  /// Called by [setRevealRadius] before it notifies, so the game can
+  /// redraw the live circle at the new radius ([liveCircleCell]).
+  void Function()? onRevealRadiusChanged;
+
   /// Whether the brush reveals or hides fog.
   ///
   /// * `true` -- painting adds cells to [revealedCells] (clears fog).
@@ -443,6 +464,11 @@ class VttState extends ChangeNotifier {
   /// ([InteractionMode.roomReveal], [InteractionMode.circleReveal]), so the
   /// relay can forward the cells to the TV (`vtt.roomReveal`).
   void Function(List<int> cells)? onRoomReveal;
+
+  /// Called when a circle is placed in the preview ([previewCircle]) or
+  /// redrawn at a new radius ([replaceLast] `true`), so the relay can
+  /// forward it (`vtt.roomReveal` with `circle: new | replace`).
+  void Function(List<int> cells, bool replaceLast)? onCirclePreview;
 
   /// Called when a new token is added locally, for relay forwarding.
   void Function(MapToken token)? onTokenAdded;
@@ -692,6 +718,7 @@ class VttState extends ChangeNotifier {
     rulerVisible = false;
     shadowRevealCells.clear();
     shadowHideCells.clear();
+    _endLiveCircle();
     dmOverlays = [];
     dmOverlaysRev = 0;
     _pendingDmOverlaysRev = null;
@@ -823,12 +850,14 @@ class VttState extends ChangeNotifier {
   /// * [commitShadow], which merges shadow cells into [revealedCells].
   /// * [clearShadow], which discards pending shadow cells.
   void toggleShadowMode() {
+    _endLiveCircle();
     shadowMode = !shadowMode;
     clearShadow();
   }
 
   /// Discards all pending shadow reveal/hide cells without committing.
   void clearShadow() {
+    _endLiveCircle();
     shadowRevealCells.clear();
     shadowHideCells.clear();
     notifyListeners();
@@ -846,6 +875,7 @@ class VttState extends ChangeNotifier {
   /// * [toggleShadowMode], which enables/disables shadow mode.
   /// * [clearShadow], which discards without committing.
   void commitShadow() {
+    _endLiveCircle();
     final revealed = <int>{};
     final hidden = <int>{};
 
@@ -882,6 +912,7 @@ class VttState extends ChangeNotifier {
   ///
   /// The [index] is computed as `row * gridCols + col`.
   void toggleReveal(int index) {
+    _endLiveCircle();
     if (shadowMode) {
       // In shadow mode, toggle between shadow sets
       if (shadowRevealCells.contains(index)) {
@@ -916,6 +947,7 @@ class VttState extends ChangeNotifier {
   /// notifies listeners if at least one cell actually changed state.
   /// Pushes a [FogAction] for undo when cells change.
   void applyBrushReveal(List<int> indices) {
+    _endLiveCircle();
     if (shadowMode) {
       bool changed = false;
       for (final index in indices) {
@@ -953,6 +985,7 @@ class VttState extends ChangeNotifier {
   ///
   /// [totalCells] should be `gridCols * gridRows`.
   void revealAll(int totalCells) {
+    _endLiveCircle();
     if (shadowMode) {
       shadowRevealCells = Set.from(List.generate(totalCells, (i) => i));
       shadowHideCells.clear();
@@ -974,6 +1007,7 @@ class VttState extends ChangeNotifier {
   /// cells and clears [shadowRevealCells]. In live mode, saves the
   /// currently revealed cells and pushes a [FogAction] for undo.
   void hideAll() {
+    _endLiveCircle();
     if (shadowMode) {
       shadowHideCells = Set<int>.from(revealedCells);
       shadowRevealCells.clear();
@@ -1004,14 +1038,9 @@ class VttState extends ChangeNotifier {
   /// * [InteractionMode.roomReveal] and [InteractionMode.circleReveal], the
   ///   modes that trigger this.
   void revealRoom(Set<int> cells) {
+    _endLiveCircle();
     if (shadowMode) {
-      if (revealMode) {
-        shadowRevealCells.addAll(cells);
-        shadowHideCells.removeAll(cells);
-      } else {
-        shadowHideCells.addAll(cells);
-        shadowRevealCells.removeAll(cells);
-      }
+      _stageCells(cells);
       notifyListeners();
       return;
     }
@@ -1116,8 +1145,63 @@ class VttState extends ChangeNotifier {
 
   /// Sets [revealRadius], clamped to 1–30 squares.
   void setRevealRadius(int radius) {
-    revealRadius = radius.clamp(1, 30);
+    final next = radius.clamp(1, 30);
+    if (next == revealRadius) return;
+    revealRadius = next;
+    onRevealRadiusChanged?.call();
     notifyListeners();
+  }
+
+  /// Ends the live circle: the next radius change no longer redraws it.
+  void _endLiveCircle() {
+    liveCircleCell = null;
+    _liveCircleAt = null;
+    _circleBaseReveal = null;
+    _circleBaseHide = null;
+  }
+
+  /// Places a circle reveal's [cells] — staged in the preview when
+  /// [shadowMode] is on, otherwise applied at once like [revealRoom].
+  ///
+  /// In the preview the circle stays *live*: the preview's squares from
+  /// before it are kept, and a call with [replaceLast] swaps the last
+  /// circle for [cells] (the same circle at a new radius) instead of adding
+  /// to it. A [replaceLast] call with no live circle does nothing — the
+  /// circle was applied, discarded or followed by another fog change.
+  /// [center] is the tapped square, kept as [liveCircleCell].
+  ///
+  /// See also:
+  /// * [setRevealRadius], which triggers the redraw on the tablet.
+  /// * `vtt.roomReveal` with `circle: new | replace`, the TV's side.
+  void previewCircle(Set<int> cells, {int? center, bool replaceLast = false}) {
+    if (!shadowMode) {
+      if (!replaceLast) revealRoom(cells);
+      return;
+    }
+    if (replaceLast) {
+      final baseReveal = _circleBaseReveal, baseHide = _circleBaseHide;
+      if (baseReveal == null || baseHide == null) return;
+      shadowRevealCells = Set.of(baseReveal);
+      shadowHideCells = Set.of(baseHide);
+    } else {
+      _circleBaseReveal = Set.of(shadowRevealCells);
+      _circleBaseHide = Set.of(shadowHideCells);
+      liveCircleCell = center;
+      _liveCircleAt = DateTime.now();
+    }
+    _stageCells(cells);
+    notifyListeners();
+  }
+
+  /// Puts [cells] into the preview: reveal or hide by [revealMode].
+  void _stageCells(Set<int> cells) {
+    if (revealMode) {
+      shadowRevealCells.addAll(cells);
+      shadowHideCells.removeAll(cells);
+    } else {
+      shadowHideCells.addAll(cells);
+      shadowRevealCells.removeAll(cells);
+    }
   }
 
   /// Toggles [revealMode] between reveal (`true`) and hide (`false`).
@@ -1718,6 +1802,16 @@ class VttState extends ChangeNotifier {
         ? Set<int>.from(
             (json['shadowHideCells'] as List).map((e) => e as int))
         : {};
+    // The TV applied or discarded the preview (or left preview mode): the
+    // tablet's live circle is over
+    final circleAt = _liveCircleAt;
+    if ((!shadowMode ||
+            (shadowRevealCells.isEmpty && shadowHideCells.isEmpty)) &&
+        (circleAt == null ||
+            DateTime.now().difference(circleAt) >
+                const Duration(milliseconds: 1500))) {
+      _endLiveCircle();
+    }
 
     // Ruler overlay fields — backwards compatible
     rulerVisible = json['rulerVisible'] as bool? ?? false;

@@ -242,12 +242,16 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   void onMount() {
     super.onMount();
     state.addListener(_onStateChanged);
+    state.onRevealRadiusChanged = _resizeLiveCircle;
     _onStateChanged();
   }
 
   @override
   void onRemove() {
     state.removeListener(_onStateChanged);
+    if (state.onRevealRadiusChanged == _resizeLiveCircle) {
+      state.onRevealRadiusChanged = null;
+    }
     super.onRemove();
   }
 
@@ -1277,9 +1281,34 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     final cols = _getGridCols();
     final rows = _getGridRows();
     if (col < 0 || col >= cols || row < 0 || row >= rows) return;
+    final center = row * cols + col;
+    final cells = _circleCells(center);
+    if (!state.shadowMode) {
+      _revealCells(cells);
+      return;
+    }
+    // In the preview the circle stays live: − / + redraws it
+    state.previewCircle(cells, center: center);
+    state.onCirclePreview?.call(cells.toList(), false);
+  }
+
+  /// The circle reveal's squares around [center] at [VttState.revealRadius]:
+  /// stopped by walls and closed doors, a plain circle without walls.
+  Set<int> _circleCells(int center) {
+    final cols = _getGridCols();
     final r = state.revealRadius;
-    _revealCells(_wallGrid?.floodFillWithin(row * cols + col, r) ??
-        WallGrid.circleCells(col, row, r, cols, rows));
+    return _wallGrid?.floodFillWithin(center, r) ??
+        WallGrid.circleCells(center % cols, center ~/ cols, r, cols, _getGridRows());
+  }
+
+  /// Redraws the circle still waiting in the preview at the new radius —
+  /// [VttState.onRevealRadiusChanged], so the radius − / + acts on it live.
+  void _resizeLiveCircle() {
+    final center = state.liveCircleCell;
+    if (center == null || !state.shadowMode || state.map == null) return;
+    final cells = _circleCells(center);
+    state.previewCircle(cells, replaceLast: true);
+    state.onCirclePreview?.call(cells.toList(), true);
   }
 
   /// Paints the brush around [worldPos]; skipped while the finger stays in

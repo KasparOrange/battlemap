@@ -435,6 +435,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.onBrushPaint = (indices) => _relay!.sendBrushReveal(indices);
     _state.onPortalTap = (index) => _relay!.sendTogglePortal(index);
     _state.onRoomReveal = (cells) => _relay!.sendRoomReveal(cells);
+    _state.onCirclePreview = (cells, replaceLast) =>
+        _relay!.sendCirclePreview(cells, replaceLast: replaceLast);
     _state.onTokenAdded = (token) => _relay!.sendAddToken(token.gridX, token.gridY);
     _state.onTokenCreated = (token) => _relay!.sendCreateToken(token.name);
     _state.onTokenHiddenChanged = (id, hidden) => _relay!.sendSetTokenHidden(id, hidden);

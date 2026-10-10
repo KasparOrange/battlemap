@@ -1484,6 +1484,13 @@ class _DmControlPanelState extends State<DmControlPanel> {
             radius: radius,
             onChanged: state.setRevealRadius,
           ),
+          if (state.shadowMode && state.liveCircleCell != null) ...[
+            const SizedBox(height: 4),
+            const Text(
+              '− / + resizes the circle waiting in the preview.',
+              style: TextStyle(color: _kTextSecondary, fontSize: 12),
+            ),
+          ],
         ],
         if (tool == 0 || tool == -1) ...[
           const SizedBox(height: 8),
