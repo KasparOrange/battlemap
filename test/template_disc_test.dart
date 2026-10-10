@@ -233,15 +233,8 @@ void main() {
   });
 
   group('TemplateDiscPanel', () {
-    late Directory dir;
-    setUpAll(() {
-      dir = Directory.systemTemp.createTempSync('template_disc_test');
-      Hive.init(dir.path);
-    });
-    tearDownAll(() async {
-      await Hive.close();
-      dir.deleteSync(recursive: true);
-    });
+    setUp(() => TemplateDiscStore.memory = {});
+    tearDown(() => TemplateDiscStore.memory = null);
 
     Future<List<(TemplateDisc, bool)>> pump(
         WidgetTester tester, TemplateDisc disc) async {
@@ -290,10 +283,76 @@ void main() {
       await tester.ensureVisible(find.text('From the middle'));
       await tester.tap(find.text('From the middle'));
       expect(calls.last.$1.coneAnchor, DiscConeAnchor.center);
-      await tester.ensureVisible(find.text('Back to the classic disc'));
-      await tester.tap(find.text('Back to the classic disc'));
+      await tester.ensureVisible(find.text('Reset to defaults'));
+      await tester.tap(find.text('Reset to defaults'));
+      await tester.pump();
       expect(calls.last.$1.shapeKey, TemplateDisc.classic().shapeKey);
       expect(calls.last.$1.visible, isTrue);
+    });
+
+    testWidgets('reset to defaults can be undone', (tester) async {
+      final custom = TemplateDisc.classic().copyWith(visible: true, markers: 4);
+      final calls = await pump(tester, custom);
+      await tester.tap(find.text('Shape'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Reset to defaults'));
+      await tester.pump();
+      expect(calls.last.$1.markers, 12);
+      await tester.tap(find.text('Undo reset'));
+      await tester.pump();
+      expect(calls.last.$1.markers, 4);
+      expect(find.text('Undo reset'), findsNothing);
+    });
+
+    testWidgets('the look saved on the tablet comes back after a restart',
+        (tester) async {
+      final look = TemplateDisc.classic().copyWith(markers: 8, tint: 0.25);
+      await TemplateDiscStore.save(look);
+      // A resumed game shows the disc with another look
+      final calls = await pump(
+          tester, TemplateDisc.classic().copyWith(visible: true, x: 7, y: 2));
+      await tester.pump();
+      await tester.pump();
+      expect(calls, isNotEmpty);
+      final d = calls.last.$1;
+      expect(d.shapeKey, look.shapeKey);
+      expect([d.visible, d.x, d.y], [true, 7, 2]);
+      expect(calls.last.$2, isFalse);
+    });
+
+    testWidgets('showing a hidden disc uses the saved look', (tester) async {
+      final look = TemplateDisc.classic().copyWith(markers: 0);
+      await TemplateDiscStore.save(look);
+      final calls = await pump(tester, TemplateDisc.classic());
+      await tester.pump();
+      expect(calls, isEmpty); // hidden: nothing pushed
+      await tester.tap(find.text('Template disc on the map'));
+      expect(calls.single.$1.markers, 0);
+      expect(calls.single.$2, isTrue);
+    });
+  });
+
+  group('TemplateDiscStore (Hive)', () {
+    late Directory dir;
+    setUp(() {
+      dir = Directory.systemTemp.createTempSync('template_disc_store');
+      Hive.init(dir.path);
+    });
+    tearDown(() async {
+      await Hive.close();
+      dir.deleteSync(recursive: true);
+    });
+
+    test('a saved look survives closing and reopening the store', () async {
+      expect(await TemplateDiscStore.load(), isNull);
+      final look = TemplateDisc.classic().copyWith(
+          markers: 4, coneAnchor: DiscConeAnchor.center, x: 9, visible: true);
+      await TemplateDiscStore.save(look);
+      await Hive.close(); // the app closes
+      Hive.init(dir.path); // and starts again
+      final back = await TemplateDiscStore.load();
+      expect(back!.shapeKey, look.shapeKey);
+      expect([back.visible, back.x], [false, 0]); // the look only
     });
   });
 }

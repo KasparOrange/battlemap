@@ -28,11 +28,18 @@ class TemplateDiscStore {
   static const String _boxName = 'templateDisc';
   static const String _lookKey = 'look';
 
+  /// Set by widget tests: keeps the look in this map instead of Hive
+  /// (Hive's file writes never finish under a widget test's fake clock).
+  @visibleForTesting
+  static Map<String, String>? memory;
+
   /// The stored look ([TemplateDisc.shapeJson]) as a hidden disc, or `null`.
   static Future<TemplateDisc?> load() async {
     try {
-      final box = await Hive.openBox<String>(_boxName);
-      final raw = box.get(_lookKey);
+      final mem = memory;
+      final raw = mem != null
+          ? mem[_lookKey]
+          : (await Hive.openBox<String>(_boxName)).get(_lookKey);
       return raw == null ? null : TemplateDisc.fromJson(jsonDecode(raw));
     } catch (e) {
       debugPrint('TemplateDiscStore.load failed: $e');
@@ -43,8 +50,14 @@ class TemplateDiscStore {
   /// Stores [disc]'s look (not its place).
   static Future<void> save(TemplateDisc disc) async {
     try {
+      final json = jsonEncode(disc.shapeJson());
+      final mem = memory;
+      if (mem != null) {
+        mem[_lookKey] = json;
+        return;
+      }
       final box = await Hive.openBox<String>(_boxName);
-      await box.put(_lookKey, jsonEncode(disc.shapeJson()));
+      await box.put(_lookKey, json);
     } catch (e) {
       debugPrint('TemplateDiscStore.save failed: $e');
     }
@@ -58,8 +71,11 @@ class TemplateDiscStore {
 /// marks, the middle's circle, the edge, tint, line and label size, snap.
 ///
 /// Every change applies at once ([onChanged]) and is remembered on this
-/// device ([TemplateDiscStore]); showing the disc lays the remembered look
-/// on this game's disc and asks the TV to centre it in its view.
+/// device ([TemplateDiscStore]), so it survives closing the app: showing
+/// the disc lays the remembered look on this game's disc (and asks the TV
+/// to centre it in its view), and a shown disc that looks different — a
+/// resumed game, another map — gets the remembered look. "Reset to
+/// defaults" brings back [TemplateDisc.classic], with an undo.
 ///
 /// See also:
 /// - [TemplateDisc], the model.
@@ -89,15 +105,48 @@ class _TemplateDiscPanelState extends State<TemplateDiscPanel> {
   /// Selected size (feet) per family, for the − / + / remove row.
   final Map<String, double?> _selected = {};
 
+  /// The look from before the last "Reset to defaults", while its undo is
+  /// offered (until the next change).
+  TemplateDisc? _beforeReset;
+
+  /// Whether a [_syncLook] push waits for the end of the frame.
+  bool _syncScheduled = false;
+
   @override
   void initState() {
     super.initState();
     TemplateDiscStore.load().then((d) {
-      if (mounted && d != null) setState(() => _remembered = d);
+      if (!mounted || d == null) return;
+      setState(() => _remembered = d);
+      _syncLook();
     });
   }
 
+  @override
+  void didUpdateWidget(TemplateDiscPanel old) {
+    super.didUpdateWidget(old);
+    _syncLook();
+  }
+
   TemplateDisc get disc => widget.disc;
+
+  /// Lays the look stored on this device on a shown disc that looks
+  /// different — after a restart, a resumed game or another map, the DM's
+  /// own settings come back. Pushed after the frame (never during build),
+  /// at most once per frame.
+  void _syncLook() {
+    final look = _remembered;
+    if (look == null || !disc.visible || disc.shapeKey == look.shapeKey) return;
+    if (_syncScheduled) return;
+    _syncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncScheduled = false;
+      final now = widget.disc, look = _remembered;
+      if (!mounted || look == null || !now.visible) return;
+      if (now.shapeKey == look.shapeKey) return;
+      widget.onChanged(now.withShapeOf(look));
+    });
+  }
 
   /// Applies a look or place change and remembers the look.
   void _change(TemplateDisc next, {bool center = false}) {
@@ -105,6 +154,7 @@ class _TemplateDiscPanelState extends State<TemplateDiscPanel> {
     if (next.shapeKey != (_remembered ?? disc).shapeKey) {
       _remembered = next;
       TemplateDiscStore.save(next);
+      if (_beforeReset != null) setState(() => _beforeReset = null);
     }
   }
 
@@ -115,6 +165,26 @@ class _TemplateDiscPanelState extends State<TemplateDiscPanel> {
     } else {
       _change(disc.copyWith(visible: false));
     }
+  }
+
+  /// Puts the classic look back (place kept) and offers to undo it.
+  void _reset() {
+    final before = disc;
+    _change(disc.withShapeOf(TemplateDisc.classic()));
+    setState(() {
+      _selected.clear();
+      _beforeReset = before.shapeKey == TemplateDisc.classic().shapeKey
+          ? null
+          : before;
+    });
+  }
+
+  /// Brings back the look from before [_reset].
+  void _undoReset() {
+    final before = _beforeReset;
+    if (before == null) return;
+    _change(disc.withShapeOf(before));
+    setState(() => _beforeReset = null);
   }
 
   void _turn(double deg) => _change(disc.copyWith(rotation: disc.rotation + deg));
@@ -191,77 +261,127 @@ class _TemplateDiscPanelState extends State<TemplateDiscPanel> {
     );
   }
 
-  /// The unfolded look editor.
+  /// The unfolded look editor: reset first, then one section per family
+  /// (rings, cubes, cones), the disc itself, lines and labels, placement.
   Widget _buildShape() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const SizedBox(height: 10),
-        _family('rings', 'Radius rings', disc.rings,
-            (set) => disc.copyWith(rings: set)),
-        _family('cubes', 'Cubes', disc.cubes, (set) => disc.copyWith(cubes: set)),
-        _family('cones', 'Cones', disc.cones, (set) => disc.copyWith(cones: set)),
-        if (disc.cones.shows) ...[
-          const SizedBox(height: 6),
-          _choice<DiscConeAnchor>('Cone tips', [
-            (DiscConeAnchor.sharedBase, 'One base'),
-            (DiscConeAnchor.center, 'From the middle'),
-          ], disc.coneAnchor, (v) => _change(disc.copyWith(coneAnchor: v))),
-          _choice<double>('Cone width', [
-            (TemplateDisc.dndConeDegrees, '5e (53°)'),
-            (60, '60°'),
-            (90, '90°'),
-          ], disc.coneDegrees, (v) => _change(disc.copyWith(coneDegrees: v))),
-        ],
-        const SizedBox(height: 12),
-        const _Label('Disc'),
-        const SizedBox(height: 4),
-        _Toggle(
-          icon: Icons.adjust,
-          label: 'Circle in the middle',
-          active: disc.centerMark,
-          onTap: () => _change(disc.copyWith(centerMark: !disc.centerMark)),
+        const SizedBox(height: 8),
+        const Text(
+          'Saved on this tablet — every disc you show uses it.',
+          style: TextStyle(color: _kTextSecondary, fontSize: 12),
         ),
         const SizedBox(height: 6),
-        _Toggle(
-          icon: Icons.circle_outlined,
-          label: 'Edge',
-          active: disc.rim,
-          onTap: () => _change(disc.copyWith(rim: !disc.rim)),
+        Row(
+          children: [
+            Expanded(
+              child: _Chip(
+                active: false,
+                onTap: _reset,
+                child: const _IconText(Icons.restart_alt, 'Reset to defaults'),
+              ),
+            ),
+            if (_beforeReset != null) ...[
+              const SizedBox(width: 6),
+              Expanded(
+                child: _Chip(
+                  active: true,
+                  onTap: _undoReset,
+                  child: const _IconText(Icons.undo, 'Undo reset'),
+                ),
+              ),
+            ],
+          ],
         ),
-        _choice<int>('Compass marks', [(0, 'None'), (4, '4'), (8, '8'), (12, '12')],
-            disc.markers, (v) => _change(disc.copyWith(markers: v))),
-        _choice<double>('Tint', [
-          (0, 'Clear'), (0.1, 'Light'), (0.25, 'Half'), (0.4, 'Strong'),
-        ], disc.tint, (v) => _change(disc.copyWith(tint: v))),
-        _choice<double>('Lines', [(0.035, 'Thin'), (0.05, 'Normal'), (0.08, 'Bold')],
-            disc.lineWidth, (v) => _change(disc.copyWith(lineWidth: v))),
-        _choice<double>('Labels', [(0.15, 'Small'), (0.2, 'Normal'), (0.28, 'Large')],
-            disc.labelSize, (v) => _change(disc.copyWith(labelSize: v))),
-        _choice<DiscSnap>('Middle snaps to', [
-          (DiscSnap.none, 'Free'),
-          (DiscSnap.squareCenters, 'Squares'),
-          (DiscSnap.squareCorners, 'Corners'),
-        ], disc.snap, (v) {
-          final next = disc.copyWith(snap: v);
-          final p = next.snapped(Offset(disc.x, disc.y));
-          _change(next.copyWith(x: p.dx, y: p.dy));
-        }),
-        const SizedBox(height: 10),
-        _Chip(
-          active: false,
-          onTap: () => _change(disc.withShapeOf(TemplateDisc.classic())),
-          child: const _IconText(Icons.restart_alt, 'Back to the classic disc'),
+        _family('rings', 'Radius rings', Icons.radio_button_unchecked,
+            disc.rings, (set) => disc.copyWith(rings: set)),
+        _family('cubes', 'Cubes', Icons.crop_square, disc.cubes,
+            (set) => disc.copyWith(cubes: set)),
+        _family('cones', 'Cones', Icons.change_history, disc.cones,
+            (set) => disc.copyWith(cones: set),
+            extra: [
+              _choice<DiscConeAnchor>('Tips', [
+                (DiscConeAnchor.sharedBase, 'One base'),
+                (DiscConeAnchor.center, 'From the middle'),
+              ], disc.coneAnchor, (v) => _change(disc.copyWith(coneAnchor: v))),
+              _choice<double>('Width', [
+                (TemplateDisc.dndConeDegrees, '5e (53°)'),
+                (60, '60°'),
+                (90, '90°'),
+              ], disc.coneDegrees, (v) => _change(disc.copyWith(coneDegrees: v))),
+            ]),
+        _Section(
+          icon: Icons.blur_circular,
+          title: 'Disc',
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _Chip(
+                    active: disc.centerMark,
+                    onTap: () =>
+                        _change(disc.copyWith(centerMark: !disc.centerMark)),
+                    child: _text('Middle circle', disc.centerMark),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _Chip(
+                    active: disc.rim,
+                    onTap: () => _change(disc.copyWith(rim: !disc.rim)),
+                    child: _text('Edge', disc.rim),
+                  ),
+                ),
+              ],
+            ),
+            _choice<int>('Compass marks',
+                [(0, 'None'), (4, '4'), (8, '8'), (12, '12')], disc.markers,
+                (v) => _change(disc.copyWith(markers: v))),
+            _choice<double>('Tint', [
+              (0, 'Clear'), (0.1, 'Light'), (0.25, 'Half'), (0.4, 'Strong'),
+            ], disc.tint, (v) => _change(disc.copyWith(tint: v))),
+          ],
+        ),
+        _Section(
+          icon: Icons.text_fields,
+          title: 'Lines and labels',
+          children: [
+            _choice<double>('Line width',
+                [(0.035, 'Thin'), (0.05, 'Normal'), (0.08, 'Bold')],
+                disc.lineWidth, (v) => _change(disc.copyWith(lineWidth: v)),
+                first: true),
+            _choice<double>('Label size',
+                [(0.15, 'Small'), (0.2, 'Normal'), (0.28, 'Large')],
+                disc.labelSize, (v) => _change(disc.copyWith(labelSize: v))),
+          ],
+        ),
+        _Section(
+          icon: Icons.grid_4x4,
+          title: 'Placement',
+          children: [
+            _choice<DiscSnap>('Middle snaps to', [
+              (DiscSnap.none, 'Free'),
+              (DiscSnap.squareCenters, 'Squares'),
+              (DiscSnap.squareCorners, 'Corners'),
+            ], disc.snap, (v) {
+              final next = disc.copyWith(snap: v);
+              final p = next.snapped(Offset(disc.x, disc.y));
+              _change(next.copyWith(x: p.dx, y: p.dy));
+            }, first: true),
+          ],
         ),
         const SizedBox(height: 4),
       ],
     );
   }
 
-  /// One family's editor: shown or not, its sizes (tap one for − / + /
-  /// remove, + adds the next five feet up), colour, line and labels.
-  Widget _family(String key, String title, DiscShapeSet set,
-      TemplateDisc Function(DiscShapeSet) apply) {
+  /// One family's section: on/off in its header, then its sizes (tap one
+  /// for − / + / remove, + adds the next five feet up), colour, line and
+  /// labels, and [extra] rows (the cones' tips and width).
+  Widget _family(String key, String title, IconData icon, DiscShapeSet set,
+      TemplateDisc Function(DiscShapeSet) apply,
+      {List<Widget> extra = const []}) {
     final selected = set.sizes.contains(_selected[key]) ? _selected[key] : null;
     void edit(DiscShapeSet next, {double? select}) {
       setState(() => _selected[key] = select);
@@ -270,144 +390,137 @@ class _TemplateDiscPanelState extends State<TemplateDiscPanel> {
 
     String ft(double v) =>
         v == v.roundToDouble() ? '${v.toInt()}' : v.toStringAsFixed(1);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _Toggle(
-            icon: switch (key) {
-              'rings' => Icons.radio_button_unchecked,
-              'cubes' => Icons.crop_square,
-              _ => Icons.change_history,
-            },
-            label: title,
-            active: set.visible,
-            onTap: () => edit(set.copyWith(visible: !set.visible)),
-          ),
-          if (set.visible) ...[
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 6,
-              runSpacing: 6,
-              children: [
-                for (final v in set.sizes)
-                  SizedBox(
-                    width: 56,
-                    child: _Chip(
-                      active: v == selected,
-                      onTap: () => setState(
-                          () => _selected[key] = v == selected ? null : v),
-                      child: _text("${ft(v)}'", v == selected),
-                    ),
-                  ),
-                SizedBox(
-                  width: 56,
-                  child: _Chip(
-                    active: false,
-                    onTap: () {
-                      var next = set.largest + TemplateDisc.feetPerSquare;
-                      if (next > 120) next = 120;
-                      if (set.sizes.contains(next)) return;
-                      edit(set.copyWith(sizes: [...set.sizes, next]), select: next);
-                    },
-                    child: const Icon(Icons.add, color: _kAccentGold, size: _kIcon),
-                  ),
+    return _Section(
+      icon: icon,
+      title: title,
+      on: set.visible,
+      onToggle: () => edit(set.copyWith(visible: !set.visible)),
+      children: [
+        const _Label('Sizes (feet)'),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            for (final v in set.sizes)
+              SizedBox(
+                width: 56,
+                child: _Chip(
+                  active: v == selected,
+                  onTap: () =>
+                      setState(() => _selected[key] = v == selected ? null : v),
+                  child: _text("${ft(v)}'", v == selected),
                 ),
-              ],
+              ),
+            SizedBox(
+              width: 56,
+              child: _Chip(
+                active: false,
+                onTap: () {
+                  var next = set.largest + TemplateDisc.feetPerSquare;
+                  if (next > 120) next = 120;
+                  if (set.sizes.contains(next)) return;
+                  edit(set.copyWith(sizes: [...set.sizes, next]), select: next);
+                },
+                child: const Icon(Icons.add, color: _kAccentGold, size: _kIcon),
+              ),
             ),
-            if (selected != null) ...[
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  for (final step in [-5.0, 5.0])
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6),
-                      child: SizedBox(
-                        width: 56,
-                        child: _Chip(
-                          active: false,
-                          onTap: () {
-                            final v = (selected + step).clamp(5.0, 120.0);
-                            if (set.sizes.contains(v)) return;
-                            edit(
-                                set.copyWith(sizes: [
-                                  for (final s in set.sizes) s == selected ? v : s
-                                ]),
-                                select: v);
-                          },
-                          child: Icon(step < 0 ? Icons.remove : Icons.add,
-                              color: _kAccentGold, size: _kIcon),
-                        ),
-                      ),
-                    ),
-                  Expanded(child: _text('${ft(selected)} ft', true)),
-                  SizedBox(
+          ],
+        ),
+        if (selected != null) ...[
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              for (final step in [-5.0, 5.0])
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: SizedBox(
                     width: 56,
                     child: _Chip(
                       active: false,
-                      onTap: () => edit(set.copyWith(
-                          sizes: set.sizes.where((s) => s != selected).toList())),
-                      child: const Icon(Icons.delete_outline,
+                      onTap: () {
+                        final v = (selected + step).clamp(5.0, 120.0);
+                        if (set.sizes.contains(v)) return;
+                        edit(
+                            set.copyWith(sizes: [
+                              for (final s in set.sizes) s == selected ? v : s
+                            ]),
+                            select: v);
+                      },
+                      child: Icon(step < 0 ? Icons.remove : Icons.add,
                           color: _kAccentGold, size: _kIcon),
                     ),
                   ),
-                ],
+                ),
+              Expanded(child: _text('${ft(selected)} ft', true)),
+              SizedBox(
+                width: 56,
+                child: _Chip(
+                  active: false,
+                  onTap: () => edit(set.copyWith(
+                      sizes: set.sizes.where((s) => s != selected).toList())),
+                  child: const Icon(Icons.delete_outline,
+                      color: _kAccentGold, size: _kIcon),
+                ),
               ),
             ],
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                for (final c in TemplateDisc.palette)
-                  _Swatch(
-                    color: Color(c),
-                    active: c == set.color,
-                    onTap: () => edit(set.copyWith(color: c), select: selected),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                for (final (style, label) in [
-                  (DiscLineStyle.solid, 'Solid'),
-                  (DiscLineStyle.dotted, 'Dotted'),
-                ]) ...[
-                  Expanded(
-                    child: _Chip(
-                      active: set.line == style,
-                      onTap: () => edit(set.copyWith(line: style), select: selected),
-                      child: _text(label, set.line == style),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                ],
-                Expanded(
-                  child: _Chip(
-                    active: set.labels,
-                    onTap: () =>
-                        edit(set.copyWith(labels: !set.labels), select: selected),
-                    child: _text('Labels', set.labels),
-                  ),
+          ),
+        ],
+        const SizedBox(height: 10),
+        const _Label('Colour'),
+        Wrap(
+          spacing: 4,
+          children: [
+            for (final c in TemplateDisc.palette)
+              _Swatch(
+                color: Color(c),
+                active: c == set.color,
+                onTap: () => edit(set.copyWith(color: c), select: selected),
+              ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        const _Label('Line'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            for (final (style, label) in [
+              (DiscLineStyle.solid, 'Solid'),
+              (DiscLineStyle.dotted, 'Dotted'),
+            ]) ...[
+              Expanded(
+                child: _Chip(
+                  active: set.line == style,
+                  onTap: () => edit(set.copyWith(line: style), select: selected),
+                  child: _text(label, set.line == style),
                 ),
-              ],
+              ),
+              const SizedBox(width: 6),
+            ],
+            Expanded(
+              child: _Chip(
+                active: set.labels,
+                onTap: () =>
+                    edit(set.copyWith(labels: !set.labels), select: selected),
+                child: _text('Labels', set.labels),
+              ),
             ),
           ],
-        ],
-      ),
+        ),
+        ...extra,
+      ],
     );
   }
 
-  /// A labelled row of mutually exclusive chips; the chip whose value is
-  /// closest to [current] is the active one.
+  /// A labelled row of mutually exclusive chips; the chip whose value
+  /// equals [current] is the active one. [first] drops the top gap (first
+  /// row of a section).
   Widget _choice<T>(String title, List<(T, String)> options, T current,
-      ValueChanged<T> onPick) {
+      ValueChanged<T> onPick, {bool first = false}) {
     bool same(T a, T b) =>
         a is double && b is double ? (a - b).abs() < 1e-6 : a == b;
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: EdgeInsets.only(top: first ? 0 : 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -443,6 +556,91 @@ class _TemplateDiscPanelState extends State<TemplateDiscPanel> {
           fontWeight: FontWeight.w600,
         ),
       );
+}
+
+/// One framed group of the look editor: an icon + title header — with an
+/// on/off dot when [onToggle] is given, the body showing only while [on] —
+/// and its rows below.
+class _Section extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final bool on;
+  final VoidCallback? onToggle;
+  final List<Widget> children;
+  const _Section({
+    required this.icon,
+    required this.title,
+    this.on = true,
+    this.onToggle,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final header = Container(
+      constraints: const BoxConstraints(minHeight: _kTarget),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      child: Row(
+        children: [
+          Icon(icon, color: on ? _kAccentGold : _kAccentGoldDim, size: _kIcon),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: on ? _kTextPrimary : _kTextSecondary,
+                    fontSize: _kText,
+                    fontWeight: FontWeight.w700)),
+          ),
+          if (onToggle != null) ...[
+            Text(on ? 'On' : 'Off',
+                style: TextStyle(
+                    color: on ? _kTextPrimary : _kTextSecondary, fontSize: 12)),
+            const SizedBox(width: 6),
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: on ? _kAccentGold : _kBorderGold,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _kSurface.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _kBorderGold),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            onToggle == null
+                ? header
+                : GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onToggle,
+                    child: header,
+                  ),
+            if (on)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: children,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Icon + text, centred (chip content).

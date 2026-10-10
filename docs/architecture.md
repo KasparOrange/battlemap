@@ -214,8 +214,12 @@ so on the table it is the physical disc's size. Everything is configurable and a
 feet (tap a size for − / + / remove, + adds the next 5 ft), colour, solid/dotted, labels; cone
 tips on one base or from the middle, cone width 5e/60°/90°; middle circle, edge, compass marks
 0/4/8/12, tint, line and label size; the middle snaps free / to square middles / to corners;
-"Back to the classic disc". The look is remembered on the tablet (Hive box `templateDisc`) and
-laid on the game's disc when it is shown; the TV centres a shown disc in its view
+"Reset to defaults" (the classic disc, with "Undo reset" until the next change). The Shape
+editor is grouped in framed sections — Radius rings, Cubes, Cones (each with on/off in its header,
+then sizes, colour, line), Disc, Lines and labels, Placement. The look is saved on the tablet (Hive
+box `templateDisc`), so it survives closing the app: it is laid on the game's disc when it is
+shown, and a shown disc that looks different (a resumed game, another map) gets it as soon as the
+Measure tab is open (`_syncLook`); the TV centres a shown disc in its view
 (`VttGame.centerTemplateDiscInView`). On the map, in every tab: drag its middle or its edge to
 move it, the gold knob on the edge (tablet only, on the cones' open side) to turn and aim it
 (whole degrees, sticks to 45° steps within 4°); a token under the finger in the Tokens tab wins

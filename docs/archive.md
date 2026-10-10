@@ -40,6 +40,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- `vtt.showCalibration` carries `pivot` (missing = bottom left, older companions work); the bar's length is a pure function of the width (`TableGrid.barInches`) so the tablet divides by the same length the TV draws
 	- 596 tests green (pivot geometry, fixed under a changed calibration, picker sends the pivot); the pattern checked as rendered pictures for three pivots; not in a build yet
 
+### 26-10-10 21:55 - 67d95074 - Template disc: look kept across restarts, reset, sections
+- Konrad: the shape's settings must be saved and come back after closing the app; a button to reset to the defaults; the settings better organised in sections
+	- saving existed (tablet Hive), but the saved look reached the map only when the disc was switched on — a disc already shown (resumed game, another map) kept the game's look; now the panel lays the saved look on a shown disc that differs (`_syncLook`, after the frame)
+	- "Back to the classic disc" → **Reset to defaults** at the top of Shape, with **Undo reset**
+	- Shape grouped in framed sections: Radius rings / Cubes / Cones (on/off in the header; Sizes, Colour, Line; cones + Tips, Width), Disc, Lines and labels, Placement
+	- found: Hive writes never finish under a widget test's fake clock and then block every later open — the panel tests keep the look in memory (`TemplateDiscStore.memory`), a plain test checks the real Hive round trip across a close; 611 tests green
+
 ### 26-10-10 21:40 - 67d95074 - Template disc on box + tablet (1.1.17+27)
 - Konrad: deploy now → version 1.1.17+27, `deploy.sh` from a clean worktree of 93bda8a: TV back in its game after 15 s, tablet companion relaunched, web on the VPS
 
