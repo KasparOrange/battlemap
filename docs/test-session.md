@@ -28,7 +28,10 @@ number; fixing happens afterwards, from code (`action.md`).
 
 `tools/fetch_test_maps.py --push <tablet serial>` downloads them into `test_assets/maps/`
 (gitignored — other people's maps, local testing only) and pushes them, plus `test_map.pdf`, to
-the tablet's Download folder. The grid size is in the file name.
+the tablet's Download folder. The grid size is in the file name. All ten are also in the
+**shared map library** on the VPS (since 2026-10-10, readable names, thumbnails, squares set —
+the Dyson tavern as 25 × 25 with its own grid, 240 px squares), so a game can pick them from the
+tablet without the files on the device.
 
 | file | what it is | why it's in the set |
 |---|---|---|

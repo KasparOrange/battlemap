@@ -6,6 +6,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:30 - shared library fill - today's maps in the shared map library
+- Konrad: put all maps used today — the AI-generated ones and the example maps — into the shared library
+	- the library was empty; 15 maps added over `PUT /library` with squares, own-grid flag and a 288 px thumbnail each (a script must send the thumbnail itself): Juri's cave + dungeon, AI keep, AI keep (variant), AI crypt, the ten test maps (Dyson tavern 25 × 25, own grid)
+	- left out: the older keep runs, crypt v0, the April PirateLair/PNG uploads still on the box; Juri's DM layers don't travel with a library entry → `architecture.md` "shared map library", `ai-art.md`, `test-session.md` "maps"
+
 ### 26-10-10 22:05 - TV stays awake - TV box no longer sleeps mid-game
 - Konrad: the TV turns itself off while the app is open — didn't we have stay-awake?
 	- we did and it works: the box held `KEEP_SCREEN_ON` for battlemap; the culprit is Google TV's inattentive sleep (`secure attentive_timeout` = 4 h without a remote key, ignores wake locks), then HDMI-CEC turns the TV off

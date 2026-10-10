@@ -59,6 +59,13 @@ then a new game on it) and **Shared library** ("Play" starts a new game after th
 settings dialog). The TV downloads a shared map once and remembers its id (`serverMapId` on the
 library entry), so picking it again reuses the copy.
 
+A library entry is **the map only**: name, kind, squares, own-grid flag and raster grid — no DM
+layers, fog or tokens. A map that had DM layers in one game (Juri's dungeon) gets them added
+again in the next. Filling the library from a script (`PUT /library/…?meta=`) leaves the entry
+without a thumbnail unless the script also sends `PUT /library/<id>/thumb` — the companion makes
+thumbnails, the server doesn't. Contents on 2026-10-10: Juri's cave and dungeon, the three AI
+maps (`ai-art.md`), the ten test maps (`test-session.md` "maps").
+
 ```mermaid
 sequenceDiagram
   participant T as tablet

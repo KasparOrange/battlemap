@@ -289,6 +289,10 @@ table: the fixed run-4 keep (`out/keep/261010-192835-fix-doorways/keep.dd2vtt`, 
 8/10: doorways empty and one square, every wall standing; left: the corridor's north wall half
 a square off, a second fireplace, lights a square or two from the layout's). The loop for a
 new map: `paint --why "…" --n 3 --judge`, then `fix <run> --judge --pack` on the best.
+In the shared map library (since 2026-10-10): "AI keep" (that fixed keep), "AI keep (variant)"
+(`261010-193719-fix-doorways`, the run-4 image 3 fix), "AI crypt" (`261010-171713-doorways`),
+"Juri's dungeon" (the warped 25 × 24 table map, own grid; its two DM layers don't travel with it)
+and "Juri's cave" (40 × 30, own grid). The older keep runs and the crypt v0 stay out.
 
 **Steps, in order** (one at a time, each onto the board before the next):
 
