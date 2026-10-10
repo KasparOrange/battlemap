@@ -100,9 +100,19 @@ class _TvShellState extends State<TvShell> {
   /// so the remote's select key hits it right away (not the back arrow).
   final FocusNode _takeOverFocus = FocusNode(debugLabel: 'takeOver');
 
-  /// Focus of the always-visible back button — where the remote lands in the
-  /// game view (see [_setView]).
+  /// Focus of the back button — where the remote lands in the game view
+  /// (see [_setView]). The button stays focusable while it is invisible.
   final FocusNode _backFocus = FocusNode(debugLabel: 'back');
+
+  /// Whether the back arrow is drawn: only for a few seconds after a remote
+  /// key press ([_onRemoteKey]), so the table shows nothing but the map.
+  bool _showBack = false;
+  Timer? _showBackTimer;
+
+  /// The last error the TV reported ([_sendError]), shown in the top-right
+  /// badge for a few seconds; null when there is none.
+  String? _tvError;
+  Timer? _tvErrorTimer;
   StreamSubscription<RelayConnectionState>? _relaySub;
   double? _transferProgress;
 
@@ -174,6 +184,7 @@ class _TvShellState extends State<TvShell> {
     _backFocus.addListener(() {
       if (mounted) setState(() {}); // repaint the back arrow's focus look
     });
+    HardwareKeyboard.instance.addHandler(_onRemoteKey);
     WakelockPlus.enable(); // Keep TV screen on
     SystemBars.hide(); // no status or navigation bar on the table
     RemoteLog.sendDeviceInfo();
@@ -197,6 +208,9 @@ class _TvShellState extends State<TvShell> {
     _autoSaveTimer?.cancel();
     _relaySub?.cancel();
     _deployNoticeTimer?.cancel();
+    _showBackTimer?.cancel();
+    _tvErrorTimer?.cancel();
+    HardwareKeyboard.instance.removeHandler(_onRemoteKey);
     _relay.dispose();
     _takeOverFocus.dispose();
     _backFocus.dispose();
@@ -1235,8 +1249,30 @@ class _TvShellState extends State<TvShell> {
   /// Sends a `tv.error` relay message so the companion can surface it in
   /// the dev log, and writes an [LogLevel.error] entry tagged `tv` to the
   /// remote log server. Also echoes locally via [_log].
+  /// Shows the back arrow for 5 s after any remote key press, so whoever
+  /// picked up the remote sees where focus is. Never consumes the key.
+  bool _onRemoteKey(KeyEvent event) {
+    if (event is KeyDownEvent && mounted) {
+      _showBackTimer?.cancel();
+      _showBackTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted) setState(() => _showBack = false);
+      });
+      if (!_showBack) setState(() => _showBack = true);
+    }
+    return false;
+  }
+
+  /// Reports [msg] to the companion (`tv.error`) and the log, and shows it in
+  /// the TV's top-right badge for 8 s.
   void _sendError(String msg) {
     _relay.sendRaw(jsonEncode({'type': 'tv.error', 'msg': msg}));
+    if (mounted) {
+      setState(() => _tvError = msg);
+      _tvErrorTimer?.cancel();
+      _tvErrorTimer = Timer(const Duration(seconds: 8), () {
+        if (mounted) setState(() => _tvError = null);
+      });
+    }
     debugPrint('TvShell ERROR: $msg');
     RemoteLog.error('tv', msg);
   }
@@ -1660,22 +1696,27 @@ class _TvShellState extends State<TvShell> {
               // Main view
               _buildCurrentView(),
 
-              // Back button (always visible)
+              // Back button: invisible but focusable, shown for a few
+              // seconds after a remote key press (see _onRemoteKey)
               Positioned(
                 top: 16,
                 left: 16,
-                child: IconButton(
-                  autofocus: true,
-                  focusNode: _backFocus,
-                  icon: Icon(Icons.arrow_back,
-                      color: _backFocus.hasFocus ? Colors.white : Colors.white38),
-                  onPressed: _navigateBack,
-                  // Clearly visible from the couch when the remote lands here.
-                  focusColor: Colors.white.withValues(alpha: 0.35),
+                child: AnimatedOpacity(
+                  opacity: _showBack ? 1 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: IconButton(
+                    autofocus: true,
+                    focusNode: _backFocus,
+                    icon: Icon(Icons.arrow_back,
+                        color: _backFocus.hasFocus ? Colors.white : Colors.white38),
+                    onPressed: _navigateBack,
+                    // Clearly visible from the couch when the remote lands here.
+                    focusColor: Colors.white.withValues(alpha: 0.35),
+                  ),
                 ),
               ),
 
-              // Relay status (top-right, always visible)
+              // Problems only (top-right): nothing while all is well
               Positioned(
                 top: 16,
                 right: 16,
@@ -1890,56 +1931,27 @@ class _TvShellState extends State<TvShell> {
     );
   }
 
-  /// Builds the relay badge in the top-right corner.
+  /// Builds the problem badge in the top-right corner — empty while the
+  /// companion is paired and no TV error ([_tvError]) is showing.
   ///
-  /// After [RelayConnectionState.replaced] (another TV registered as table)
+  /// A [_tvError] takes the badge for its 8 s; otherwise it shows the relay
+  /// trouble. After [RelayConnectionState.replaced] (another TV registered as table)
   /// it adds a focusable "Take over" button — reachable with the remote — that
   /// calls [VttRelayClient.connect] to claim the relay slot back.
   Widget _buildRelayStatus() {
-    final badge = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            switch (_relayState) {
-              RelayConnectionState.paired => Icons.wifi,
-              RelayConnectionState.connected => Icons.wifi_find,
-              RelayConnectionState.connecting => Icons.cloud_sync,
-              RelayConnectionState.disconnected => Icons.cloud_off,
-              RelayConnectionState.replaced => Icons.swap_horiz,
-            },
-            color: switch (_relayState) {
-              RelayConnectionState.paired => Colors.greenAccent,
-              RelayConnectionState.connected => Colors.orangeAccent,
-              RelayConnectionState.connecting => Colors.orangeAccent,
-              RelayConnectionState.disconnected => Colors.redAccent,
-              RelayConnectionState.replaced => Colors.redAccent,
-            },
-            size: 16,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            switch (_relayState) {
-              RelayConnectionState.paired => 'Companion connected',
-              RelayConnectionState.connected => 'Waiting for companion...',
-              RelayConnectionState.connecting => 'Connecting...',
-              RelayConnectionState.disconnected => 'Disconnected',
-              RelayConnectionState.replaced => 'Another TV took over',
-            },
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-              fontFamily: 'monospace',
-            ),
-          ),
-        ],
-      ),
-    );
+    final error = _tvError;
+    if (error != null) return _statusBadge(Icons.error_outline, Colors.redAccent, error);
+    final badge = switch (_relayState) {
+      RelayConnectionState.connected => _statusBadge(Icons.phonelink_off,
+          Colors.orangeAccent, 'Companion not connected'),
+      RelayConnectionState.connecting => _statusBadge(Icons.cloud_sync,
+          Colors.orangeAccent, 'Connecting to relay...'),
+      RelayConnectionState.disconnected => _statusBadge(Icons.cloud_off,
+          Colors.redAccent, 'No connection to the relay'),
+      RelayConnectionState.replaced => _statusBadge(Icons.swap_horiz,
+          Colors.redAccent, 'Another TV took over'),
+      RelayConnectionState.paired => const SizedBox.shrink(),
+    };
     if (_relayState != RelayConnectionState.replaced) return badge;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -1958,6 +1970,37 @@ class _TvShellState extends State<TvShell> {
           child: const Text('Take over'),
         ),
       ],
+    );
+  }
+
+  /// One dark pill for the top-right corner: [icon] in [color], then [text].
+  Widget _statusBadge(IconData icon, Color color, String text) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 480),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              text,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                fontFamily: 'monospace',
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
