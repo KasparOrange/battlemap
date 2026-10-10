@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 20:40 - a494e8fa - picture grid + grid editor
+- Konrad: build user-friendly, capable, powerful but precise ways to scale the map by hand afterwards, to correct the grid detection's errors
+	- the grid became a property of the picture (`RasterGrid`: corner, square width/height, counts) mapped onto the map's squares by the renderer → no cropping (the detection's crop is gone), partial edge squares and non-square photo squares possible; library entry, `vtt.imageUploaded`/`vtt.setMapGrid` `grid`, `vtt.fullState` `rasterGrid`
+	- grid editor (`lib/ui/grid_editor.dart`): tools Look / Move / Stretch / 2 corners with a magnifier, size steps to 0.01 px, position to 0.1 px, ½ / ×2, squares across, whole/partial edges, corner jumps to check drift, undo/redo, detect again; from the upload dialog and the Map tab; same counts keep the game's fog → `architecture.md` "picture grid and grid editor"
+	- found: the map decode shrank the picture to the map's proportions (fine while the grid covered the whole picture) → decodes at the picture's own size now; `pixelsPerGrid` stays `round(cellW)` like before
+	- 30 new tests (grid math, state, editor widget incl. portrait/phone layout), suite 498 green; committed from a HEAD-based index because two other sessions had staged/unstaged edits in the same files
+
 ### 26-10-10 20:05 - a9469a3d - AI maps step 5: the fixed keep on the TV emulator
 - Konrad: follow up on the map session's recommendation — put the fixed keep on the TV (step 5)
 	- the fixed run-4 keep and the run-2 crypt loaded on AVD `bm_tv` (installed 1.1.9) in the table view, rooms revealed with `vtt.roomReveal`, doors toggled with `vtt.togglePortal` over the relay (a throwaway `bench_bot` probe)

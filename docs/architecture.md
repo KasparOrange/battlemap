@@ -157,8 +157,9 @@ cut square at the screen's edge.
   whether battlemap draws its grid — `MapFit`), plus mode and window. Whether battlemap draws its
   grid is also remembered on the map (`MapLibraryEntry.drawGrid`, set by the upload dialog's
   "the picture has its own grid lines" and by every grid toggle), so the next game on the map
-  starts the same way. Picture/PDF maps can be re-gridded in a game (Settings ▸ Map squares,
-  `vtt.setMapGrid`; clears that game's fog, keeps drawings, tokens, layers).
+  starts the same way. Picture/PDF maps can be re-gridded in a game (Map tab ▸ "Fit the grid
+  on the picture" / "Map squares", `vtt.setMapGrid`; keeps drawings, tokens, layers, and the
+  fog too when the counts stay — see "picture grid").
 - **Upload dialog** for picture/PDF maps (`showMapGridDialog`): the picture's size, columns with
   rows following for square squares, a warning when squares come out > 3 % off square, and how
   the map sits on the table (fits / fits turned / the TV pans).
@@ -169,8 +170,8 @@ Many published maps have their grid drawn into the picture. Before the upload di
 companion looks for it (`detectGridInPicture` in `lib/model/grid_detect.dart`, ≤ 0.2 s): a found
 grid pre-fills columns × rows, ticks "the picture has its own grid lines" (battlemap then draws
 none) and shows a green "Found a drawn grid: 40 × 30 squares of 32 px". A grid that does not
-start at the picture's edge is **cropped to whole squares** (`cropToGrid`, PNG), so battlemap's
-`cols × rows` grid lands exactly on the drawn one. Nothing found → the old defaults, box unticked.
+start at the picture's edge becomes a **picture grid** (below) — nothing is cropped. Nothing
+found → the old defaults, box unticked. Either way "Fit on the picture" opens the grid editor.
 
 The formula, per axis (x shown; rows are the same), on the picture averaged down to ≤ 3072 px:
 
@@ -180,13 +181,47 @@ The formula, per axis (x shown; rows are the same), on the picture averaged down
 | 2 clean | minus a 15-sample moving average, then a `[1 2 3 2 1]` blur | only sharp peaks stay; thick and thin lines overlap when shifted |
 | 3 period | autocorrelation `A(l) = Σ P(x)P(x+l) / Σ P²`: strongest peak for `l` ∈ [20 px, size/3], then its smallest fraction `l/d` (d = 2…6) still ≥ half as strong; sub-pixel via a parabola and the peak at `k·l` | `A` peaks at the spacing and its multiples; walls or major lines every 2–5 squares must not win; a strong fraction under 20 px = texture (bricks) → no grid |
 | 4 agree | both axes within 3 %, both strengths ≥ 0.25 | random texture practically never agrees on both axes |
-| 5 phase | `arg Σ P(x)·e^{2πi·x/cell}` → where the lines sit | lines more than 15 % of a square from the edge → crop |
+| 5 phase | `arg Σ P(x)·e^{2πi·x/cell}` → where the lines sit | the picture grid's position (`GridDetection.toRasterGrid`) |
 
 Validated: Juri's cave map (40 × 30 of 32 px, strength 0.96), all `.dd2vtt` test-map pictures
 (72 / 150 px, 0.38–0.65), Dyson's 6000 px tavern (240 px dashed grey lines, needed 3072 not 2048),
-Juri's photographed page (52 px, drifting → cropped); no grid reported on the AI pipeline's
+Juri's photographed page (52 px, drifting); no grid reported on the AI pipeline's
 pictures (their 12 px stone texture fooled the first version) or the gridless small home.
 `test/grid_detect_test.dart` covers it with synthetic pictures (the real maps are gitignored).
+
+## picture grid and grid editor (since 2026-10-10)
+
+A picture/PDF map's squares are a `RasterGrid` (`lib/model/raster_grid.dart`): the top-left
+corner of square (0, 0) in picture px (`x`, `y`, may be negative), the square's width and height
+(`cellW`, `cellH`, sub-pixel), `cols × rows`, and the picture size they refer to. The game maps
+the grid's rectangle onto the map's squares (`VttMapImageComponent`, also the DM layers and the
+tablet's overview map), so nothing is cropped or resampled: a grid starting inside the picture
+just leaves the sliver off the table, "partial edge squares" reach past the picture (dark there),
+and non-square squares of a photographed page come out square. Without a grid the counts stretch
+over the whole picture (`RasterGrid.whole`, every map before). The map's own px per square =
+`round(cellW)`. Stored on the library entry (`MapLibraryEntry.rasterGrid`), sent in
+`vtt.imageUploaded` / `vtt.setMapGrid` (`grid`) and `vtt.fullState` (`rasterGrid`); a PDF
+rendered at another size scales it (`forPicture`).
+
+**Grid editor** (`showGridEditor`, `lib/ui/grid_editor.dart`, companion, full screen): the picture
+with battlemap's grid drawn over it (outside dimmed), zoomable, a side panel on a landscape
+tablet, below on portrait. Corrects what detection got wrong — or fits a gridless picture:
+
+| Control | What it does | Precision |
+|---|---|---|
+| Look / Move grid / Stretch / 2 corners | one finger pans / slides the grid / stretches it (top-left corner stays, the line under the finger follows) / marks two grid corners; **two fingers always move the view** | magnifier (4×, crosshair) while dragging |
+| 2 corners | mark a corner, mark a far one, check "squares across / down" (auto-counted, ±), "Use these corners" | a mark's error ÷ the count: 1 px over 30 squares = 0.03 px |
+| Square size | −1 / −.1 / −.01 · value (tap to type) · +.01 / +.1 / +1; "Square squares" off → width and height rows | 0.01 px |
+| Position | arrows by 1 px or 0.1 px, x/y (tap to type), "lines on the picture edge" | 0.1 px |
+| ½ size, × 2 size, squares across ±, whole only / include partial | the detector's typical errors (half/double), the old fill-the-width count | — |
+| Check the fit | zoom to top left / right, centre, bottom left / right, whole picture | drift shows at the far corner |
+| Undo, redo, back to the start, detect again, detected | — | — |
+
+Keyboard: arrows nudge (Shift 10×), + / − size by 0.01. The readout shows counts, square size,
+how the map sits on the table, skew of non-square squares. Opened from the upload dialog ("Fit on
+the picture") and in a game (Map tab ▸ "Fit the grid on the picture"). In a game a fine
+adjustment with **the same counts keeps the fog**, shadow edits, the table window and undo
+(`VttState.regridRaster`); new counts clear them.
 
 ## rendering order (flame engine)
 

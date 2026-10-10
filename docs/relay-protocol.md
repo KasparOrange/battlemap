@@ -80,11 +80,16 @@ and pushes each `lib.thumbnail` unasked as soon as it's ready (`docs/sessions.md
 4. phone sends: `{"type": "vtt.imageUploaded", "url": "http://...", "displayName": "map.png", "gridCols": 20, "gridRows": 15, "hasGrid": true}`
    — `hasGrid` (since 1.1.9, optional): the picture has grid lines of its own, so the TV draws
    none (remembered on the map entry as `drawGrid: false`)
+   — `grid` (since 1.1.10, optional): where the squares lie on the picture, a `RasterGrid`
+   `{"x": 0.0, "y": 0.0, "w": 32.0, "h": 32.0, "cols": 40, "rows": 30, "pw": 1280, "ph": 960}`
+   (top-left corner, square width/height in picture px, counts, picture size); it wins over
+   `gridCols`/`gridRows`. Without it the counts stretch over the whole picture
 5. TV HTTP GETs the image, loads it as a map
 
 The grid lives only in the TV's library entry. The companion gets just the picture (chunks on
 a new or resumed session, `vtt.downloadMap` on a reconnect) and takes the grid from
-`vtt.fullState` `gridCols`/`gridRows`; when a later state names a different grid it re-grids
+`vtt.fullState` `gridCols`/`gridRows` and `rasterGrid` (since 1.1.10, the picture grid, same
+shape as `grid` above); when a later state names a different grid it re-grids
 the picture (`VttState.applyRemoteGrid`, since 1.1.8 — before, it kept the previous map's grid
 and a downloaded image map failed to load at all).
 
@@ -194,7 +199,7 @@ to its own view, it draws it as a dashed frame (see `camera.vw`/`vh` below).
 {"type": "vtt.calibrate", "tvWidthInches": 34.5}      // the TV's picture is this wide → stored on the TV, every game
 {"type": "vtt.resetCalibration"}                      // back to 34.5 in = 34 × 19 squares
 {"type": "vtt.showCalibration", "on": true}           // the TV's one-inch squares + 10-inch measuring bar
-{"type": "vtt.setMapGrid", "cols": 50, "rows": 50}    // re-grid the open picture/PDF map (clears its fog)
+{"type": "vtt.setMapGrid", "cols": 50, "rows": 50, "grid": {…}}  // re-grid the open picture/PDF map; optional grid = RasterGrid (upload above); same counts keep the fog
 ```
 
 `architecture.md` "table view" has the model. Before 1.1.9 `vtt.calibrate` set a per-session
