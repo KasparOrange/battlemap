@@ -78,9 +78,11 @@ devices:
 - a map bigger than 34 × 19 (e.g. the castle, or a picture map with many squares): drag the gold
   grip above the dashed frame, tap the Camera tab's overview, arrows; the TV follows in whole
   squares; Whole map ↔ 1-inch table
-- upload a picture map: the squares dialog shows its size, rows follow columns, "own grid
-  lines" switches our grid off — and the next game on that map starts the same way
-- Settings ▸ Map squares on a picture map re-grids it (fog of that game cleared)
+- upload a picture map: a drawn grid is detected (green line, counts pre-filled, "own grid
+  lines" ticked — our grid off, also for the next game on that map); "Fit on the picture" opens
+  the grid editor (Move / Stretch / 2 corners, steps to 0.01 px) — check it on the real tablet
+- Settings ▸ Grid ▸ "Fit the grid on the picture" in a game: the same counts keep the fog, new
+  counts clear it; "Map squares" is the quick count-only dialog
 
 ## tabletop UX polish (2026-10-10, since 1.1.7+17) — needs a device test
 

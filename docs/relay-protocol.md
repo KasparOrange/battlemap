@@ -91,7 +91,7 @@ otherwise the tablet shows the new grid over its old picture (found 2026-10-10).
 4. phone sends: `{"type": "vtt.imageUploaded", "url": "http://...", "displayName": "map.png", "gridCols": 20, "gridRows": 15, "hasGrid": true}`
    — `hasGrid` (since 1.1.9, optional): the picture has grid lines of its own, so the TV draws
    none (remembered on the map entry as `drawGrid: false`)
-   — `grid` (since 1.1.10, optional): where the squares lie on the picture, a `RasterGrid`
+   — `grid` (since 1.1.11, optional): where the squares lie on the picture, a `RasterGrid`
    `{"x": 0.0, "y": 0.0, "w": 32.0, "h": 32.0, "cols": 40, "rows": 30, "pw": 1280, "ph": 960}`
    (top-left corner, square width/height in picture px, counts, picture size); it wins over
    `gridCols`/`gridRows`. Without it the counts stretch over the whole picture
@@ -99,7 +99,7 @@ otherwise the tablet shows the new grid over its old picture (found 2026-10-10).
 
 The grid lives only in the TV's library entry. The companion gets just the picture (chunks on
 a new or resumed session, `vtt.downloadMap` on a reconnect) and takes the grid from
-`vtt.fullState` `gridCols`/`gridRows` and `rasterGrid` (since 1.1.10, the picture grid, same
+`vtt.fullState` `gridCols`/`gridRows` and `rasterGrid` (since 1.1.11, the picture grid, same
 shape as `grid` above); when a later state names a different grid it re-grids
 the picture (`VttState.applyRemoteGrid`, since 1.1.8 — before, it kept the previous map's grid
 and a downloaded image map failed to load at all).

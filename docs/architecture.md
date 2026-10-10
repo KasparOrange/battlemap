@@ -173,8 +173,8 @@ cut square at the screen's edge.
   whether battlemap draws its grid — `MapFit`), plus mode and window. Whether battlemap draws its
   grid is also remembered on the map (`MapLibraryEntry.drawGrid`, set by the upload dialog's
   "the picture has its own grid lines" and by every grid toggle), so the next game on the map
-  starts the same way. Picture/PDF maps can be re-gridded in a game (Map tab ▸ "Fit the grid
-  on the picture" / "Map squares" under Settings ▸ Grid, `vtt.setMapGrid`; keeps drawings, tokens, layers, and the
+  starts the same way. Picture/PDF maps can be re-gridded in a game (Settings ▸ Grid ▸
+  "Fit the grid on the picture" or "Map squares", `vtt.setMapGrid`; keeps drawings, tokens, layers, and the
   fog too when the counts stay — see "picture grid").
 - **Upload dialog** for picture/PDF maps (`showMapGridDialog`): the picture's size, columns with
   rows following for square squares, a warning when squares come out > 3 % off square, and how

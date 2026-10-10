@@ -54,8 +54,10 @@ they are ignored now and such sessions open on the 1-inch table.
 
 the library entry remembers whether battlemap draws its grid over the map (`drawGrid`, from the
 upload dialog's "the picture has its own grid lines" and from every grid toggle) — a new session
-on the map starts that way. a picture/PDF map's square count (`pdfGridCols`/`pdfGridRows`) can be
-changed in a game (Settings ▸ Map squares) and stays on the map.
+on the map starts that way. a picture/PDF map's squares — the count (`pdfGridCols`/`pdfGridRows`)
+and where they lie on the picture (`rasterGrid`, a `RasterGrid`: position, square width/height)
+— can be changed in a game (Settings ▸ Grid: the grid editor or "Map squares") and stay on the map.
+the session's fog survives a fine adjustment with the same counts; new counts clear it.
 
 ## thumbnails
 

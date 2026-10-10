@@ -102,15 +102,17 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 3. Double-tap "load" on a session: it loads once.
 
 **6. improvised maps**
-1. Upload 08a and 08b: the squares dialog shows the picture's size, the rows follow the columns
-   (19 → 14, 16 → 18); with "the picture has its own grid lines" ticked the TV draws no grid, and
+1. Upload 08a and 08b: 08a's drawn grid is detected (green line, 19 × 14 of 72 px pre-filled),
+   08b has none (count by hand, rows follow: 16 → 18). "Fit on the picture" opens the grid
+   editor: 2 corners on 08b's room corners, ±0.01 px steps, a pinch never moves the grid. With
+   "the picture has its own grid lines" ticked the TV draws no grid, and
    the next game on that map neither. The tablet's chip (top right) shows the same squares as the
    TV, also after switching from another map and after a reconnect (before 1.1.8 it kept the
    previous map's grid and stretched the picture).
 2. Upload 09 (6000 px PNG) with its real square count: bigger than 34 × 19, so the TV shows a
    window — move it with the gold grip above the tablet's frame, the Camera tab's overview and
-   arrows; Whole map ↔ 1-inch table. A wrong count: Settings ▸ Map squares (clears that game's
-   fog).
+   arrows; Whole map ↔ 1-inch table. A wrong grid: Settings ▸ Grid ▸ "Fit the grid on the
+   picture" (same counts keep the fog) or "Map squares" (new counts clear it).
 3. Upload `test_map.pdf`: the tablet rasterizes it, the TV gets an image.
 
 **7. stress**

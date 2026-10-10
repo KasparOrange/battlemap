@@ -132,7 +132,7 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- 10 unit tests, suite 461 green
 	- deployed 1.1.9+19 (table view) with `tools/deploy.sh`: box 1.1.6+16 → 1.1.9+19 (back in its game after 16 s), tablet 1.1.8+18 → 1.1.9+19, web on the VPS
 	- on the table: "Juri's cave" (detected 40 × 30 of 32 px, aligned) uploaded over the relay as `bot` with `hasGrid` → `drawGrid` off; session "Juri's cave" in table view (window at column 3, row 6), all revealed, the upload's own "Session 1" deleted
-	- found: the `bot` role no longer receives `vtt.fullState` (only `lib.listing`), so the old `juri_table.py` waits forever for the session — check with `tv_ctl.py status` instead
+	- found: with the tablet asleep (not paired) the TV broadcasts no `vtt.fullState`, so the bot sees none and the old `juri_table.py` waits forever for the session (`relay-protocol.md` "bot role") — check with `tv_ctl.py status` instead
 	- the TV's library holds two `PirateLair_Lit_Grid_52x64` uploads at the 20 × 15 default — exactly the case the detector fixes (not yet in a build)
 
 ### 26-10-10 19:40 - battlemap-35 - table view: one square = one inch, 34 × 19 window (1.1.9+19)
