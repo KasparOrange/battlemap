@@ -360,6 +360,10 @@ class Session {
   /// Ruler rotation in degrees (0, 90, 180, or 270).
   int rulerRotation;
 
+  /// The AoE template disc of this map ([TemplateDisc.toJson]: shown or
+  /// not, place, turn and look), or `null` (never used: hidden, classic).
+  Map<String, dynamic>? templateDisc;
+
   /// DM-only picture layers (list of [DmOverlay.toJson] maps, bottom layer
   /// first). The TV keeps them for the companion and never renders them.
   List<Map<String, dynamic>> dmOverlayData;
@@ -387,7 +391,8 @@ class Session {
     'revealedCells', 'openPortals', 'showGrid', 'fogEnabled', 'showWalls',
     'tvCameraMode', 'tableCol', 'tableRow', 'mapFit',
     'tokenData', 'strokeData', 'isPdfSession', 'isImageSession',
-    'rulerVisible', 'rulerX', 'rulerY', 'rulerRotation', 'dmOverlayData',
+    'rulerVisible', 'rulerX', 'rulerY', 'rulerRotation', 'templateDisc',
+    'dmOverlayData',
     'cameraX', 'cameraY', 'cameraZoom', 'cameraAngle',
   ];
 
@@ -447,6 +452,7 @@ class Session {
     this.rulerX = 0,
     this.rulerY = 0,
     this.rulerRotation = 0,
+    this.templateDisc,
     this.dmOverlayData = const [],
     List<String>? mapIds,
     Map<String, Map<String, dynamic>>? parkedMaps,
@@ -550,6 +556,7 @@ class Session {
         'rulerX': rulerX,
         'rulerY': rulerY,
         'rulerRotation': rulerRotation,
+        if (templateDisc != null) 'templateDisc': templateDisc,
         'dmOverlayData': dmOverlayData,
         'mapIds': mapIds,
         'parkedMaps': parkedMaps,
@@ -606,6 +613,9 @@ class Session {
         rulerX: (json['rulerX'] as num?)?.toDouble() ?? 0,
         rulerY: (json['rulerY'] as num?)?.toDouble() ?? 0,
         rulerRotation: json['rulerRotation'] as int? ?? 0,
+        templateDisc: json['templateDisc'] is Map
+            ? Map<String, dynamic>.from(json['templateDisc'] as Map)
+            : null,
         dmOverlayData: (json['dmOverlayData'] as List?)
                 ?.map((e) => Map<String, dynamic>.from(e as Map))
                 .toList() ??

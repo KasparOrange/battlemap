@@ -503,6 +503,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.onAoeChanged = (t) =>
         t == null ? _relay!.sendClearAoe() : _relay!.sendSetAoe(t.toJson());
     _state.onRulerMoved = (x, y) => _relay!.sendSetRulerPosition(x, y);
+    _state.onTemplateDiscChanged = (disc, center) =>
+        _relay!.sendSetTemplateDisc(disc.toJson(), center: center);
     _state.onDmOverlaysChanged = (overlays, rev) => _relay!
         .sendSetDmOverlays(overlays.map((o) => o.toJson()).toList(), rev);
     _relaySub = _relay!.stateStream.listen((s) {
@@ -1192,6 +1194,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         // Ruler
         onToggleRuler: c.sendToggleRuler,
         onRotateRuler: c.sendRotateRuler,
+        // Template disc: shown here at once, onTemplateDiscChanged sends it
+        onSetTemplateDisc: (disc, {bool center = false}) =>
+            _state.setTemplateDisc(disc, center: center),
         // Table view
         onShowCalibration: c.sendShowCalibration,
         onSetTvCameraMode: (mode) => c.sendSetTvCameraMode(mode.name),
@@ -1308,6 +1313,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         if (_state.rulerVisible) _game.centerRulerInView();
       },
       onRotateRuler: _state.rotateRulerCW,
+      onSetTemplateDisc: (disc, {bool center = false}) {
+        _state.setTemplateDisc(disc, center: center);
+        if (center) _game.centerTemplateDiscInView();
+      },
       onSetMapGrid: (cols, rows, grid) => _state.regridRaster(cols, rows, grid: grid),
       // Session settings
       onUpdateSessionSettings: _state.setSessionSettings,

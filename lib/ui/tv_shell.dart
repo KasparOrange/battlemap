@@ -19,6 +19,7 @@ import '../model/raster_grid.dart';
 import '../model/session.dart';
 import '../model/shared_map.dart';
 import '../model/table_fit.dart';
+import '../model/template_disc.dart';
 import '../network/http_download_stub.dart'
     if (dart.library.io) '../network/http_download.dart';
 import '../network/relay_config.dart';
@@ -812,6 +813,9 @@ class _TvShellState extends State<TvShell> {
       _state.rulerX = session.rulerX;
       _state.rulerY = session.rulerY;
       _state.rulerRotation = session.rulerRotation;
+      if (session.templateDisc != null) {
+        _state.templateDisc = TemplateDisc.fromJson(session.templateDisc);
+      }
       _state.dmOverlays =
           session.dmOverlayData.map((o) => DmOverlay.fromJson(o)).toList();
       _state.sessionSettings = session.settings.copy();
@@ -1152,6 +1156,7 @@ class _TvShellState extends State<TvShell> {
       rulerX: _state.rulerX,
       rulerY: _state.rulerY,
       rulerRotation: _state.rulerRotation,
+      templateDisc: _state.templateDisc.toJson(),
       dmOverlayData: _state.dmOverlays.map((o) => o.toJson()).toList(),
       mapIds: _currentMapIds(),
       parkedMaps: _sessionMaps?.sessionId == _activeSessionId
@@ -1788,6 +1793,13 @@ class _TvShellState extends State<TvShell> {
           );
         case 'vtt.rotateRuler':
           _state.rotateRulerCW();
+
+        // AoE template disc: the whole disc; `center` = put it in my view
+        case 'vtt.setTemplateDisc':
+          final center = msg['center'] == true;
+          _state.setTemplateDisc(TemplateDisc.fromJson(msg['disc']),
+              center: center);
+          if (center) _game?.centerTemplateDiscInView();
         // vtt.setScaleFactor (companions before 1.1.9) is ignored: the TV
         // shows one inch per square, the calibration is vtt.calibrate.
 

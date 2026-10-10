@@ -11,6 +11,7 @@ import '../model/map_token.dart';
 import '../model/raster_grid.dart';
 import '../model/session.dart';
 import '../model/table_fit.dart';
+import '../model/template_disc.dart';
 import '../model/undo_action.dart';
 import '../model/uvtt_map.dart';
 import '../model/uvtt_parser.dart';
@@ -333,6 +334,11 @@ class VttState extends ChangeNotifier {
   /// for relay forwarding. Coordinates are in grid squares.
   void Function(double x, double y)? onRulerMoved;
 
+  /// Called when the DM changes the [templateDisc] locally (shown, moved,
+  /// turned, reshaped), for relay forwarding as `vtt.setTemplateDisc`.
+  /// [center] asks the TV to put it in the middle of its view.
+  void Function(TemplateDisc disc, bool center)? onTemplateDiscChanged;
+
   /// Called when the DM edits the [dmOverlays] list locally (add, remove,
   /// reorder, visibility, opacity), for relay forwarding as
   /// `vtt.setDmOverlays`. Receives the whole new list and its [dmOverlaysRev].
@@ -406,6 +412,19 @@ class VttState extends ChangeNotifier {
   ///
   /// See also: [RulerComponent.armLengthSquares], which draws with it.
   static const double rulerArmSquares = 10;
+
+  // --- AoE template disc ---
+
+  /// The area-of-effect template disc (Measure tab): radius rings, cubes
+  /// and cones around a middle, shown when [TemplateDisc.visible]. Keeps
+  /// its look while hidden. Saved with the game (`Session.templateDisc`).
+  ///
+  /// See also: [setTemplateDisc], [TemplateDiscComponent].
+  TemplateDisc templateDisc = TemplateDisc.classic();
+
+  /// When this device last changed [templateDisc] itself — the TV's echo of
+  /// an older drag position is ignored for a moment ([applyRemoteState]).
+  DateTime? _templateDiscEditAt;
 
   // --- Session settings ---
 
@@ -670,6 +689,7 @@ class VttState extends ChangeNotifier {
     final keepOverlays = dmOverlays;
     final keepOverlaysRev = dmOverlaysRev;
     final keepRuler = rulerVisible;
+    final keepDisc = templateDisc;
     final keepMode = tvCameraMode;
     final keepRevealed = Set<int>.of(revealedCells);
     final keepShadowReveal = Set<int>.of(shadowRevealCells);
@@ -684,6 +704,7 @@ class VttState extends ChangeNotifier {
     dmOverlays = keepOverlays;
     dmOverlaysRev = keepOverlaysRev;
     rulerVisible = keepRuler;
+    templateDisc = keepDisc;
     tvCameraMode = keepMode;
     if (sameSquares) {
       revealedCells = keepRevealed;
@@ -716,6 +737,7 @@ class VttState extends ChangeNotifier {
     measureEnd = null;
     activeAoe = null;
     rulerVisible = false;
+    templateDisc = templateDisc.copyWith(visible: false);
     shadowRevealCells.clear();
     shadowHideCells.clear();
     _endLiveCircle();
@@ -1555,6 +1577,28 @@ class VttState extends ChangeNotifier {
         r(h * (sin(a) - cos(a))));
   }
 
+  // ===== AoE template disc =====
+
+  /// Replaces the [templateDisc] (shown, hidden, moved, turned, reshaped)
+  /// and fires [onTemplateDiscChanged] for relay forwarding.
+  ///
+  /// [center] (tablet → TV) asks the TV to put the disc in the middle of
+  /// its view ([VttGame.centerTemplateDiscInView]); the tablet then takes
+  /// the TV's answer instead of guarding its own position.
+  void setTemplateDisc(TemplateDisc disc, {bool center = false}) {
+    templateDisc = disc;
+    _templateDiscEditAt = center ? null : DateTime.now();
+    notifyListeners();
+    onTemplateDiscChanged?.call(disc, center);
+  }
+
+  /// Moves the disc's middle to ([x], [y]) grid squares without firing
+  /// [onTemplateDiscChanged] — the TV placing it in its view.
+  void placeTemplateDisc(double x, double y) {
+    templateDisc = templateDisc.copyWith(x: x, y: y);
+    notifyListeners();
+  }
+
   /// Replaces the active [sessionSettings] and notifies listeners.
   ///
   /// Use this from controllers (TV shell, companion screen, dispatch) instead
@@ -1724,6 +1768,7 @@ class VttState extends ChangeNotifier {
         'rulerX': rulerX,
         'rulerY': rulerY,
         'rulerRotation': rulerRotation,
+        'templateDisc': templateDisc.toJson(),
         'sessionSettings': sessionSettings.toJson(),
         'canUndo': canUndo,
         'canRedo': canRedo,
@@ -1818,6 +1863,17 @@ class VttState extends ChangeNotifier {
     rulerX = (json['rulerX'] as num?)?.toDouble() ?? 0;
     rulerY = (json['rulerY'] as num?)?.toDouble() ?? 0;
     rulerRotation = json['rulerRotation'] as int? ?? 0;
+
+    // Template disc — absent from older TV builds; the TV's echo of an
+    // older drag position does not pull back a disc the DM is moving
+    final disc = json['templateDisc'];
+    final editAt = _templateDiscEditAt;
+    if (disc != null &&
+        (editAt == null ||
+            DateTime.now().difference(editAt) >
+                const Duration(milliseconds: 1500))) {
+      templateDisc = TemplateDisc.fromJson(disc);
+    }
 
     // Session settings — backwards compatible
     sessionSettings = json['sessionSettings'] != null

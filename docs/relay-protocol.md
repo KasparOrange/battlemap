@@ -283,11 +283,16 @@ multiplied the zoom (0.5–2.0); the TV now ignores `vtt.setScaleFactor`.
 {"type": "vtt.toggleRuler"}                              // on show, the TV centres the ruler in its view
 {"type": "vtt.setRulerPosition", "x": 3.25, "y": 7.5}   // corner, grid squares; sent while dragging the ruler on the phone
 {"type": "vtt.rotateRuler"}
+{"type": "vtt.setTemplateDisc", "disc": {"visible": true, "x": 12.5, "y": 8.5, "rotation": 30.0, "rings": {...}, ...}, "center": true}   // since 2026-10-10; the whole disc (TemplateDisc.toJson), sent on every change incl. drags; center = TV puts it in its view
 {"type": "vtt.undo"}
 {"type": "vtt.redo"}
 ```
 
-Measure coordinates are world pixels; AoE origin/radius and ruler position are grid squares.
+Measure coordinates are world pixels; AoE origin/radius, ruler and template disc position are
+grid squares. The disc's look: `rings`/`cubes`/`cones` (`visible`, `sizes` in feet, `color`
+ARGB, `line` solid|dotted, `labels`), `coneAnchor` sharedBase|center, `coneDegrees`,
+`centerMark`, `markers`, `rim`, `tint`, `lineWidth`/`labelSize` (squares), `snap`
+none|squareCenters|squareCorners; anything missing falls back to the classic disc.
 
 ## DM layers (companion → table) — since 1.1.6
 
@@ -336,7 +341,8 @@ sent every 50ms when state changes:
   "tableCols": 34, "tableRows": 19,     // whole one-inch squares on the TV screen
   "showCalibration": false,
   "dmOverlays": [{"id": "...", "name": "...", "url": "...", "visible": true, "opacity": 0.6}],   // since 1.1.6 — see "DM layers"
-  "dmOverlaysRev": 1760112000000
+  "dmOverlaysRev": 1760112000000,
+  "templateDisc": {"visible": false, "x": 0.0, "y": 0.0, "rotation": 0.0, ...}   // since 2026-10-10 — see vtt.setTemplateDisc
 }
 ```
 

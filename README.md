@@ -60,6 +60,7 @@ lightweight Python WebSocket relay running on a VPS.
 | [SystemBars] | `lib/ui/system_bars.dart` | Hides Android's status and navigation bars (sticky immersive): the companion during a game (toggle on the map, stored on the device), the TV always. No-op off Android. |
 | [GridEditorPage] | `lib/ui/grid_editor.dart` | The companion's full-screen grid editor (`showGridEditor`): fit a picture map's squares by hand — Move / Stretch / 2 corners / Known length (gridless maps), steps to 0.01 px, corner jumps, undo. |
 | [NumberStepper] | `lib/ui/number_stepper.dart` | `−10 −5 −2 −1 [n] +1 +2 +5 +10` with a numpad behind the number (`showNumpad`) — every count and length in the grid dialogs and Measure the TV. |
+| [TemplateDiscPanel] | `lib/ui/template_disc_panel.dart` | Measure tab ▸ Template disc: the acrylic AoE disc (radius rings, cubes, cones) on the map — show, turn, centre on the TV, its whole look configurable; drawn by `TemplateDiscComponent`, model `TemplateDisc`. |
 | [SharedLibrarySheet] | `lib/ui/shared_library_sheet.dart` | The companion's shared map library (`showSharedLibrarySheet`): the VPS's maps with thumbnails — add to the game / play, delete, upload from the device. |
 | [SharedLibraryClient] | `lib/network/shared_library.dart` | HTTP client for the VPS's shared map library (`/library` on the dev server). |
 | [TvOverviewMap] | `lib/ui/tv_overview_map.dart` | The companion's overview: the whole map with a box around what the players see; tap or drag to move the TV's window. |

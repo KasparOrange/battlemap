@@ -10,11 +10,13 @@ import '../model/map_token.dart';
 import '../model/raster_grid.dart';
 import '../model/session.dart';
 import '../model/table_fit.dart';
+import '../model/template_disc.dart';
 import '../state/vtt_state.dart';
 import 'grid_editor.dart';
 import 'map_grid_dialog.dart';
 import 'number_stepper.dart';
 import 'session_settings_dialog.dart';
+import 'template_disc_panel.dart';
 
 // ─── Medieval warm color palette ────────────────────────────────────
 
@@ -236,6 +238,13 @@ class DmCallbacks {
   /// Rotates the ruler 90 degrees clockwise.
   final VoidCallback onRotateRuler;
 
+  // ── AoE template disc ─────────────────────────────────────────────
+
+  /// Replaces the template disc ([VttState.templateDisc]); [center] puts
+  /// it in the middle of the TV's view. `null` hides the Measure tab's
+  /// disc section.
+  final void Function(TemplateDisc disc, {bool center})? onSetTemplateDisc;
+
   // ── Table view (networked mode only) ──────────────────────────────
 
   /// Shows (`true`) or hides the TV's calibration pattern — on while the
@@ -347,6 +356,7 @@ class DmCallbacks {
     required this.onClearAoe,
     required this.onToggleRuler,
     required this.onRotateRuler,
+    this.onSetTemplateDisc,
     this.onShowCalibration,
     this.onSetTvCameraMode,
     this.onPanTable,
@@ -1784,7 +1794,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Measure Tab ─────────────────────────────────────────
 
-  /// Builds the Measure tab: measure mode + the physical ruler controls.
+  /// Builds the Measure tab: measure mode, the physical ruler controls and
+  /// the AoE template disc ([TemplateDiscPanel]).
   Widget _buildMeasureTab() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1815,6 +1826,17 @@ class _DmControlPanelState extends State<DmControlPanel> {
           const Text(
             'Drag the ruler on the map to move it (in any mode).',
             style: TextStyle(color: _kTextSecondary, fontSize: 12),
+          ),
+        ],
+        if (cb.onSetTemplateDisc != null) ...[
+          const SizedBox(height: 12),
+          Container(height: 1, color: _kBorderGold),
+          const SizedBox(height: 10),
+          const _GoldLabel('Template disc'),
+          const SizedBox(height: 4),
+          TemplateDiscPanel(
+            disc: state.templateDisc,
+            onChanged: cb.onSetTemplateDisc!,
           ),
         ],
       ],

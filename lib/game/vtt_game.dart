@@ -23,6 +23,7 @@ import 'components/strokes_component.dart';
 import 'components/table_frame_component.dart';
 import 'components/measure_component.dart';
 import 'components/ruler_component.dart';
+import 'components/template_disc_component.dart';
 import 'components/token_layer.dart';
 import 'components/torch_glow_component.dart';
 import 'components/tv_viewport_component.dart';
@@ -105,6 +106,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   MeasureComponent? _measure;
   AoeTemplateComponent? _aoeComponent;
   RulerComponent? _ruler;
+  TemplateDiscComponent? _templateDisc;
   TorchGlowComponent? _torchGlow;
   GlobalEffectsComponent? _globalEffects;
   TvViewportComponent? _tvViewport;
@@ -175,6 +177,11 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   // Ruler drag state (grid-space offset from the corner to the grab point)
   bool _draggingRuler = false;
   Offset _rulerGrabOffset = Offset.zero;
+
+  // Template disc drag: moving (grid-space offset from the middle to the
+  // grab point) or turning by its knob
+  _DiscDrag? _discDrag;
+  Offset _discGrabOffset = Offset.zero;
 
   // Camera change reporting
   CameraSnapshot? _lastReportedCamera;
@@ -468,6 +475,16 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       viewAngle: () => camera.viewfinder.angle,
     );
     world.add(_ruler!);
+
+    // AoE template disc (priority 22 — above the measure line, below the ruler)
+    _templateDisc = TemplateDiscComponent(
+      state: state,
+      pixelsPerGrid: map.resolution.pixelsPerGrid.toDouble(),
+      mapSize: mapSizeVec,
+      showHandles: !isDisplay,
+      viewAngle: () => camera.viewfinder.angle,
+    );
+    world.add(_templateDisc!);
 
     // TV viewport outline (priority 28, phone only)
     if (!isDisplay) {
@@ -777,6 +794,8 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     _measure = null;
     _ruler?.removeFromParent();
     _ruler = null;
+    _templateDisc?.removeFromParent();
+    _templateDisc = null;
     _tvViewport?.removeFromParent();
     _tvViewport = null;
     _torchGlow?.removeFromParent();
@@ -885,6 +904,21 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     final c = camera.viewfinder.position;
     final quarterTurns = (camera.viewfinder.angle / (pi / 2)).round();
     state.placeRuler(c.x / ppg, c.y / ppg, quarterTurns * 90);
+  }
+
+  /// Puts the template disc's middle in the middle of this game's view
+  /// (snapped as the disc asks), keeping its turn and look.
+  ///
+  /// Called when the disc is shown — on the TV for `vtt.setTemplateDisc`
+  /// with `center`, so it appears where the players look. No-op without a
+  /// map.
+  void centerTemplateDiscInView() {
+    final map = state.map;
+    if (map == null) return;
+    final ppg = map.resolution.pixelsPerGrid.toDouble();
+    final c = camera.viewfinder.position;
+    final p = state.templateDisc.snapped(Offset(c.x / ppg, c.y / ppg));
+    state.placeTemplateDisc(p.dx, p.dy);
   }
 
   /// Stores the TV's camera (phone side) for the viewport outline and
@@ -1037,6 +1071,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     _toolActive = false;
     _draggingTokenId = null;
     _draggingRuler = false;
+    _discDrag = null;
     _lastBrushCell = null;
     _scaleStartPos = null;
   }
@@ -1105,6 +1140,15 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       );
       return;
     }
+    // So is the template disc: its knob turns it, its middle or edge moves it
+    final discHit = _discHitTest(worldPos);
+    if (discHit != null) {
+      _discDrag = discHit;
+      final ppg = _getPixelsPerGrid();
+      final d = state.templateDisc;
+      _discGrabOffset = Offset(worldPos.x / ppg - d.x, worldPos.y / ppg - d.y);
+      return;
+    }
     switch (state.interactionMode) {
       case InteractionMode.fogReveal:
         _lastBrushCell = null;
@@ -1144,6 +1188,10 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       );
       return;
     }
+    if (_discDrag != null) {
+      _discDragUpdate(worldPos);
+      return;
+    }
     switch (state.interactionMode) {
       case InteractionMode.fogReveal:
         _fogBrushAt(worldPos);
@@ -1177,6 +1225,10 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       _draggingRuler = false;
       return;
     }
+    if (_discDrag != null) {
+      _discDrag = null;
+      return;
+    }
     switch (state.interactionMode) {
       case InteractionMode.fogReveal:
         _lastBrushCell = null;
@@ -1204,6 +1256,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// painted stay (they are undoable).
   void _toolCancel() {
     _draggingRuler = false;
+    _discDrag = null;
     _tvDragStartSquares = null;
     _tvDragStartCenter = null;
     _tvDragPreview = null;
@@ -1521,4 +1574,72 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     final onVertical = lx >= -w - pad && lx <= pad && ly >= -len - pad && ly <= pad;
     return onHorizontal || onVertical;
   }
+
+  // ===== Template disc =====
+
+  /// What a drag starting at [worldPos] does to the template disc: turn it
+  /// (its knob, tablet only), move it (its middle or a band along its
+  /// edge), or `null` (the disc is hidden or not under the finger).
+  ///
+  /// In the Tokens mode a token under the finger wins over the disc's
+  /// middle, so the caster's token under the disc stays draggable.
+  _DiscDrag? _discHitTest(Vector2 worldPos) {
+    final disc = state.templateDisc;
+    if (!disc.visible) return null;
+    final ppg = _getPixelsPerGrid();
+    final p = Offset(worldPos.x / ppg, worldPos.y / ppg);
+    // At least ~22 screen pixels of grab room, however far out the zoom
+    final pad = max(0.35, 22 / (max(camera.viewfinder.zoom, 1e-4) * ppg));
+    if (!isDisplay &&
+        (p - disc.toMap(disc.knobLocal)).distance <=
+            TemplateDiscComponent.knobRadius + pad) {
+      return _DiscDrag.turn;
+    }
+    final fromMiddle = (p - Offset(disc.x, disc.y)).distance;
+    if (fromMiddle <= 0.5 + pad * 0.5) {
+      final cx = p.dx.floor(), cy = p.dy.floor();
+      final tokenThere = state.interactionMode == InteractionMode.token &&
+          state.tokens.any((t) => t.placed && t.gridX == cx && t.gridY == cy);
+      if (!tokenThere) return _DiscDrag.move;
+    }
+    if ((fromMiddle - disc.rimRadius).abs() <= pad) return _DiscDrag.move;
+    return null;
+  }
+
+  /// Moves or turns the disc to follow the finger at [worldPos].
+  ///
+  /// Moving keeps the grab point under the finger, snapped as the disc
+  /// asks ([TemplateDisc.snapped]). Turning points the cones' open side
+  /// (the knob) at the finger, in whole degrees, sticking to multiples of
+  /// 45° within 4°.
+  void _discDragUpdate(Vector2 worldPos) {
+    final ppg = _getPixelsPerGrid();
+    final disc = state.templateDisc;
+    final p = Offset(worldPos.x / ppg, worldPos.y / ppg);
+    switch (_discDrag!) {
+      case _DiscDrag.move:
+        final m = disc.snapped(p - _discGrabOffset);
+        if (m.dx == disc.x && m.dy == disc.y) return;
+        state.setTemplateDisc(disc.copyWith(x: m.dx, y: m.dy));
+      case _DiscDrag.turn:
+        final v = p - Offset(disc.x, disc.y);
+        if (v.distance < 0.2) return;
+        // The knob sits at 180° in the disc's frame
+        var deg = (atan2(v.dy, v.dx) * 180 / pi - 180).roundToDouble();
+        final near45 = (deg / 45).roundToDouble() * 45;
+        if ((deg - near45).abs() <= 4) deg = near45;
+        deg = ((deg % 360) + 360) % 360;
+        if (deg == disc.rotation) return;
+        state.setTemplateDisc(disc.copyWith(rotation: deg));
+    }
+  }
+}
+
+/// What a drag on the template disc does.
+enum _DiscDrag {
+  /// Moves the disc (its middle or edge was grabbed).
+  move,
+
+  /// Turns the disc around its middle (its knob was grabbed).
+  turn,
 }

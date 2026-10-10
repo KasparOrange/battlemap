@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:20 - 67d95074 - Measure tab: AoE template disc
+- Konrad (photo of an acrylic AoE template disc): add a self-built, highly configurable shape that rebuilds it exactly, as a new tool in the DM panel's Measure tab
+	- measured from the photo: the cubes are centred on the middle; both cones share one base line (the 30 ft cone's left edge = the 30 ft cube's), so the 30 ft tip sits 15 ft east and the 15 ft tip on the middle; the marks are 12 at 30° between the 15 and 20 ft rings, the top one hidden by the labels; the edge sits just outside the 30 ft cube's corners (~21.2 ft) — all rebuilt as `TemplateDisc.classic` (`lib/model/template_disc.dart`)
+	- `TemplateDiscComponent` draws it on the TV and the tablet (gold turning knob tablet-only); `vtt.setTemplateDisc` carries the whole disc; the TV saves it per map and echoes it in `vtt.fullState`; the tablet remembers its look (Hive `templateDisc`)
+	- Measure tab ▸ Template disc: show (TV centres it), ±15°, to the TV's middle, **Shape** unfolds the whole look (`architecture.md` "Template disc"); drag middle/edge to move, knob to turn, in every tab
+	- 592 tests green (26 new: geometry vs the photo, JSON, echo guard, session per map, render, panel); a render of the classic disc checked against the photo; not in a build yet, no device test
+
 ### 26-10-10 21:20 - 230ef3ba - Map scale for gridless maps + number stepper
 - Konrad: the measuring should be the scale of each map (building on the grid detection), also for maps with no grid drawn in — not something of the TV or the app; and the step buttons should be MitWare's: the number in the middle, −1 −2 −5 −10 left, +1 +2 +5 +10 right, a tap on the number opens a numpad
 	- what existed: the map's scale was already per map (`RasterGrid`, stored with the map); "Measure the TV" is the TV's own inch, set once per TV — both stay, the dialogs now say which is which. Missing was a way to scale a map with **no squares to count**: the upload dialog asked to "count the squares along the top edge"

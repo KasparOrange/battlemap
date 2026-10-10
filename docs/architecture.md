@@ -173,6 +173,27 @@ to its screen (`VttGame.centerRulerInView`); rotating turns it around the middle
 (`VttState.rotateRulerCW`); its numbers stay upright on every screen (`RulerComponent.labelAngle`
 undoes ruler + camera rotation).
 
+**Template disc (since 2026-10-10):** the acrylic AoE template disc, rebuilt — Measure tab ▸
+Template disc. Classic look (`TemplateDisc.classic`): red 5/10/15/20 ft radius rings, black dotted
+10/20/30 ft cubes centred on the middle, blue dotted 15/30 ft 5e cones (as wide as long) on one
+shared base line (the 30 ft cone centred, the 15 ft cone's tip on the middle), label pills, 12
+compass marks between the two largest rings (the one under the ring labels left out), a
+one-square circle in the middle, a clear edge just outside the farthest outline. One square = 5 ft,
+so on the table it is the physical disc's size. Everything is configurable and applies at once
+(the panel's **Shape** unfolds in place): per family (rings, cubes, cones) shown or not, sizes in
+feet (tap a size for − / + / remove, + adds the next 5 ft), colour, solid/dotted, labels; cone
+tips on one base or from the middle, cone width 5e/60°/90°; middle circle, edge, compass marks
+0/4/8/12, tint, line and label size; the middle snaps free / to square middles / to corners;
+"Back to the classic disc". The look is remembered on the tablet (Hive box `templateDisc`) and
+laid on the game's disc when it is shown; the TV centres a shown disc in its view
+(`VttGame.centerTemplateDiscInView`). On the map, in every tab: drag its middle or its edge to
+move it, the gold knob on the edge (tablet only, on the cones' open side) to turn and aim it
+(whole degrees, sticks to 45° steps within 4°); a token under the finger in the Tokens tab wins
+over the middle. Rendered by `TemplateDiscComponent` (priority 22, outlines and labels cached
+per look, labels flip instead of reading upside down). State: `VttState.templateDisc`, synced
+with `vtt.setTemplateDisc`; the tablet ignores the TV's echo for 1.5 s after its own change so a
+drag does not jump back. Saved per map (`Session.templateDisc`, a per-map key).
+
 **DM layers (since 2026-10-10):** the Layers tab adds any number of pictures (PNG/JPG/WebP, PDF
 page 1) that only the DM sees — a DM version of the map, notes, secrets. Each layer has an eye,
 an opacity slider, up/down and delete (undo snackbar); a master eye hides them all on this

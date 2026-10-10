@@ -1091,6 +1091,18 @@ class VttRelayClient {
   /// Rotates the ruler 90 degrees clockwise on the TV.
   void sendRotateRuler() => _send({'type': 'vtt.rotateRuler'});
 
+  // --- AoE template disc (companion → table via relay) ---
+
+  /// Sends the whole template disc ([TemplateDisc.toJson]) to the TV;
+  /// [center] asks the TV to put it in the middle of its view. Sent for
+  /// every change, drag moves included (a few hundred bytes).
+  void sendSetTemplateDisc(Map<String, dynamic> disc, {bool center = false}) =>
+      _send({
+        'type': 'vtt.setTemplateDisc',
+        'disc': disc,
+        if (center) 'center': true,
+      });
+
   /// Replaces the session's DM-only picture layer list on the TV
   /// (`vtt.setDmOverlays`). [overlays] are [DmOverlay.toJson] maps, bottom
   /// layer first; [rev] is the phone's edit revision the TV echoes back in
