@@ -121,7 +121,7 @@ Outside: from the phone via SSH/mosh to the VPS. At home: on the Mac, against th
 
 - Every network request, file read, map load, or session save must show visible feedback
 - Use progress bars for large transfers (map upload/download)
-- Use snackbars for quick operations ("Loading session...", "Map saved")
+- Use notices for quick operations ("Loading session...", "Map saved") — `Notice.show` (`lib/ui/notice.dart`), never a Material `SnackBar` (`docs/architecture.md` "notices")
 - Use overlay spinners for blocking operations (PDF rendering)
 - Never let the user tap something and see nothing happen — always show feedback immediately
 - Debounce repeated taps on action buttons (prevent double-loading sessions)
@@ -242,6 +242,7 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 54 | Map scale for gridless maps + number stepper | Code done (2026-10-10), 566 tests green, not in a build yet | Grid editor tool Known length (a line over a door/room/scale bar + its squares or feet → `RasterGrid.fromLength`); upload says "no grid found" → "Measure on the picture"; squares read from file names (`gridCountsFromName`); `NumberStepper` (±1/2/5/10, numpad on the number) for map counts, editor size/counts, Measure the TV's picture width; `docs/architecture.md` "number stepper", "picture grid and grid editor" |
 | 55 | Measure tab: AoE template disc | Done (2026-10-10, 1.1.17+27 on box + tablet + web), 592 tests green; needs a test at the table | The acrylic disc rebuilt (5–20 ft rings, 10–30 ft cubes, 15/30 ft cones on one base, compass marks) and configurable (sizes, colours, lines, labels, cone tips/width, marks, tint, snap); drag middle/edge, gold knob turns; look remembered on the tablet; `docs/architecture.md` "Template disc", `relay-protocol.md` `vtt.setTemplateDisc` |
 | 55 | Measure the TV: fixed ruler pivot | Code done (2026-10-10), 596 tests green, not in a build yet | The measuring bar starts at a pivot fixed on the screen (a corner, bottom left by default, or the centre — picked on a TV picture in the dialog), so the ruler stays put while the calibration changes; `CalibrationPivot`, `vtt.showCalibration.pivot`; `docs/architecture.md` "table view" |
+| 56 | Notices instead of snackbars | Code done (2026-10-10), 603 tests green, not in a build yet | One floating card centred near the bottom over every route: kind icon, text, optional button, ×, countdown hairline; always closes by itself (the action snackbars never did), replaces instead of queueing, held finger pauses; `lib/ui/notice.dart`, `docs/architecture.md` "notices" |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |
 | 11 | Shape drawing tools | Not started | Circles, cones, area-of-effect markers |

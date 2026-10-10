@@ -10,6 +10,7 @@ import 'ui/tv_shell.dart';
 import 'update/deploy_restore.dart';
 import 'ui/vtt_companion_screen.dart';
 import 'ui/dev_screen.dart';
+import 'ui/notice.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,6 +50,8 @@ class BattlemapApp extends StatelessWidget {
       onGenerateInitialRoutes: _initialRoutes,
       onGenerateRoute: (_) =>
           MaterialPageRoute(builder: (_) => const ModeSelector()),
+      // Floating notices over every route, dialogs and sheets included.
+      builder: (_, child) => NoticeHost(child: child!),
     );
   }
 

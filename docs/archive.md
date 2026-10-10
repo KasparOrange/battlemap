@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:27 - 4c6e75db - Notices instead of snackbars
+- Konrad: redesign the tablet's snackbars (plain and with a button) as one reusable component, floating centred near the bottom, with a discreet countdown bar and a close button — and fix that they don't go away on their own
+	- cause of the bug: since the newer Flutter, a `SnackBar` with an action persists until tapped (`persist` defaults to true with an action) — every Undo and the "Reconnect" one (which also had a 1-day duration); and snackbars queued behind each other
+	- `lib/ui/notice.dart`: `Notice.show` / `Notice.dismiss`, `NoticeHost` in `MaterialApp.builder`; every notice times out (`Notice.autoDuration`), a new one replaces the old, a held finger pauses, × closes; all 30 snackbar call sites moved (companion, DM panel, grid editor, shared library sheet — whose own `ScaffoldMessenger` is gone); `architecture.md` "notices"
+	- 603 tests green (7 new in `test/notice_test.dart`: closes by itself with and without a button, button runs + closes, ×, replace + stale id, pause while held, durations); not in a build yet, no device test
+
 ### 26-10-10 21:50 - 230ef3ba - Measure the TV: a fixed pivot for the ruler
 - Konrad: we couldn't tell which point stays put when the scale changes, so we couldn't lay the ruler there — assume a sensible pivot, and let us pick a corner or the centre
 	- before: the 10-inch bar sat centred on the window's square boundaries — every calibration change (and every change of the square count) slid its zero, the ruler had to be moved each time

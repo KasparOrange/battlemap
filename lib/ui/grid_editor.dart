@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 
 import '../model/grid_detect.dart';
 import '../model/raster_grid.dart';
+import 'notice.dart';
 import 'number_stepper.dart';
 
 // The DM panel's warm palette (dm_control_panel.dart / map_grid_dialog.dart).
@@ -317,7 +318,7 @@ class GridEditorPageState extends State<GridEditorPage> {
     final d = await detectGridInPicture(widget.pictureBytes);
     if (!mounted) return;
     if (d == null) {
-      _snack('No drawn grid found — fit it by hand.', color: Colors.orangeAccent);
+      _snack('No drawn grid found — fit it by hand.', kind: NoticeKind.warning);
       return;
     }
     _useDetected(d);
@@ -407,7 +408,7 @@ class GridEditorPageState extends State<GridEditorPage> {
         a: a, b: b, nx: _nx, ny: _ny, square: square, fallback: grid,
         partialEdges: partialEdges);
     if (g == null) {
-      _snack('Put the two corners at least one square apart.', color: Colors.orangeAccent);
+      _snack('Put the two corners at least one square apart.', kind: NoticeKind.warning);
       return;
     }
     setGrid(g);
@@ -426,7 +427,7 @@ class GridEditorPageState extends State<GridEditorPage> {
     final g = RasterGrid.fromLength(
         a: a, b: b, squares: _lenSquares, picture: _picture, partialEdges: partialEdges);
     if (g == null) {
-      _snack('Draw a longer line, or fewer squares.', color: Colors.orangeAccent);
+      _snack('Draw a longer line, or fewer squares.', kind: NoticeKind.warning);
       return;
     }
     setState(() => square = true);
@@ -608,7 +609,7 @@ class GridEditorPageState extends State<GridEditorPage> {
         final v = (t.pic.dy - t.grid.y) / t.grid.cellH;
         if (u.abs() < RasterGrid.minLeverage && v.abs() < RasterGrid.minLeverage) {
           _snack('Start the stretch on a line farther from the top-left corner.',
-              color: Colors.orangeAccent);
+              kind: NoticeKind.warning);
         }
       }
       setGrid(grid, undoFrom: t.grid); // the whole drag is one undo step
@@ -674,15 +675,8 @@ class GridEditorPageState extends State<GridEditorPage> {
 
   // ─── UI ─────────────────────────────────────────────────
 
-  void _snack(String text, {Color color = _gold}) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(text, style: TextStyle(color: color == _gold ? _bg : Colors.black)),
-        backgroundColor: color,
-        duration: const Duration(seconds: 3),
-      ));
-  }
+  void _snack(String text, {NoticeKind kind = NoticeKind.info}) =>
+      Notice.show(context, text, kind: kind);
 
   Future<void> _close() async {
     if (grid.closeTo(widget.initial, eps: 1e-6)) {

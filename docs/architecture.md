@@ -88,6 +88,28 @@ the TV has no touch, no keyboard, no usable remote. the phone controls everythin
 - map loading, fog painting, drawing, token placement
 - app updates
 
+the TV screen shows no chrome while all is well: the back arrow (top left) stays focusable for
+the remote but is drawn only for 5 s after a remote key press; the top-right badge appears only
+for a problem — companion not connected, relay connecting/unreachable, another TV took over, or
+a TV error (`tv.error`, shown 8 s). `tv_shell.dart` `_buildRelayStatus`.
+
+### notices (since 2026-10-10)
+
+every short message on the tablet ("Map deleted", "Whole map revealed · Undo", "Upload failed")
+is one component, `Notice.show` (`lib/ui/notice.dart`) — no Material `SnackBar` anywhere. a card
+floats centred near the bottom over every route (the `NoticeHost` sits in `MaterialApp.builder`,
+above the Navigator, so dialogs, sheets and the grid editor show it too): kind icon (info gold,
+warning orange, error red), the text, an optional button (Undo, Reconnect — runs and closes), a
+close ×, and a hairline along the bottom that shrinks to the middle while the time runs out.
+
+| rule | why |
+|---|---|
+| every notice closes by itself: info 3 s, warning 4 s, error 5 s, ≥ 6 s with a button, +1 s per 40 characters, cap 10 s | Material snackbars with an action stay open until tapped (Flutter's `persist` default) — the "they never go away" bug |
+| a new notice replaces the one on screen (cross-fade), no queue | snackbars queued, so a burst of taps left messages trickling in for half a minute |
+| a finger on the card pauses the countdown | time to read a long one |
+| `Notice.show` returns an id; `Notice.dismiss(context, id)` closes only that one | "Another phone took over the TV" closes when the relay reconnects without killing a newer Undo |
+| the × has no tooltip | the host sits above the Navigator's Overlay, which tooltips need |
+
 ## interaction modes
 
 single-finger gestures route to the active tool:
@@ -118,8 +140,8 @@ overview map with the players' window (tap/drag it), arrows that move the window
 (`DmControlPanel.sideLayoutFor`: wider than tall, shortest side ≥ 600 dp) it docks at the right
 edge instead: a 72 px tab rail with undo/redo at its foot, the tab content (320 px) unfolding to
 its left; the map takes the rest of the row. ≥ 44 px targets, 14 px text. Sliders (draw width,
-scale, layer opacity) preview locally and send on release. Bulk buttons (Reveal all, Hide all, Clear drawings)
-confirm with a snackbar that offers Undo (`vtt.undo`).
+layer opacity) preview locally and send on release. Bulk buttons (Reveal all, Hide all, Clear drawings)
+confirm with a notice that offers Undo (`vtt.undo`).
 
 **Full screen (Android, since 2026-10-10):** during a game the companion hides Android's status
 and navigation bars (sticky immersive, `SystemBars` in `lib/ui/system_bars.dart`); a swipe in
@@ -146,7 +168,7 @@ players"), and buttons — **place** (not on the map: arms it, `VttState.placing
 the tablet; the next tap on an empty square puts it there via `vtt.moveToken`; leaving the tab
 cancels) or **jump** (on the map: centres the tablet's own view on it, `VttGame.centerOnSquare`,
 the TV stays), **eye** (hide from the players / show, `vtt.setTokenHidden`: the TV leaves it out,
-the tablet draws it faded) and **delete** (one tap, snackbar with Undo).
+the tablet draws it faded) and **delete** (one tap, notice with Undo).
 
 **Fog tab:** Tool = Brush | Room | Circle (the interaction mode), Reveal | Hide, brush size
 (brush only) or radius in squares (circle only, − n +, 1–30, default 4), "Players see changes: Instantly | Preview first" (shadow mode; staged squares are
@@ -196,7 +218,7 @@ drag does not jump back. Saved per map (`Session.templateDisc`, a per-map key).
 
 **DM layers (since 2026-10-10):** the Layers tab adds any number of pictures (PNG/JPG/WebP, PDF
 page 1) that only the DM sees — a DM version of the map, notes, secrets. Each layer has an eye,
-an opacity slider, up/down and delete (undo snackbar); a master eye hides them all on this
+an opacity slider, up/down and delete (undo notice); a master eye hides them all on this
 device. Pictures go phone → VPS (`uploads/dm/`, kept); the list (`DmOverlay`, metadata only)
 lives in the TV's session and comes back in `vtt.fullState`. Only the phone's `VttGame` gets a
 `DmOverlayImages` cache (download, decode ≤ 4096 px while visible, free when hidden), so only

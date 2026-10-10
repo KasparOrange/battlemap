@@ -14,6 +14,7 @@ import '../model/template_disc.dart';
 import '../state/vtt_state.dart';
 import 'grid_editor.dart';
 import 'map_grid_dialog.dart';
+import 'notice.dart';
 import 'number_stepper.dart';
 import 'session_settings_dialog.dart';
 import 'template_disc_panel.dart';
@@ -2259,17 +2260,12 @@ class _DmControlPanelState extends State<DmControlPanel> {
   void _removeLayer(DmOverlay layer) {
     final removed = state.removeDmOverlay(layer.id);
     if (removed == null) return;
-    final messenger = ScaffoldMessenger.of(context);
-    messenger.hideCurrentSnackBar();
-    messenger.showSnackBar(SnackBar(
-      content: Text('Removed "${layer.name}"'),
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 4),
-      action: SnackBarAction(
-        label: 'Undo',
-        onPressed: () => state.insertDmOverlay(removed.index, removed.overlay),
-      ),
-    ));
+    Notice.show(
+      context,
+      'Removed "${layer.name}"',
+      actionLabel: 'Undo',
+      onAction: () => state.insertDmOverlay(removed.index, removed.overlay),
+    );
   }
 
   // ─── Settings Tab ────────────────────────────────────────

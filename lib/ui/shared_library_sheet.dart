@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../model/shared_map.dart';
 import '../network/shared_library.dart';
+import 'notice.dart';
 
 /// Uploads a map from this device into the shared library and returns its
 /// entry (`null` = cancelled or failed — the uploader shows why). Reports
@@ -36,19 +37,17 @@ Future<void> showSharedLibrarySheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
-    // Own messenger + scaffold: snackbars show on the sheet, not under it
+    // Notices float above every route (NoticeHost), the sheet included.
     builder: (context) => FractionallySizedBox(
       heightFactor: 0.85,
-      child: ScaffoldMessenger(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: _SharedLibrarySheet(
-            client: client,
-            openLabel: openLabel,
-            onOpen: onOpen,
-            onUpload: onUpload,
-            inGame: inGame,
-          ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: _SharedLibrarySheet(
+          client: client,
+          openLabel: openLabel,
+          onOpen: onOpen,
+          onUpload: onUpload,
+          inGame: inGame,
         ),
       ),
     ),
@@ -165,11 +164,7 @@ class _SharedLibrarySheetState extends State<_SharedLibrarySheet> {
   }
 
   void _snack(String msg, {bool error = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg),
-      backgroundColor: error ? Colors.redAccent : null,
-      duration: const Duration(seconds: 2),
-    ));
+    Notice.show(context, msg, kind: error ? NoticeKind.error : NoticeKind.info);
   }
 
   @override

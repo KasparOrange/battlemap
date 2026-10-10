@@ -37,6 +37,7 @@ import 'shared_library_sheet.dart';
 import '../storage/map_thumbnails.dart';
 import 'tv_overview_map.dart';
 import 'system_bars.dart';
+import 'notice.dart';
 
 /// Companion Mode screen — the DM's phone-based control surface.
 ///
@@ -232,28 +233,18 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     if (mounted) setState(() {});
   }
 
-  /// Shows a floating [SnackBar] with the given [msg].
-  ///
-  /// Optionally accepts a background [color] (defaults to `Colors.white24`).
-  void _showSnack(String msg, {Color? color}) {
+  /// Shows [msg] as a floating [Notice] of [kind] (info by default).
+  void _showSnack(String msg, {NoticeKind kind = NoticeKind.info}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: color ?? Colors.white24,
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-      ),
-    );
+    Notice.show(context, msg, kind: kind);
   }
 
   /// Confirms a one-tap bulk action (reveal all, hide all, clear drawings)
-  /// with a snackbar offering Undo.
+  /// with a [Notice] offering Undo.
   ///
   /// [changed] is whether the action did anything; [staged] whether it only
   /// staged fog in shadow mode (nothing reached the players, nothing to
-  /// undo — the snackbar points at the apply button). [onUndo] undoes the
+  /// undo — the notice points at the apply button). [onUndo] undoes the
   /// action (`vtt.undo` on the TV, or the local undo).
   ///
   /// See also: [_buildCallbacks], which wraps the panel's bulk buttons.
@@ -263,22 +254,16 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     required VoidCallback onUndo,
   }) {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(staged
-            ? '$done in the preview — apply it to show the players'
-            : changed
-                ? done
-                : 'Nothing changed'),
-        backgroundColor: Colors.white24,
-        duration: Duration(seconds: changed && !staged ? 5 : 2),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        action: changed && !staged
-            ? SnackBarAction(label: 'Undo', onPressed: onUndo)
-            : null,
-      ),
+    final undoable = changed && !staged;
+    Notice.show(
+      context,
+      staged
+          ? '$done in the preview — apply it to show the players'
+          : changed
+              ? done
+              : 'Nothing changed',
+      actionLabel: undoable ? 'Undo' : null,
+      onAction: undoable ? onUndo : null,
     );
   }
 
@@ -325,6 +310,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// ([VttRelayClient.onCommandDropped]); throttles it to one per 3 s.
   DateTime? _lastDropNotice;
 
+  /// The open "Another phone took over the TV" [Notice], closed again
+  /// once the relay connects.
+  int? _replacedNotice;
+
   /// The TV's most recent `vtt.fullState`, re-applied in [_onMapReady]
   /// because loading a map resets the state the TV already sent.
   Map<String, dynamic>? _lastFullState;
@@ -341,7 +330,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       }
       _lastDropNotice = now;
       _showSnack('Not connected to the TV — that wasn\'t sent',
-          color: Colors.orange.shade800);
+          kind: NoticeKind.warning);
     };
     _relay!.onStateSync = (msg) {
       _lastFullState = msg;
@@ -464,7 +453,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     // Rolling deploy: the TV saved its game and is about to restart.
     _relay!.onDeployReady = (_) {
       DevLog.add('Companion: TV is updating (deploy.ready)');
-      _showSnack('TV is updating — back in a few seconds', color: Colors.blueGrey);
+      _showSnack('TV is updating — back in a few seconds', kind: NoticeKind.info);
     };
     _relay!.onTvRendering = (active, label) {
       if (mounted) setState(() { _tvRendering = active; _tvRenderingLabel = label; });
@@ -476,13 +465,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       _clearMapSwitch();
       if (mounted) setState(() => _loadingSessionId = null);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('TV: $msg'),
-            backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        _showSnack('TV: $msg', kind: NoticeKind.error);
       }
     };
     _state.onBrushPaint = (indices) => _relay!.sendBrushReveal(indices);
@@ -520,13 +503,14 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       if (!mounted) return;
       setState(() => _relayState = s);
       if (s == RelayConnectionState.replaced) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('Another phone took over the TV'),
-          duration: const Duration(days: 1),
-          action: SnackBarAction(label: 'Reconnect', onPressed: _relay!.connect),
-        ));
-      } else {
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        _replacedNotice = Notice.show(context, 'Another phone took over the TV',
+            kind: NoticeKind.warning,
+            actionLabel: 'Reconnect',
+            onAction: _relay!.connect,
+            duration: const Duration(seconds: 10));
+      } else if (_replacedNotice != null) {
+        Notice.dismiss(context, _replacedNotice);
+        _replacedNotice = null;
       }
     });
     _relay!.connect();
@@ -653,9 +637,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         DevLog.add('Companion: map download failed');
         _clearMapSwitch();
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text("Couldn't download the TV's map — check the connection"),
-          ));
+          _showSnack("Couldn't download the TV's map — check the connection",
+              kind: NoticeKind.error);
         }
       }
     } catch (e) {
@@ -697,13 +680,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     if (bytes.isEmpty) {
       DevLog.add('Companion: file picker returned no data for "${file.name}"');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not read file. Try downloading it to your phone first, then pick from local storage.'),
-            backgroundColor: Colors.redAccent,
-            duration: Duration(seconds: 5),
-          ),
-        );
+        _showSnack(
+            'Could not read file. Try downloading it to your phone first, then pick from local storage.',
+            kind: NoticeKind.error);
       }
       return null;
     }
@@ -718,13 +697,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     if (!isPdf && !isImage && !isVtt) {
       DevLog.add('Companion: unsupported file type: ${file.name}');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unsupported file. Use .dd2vtt, .uvtt, .pdf, .png, .jpg, or .webp files.'),
-            backgroundColor: Colors.orangeAccent,
-            duration: Duration(seconds: 4),
-          ),
-        );
+        _showSnack('Unsupported file. Use .dd2vtt, .uvtt, .pdf, .png, .jpg, or .webp files.',
+            kind: NoticeKind.warning);
       }
       return null;
     }
@@ -740,7 +714,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       final rendered = await PdfHelper.renderPdfPage(bytes);
       if (rendered == null) {
         DevLog.add('Companion: PDF render failed for "${file.name}"');
-        _showSnack('Could not render this PDF', color: Colors.redAccent);
+        _showSnack('Could not render this PDF', kind: NoticeKind.error);
         return null;
       }
       uploadBytes = rendered['imageBytes'] as Uint8List;
@@ -861,7 +835,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     );
     if (shared == null) {
       DevLog.add('Companion: shared library upload failed');
-      _showSnack('Upload failed', color: Colors.redAccent);
+      _showSnack('Upload failed', kind: NoticeKind.error);
       return null;
     }
     _lastUpload = (path: shared.url, bytes: picked.bytes);
@@ -1091,7 +1065,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     } else {
       _showSnack(
         '${added > 0 ? '$added added, ' : ''}${skipped.length} skipped: ${skipped.join(', ')}',
-        color: Colors.orangeAccent,
+        kind: NoticeKind.warning,
       );
     }
   }
@@ -1227,7 +1201,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         },
         onMatchTv: () {
           if (_game.tvCamera == null) {
-            _showSnack("The TV hasn't sent its view yet", color: Colors.orangeAccent);
+            _showSnack("The TV hasn't sent its view yet", kind: NoticeKind.warning);
             return;
           }
           _game.matchTvCamera();
