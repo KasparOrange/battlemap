@@ -20,7 +20,7 @@ client (player tablet, button-only remote) on the JSON relay protocol.
 
 0. **Konrad looked at the result (2026-09-06, after deploy 1.1.5+15) and saw problems he
    will fix in the next session** — he did not list them; ask first, then fix from code.
-1. **Device test** (Konrad, phone + TV): walk the six tabs once. Specifically check
+1. **Device test** (Konrad, phone + TV): walk the tabs once. Specifically check
    - pinch/two-finger pan on the phone never paints fog; the dashed TV frame is where the TV
      looks; "TV follows the tablet" moves the TV live; "Jump to TV" jumps the tablet to it
    - undo/redo buttons light up after a fog stroke made from the phone
@@ -56,9 +56,9 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
 - **Bench robot (2026-10-10)**: `tools/bench_bot.py run --stress` plays the whole game night,
   59/59 green; it and the UX review found 11 bugs, all fixed (`archive.md` 26-10-10). Run it after
   every TV-side change; `bench_bot.py prep` leaves a tabletop game to play with by hand.
-- **Needs deploying** (Konrad: not now — first refine on the bench): all 2026-10-10 fixes exist only
-  in the debug build on the emulators. Deploy = restart the VPS relay with the new
-  `tools/vtt_relay.py` (`replaced` message, `bot` role), bump the version, build the release APK.
+- **Deployed 2026-10-10 evening** (see "deploy state"): VPS relay on current main (`replaced`,
+  `bot` role), threaded dev server, release APKs on the box and the tablet. Later fixes reach the
+  devices with `tools/deploy.sh` (rolling deploy).
 - Device test (next 1) can now run on the bench first: TV emulator + tablet emulator, following
   `test-session.md` (scripted game night with 10 real maps, incl. a 30 MB stress map).
 - **Big maps**: confirmed on the bench (castle showed an empty screen), fixed — map pictures are
@@ -91,10 +91,11 @@ undo, master eye; reopen the app → layers come back; the TV never shows them.
 
 ## rolling deploy (2026-10-10) — first real run pending
 
-`tools/deploy.sh` (`setup.md` "rolling deploy"). The box's 1.1.6+16 predates the restore code,
-so the first run restores through the relay (session from `diag.status`, route
-`/restore?session=…`); from then on `deploy.prepare` + the snapshot work too. The same deploy
-ships the takeover fix (a companion replacing another got no map).
+`tools/deploy.sh [tv] [tablet] [web]` (`setup.md` "rolling deploy"). **Ask Konrad before a run
+that restarts the TV while he plays.** The box's 1.1.6+16 predates the restore code, so the first
+run restores through the relay (session from `diag.status`, route `/restore?session=…`); from
+then on `deploy.prepare` + the snapshot work too. The same deploy ships the takeover fix (a
+companion replacing another got no map — until then: `tools/tv_ctl.py resume MAP SESSION`).
 
 
 `lib/network/vtt_server.dart` + `vtt_server_stub.dart` are the original pre-relay design:

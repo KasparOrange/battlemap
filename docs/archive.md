@@ -6,6 +6,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 18:59 - docs sweep: DM layers + rolling deploy
+- README: DM layers in "How it works", `DmOverlay` / `DeployRestore` in the tables, "Live deploy to the real box and tablet"; CLAUDE.md tracker: duplicate #42 → polish #43, rolling deploy #44 (first real run pending, ask Konrad first); action.md: stale "needs deploying" and "six tabs" fixed; setup.md: an old relay can survive SIGTERM holding live sockets → check `pgrep`, `kill -9`
+
 ### 26-10-10 18:52 - beb74b6e - Juri's dungeon on the table, image maps keep their grid on the companion (1.1.8+18)
 - Konrad: replace the test map in the open game with Juri's map (labels removed by Nano Banana), on the TV and the tablet, with the overlay as a DM layer to show or hide
 	- map + overlays warped onto an exact 25 × 24 grid of 52 px (the photo's grid drifts 51–52 px) → `ai-art.md` "On the table"

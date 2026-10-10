@@ -15,7 +15,9 @@ The same APK runs in two modes:
   VPS WebSocket relay and waits for a companion phone to pair.
 - **Companion Mode** -- the DM's Android tablet or phone (same APK; the web
   build in a browser is a fallback) connects to the same relay. All map loading,
-  fog reveal, door toggling, measuring, drawing, and camera control happens here.
+  fog reveal, door toggling, measuring, drawing, and camera control happens here —
+  plus **DM layers**: any number of pictures (a DM version of the map, notes, secrets)
+  laid over the map on the DM's screen only; the TV never shows them.
 
 The phone sends commands; the TV renders. Both communicate through a
 lightweight Python WebSocket relay running on a VPS.
@@ -37,12 +39,13 @@ lightweight Python WebSocket relay running on a VPS.
 
 | Component | File | Role |
 |-----------|------|------|
-| [VttGame] | `lib/game/vtt_game.dart` | Flame engine game -- renders map image, grid, fog of war, walls, portals, tokens, and drawing strokes. Routes single-finger input to the active tool; two-finger gestures control the camera. |
+| [VttGame] | `lib/game/vtt_game.dart` | Flame engine game -- renders map image, grid, fog of war, walls, portals, tokens, and drawing strokes; on the DM's device also the DM layers (only a game given [DmOverlayImages] can draw them). Routes single-finger input to the active tool; two-finger gestures control the camera. |
 | [VttState] | `lib/state/vtt_state.dart` | Central game state (ChangeNotifier) -- fog cells, portal states, tokens, strokes, calibration, interaction mode. Serializes to JSON for relay sync. |
 | [TvShell] | `lib/ui/tv_shell.dart` | TV entry point -- manages relay connection, map library, sessions, and view navigation. All interaction arrives via relay commands from the phone. |
 | [VttCompanionScreen] | `lib/ui/vtt_companion_screen.dart` | Phone DM controller -- file picker, DM control panel, local VttGame mirror. Sends commands to TV through the relay. |
 | [VttRelayClient] | `lib/network/vtt_relay_client.dart` | WebSocket client (web_socket_channel) -- works on both web and native. Handles registration, pairing, command/state forwarding, and chunked map transfers. |
 | [MapLibrary] | `lib/storage/map_library.dart` | Persistent on-device storage for .dd2vtt map files and saved sessions. Native-only (stubbed on web). |
+| [DeployRestore] | `lib/update/deploy_restore.dart` | Rolling deploy: launch routes `/restore` (TV reopens its game) and `/companion`, plus the TV's restore snapshot. |
 
 ### Data Model
 
@@ -51,7 +54,8 @@ lightweight Python WebSocket relay running on a VPS.
 | [UvttMap] | `lib/model/uvtt_map.dart` | Parsed Universal VTT map -- resolution, walls, portals, lights, environment, and the embedded map image. |
 | [UvttParser] | `lib/model/uvtt_parser.dart` | Decodes `.dd2vtt` / `.uvtt` JSON files into [UvttMap] instances. |
 | [MapLibraryEntry] | `lib/model/map_library_entry.dart` | Metadata for a map stored in the TV's local library (grid size, file size, thumbnail path). |
-| [Session] | `lib/model/session.dart` | A saved gameplay session -- references a map and captures the full DM state snapshot (fog, portals, tokens, camera). |
+| [Session] | `lib/model/session.dart` | A saved gameplay session -- references a map and captures the full DM state snapshot (fog, portals, tokens, camera, DM layer list). |
+| [DmOverlay] | `lib/model/dm_overlay.dart` | One DM-only picture layer (VPS url, visible, opacity); the TV stores the list, only the companion draws it. |
 | [MapToken] | `lib/model/map_token.dart` | A single token on the grid (position, color, label). JSON-serializable. |
 | [DrawStroke] | `lib/model/draw_stroke.dart` | A freehand drawing stroke (list of points, color, width). JSON-serializable. |
 
@@ -85,6 +89,17 @@ adb install -r build/app/outputs/flutter-apk/app-release.apk
 Bump the `version` field in `pubspec.yaml` before each release (increment the
 `+N` version code so Android recognises the upgrade).
 
+### Live deploy to the real box and tablet (rolling, mid-game)
+
+```bash
+tools/deploy.sh            # tv + tablet + web; tv / tablet / web alone, --here = working tree
+```
+
+Builds while the old app keeps running, has the TV save its game, installs over the Wi-Fi
+(latrine's `android` adapter, data kept) and relaunches straight back into the same game; the
+tablet reopens in Companion Mode. The table pauses for about 15 s. Details: `docs/setup.md`
+"rolling deploy".
+
 ### Apple TV (development only)
 
 ```bash
@@ -112,7 +127,7 @@ TV over the relay and checks both its state and its actual picture. Details: `do
 
 ```bash
 python3 tools/vtt_relay.py     # port 9090 — WebSocket hub between TV and phone
-python3 tools/dev_server.py    # port 4242 — web build, APK, map uploads
+python3 tools/dev_server.py    # port 4242 — web build, APK, map uploads (DM layer pictures kept)
 ```
 
 The relay listens for WebSocket connections from both the TV and the companion
