@@ -4,7 +4,7 @@
     32,
     18
   ],
-  "setting": "the ground floor of a ruined border keep",
+  "setting": "the ground floor of an old border keep",
   "areas": [
     {
       "id": "great hall",
@@ -47,7 +47,7 @@
       "desc": "weapon racks, a broken armor stand"
     },
     {
-      "id": "courtyard ruin",
+      "id": "courtyard",
       "kind": "rubble",
       "rect": [
         20,
@@ -55,7 +55,8 @@
         10,
         8
       ],
-      "desc": "collapsed section open to the sky, fallen masonry, weeds pushing through"
+      "desc": "rubble-strewn courtyard, fallen masonry blocks, weeds pushing through the flagstones",
+      "ruined": true
     },
     {
       "id": "barracks",

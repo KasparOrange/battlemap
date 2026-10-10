@@ -103,6 +103,10 @@ prepaid €20, no auto-refill — a temporary home: Konrad's own account (ko) ha
   of a cell on that shared edge.
 - `kind`: `floor` (default), `water`, `rubble`, `vegetation`, `solid` (pillars, rock).
   `"outdoor": true` makes uncovered cells open ground instead of rock.
+- `"ruined": true` on an area: its prompt line gets "ruined inside only … its walls stand
+  complete and unbroken". Damage goes here, never into `desc`/`setting`: words like
+  "collapsed", "ruined", "breach", "hole" made the model open walls (run 1). `mapgen.py` lints
+  the texts for such words and warns (also stored in `meta.json` → `lint`).
 
 **First results (prompt v0, 1K):** both sample maps keep our geometry almost exactly — walls,
 doors, the flooded corner, the corridor all land on the layout (overlay check by eye). The
@@ -113,8 +117,15 @@ Thinking `high` adds ~2.4k thought tokens (billed as text output, a fraction of 
 **Run 2 — doorways (2026-10-10, 4 images at 1K, ~14 cents):** guide without red bars,
 prompt "open doorways, no doors": all four paintings show empty openings, no red, no
 side-on doors. Battlemap's drawn doors sit cleanly in the wall line (board, zone "run 2").
-Still open: ruin text breaks the courtyard walls (step 2); one keep draw painted the guide's
-black rock gap and walls as flat black bars.
+Still open: ruin text breaks the courtyard walls (step 2 → run 3); one keep draw painted the
+guide's black rock gap and walls as flat black bars.
+
+**Run 3 — ruins in the layout (2026-10-10, keep × 3 at 1K, ~10 cents):** courtyard marked
+`"ruined": true`, no ruin words in any text, prompt rule "every wall stays whole". All three
+keep every courtyard wall (run 1: broken in both draws). New failure in one draw: an invented
+exit through the south wall to the map edge — and that draw had the best QA score. Image 2 is
+packed as the test map (`out/keep/261010-173421-ruined/keep.dd2vtt`), with a grid preview
+(`mapgen.py doors … --grid`). Another draw shows the yellow light dot as is.
 
 **Doors are battlemap's** (since run 2): the guide leaves a doorway as a gap, the `.dd2vtt`
 carries `"battlemap": {"draw_doors": true}` (other VTTs ignore it), and battlemap's
@@ -138,8 +149,10 @@ device).
 the budget (prepaid €20 on Bao's account, ≈ $0.30 used by 2026-10-10 — AI Studio → Ausgaben,
 signed in as nico.zingerle). Every new image goes onto the board (rule above).
 
-**Where it stands (2026-10-10, end of the second session):** step 1 is done (run 2 on the
-board); ≈ $0.45 of the €20 used. Next is step 2, ruins in the layout.
+**Where it stands (2026-10-10, end of the second session):** steps 1 and 2 are done (runs 2
+and 3 on the board); ≈ $0.55 of the €20 used. Test map for the table: the run-3 keep
+(`out/keep/261010-173421-ruined/keep.dd2vtt`, grid preview `doors_2_grid.jpg`). Next is
+step 3, the judge — first the free script check for openings we didn't ask for.
 
 **Findings from run 1 that set the order** (Konrad, 2026-10-10):
 
@@ -157,10 +170,11 @@ board); ≈ $0.45 of the €20 used. Next is step 2, ruins in the layout.
    on toggle — this is also the "door animations" idea in `feature-ideas.md`. One sprite per
    style (Nano Banana once, or drawn in code). Needs a battlemap feature (opt-in, tests), so
    it follows the project's one-feature-at-a-time rule.
-2. **Ruins in the layout**, not in free text: an area flag (e.g. `"ruined": true`) that the
+2. ✅ **Done 2026-10-10 (run 3).** **Ruins in the layout**, not in free text: an area flag (e.g. `"ruined": true`) that the
    prompt turns into "damage inside the room, every wall stays standing".
-3. **Judge.** Script checks in `mapgen.py` (free): red / marker pixels left in door bands,
-   painted-wall overlap with our wall lines. Model judge = a **Claude helper session** on the
+3. **Judge.** Script checks in `mapgen.py` (free): marker pixels left (red, yellow light dots),
+   painted-wall overlap with our wall lines, and **openings we didn't ask for** (run 3: an exit
+   painted through a wall — the check that matters most now). Model judge = a **Claude helper session** on the
    subscription (`claude-bridge headless new --cwd ~/code/battlemap`, never `claude -p`): reads
    `guide.png`, `out_N.jpg`, `overlay_N.jpg` and writes `judge_N.json`
    `{walls_kept, doorways_clean, grid_or_text, style_ok, issues: [{x, y, what, severity}]}`

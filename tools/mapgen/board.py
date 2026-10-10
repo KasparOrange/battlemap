@@ -76,6 +76,7 @@ CRYPT_HIGH = OUT / "crypt/261010-163623-high"
 KEEP_RUN = OUT / "keep/261010-163503-v0"
 CRYPT_DW = OUT / "crypt/261010-171713-doorways"
 KEEP_DW = OUT / "keep/261010-171818-doorways"
+KEEP_RU = OUT / "keep/261010-173421-ruined"
 
 # pin: (number, grid x, grid y, colour, title, text)
 PLATES = [
@@ -184,6 +185,31 @@ PLATES = [
          (1, 10.5, 13.5, RED, "Guide colours taken literally", "The rock gap between kitchen and barracks became a flat black bar, walls near-black."),
          (2, 6, 10.5, GREEN, "Kitchen doorway", "Open gap, door drawn on top."),
      ]},
+    # run 3: the courtyard marked "ruined": true in the layout, no ruin words in the text
+    {"id": "r_keep2", "zone": "run3", "title": "KEEP · RUN 3 · IMAGE 2 · WITH GRID", "img": KEEP_RU / "doors_2_grid.jpg",
+     "name": "keep-ru-2-grid.jpg", "grid": KEEP_GRID, "width": 960,
+     "side": KEEP_RU / "doors_2.jpg", "side_label": "Without the grid",
+     "intro": "The test map: packed as keep.dd2vtt. Battlemap's grid on top (white) to check the fit; "
+              "doors drawn by battlemap.",
+     "pins": [
+         (1, 25, 12, GREEN, "Ruin inside, walls whole", "Rubble, broken flagstones and weeds — every courtyard wall stands."),
+         (2, 20, 12, GREEN, "Walls on grid lines", "The painted walls follow the grid squares, as the .dd2vtt expects."),
+     ]},
+    {"id": "r_keep1", "zone": "run3", "title": "KEEP · RUN 3 · IMAGE 1", "img": KEEP_RU / "doors_1.jpg",
+     "name": "keep-ru-1.jpg", "grid": KEEP_GRID, "width": 960, "overlay": KEEP_RU / "overlay_1.jpg",
+     "intro": "31 s. Highest QA score of the three (1.11) — and the only one with a new opening: "
+              "the score still can't rank.",
+     "pins": [
+         (1, 24.7, 16.6, RED, "Invented exit", "A path through the south wall to the map edge — not in the layout. A new failure, not ruin text."),
+         (2, 25, 12, GREEN, "Courtyard walls stand", "The ruin stays inside."),
+     ]},
+    {"id": "r_keep3", "zone": "run3", "title": "KEEP · RUN 3 · IMAGE 3", "img": KEEP_RU / "doors_3.jpg",
+     "name": "keep-ru-3.jpg", "grid": KEEP_GRID, "width": 960, "overlay": KEEP_RU / "overlay_3.jpg",
+     "intro": "20 s. Walls whole everywhere.",
+     "pins": [
+         (1, 25, 12, GREEN, "Ruin inside, walls whole", "Cracked floor and fallen blocks, no gaps."),
+         (2, 8, 2.3, AMBER, "Light marker leaks", "The yellow guide dot shows on the hearth instead of a brazier."),
+     ]},
 ]
 
 NEXT = [
@@ -193,7 +219,6 @@ NEXT = [
     ("Style references", "3 reference images in one style: do maps from different layouts look like one campaign?", BLUE),
     ("Variants, same walls", "Edit a final into night, burning, flooded — the geometry must not move.", BLUE),
     ("Outdoor map", "A forest clearing with a stream (\"outdoor\": true): no rock, open edges.", BLUE),
-    ("Text vs geometry", "\"Collapsed\" removed a wall. Find wording that keeps walls, or mark ruins in the layout itself.", AMBER),
 ]
 
 
@@ -266,7 +291,8 @@ def main():
         "**blue** planned · **grey** reference.\n\n"
         "**State 2026-10-10:** run 1 done (prompt v0, 1K, 6 images, ~20 cents). Geometry held; "
         "door markers leak red into the art. **Run 2** (right): doorways stay empty, battlemap "
-        "draws the doors — no red left. Next images are the blue slots at the bottom.\n\n"
+        "draws the doors — no red left. **Run 3**: ruins marked in the layout keep their walls. "
+        "Next images are the blue slots at the bottom.\n\n"
         "Source: `battlemap/docs/ai-art.md` · rebuilt by `tools/mapgen/board.py`.")
     add("intro", "markdown", 0, 0, TEXT_W, md_h(intro), {"md": intro, "color": PURPLE})
 
@@ -298,11 +324,16 @@ def main():
                   GREEN, rx, lay["h"] + 352, [p for p in PLATES if p["zone"] == "run1"], 2)
 
     rx2 = rx + max(lay["w"], run["w"]) + 352
-    zone_of("run2", "RUN 2 · DOORWAYS · 1K",
+    r2 = zone_of("run2", "RUN 2 · DOORWAYS · 1K",
             "Doors are no longer painted: the guide leaves a gap, the prompt asks for empty doorways, "
             "and battlemap draws a top-down door that swings open on the phone's tap. Shown here "
             "with the doors drawn on the way the TV draws them.",
             GREEN, rx2, 0, [p for p in PLATES if p["zone"] == "run2"], 2)
+    zone_of("run3", "RUN 3 · RUINS IN THE LAYOUT · 1K",
+            "The courtyard is marked \"ruined\": true in the layout; the text has no ruin words and the "
+            "prompt says every wall stays whole. Run 1 broke the courtyard walls in both draws; now "
+            "all three keep them. One draw invented an exit instead.",
+            GREEN, rx2, r2["h"] + 352, [p for p in PLATES if p["zone"] == "run3"], 2)
 
     nz = add("next", "zone", 0, left_h + 352, 100, 100, {"title": "NEXT IMAGES", "color": BLUE, "titleSize": 64})
     add("next_sum", "markdown", PAD, 150, CARD_W * 2 + 32, 130,
@@ -320,6 +351,7 @@ def main():
     ED.append({"id": "e_lay_run", "from": "layouts", "to": "run1", "label": "painted into"})
     ED.append({"id": "e_run_next", "from": "run1", "to": "next", "label": "leads to"})
     ED.append({"id": "e_run1_run2", "from": "run1", "to": "run2", "label": "doors fixed in"})
+    ED.append({"id": "e_run2_run3", "from": "run2", "to": "run3", "label": "ruins fixed in"})
 
     for i, e in enumerate(ED):  # a PUT stores edges as sent; the app needs id + props on each
         e.setdefault("id", f"e{i}")

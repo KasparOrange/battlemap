@@ -4,7 +4,9 @@ Setting: {setting}.
 
 Repaint the attached layout guide (the first image) as a finished map. The guide is exact:
 keep every wall, doorway, room and corridor at exactly the same position and size. Do not
-add, move or remove walls or openings. Fill the whole frame edge to edge.
+add, move or remove walls or openings. Every wall stays whole: no gaps, holes, breaches or
+collapsed sections anywhere except the doorways in the guide, also in ruined or damaged
+areas, where the damage stays inside the room. Fill the whole frame edge to edge.
 
 Guide legend: black = solid rock outside the map, render as dark textured stone;
 dark grey bands = walls; mid grey = floor; a gap in a wall = an open doorway: paint

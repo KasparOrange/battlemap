@@ -12,7 +12,7 @@ Usage:
   tools/mapgen/mapgen.py guide  layouts/crypt.json            # guide PNG only, free
   tools/mapgen/mapgen.py paint  layouts/crypt.json --size 1K --n 2
   tools/mapgen/mapgen.py pack   layouts/crypt.json out/crypt/<run>/out_1.jpg
-  tools/mapgen/mapgen.py doors  layouts/crypt.json out/crypt/<run>/out_1.jpg [--open]
+  tools/mapgen/mapgen.py doors  layouts/crypt.json out/crypt/<run>/out_1.jpg [--open] [--grid]
 
 Options for paint: --size 1K|2K|4K, --n N, --thinking minimal|medium|high,
 --refs img... (style references), --prompt file (template), --pack (pack the best).
@@ -27,6 +27,7 @@ import io
 import json
 import math
 import os
+import re
 import subprocess
 import sys
 import time
@@ -62,6 +63,12 @@ WALKABLE = {"floor", "water", "rubble", "vegetation"}
 GUIDE_LONG_SIDE = 1024
 WALL_THICKNESS = 0.25  # squares
 
+# What an area with "ruined": true adds to its prompt line: decay inside, walls whole.
+RUINED = ("ruined inside only: cracked and sunken floor, fallen stones and rubble lying on the floor, "
+          "weeds in the cracks; its walls stand complete and unbroken")
+# Free-text words that made the model open walls our .dd2vtt still has (run 1, keep).
+WALL_BREAKERS = re.compile(r"\b(collaps\w*|breach\w*|ruin\w*|crumbl\w*|cave[sd]?[- ]in|destroyed|holes?|gaps?)\b", re.I)
+
 
 # ---------------------------------------------------------------- layout
 
@@ -75,6 +82,15 @@ def load_spec(path):
     spec.setdefault("lights", [])
     spec.setdefault("props", [])
     return spec
+
+
+def lint(spec):
+    """Warnings for free text that tends to make the model break walls; damage belongs in "ruined"."""
+    texts = [("setting", spec.get("setting", ""))]
+    texts += [(a.get("id", a.get("kind", "area")), a.get("desc", "")) for a in spec["areas"]]
+    texts += [("prop", p.get("desc", "")) for p in spec["props"]]
+    return [f'{where}: "{m.group(0)}" tends to open walls — describe the room plainly, set "ruined": true'
+            for where, text in texts for m in WALL_BREAKERS.finditer(text)]
 
 
 def cells(spec):
@@ -201,8 +217,9 @@ def squares(rect):
 def build_prompt(spec, template):
     """Fills the prompt template with grid size, style and per-area / per-prop text."""
     cols, rows = spec["grid"]
-    lines = [f"- {a.get('id', a.get('kind', 'area'))} ({squares(a['rect'])}): {a['desc']}"
-             for a in spec["areas"] if a.get("desc")]
+    lines = [f"- {a.get('id', a.get('kind', 'area'))} ({squares(a['rect'])}): "
+             + "; ".join(t for t in (a.get("desc"), RUINED if a.get("ruined") else None) if t)
+             for a in spec["areas"] if a.get("desc") or a.get("ruined")]
     lines += [f"- prop ({squares(p['rect'])}): {p['desc']}" for p in spec["props"]]
     return template.format(
         cols=cols, rows=rows,
@@ -317,15 +334,18 @@ def qa(spec, guide, out_img):
     return score, overlay
 
 
-def door_preview(spec, out_img, size, open_=False):
-    """The painting with doors drawn the way battlemap draws them (PortalComponent).
+def door_preview(spec, out_img, open_=False, grid=False):
+    """The painting as the TV shows it: resampled to exact squares (as `pack` does) with
+    doors drawn the way battlemap draws them (PortalComponent), optionally a grid on top.
 
     Same geometry and colours as lib/game/components/portal_component.dart: a wooden
     leaf 0.14 squares thick hinged at bounds[0], two iron straps, a south-east shadow;
     open = turned 85° toward the south / east side of the wall. Keep the two in step.
+    The grid is battlemap's grid overlay (white lines), drawn stronger to check the fit.
     """
-    img = out_img.convert("RGB").resize(size, Image.LANCZOS)
-    s = size[0] / spec["grid"][0]
+    cols, rows = spec["grid"]
+    s = max(50, out_img.width // cols)
+    img = out_img.convert("RGB").resize((cols * s, rows * s), Image.LANCZOS)
     d = ImageDraw.Draw(img, "RGBA")
 
     def poly(hx, hy, ang, x0, x1, y0, y1, off=0.0):
@@ -346,6 +366,12 @@ def door_preview(spec, out_img, size, open_=False):
             m, w = length * at, 0.025 * s
             d.polygon(poly(hx, hy, ang, m - w, m + w, -t / 2 - 0.01 * s, t / 2 + 0.01 * s),
                       fill=(0x3A, 0x3A, 0x3C))
+    if grid:
+        lw = max(1, round(s / 40))
+        for x in range(cols + 1):
+            d.line([(x * s, 0), (x * s, rows * s)], fill=(255, 255, 255, 110), width=lw)
+        for y in range(rows + 1):
+            d.line([(0, y * s), (cols * s, y * s)], fill=(255, 255, 255, 110), width=lw)
     return img
 
 
@@ -422,10 +448,14 @@ def main():
     k.add_argument("--ppg", type=int); k.add_argument("--png", action="store_true")
     o = sub.add_parser("doors", help="the painting with battlemap's doors drawn on (preview)")
     o.add_argument("spec"); o.add_argument("image"); o.add_argument("--open", action="store_true")
+    o.add_argument("--grid", action="store_true", help="battlemap's grid on top, to check the fit")
     a = ap.parse_args()
 
     spec = load_spec(a.spec)
     name = spec["name"]
+    warnings = lint(spec)
+    for w in warnings:
+        print(f"lint: {w}", file=sys.stderr)
     if a.cmd == "guide":
         (OUT / name).mkdir(parents=True, exist_ok=True)
         path = OUT / name / "guide.png"
@@ -434,8 +464,8 @@ def main():
     elif a.cmd == "doors":
         img = Image.open(a.image)
         path = Path(a.image).with_name(Path(a.image).stem.replace("out_", "doors_")
-                                       + ("_open" if a.open else "") + ".jpg")
-        door_preview(spec, img, img.size, a.open).save(path, quality=88)
+                                       + ("_open" if a.open else "") + ("_grid" if a.grid else "") + ".jpg")
+        door_preview(spec, img, a.open, a.grid).save(path, quality=90)
         print(path)
     elif a.cmd == "pack":
         pack(spec, a.image, OUT / name / f"{name}.dd2vtt", a.ppg, "PNG" if a.png else "WEBP")
@@ -458,14 +488,14 @@ def main():
             out_img = Image.open(path)
             score, overlay = qa(spec, guide, out_img)
             overlay.save(run / f"overlay_{i}.jpg", quality=85)
-            door_preview(spec, out_img, out_img.size).save(run / f"doors_{i}.jpg", quality=88)
+            door_preview(spec, out_img).save(run / f"doors_{i}.jpg", quality=88)
             results.append({"file": path.name, "qa": round(score, 3), "size": out_img.size,
                             "seconds": round(time.time() - t0, 1), "usage": usage})
             print(f"{path}  {out_img.size[0]}×{out_img.size[1]}  qa {score:.2f}  {time.time() - t0:.0f}s")
         cost = PRICE[a.size] * a.n
         (run / "meta.json").write_text(json.dumps({
             "model": MODEL, "size": a.size, "aspect": aspect, "thinking": a.thinking, "refs": a.refs,
-            "prompt_template": a.prompt, "est_cost_usd": round(cost, 4), "results": results}, indent=2))
+            "prompt_template": a.prompt, "lint": warnings, "est_cost_usd": round(cost, 4), "results": results}, indent=2))
         print(f"run {run}  est. ${cost:.2f}")
         if a.pack:
             best = max(results, key=lambda r: r["qa"])

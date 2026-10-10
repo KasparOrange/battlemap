@@ -12,6 +12,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- **fog**: TV fog fully opaque (players saw the dungeon through 90 % fog), phone fog 70 % so the DM reads the layout; atmospheric mode's deep fog opaque on the TV (`FogOfWarComponent.forPlayers`)
 	- UX click-through of the companion handed to a helper agent; findings → `action.md`
 
+### 26-10-10 - ruins in the layout (ai art step 2) + grid preview
+- Konrad: "go" (step 2) → layout areas take `"ruined": true` (prompt: damage inside, walls whole), prompt rule "every wall stays whole", lint warns on wall-breaking words in texts (`meta.json` → `lint`); keep layout moved its ruin from text to the flag
+- run 3 (keep × 3, 1K, ~10 cents): all courtyard walls kept; one draw invented an exit through the south wall (and had the best QA score) → judge step now leads with an "unasked openings" check
+- Konrad: overlay a grid to test the map → `mapgen.py doors … --grid` (exact squares like `pack`, battlemap's doors + grid); image 2 packed as the test keep; board zone "run 3"
+
 ### 26-10-10 - drawn doors (ai art step 1)
 - Konrad: continue the AI map hand-off → step 1 done: doors are no longer painted
 	- mapgen: guide leaves doorways as gaps (no red bar), prompt asks for empty doorways, `pack` writes `"battlemap": {"draw_doors": true}` and hinges a double door's second leaf at its far end; new `doors` command / `doors_N.jpg` previews
