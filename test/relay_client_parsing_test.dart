@@ -246,6 +246,30 @@ void main() {
       expect(listing, isNotNull);
     });
 
+    test('lib.thumbnail is delivered to onThumbnail as PNG bytes', () {
+      String? id;
+      List<int>? png;
+      client.onThumbnail = (m, b) {
+        id = m;
+        png = b;
+      };
+      final received = capture({
+        'type': 'lib.thumbnail',
+        'mapId': 'm1',
+        'png': base64Encode([1, 2, 3]),
+      });
+      expect(received, isNull);
+      expect(id, 'm1');
+      expect(png, [1, 2, 3]);
+    });
+
+    test('a malformed lib.thumbnail is dropped', () {
+      var called = false;
+      client.onThumbnail = (_, _) => called = true;
+      capture({'type': 'lib.thumbnail', 'mapId': 'm1', 'png': '%%%'});
+      expect(called, isFalse);
+    });
+
     test('tv.error invokes onTvError with the message', () {
       String? err;
       client.onTvError = (m) => err = m;

@@ -26,6 +26,7 @@ import '../pdf_helper.dart';
 import '../model/aoe_template.dart';
 import '../state/vtt_state.dart';
 import '../storage/map_library.dart';
+import '../storage/map_thumbnails.dart';
 import '../update/update_service_stub.dart'
     if (dart.library.io) '../update/update_service.dart';
 import '../util/file_signatures.dart';
@@ -992,6 +993,63 @@ class _TvShellState extends State<TvShell> {
       }).toList(),
     };
     _relay.sendRaw(jsonEncode(listing));
+    unawaited(_makeMissingThumbnails());
+  }
+
+  /// Maps whose thumbnail could not be made — not retried until restart.
+  final Set<String> _thumbnailFailed = {};
+
+  /// Whether [_makeMissingThumbnails] is running (one pass at a time).
+  bool _thumbnailsRunning = false;
+
+  /// Makes the missing map thumbnails one by one ([MapThumbnails]), stores
+  /// them and sends each to the companion (`lib.thumbnail`) as it's ready.
+  ///
+  /// Runs only while the TV shows the library and stops when a game starts:
+  /// reading a big `.dd2vtt` costs memory the game needs on a 2 GB box.
+  /// PDF maps get none (they'd need rasterizing). Started after every
+  /// library listing; a pass already running is not doubled.
+  Future<void> _makeMissingThumbnails() async {
+    if (_thumbnailsRunning) return;
+    _thumbnailsRunning = true;
+    try {
+      for (final entry in List.of(_library.entries)) {
+        if (!mounted || _currentView != TvView.library) break;
+        if (entry.isPdf ||
+            _thumbnailFailed.contains(entry.id) ||
+            _library.hasThumbnail(entry.id)) {
+          continue;
+        }
+        try {
+          final bytes = await _library.loadMapBytes(entry.id);
+          final picture =
+              await MapThumbnails.mapPicture(bytes, isImage: entry.isImage);
+          final png =
+              picture == null ? null : await MapThumbnails.encode(picture);
+          if (png == null) {
+            _thumbnailFailed.add(entry.id);
+            continue;
+          }
+          await _library.saveThumbnail(entry.id, png);
+          _sendThumbnail(entry.id, png);
+          _log('Thumbnail made for ${entry.displayName} (${png.length ~/ 1024} KB)');
+        } catch (e) {
+          _thumbnailFailed.add(entry.id);
+          _log('Thumbnail failed for ${entry.id}: $e');
+        }
+      }
+    } finally {
+      _thumbnailsRunning = false;
+    }
+  }
+
+  /// Sends the thumbnail [png] of map [mapId] to the companion.
+  void _sendThumbnail(String mapId, Uint8List png) {
+    _relay.sendRaw(jsonEncode({
+      'type': 'lib.thumbnail',
+      'mapId': mapId,
+      'png': base64Encode(png),
+    }));
   }
 
   // ─── Error reporting ────────────────────────────────────
@@ -1067,6 +1125,12 @@ class _TvShellState extends State<TvShell> {
         // Library
         case 'lib.requestList':
           _sendLibraryListing();
+
+        case 'lib.getThumbnail':
+          final mapId = msg['mapId'] as String;
+          _library.loadThumbnail(mapId).then((png) {
+            if (png != null) _sendThumbnail(mapId, png);
+          });
 
         case 'lib.deleteMap':
           final mapId = msg['mapId'] as String?;

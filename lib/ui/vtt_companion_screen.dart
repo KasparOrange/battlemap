@@ -24,6 +24,7 @@ import '../network/vtt_relay_client.dart';
 import '../state/vtt_state.dart';
 import 'dev_log.dart';
 import 'dm_control_panel.dart';
+import 'library_cards.dart';
 import 'session_settings_dialog.dart';
 
 /// Companion Mode screen — the DM's phone-based control surface.
@@ -92,6 +93,12 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   // Library data (received from TV)
   List<MapLibraryEntry> _maps = [];
   List<Session> _sessions = [];
+
+  /// Map thumbnails received from the TV (`lib.thumbnail`), by map id.
+  final Map<String, Uint8List> _thumbs = {};
+
+  /// Map ids whose thumbnail was already asked for (once per app run).
+  final Set<String> _thumbsAsked = {};
 
   // Update state
   Map<String, dynamic>? _updateInfo;
@@ -335,6 +342,16 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
             .map((e) => Session.fromJson(e as Map<String, dynamic>))
             .toList();
       });
+      // Ask for thumbnails the TV has; missing ones it pushes once made
+      for (final m in (listing['maps'] as List).cast<Map<String, dynamic>>()) {
+        final id = m['id'] as String?;
+        if (id == null || m['thumbnailAvailable'] != true) continue;
+        if (_thumbs.containsKey(id) || !_thumbsAsked.add(id)) continue;
+        _relay?.sendGetThumbnail(id);
+      }
+    };
+    _relay!.onThumbnail = (mapId, png) {
+      if (mounted) setState(() => _thumbs[mapId] = png);
     };
     _relay!.onUpdateVersionInfo = (info) {
       DevLog.add('Companion: update version info received');
@@ -1284,17 +1301,59 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                         style: TextStyle(color: Colors.white24, fontSize: 14),
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _maps.length,
-                      itemBuilder: (context, index) =>
-                          _buildMapListItem(_maps[index]),
-                    ),
+                  : Builder(builder: (context) {
+                      final last = _lastSession;
+                      final offset = last == null ? 0 : 1;
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _maps.length + offset,
+                        itemBuilder: (context, index) => index < offset
+                            ? Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _buildContinueCard(last!),
+                              )
+                            : _buildMapListItem(_maps[index - offset]),
+                      );
+                    }),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// The most recently played session whose map is still in the library,
+  /// or `null` — what the "continue" card offers.
+  Session? get _lastSession {
+    final mapIds = {for (final m in _maps) m.id};
+    Session? last;
+    for (final s in _sessions) {
+      if (!mapIds.contains(s.mapId)) continue;
+      if (last == null || s.lastModifiedAt.isAfter(last.lastModifiedAt)) last = s;
+    }
+    return last;
+  }
+
+  /// The library's top card: resume [session] with one tap.
+  Widget _buildContinueCard(Session session) {
+    final map = _maps.firstWhere((m) => m.id == session.mapId);
+    final loading = _loadingSessionId == session.id;
+    return ContinueSessionCard(
+      sessionName: session.name,
+      mapName: map.displayName,
+      ago: _timeAgo(session.lastModifiedAt),
+      thumbnail: _thumbs[map.id],
+      progress: loading ? (_transferProgress ?? 0.0) : null,
+      onTap: () => _resumeSession(session),
+    );
+  }
+
+  /// Resumes [session] on the TV (debounced; the row/card shows progress).
+  void _resumeSession(Session session) {
+    if (!_beginLoading()) return;
+    _showSnack('Loading session...');
+    if (mounted) setState(() => _loadingSessionId = session.id);
+    _relay?.sendGoToGame(session.mapId, sessionId: session.id);
   }
 
   Widget _buildMapListItem(MapLibraryEntry entry) {
@@ -1314,16 +1373,12 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
           // Map header — tap to start new session
           GestureDetector(
             onTap: () => _startNewSessionWithSettings(
-                entry.id, 'Session ${mapSessions.length + 1}'),
+                entry.id, defaultSessionName(mapSessions.length, DateTime.now())),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
               child: Row(
                 children: [
-                  Icon(
-                    entry.isPdf ? Icons.picture_as_pdf : Icons.map,
-                    color: entry.isPdf ? Colors.redAccent.withValues(alpha: 0.5) : Colors.white24,
-                    size: 24,
-                  ),
+                  MapThumb(bytes: _thumbs[entry.id], isPdf: entry.isPdf),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -1359,8 +1414,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                     icon: const Icon(Icons.play_circle_outline,
                         color: Colors.greenAccent, size: 24),
                     tooltip: 'New Session',
-                    onPressed: () => _startNewSessionWithSettings(
-                        entry.id, 'Session ${mapSessions.length + 1}'),
+                    onPressed: () => _startNewSessionWithSettings(entry.id,
+                        defaultSessionName(mapSessions.length, DateTime.now())),
                   ),
                   // Delete button
                   IconButton(
@@ -1395,12 +1450,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     final progress = isLoading ? (_transferProgress ?? 0.0) : 0.0;
 
     return GestureDetector(
-      onTap: () {
-        if (!_beginLoading()) return;
-        _showSnack('Loading session...');
-        if (mounted) setState(() => _loadingSessionId = session.id);
-        _relay?.sendGoToGame(session.mapId, sessionId: session.id);
-      },
+      onTap: () => _resumeSession(session),
       child: Container(
         margin: const EdgeInsets.only(top: 6),
         clipBehavior: Clip.antiAlias,

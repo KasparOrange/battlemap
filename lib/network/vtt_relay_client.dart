@@ -111,6 +111,11 @@ class VttRelayClient {
   /// saved sessions.
   void Function(Map<String, dynamic> listing)? onLibraryListing;
 
+  /// Called when a `lib.thumbnail` arrives (companion side): the PNG
+  /// thumbnail of library map [mapId], answering [sendGetThumbnail] or
+  /// pushed by the TV as soon as it has made a missing one.
+  void Function(String mapId, Uint8List png)? onThumbnail;
+
   /// Called when the TV instructs the companion to download a map via HTTP.
   ///
   /// The [url] points to the map file on the VPS dev server, and
@@ -358,6 +363,14 @@ class VttRelayClient {
 
         case 'lib.listing':
           onLibraryListing?.call(msg);
+
+        case 'lib.thumbnail':
+          try {
+            onThumbnail?.call(
+                msg['mapId'] as String, base64Decode(msg['png'] as String));
+          } catch (e) {
+            debugPrint('VTT relay: bad thumbnail: $e');
+          }
 
         case 'update.versionInfo':
           onUpdateVersionInfo?.call(msg);
@@ -805,6 +818,11 @@ class VttRelayClient {
   /// Deletes the map identified by [mapId] from the TV's local library.
   void sendDeleteMap(String mapId) =>
       _send({'type': 'lib.deleteMap', 'mapId': mapId});
+
+  /// Asks the TV for the thumbnail of library map [mapId]; the answer is a
+  /// `lib.thumbnail` ([onThumbnail]). The TV ignores maps without one.
+  void sendGetThumbnail(String mapId) =>
+      _send({'type': 'lib.getThumbnail', 'mapId': mapId});
 
   /// Deletes the saved session identified by [sessionId] from the TV.
   void sendDeleteSession(String sessionId) =>
