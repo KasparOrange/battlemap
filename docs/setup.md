@@ -109,6 +109,21 @@ from the companion app: tap the update icon in the library header → check for 
 
 or manually: open `http://<VPS_IP>:4242/battlemap.apk` in the TV browser.
 
+or from the Mac over the Wi-Fi (wireless debugging on the box, paired with this Mac once): a
+session's own adb can't reach LAN devices (macOS Local Network privacy), latrine's `android`
+adapter can. The Mac's `~/.android/debug.keystore` is the key the box's app is signed with
+(checked 2026-10-10), so `install -r` keeps the TV's library and sessions:
+
+```bash
+. ~/.config/mwlog/battlemap.env
+$F build apk --release --dart-define=MWLOG_AUTH=$MWLOG_USER:$MWLOG_PASS   # default relay = VPS
+latrine android install build/app/outputs/flutter-apk/app-release.apk --device xiaomi
+latrine android app battlemap start --device xiaomi
+```
+
+While another session works in this checkout, build in a throwaway `git worktree` so the two
+builds don't share `build/` and Gradle locks.
+
 ## testing
 
 ```bash

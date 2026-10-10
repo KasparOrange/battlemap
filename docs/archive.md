@@ -6,6 +6,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 17:58 - 93f94292 - TV app 1.1.5+15 on the Xiaomi box from the Mac
+- Konrad: "deploy the current version of the TV app to the TV that is connected via wireless debugging" → release APK of `34d7c92` (VPS relay, MwLog on), built in a temporary worktree, `install -r` over 1.1.1+11; app started (mode selector)
+	- the box's app is signed with the Mac's debug key (same SHA-256), so the update kept its data
+	- a session's adb can't reach the box (Local Network privacy) → latrine got an `android` adapter for that; `docs/setup.md` "TV update" has the Mac route
+
 ### 26-10-10 - battlemap play-around prep + tablet map download
 - Konrad: "play around, realistic scenario, refine UI/UX" → `bench_bot.py prep` leaves a game in progress (tavern, 4 named heroes + 2 NPCs with HP, common room revealed)
 	- **the native companion could not download maps**: `httpDownloadWeb` in `http_upload_stub.dart` (the non-web side) returned `null` always — the Android tablet kept showing an old map. Now delegates to dart:io `httpDownload`; a failed download shows a snackbar
