@@ -15,11 +15,12 @@ Two places, one repo on GitHub (`main`), **the VPS is primary**:
 | where | when | what |
 |---|---|---|
 | **VPS** (`ssh kaspar@72.62.88.197`, mosh from the phone) | outside, on the phone with Claude Code | phone companion (web build, served by dev_server, visible on the phone right away), APK builds, Shorebird, relay/servers |
-| **Mac** (`~/code/battlemap`) | at home | Apple TV dev target via flutter-tvos (needs macOS + Xcode — `docs/apple-tv-dev.md`), everything else too |
+| **Mac** (`~/code/battlemap`) | at home | **Android bench** (Google TV + tablet emulators, below — the main local setup since 2026-10-10, the targets are Android TV/Google TV + Android phone/tablet); Apple TV dev target via flutter-tvos (`docs/apple-tv-dev.md`) as a secondary |
 
 Rules: commit + push from wherever you worked, `git pull --ff-only` on the other side before
 starting; never leave uncommitted work behind on the VPS (it was invisible from the Mac for
-months in 2026). Builds that need macOS live on the Mac; builds for the Xiaomi box live on the VPS.
+months in 2026). Builds that need macOS live on the Mac; release APKs for the Xiaomi box are built on
+the VPS (the Mac builds debug APKs for the emulators too).
 
 ## VPS services
 
@@ -186,3 +187,34 @@ Caveats: the relay has **one table slot** — stop the simulator app before test
 real Apple TV on the VPS relay. Browser automation cannot see Flutter's canvas; drive it by
 screenshots + coordinates (Playwright), or enable Flutter semantics for labels
 (`docs/action.md` "planned workflow"). Test map: `test_assets/test_map.dd2vtt` (3.6 MB).
+
+## android bench (Mac, set up 2026-10-10) — the main local setup
+
+The real targets are **Android TV / Google TV** (the Xiaomi box runs Google TV, Android 14) and an
+**Android phone/tablet** running the same APK in companion mode — so the Mac emulates exactly that.
+iPhone/Apple TV simulators (above, `apple-tv-dev.md`) remain a secondary option.
+
+| AVD | image | why |
+|---|---|---|
+| `bm_tv` | `system-images;android-34;google-tv;arm64-v8a`, `tv_1080p`, 2 GB RAM | same OS + memory as the Xiaomi box; D-pad = arrow keys + Return in the emulator window |
+| `bm_tablet` | `system-images;android-36;google_apis;arm64-v8a`, `pixel_tablet` | companion as native APK (touch, pinch: hold ⌥ + drag) |
+
+Both have `hw.keyboard=yes` and `hw.gpu.mode=host` in `~/.android/avd/<name>.avd/config.ini`.
+Flutter uses Homebrew's JDK 17 (`flutter config --jdk-dir /opt/homebrew/opt/openjdk@17`).
+
+```bash
+tools/android_bench.sh        # boots both AVDs, starts relay :9090 + dev server :4242,
+                              # adb reverse both ports into each emulator (idempotent)
+F=~/code/flutter-tvos/flutter/bin/flutter
+$F run -d emulator-5556 --dart-define=RELAY_HOST=localhost   # TV: select "TV Mode"
+$F run -d emulator-5554 --dart-define=RELAY_HOST=localhost   # tablet: Companion → Connect
+```
+
+`adb reverse` is what lets `RELAY_HOST=localhost` work inside an emulator (its own localhost is
+not the Mac's; the alternative is `10.0.2.2`). Serial numbers follow boot order — check
+`adb devices` / `adb -s <serial> emu avd name`. Test map for the tablet's file picker:
+`adb -s <tablet> push test_assets/test_map.dd2vtt /sdcard/Download/`.
+
+Verified 2026-10-10: debug APK on both, TV registers as table, tablet connects as companion,
+both show the (empty) map library and "Companion connected". Limits: an emulator says nothing
+about the Mali-G310 / 2 GB performance — check that on the real box before a release.

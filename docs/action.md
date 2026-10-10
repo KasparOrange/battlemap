@@ -42,6 +42,18 @@ client (player tablet, button-only remote) on the JSON relay protocol.
    .instance.ensureSemantics()` behind a define) is the plan for a subagent-driven
    click-through; `terminal-browser`/agent-browser snapshots don't work (canvas, no DOM).
 
+## direction: Android (decided 2026-10-10)
+
+Final devices: **Android TV / Google TV** + **Android tablet/phone** (companion as the native APK,
+the web build stays as a fallback). Local testing on the Mac's Android bench (`setup.md`
+"android bench"); Apple TV/iPhone only for development.
+
+- **Google TV launcher gap**: the manifest has no `LEANBACK_LAUNCHER` category, no `android:banner`
+  and no `uses-feature` `android.software.leanback` / `touchscreen required=false` — so the app is
+  missing from the Google TV home row (launchable only via Settings ▸ Apps or adb). Fix before
+  calling it a Google TV app.
+- Device test (next 1) can now run on the bench first: TV emulator + tablet emulator.
+
 ## kept on purpose: direct TV connection (no relay)
 
 `lib/network/vtt_server.dart` + `vtt_server_stub.dart` are the original pre-relay design:

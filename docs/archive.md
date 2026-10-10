@@ -6,6 +6,14 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - battlemap android bench
+- Konrad: final devices are Android TV / Google TV + Android tablet/phone; develop on the Mac → Android bench set up instead of iPhone/Apple TV simulators
+	- installed `emulator` + `google-tv` API 34 and `google_apis` API 36 arm64 images; AVDs `bm_tv` (tv_1080p, 2 GB) and `bm_tablet` (pixel_tablet); `flutter config --jdk-dir` → Homebrew openjdk@17 (doctor could not find Java before)
+	- `tools/android_bench.sh`: boot AVDs, relay + dev server, `adb reverse` 9090/4242; relay venv now at `~/.local/share/battlemap/venv`
+	- verified: debug APK (`RELAY_HOST=localhost`) on both, TV registers, tablet pairs; `flutter analyze` clean, 361/361 tests
+	- found: no Leanback launcher entry/banner in the manifest → `action.md` "direction: Android"
+	- docs: `setup.md` "android bench" + environments table, `action.md`, `CLAUDE.md`
+
 ### 26-09-14 - session_016jcYHtEqjZJn1HWLA2qq13
 - Coordinator (Konrad away): `action.md` next 3 → dead code deleted. Verified first that nothing outside the set imports it (only `main.dart` → `TvShell`/`VttCompanionScreen`/`DevScreen`). Removed: `lib/companion_screen.dart`, `lib/table_screen.dart`, `lib/game_state.dart`, `lib/game/battlemap_game.dart`, `lib/game/components/grid_component.dart`, `lib/game/components/pdf_background_component.dart`, `lib/ui/vtt_screen.dart`, `lib/network/{client,client_stub,server,server_stub,vtt_client,vtt_client_stub}.dart`; `lib/pdf_helper.dart` reduced to the static `renderPdfPage` (legacy `loadPdf`/`setPage`/`clear`/`dispose` gone). `lib/network/vtt_server.dart` + stub kept on purpose (offline play, roadmap #39). `flutter analyze` clean, `flutter test` 361/361 green (SDK: `~/code/flutter-tvos/flutter/bin`, the Mac has no other `flutter` on PATH). `docs/plans/vtt-table-display.md` still names `vtt_screen.dart` — historical plan, left as is.
 

@@ -25,7 +25,9 @@ Both modes are the **same Flutter APK**. The TV box runs the APK. The phone runs
 
 The **VPS is the primary dev machine** (Flutter + Android SDK, relay, servers; worked from the
 phone via mosh + Claude Code when outside). The **Mac** checkout (`~/code/battlemap`) is for
-home and for the Apple TV dev target (flutter-tvos needs macOS/Xcode). Both sync through GitHub
+home: the **Android bench** (Google TV + tablet emulators, `tools/android_bench.sh`) is the main
+local setup — the final devices are Android TV/Google TV + Android tablet/phone; the Apple TV dev
+target (flutter-tvos) is secondary. Both sync through GitHub
 `main`: commit + push where you worked, `git pull --ff-only` on the other side first. Details:
 `docs/setup.md` "development environments".
 
@@ -37,7 +39,7 @@ Detailed documentation lives in `docs/`:
 |------|---------|
 | `docs/architecture.md` | System overview, data flow, rendering order, interaction model |
 | `docs/relay-protocol.md` | Every relay message type with fields and examples |
-| `docs/setup.md` | VPS services, building, deploying, testing, log queries |
+| `docs/setup.md` | VPS services, building, deploying, testing, log queries, Android bench on the Mac |
 | `docs/sessions.md` | Session lifecycle, auto-save, what's persisted, thumbnails |
 | `docs/packages.md` | All dependencies: current, adopted, considered, rejected |
 | `docs/shorebird-setup.md` | OTA update setup (Shorebird code push) |
