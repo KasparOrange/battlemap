@@ -6,6 +6,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - paint the still, render what moves
+- Konrad likes "doors drawn by battlemap" and wants it as a direction: later also fire, light, water etc. as effect layers over a still painting → `ai-art.md` principle + Next step 7 (try list, once effects exist)
+
 ### 26-10-10 - ai art hand-off
 - Konrad: doors are drawn side-on (not top-down) and differ per draw; judge with Claude (subscription) rather than Gemini; prepare the hand-off → `ai-art.md` § "Next — pick up here": doors drawn by battlemap as top-down sprites per portal (model paints empty doorways), ruins as a layout flag, script checks + Claude helper session as judge (Gemini only for unattended server runs), board built from run data, TV test, then 4K + tuning; pointer in `action.md`, tracker #40
 

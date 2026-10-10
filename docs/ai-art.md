@@ -20,6 +20,14 @@ pricing page and changelog on that date — they churn (see "model churn").
 - **One style bible.** A fixed style text plus 3–5 reference images go with every request,
   so maps, tokens and items look like one world.
 
+- **Paint the still, render what moves** (Konrad, 2026-10-10 — direction, try it once the
+  effects exist). The painting holds only what never changes. Anything that moves, toggles or
+  glows is left out of it and drawn by battlemap on top of the image: doors first (Next, step 1),
+  later fire, torch and brazier flames, light pools, water shimmer, smoke. The layout already
+  knows where they go (lights, water areas), so the prompt asks for unlit braziers, empty
+  sconces and evenly lit floors, and the effect layers ("torch/light animations", "water
+  animation" in `feature-ideas.md`) add the life — animated and switchable from the phone.
+
 ## Subscription vs API (verdict)
 
 There is no Claude-Code-like "one subscription with a usage limit" for API use:
@@ -136,6 +144,9 @@ signed in as nico.zingerle). Every new image goes onto the board (rule above).
    do fog, doors and room reveal match the painted walls?
 6. **4K finals + the tuning grid** (below), run by the helper session; this session gets a
    short summary + the board.
+7. **Later, once battlemap has light / fire / water effects:** extend "paint the still,
+   render what moves" — prompt for unlit sources and even lighting, render flames, light and
+   water as layers (try list, not scheduled).
 
 ## Map pipeline
 
