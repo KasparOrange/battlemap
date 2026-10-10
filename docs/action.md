@@ -182,11 +182,11 @@ the TV hosts a WebSocket server on the LAN and the phone connects to its IP. Unr
 and behind the current protocol, but it is the starting point for **play without internet**
 (friend's place, hotspot). Roadmap #39. Not to be deleted as "dead code".
 
-## deploy state (2026-10-10 22:25)
+## deploy state (2026-10-10 22:45)
 
-- **box**, **tablet**, **web companion**: 1.1.19+29 (`tools/deploy.sh`, HEAD 2ffd4aa: fog edge trim,
-  map from a link + Store as, circle preview fix, notices, ruler pivot). 1.1.20+30 (TV overscan,
-  calibration pattern switch, back to auto) follows from its own session.
+- **box**, **tablet**, **web companion**: 1.1.20+30 (`tools/deploy.sh`, HEAD a020169: TV overscan,
+  calibration pattern switch, back to auto; on top of 1.1.19+29 — fog edge trim, map from a link +
+  Store as, circle preview fix, notices, ruler pivot).
 - **VPS**: dev server with `/fetch` + `?format=` and the shared map library, relay with the
   diagnostics. The web's `version.json` (in-app APK update check) still says 1.1.5+15 — deploy.sh
   installs over adb and leaves it alone.

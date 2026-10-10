@@ -270,7 +270,7 @@ cut square at the screen's edge.
   34.5 in = 34 × 19 squares with about ¼ in to spare per side. Companion ▸ Settings ▸ Table scale
   ▸ "Measure the TV…": the TV shows its one-inch squares and a 10-inch bar
   (`TableFrameComponent`, `vtt.showCalibration`). The bar starts at a **pivot** — a screen
-  corner (inset 8 % of the screen's height, ~1½ in) or the centre, picked on a small TV picture in
+  corner of what the TV shows (inset 8 % of that area's height, ~1½ in; overscan below) or the centre, picked on a small TV picture in
   the dialog, bottom left by default (`CalibrationPivot`, `TableGrid.pivotPoint`): it is fixed in
   screen pixels, so the ruler's zero stays on the gold ring while the calibration changes and only
   the far end moves (before, the bar sat centred on square boundaries and slid with every change).

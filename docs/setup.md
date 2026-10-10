@@ -212,6 +212,12 @@ Needs: box + tablet paired with this Mac (`latrine android devices`), the bench 
 (`~/.local/share/battlemap/venv`, created on first run), `~/.config/mwlog/battlemap.env`.
 Rule of thumb: batch changes — every TV deploy interrupts the table.
 
+Gotcha (2026-10-10): `deploy.sh tablet` alone leaves the **box on the older build** — the ruler
+pivot "did not show on the TV" because the box still ran 1.1.17 while the tablet had 1.1.18.
+When a TV-side feature seems missing, first ask each device what it runs:
+`ANDROID_ADB_SERVER_PORT=5059 adb -s <IP:5555> shell dumpsys package com.example.battlemap | grep versionName`
+(after `latrine android devices`).
+
 Gotcha (2026-10-10): the clean worktree builds **HEAD**, so committing a whole file that another
 session is still editing in this checkout ships their half-done code — the build fails on
 symbols that exist only in their uncommitted files. Before committing a shared file, check

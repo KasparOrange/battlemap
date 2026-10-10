@@ -70,7 +70,7 @@ lightweight Python WebSocket relay running on a VPS.
 | [SharedLibrarySheet] | `lib/ui/shared_library_sheet.dart` | The companion's shared map library (`showSharedLibrarySheet`): the VPS's maps with thumbnails — add to the game / play, delete, upload from the device or a link, "Store as" (WebP recommended). |
 | [SharedLibraryClient] | `lib/network/shared_library.dart` | HTTP client for the VPS's shared map library (`/library`, `/fetch` on the dev server); `StoreFormat` = what an upload is stored as. |
 | [TvOverviewMap] | `lib/ui/tv_overview_map.dart` | The companion's overview: the whole map with a box around what the players see; tap or drag to move the TV's window. |
-| [TvCalibrationStore] | `lib/storage/tv_calibration_store.dart` | The TV's own calibration (how wide its picture is), kept on the TV for every game. |
+| [TvCalibrationStore] | `lib/storage/tv_calibration_store.dart` | The TV's own calibration (how wide its picture is, how much the set cuts off each edge), kept on the TV for every game. |
 | [DeployRestore] | `lib/update/deploy_restore.dart` | Rolling deploy: launch routes `/restore` (TV reopens its game) and `/companion`, plus the TV's restore snapshot. |
 
 ### Data Model

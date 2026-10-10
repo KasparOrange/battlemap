@@ -30,7 +30,7 @@ sessions are stored on the TV's local disk and survive app restarts and updates.
 | `revealMode` | reveal vs hide mode |
 | `tvCameraMode` | how the TV frames the map: `table` (1 inch per square, default), `fit` (whole map), `free` |
 | `tableCol` / `tableRow` | first square of the TV's table window on a map bigger than 34 × 19 (`null` = centred) |
-| `mapFit` | how this map goes on the table, written on every save: `cellPx` (map px per square), `cols`/`rows`, `tvZoom` (TV zoom for one inch), `screenWidthInches` + `pxPerInch` (the TV calibration it was computed for), `tableCols`/`tableRows` (34 × 19), `fitsTable`, `drawGrid` (false = the picture has its own grid lines). informational — the TV recomputes the scale from its current calibration on load |
+| `mapFit` | how this map goes on the table, written on every save: `cellPx` (map px per square), `cols`/`rows`, `tvZoom` (TV zoom for one inch), `screenWidthInches` + `pxPerInch` (the TV calibration it was computed for), `tableCols`/`tableRows` (34 × 19; the squares the TV set really shows, overscan left out), `fitsTable`, `drawGrid` (false = the picture has its own grid lines). informational — the TV recomputes the scale from its current calibration on load |
 | `cameraX/Y/zoom/angle` | camera position and orientation |
 | `interactionMode` | active tool (fog/draw/token) |
 | `drawColor/drawWidth` | drawing tool settings |
