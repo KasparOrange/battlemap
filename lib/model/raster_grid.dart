@@ -142,12 +142,16 @@ class RasterGrid {
       (cols * cellW - pictureW).abs() < 0.01 &&
       (rows * cellH - pictureH).abs() < 0.01;
 
-  /// Whether the grid reaches past the picture (partial edge squares).
-  bool get hasPartialEdges =>
-      x < -0.01 ||
-      y < -0.01 ||
-      x + cols * cellW > pictureW + 0.01 ||
-      y + rows * cellH > pictureH + 0.01;
+  /// Whether the grid reaches past the picture by more than
+  /// [edgeTolerance] of a square on some side (partial edge squares) — a
+  /// line a hair outside the edge, as detection often finds, does not count.
+  bool get hasPartialEdges {
+    final tx = edgeTolerance * cellW, ty = edgeTolerance * cellH;
+    return x < -tx ||
+        y < -ty ||
+        x + cols * cellW > pictureW + tx ||
+        y + rows * cellH > pictureH + ty;
+  }
 
   /// The same squares on a picture of [size] (scaled), e.g. a PDF page
   /// rendered at another resolution than the one the grid was set on.
@@ -268,6 +272,64 @@ class RasterGrid {
       picture: Size(fallback.pictureW, fallback.pictureH),
       partialEdges: partialEdges,
     );
+  }
+
+  /// Counts between two grid corners [a] and [b] for the two-corner tool,
+  /// signed (negative = [b] left of / above [a]).
+  ///
+  /// Free squares ([square] false): each axis rounded with the current
+  /// [cellW] / [cellH]. Square squares: the pair whose two directions agree
+  /// on one square size within 1 % ([cornersAgree]), and among those the
+  /// one closest to the current size — so a wrong current size cannot give
+  /// a pair that contradicts itself (17 × 12 vs 16 × 12). An axis shorter
+  /// than half a square counts 0 and the other alone decides.
+  (int, int) cornerCounts(Offset a, Offset b, {required bool square}) {
+    final dx = b.dx - a.dx, dy = b.dy - a.dy;
+    if (!square) return ((dx / cellW).round(), (dy / cellH).round());
+    final guess = (cellW + cellH) / 2;
+    final ax = dx.abs(), ay = dy.abs();
+    if (ax < 0.5 * guess || ay < 0.5 * guess) {
+      return ((dx / guess).round(), (dy / guess).round());
+    }
+    final long = max(ax, ay), short = min(ax, ay);
+    int? bestLong, bestShort;
+    var bestScore = double.infinity;
+    for (var nl = 1; nl <= long / minCell; nl++) {
+      final ns = (short * nl / long).round();
+      if (ns < 1) continue;
+      final cl = long / nl, cs = short / ns;
+      if ((cl - cs).abs() / cl > 0.01) continue;
+      final score = log(cl / guess).abs();
+      if (score < bestScore) {
+        bestScore = score;
+        bestLong = nl;
+        bestShort = ns;
+      }
+    }
+    if (bestLong == null) return ((dx / guess).round(), (dy / guess).round());
+    final (nx, ny) = ax >= ay ? (bestLong, bestShort!) : (bestShort!, bestLong);
+    return (dx < 0 ? -nx : nx, dy < 0 ? -ny : ny);
+  }
+
+  /// The count on the other axis that agrees with [n] squares over
+  /// [distance] for square squares across [otherDistance] (signed like
+  /// [otherDistance]) — "down follows across" in the two-corner tool.
+  static int followingCount(double distance, int n, double otherDistance) {
+    if (n == 0 || distance.abs() < 1e-9) return 0;
+    final c = (otherDistance.abs() * n.abs() / distance.abs()).round();
+    return otherDistance < 0 ? -c : c;
+  }
+
+  /// The square sizes two corners imply per axis (`null` for an axis with a
+  /// count of 0), and whether they agree within 1 %.
+  static ({double? across, double? down, bool agree}) cornersAgree(
+      Offset a, Offset b, int nx, int ny) {
+    final across = nx == 0 ? null : (b.dx - a.dx).abs() / nx.abs();
+    final down = ny == 0 ? null : (b.dy - a.dy).abs() / ny.abs();
+    final agree = across == null ||
+        down == null ||
+        (across - down).abs() / max(across, down) <= 0.01;
+    return (across: across, down: down, agree: agree);
   }
 
   /// [n] squares across the picture's width, stretched to fill it from the

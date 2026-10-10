@@ -172,6 +172,15 @@ class GridEditorPageState extends State<GridEditorPage> {
   Offset? _gesturePicStart;
   bool _viewGesture = false;
   int? _dragMarker; // 0 = A, 1 = B
+  // Fingers on the canvas now / most at once during this touch, and the
+  // state when the touch began (restored when it turns into a pinch).
+  int _pointers = 0;
+  int _maxPointers = 0;
+  ({
+    RasterGrid grid,
+    ({Offset? a, Offset? b, int nx, int ny, bool byHand}) marks,
+    Offset pic,
+  })? _touchStart;
   Offset? _loupeAt; // screen point of the finger while a loupe shows
 
   // Two-corner tool.
@@ -360,8 +369,28 @@ class GridEditorPageState extends State<GridEditorPage> {
   void _autoCounts() {
     final a = _cornerA, b = _cornerB;
     if (a == null || b == null) return;
-    _nx = ((b.dx - a.dx) / grid.cellW).round();
-    _ny = ((b.dy - a.dy) / grid.cellH).round();
+    final (nx, ny) = grid.cornerCounts(a, b, square: square);
+    _nx = nx;
+    _ny = ny;
+  }
+
+  /// Sets the across ([across] true) or down count; with square squares
+  /// the other count follows so both directions agree on one size.
+  void _setCount(bool across, int v) {
+    final a = _cornerA, b = _cornerB;
+    setState(() {
+      _countsByHand = true;
+      if (across) {
+        _nx = v;
+      } else {
+        _ny = v;
+      }
+      if (!square || a == null || b == null) return;
+      final dx = b.dx - a.dx, dy = b.dy - a.dy;
+      final half = 0.5 * min(grid.cellW, grid.cellH);
+      if (across && dy.abs() >= half) _ny = RasterGrid.followingCount(dx, _nx, dy);
+      if (!across && dx.abs() >= half) _nx = RasterGrid.followingCount(dy, _ny, dx);
+    });
   }
 
   void _applyCorners() {
@@ -375,8 +404,6 @@ class GridEditorPageState extends State<GridEditorPage> {
       return;
     }
     setGrid(g);
-    _snack('Squares set from the corners: ${g.cellW.toStringAsFixed(2)}'
-        '${square ? '' : ' × ${g.cellH.toStringAsFixed(2)}'} px.');
   }
 
   void _clearCorners() => setState(() {
@@ -431,9 +458,11 @@ class GridEditorPageState extends State<GridEditorPage> {
     _startZoom = _zoom;
     _startPan = _pan;
     _startFocal = d.localFocalPoint;
-    _gestureStartGrid = grid;
-    _gesturePicStart = _toPic(d.localFocalPoint);
-    _viewGesture = d.pointerCount >= 2 || tool == GridTool.look;
+    // From where the finger touched down, not where the recogniser
+    // noticed the drag: the grid follows the finger exactly.
+    _gestureStartGrid = _touchStart?.grid ?? grid;
+    _gesturePicStart = _touchStart?.pic ?? _toPic(d.localFocalPoint);
+    _viewGesture = d.pointerCount >= 2 || _maxPointers >= 2 || tool == GridTool.look;
     _dragMarker = null;
     if (!_viewGesture && tool == GridTool.corners) {
       _dragMarker = _markerAt(d.localFocalPoint);
@@ -459,13 +488,17 @@ class GridEditorPageState extends State<GridEditorPage> {
   }
 
   void _onScaleUpdate(ScaleUpdateDetails d) {
-    if (d.pointerCount >= 2 && !_viewGesture) {
-      // A second finger joined: switch to moving the view.
+    if ((d.pointerCount >= 2 || _maxPointers >= 2) && !_viewGesture) {
+      // A second finger joined ([_pointerDown] already undid the edit):
+      // from here the touch moves the view.
       _viewGesture = true;
       _startZoom = _zoom;
       _startPan = _pan;
       _startFocal = d.localFocalPoint;
-      setState(() => _loupeAt = null);
+      setState(() {
+        _loupeAt = null;
+        _dragMarker = null;
+      });
     }
     if (_viewGesture) {
       final focalPic = (_startFocal - _startPan) / _startZoom;
@@ -499,24 +532,73 @@ class GridEditorPageState extends State<GridEditorPage> {
   }
 
   void _onScaleEnd(ScaleEndDetails d) {
-    final start = _gestureStartGrid;
-    if (!_viewGesture && start != null &&
+    // Edits are committed when the last finger lifts ([_pointerUp]): the
+    // recogniser ends and restarts its gesture whenever a finger joins.
+    setState(() {
+      _loupeAt = null;
+      _dragMarker = null;
+    });
+  }
+
+  // ─── fingers ────────────────────────────────────────────
+  // One touch = from the first finger down to the last finger up. Only a
+  // one-finger touch edits; once a second finger lands, everything the
+  // first one did is undone and the touch only moves the view.
+
+  void _pointerDown(PointerDownEvent e) {
+    _pointers++;
+    if (_pointers == 1) {
+      _maxPointers = 1;
+      _touchStart = (
+        grid: grid,
+        marks: (a: _cornerA, b: _cornerB, nx: _nx, ny: _ny, byHand: _countsByHand),
+        pic: _toPic(e.localPosition),
+      );
+      return;
+    }
+    if (_maxPointers == 1) _revertTouch();
+    _maxPointers = max(_maxPointers, _pointers);
+  }
+
+  void _pointerUp(PointerEvent e) {
+    if (_pointers == 0) return;
+    _pointers--;
+    if (_pointers > 0) return;
+    final t = _touchStart;
+    _touchStart = null;
+    if (t != null && _maxPointers == 1 &&
         (tool == GridTool.move || tool == GridTool.stretch)) {
-      if (tool == GridTool.stretch) {
-        final u = (_gesturePicStart!.dx - start.x) / start.cellW;
-        final v = (_gesturePicStart!.dy - start.y) / start.cellH;
+      final moved = !t.grid.closeTo(grid, eps: 1e-6);
+      if (tool == GridTool.stretch && !moved) {
+        final u = (t.pic.dx - t.grid.x) / t.grid.cellW;
+        final v = (t.pic.dy - t.grid.y) / t.grid.cellH;
         if (u.abs() < RasterGrid.minLeverage && v.abs() < RasterGrid.minLeverage) {
           _snack('Start the stretch on a line farther from the top-left corner.',
               color: Colors.orangeAccent);
         }
       }
-      setGrid(grid, undoFrom: start); // records the drag as one undo step
+      setGrid(grid, undoFrom: t.grid); // the whole drag is one undo step
     }
     setState(() {
       _loupeAt = null;
       _dragMarker = null;
     });
-    _gestureStartGrid = null;
+  }
+
+  /// Puts the grid and the marks back to where this touch found them.
+  void _revertTouch() {
+    final t = _touchStart;
+    if (t == null) return;
+    setState(() {
+      grid = t.grid;
+      _cornerA = t.marks.a;
+      _cornerB = t.marks.b;
+      _nx = t.marks.nx;
+      _ny = t.marks.ny;
+      _countsByHand = t.marks.byHand;
+      _loupeAt = null;
+      _dragMarker = null;
+    });
   }
 
   int? _markerAt(Offset screen) {
@@ -684,6 +766,9 @@ class GridEditorPageState extends State<GridEditorPage> {
       );
       return ClipRect(
         child: Listener(
+          onPointerDown: _pointerDown,
+          onPointerUp: _pointerUp,
+          onPointerCancel: _pointerUp,
           onPointerSignal: (s) {
             if (s is PointerScrollEvent) {
               final p = _toPic(s.localPosition);
@@ -730,13 +815,16 @@ class GridEditorPageState extends State<GridEditorPage> {
     ]);
   }
 
-  /// A magnifier above the finger: 4× the view (at least 6 screen px per
-  /// picture px) with a crosshair on the finger's picture point.
+  /// A magnifier above the finger showing about one and a half squares
+  /// around it (at least 1.5× the view) with a crosshair on the finger's
+  /// picture point; the marks are left out so they do not hide the corner.
   Widget _loupe(Offset at, _GridPainter base) {
-    const size = 150.0;
+    const size = 170.0;
     final pic = _toPic(at);
-    final z = max(_zoom * 4, 6.0);
-    final center = const Offset(size / 2, size / 2);
+    final z = max(_zoom * 1.5, size / (1.5 * max(grid.cellW, grid.cellH)))
+        .clamp(0.05, 60.0)
+        .toDouble();
+    const center = Offset(size / 2, size / 2);
     final top = at.dy - size - 40 < 0 ? at.dy + 40 : at.dy - size - 40;
     final left = (at.dx - size / 2).clamp(0.0, max(0.0, _viewSize.width - size)).toDouble();
     return Positioned(
@@ -753,7 +841,8 @@ class GridEditorPageState extends State<GridEditorPage> {
           ),
           child: ClipOval(
             child: CustomPaint(
-              painter: base.copyWith(zoom: z, pan: center - pic * z, crosshair: center),
+              painter: base.copyWith(
+                  zoom: z, pan: center - pic * z, crosshair: center, showMarks: false),
             ),
           ),
         ),
@@ -960,20 +1049,19 @@ class GridEditorPageState extends State<GridEditorPage> {
       );
     }
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 6,
-      crossAxisSpacing: 6,
-      childAspectRatio: 3.6,
-      children: [
-        b(GridTool.look, Icons.pan_tool_alt, 'Look'),
-        b(GridTool.move, Icons.open_with, 'Move grid'),
-        b(GridTool.stretch, Icons.open_in_full, 'Stretch'),
-        b(GridTool.corners, Icons.control_point, '2 corners'),
-      ],
-    );
+    return Column(children: [
+      Row(children: [
+        Expanded(child: b(GridTool.look, Icons.pan_tool_alt, 'Look')),
+        const SizedBox(width: 6),
+        Expanded(child: b(GridTool.move, Icons.open_with, 'Move grid')),
+      ]),
+      const SizedBox(height: 6),
+      Row(children: [
+        Expanded(child: b(GridTool.stretch, Icons.open_in_full, 'Stretch')),
+        const SizedBox(width: 6),
+        Expanded(child: b(GridTool.corners, Icons.control_point, '2 corners')),
+      ]),
+    ]);
   }
 
   Widget _cornerControls() {
@@ -982,26 +1070,42 @@ class GridEditorPageState extends State<GridEditorPage> {
       return Text(a == null ? 'Mark 1: tap a grid corner.' : 'Mark 2: tap a far grid corner.',
           style: const TextStyle(color: _ok, fontSize: 13));
     }
-    Widget counter(String label, int value, void Function(int) set) => Row(children: [
+    final sx = b.dx < a.dx ? -1 : 1, sy = b.dy < a.dy ? -1 : 1;
+    Widget counter(String label, bool across, int value, int sign) => Row(children: [
           SizedBox(width: 92, child: Text(label, style: const TextStyle(color: _gold, fontSize: 13))),
-          _iconBtn(Icons.remove, 'One less', () => set(value - 1)),
+          _iconBtn(Icons.remove, 'One square less $label',
+              () => _setCount(across, sign * max(0, value.abs() - 1))),
           SizedBox(
               width: 44,
-              child: Text('$value',
+              child: Text('${value.abs()}',
+                  key: ValueKey(across ? 'gridEditorAcross' : 'gridEditorDown'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: _gold, fontSize: 18))),
-          _iconBtn(Icons.add, 'One more', () => set(value + 1)),
+          _iconBtn(Icons.add, 'One square more $label',
+              () => _setCount(across, sign * (value.abs() + 1))),
         ]);
+    final implied = RasterGrid.cornersAgree(a, b, _nx, _ny);
+    String px(double? v) => v == null ? '—' : '${v.toStringAsFixed(2)} px';
+    final sizeLine = square && implied.agree
+        ? 'Gives squares of ${px(implied.across ?? implied.down)}.'
+        : 'Across gives ${px(implied.across)}, down gives ${px(implied.down)}.';
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('Squares from mark 1 to mark 2:', style: TextStyle(color: _goldDim, fontSize: 12.5)),
-      counter('across', _nx, (v) => setState(() {
-            _nx = v;
-            _countsByHand = true;
-          })),
-      counter('down', _ny, (v) => setState(() {
-            _ny = v;
-            _countsByHand = true;
-          })),
+      Text(
+          square
+              ? 'Squares from mark 1 to mark 2 (down follows across):'
+              : 'Squares from mark 1 to mark 2:',
+          style: const TextStyle(color: _goldDim, fontSize: 12.5)),
+      counter('across', true, _nx, sx),
+      counter('down', false, _ny, sy),
+      const SizedBox(height: 4),
+      Text(sizeLine,
+          key: const ValueKey('gridEditorCornerSize'),
+          style: const TextStyle(color: _gold, fontSize: 13)),
+      if (square && !implied.agree)
+        const Text(
+            'The two directions disagree by more than 1 % — check the counts '
+            '(or turn off "Square squares" for a photographed page).',
+            style: TextStyle(color: Colors.orangeAccent, fontSize: 12.5)),
       const SizedBox(height: 6),
       Wrap(spacing: 8, runSpacing: 6, children: [
         FilledButton.icon(
@@ -1169,6 +1273,7 @@ class _GridPainter extends CustomPainter {
   final Offset? cornerA;
   final Offset? cornerB;
   final Offset? crosshair;
+  final bool showMarks;
 
   _GridPainter({
     required this.image,
@@ -1180,9 +1285,11 @@ class _GridPainter extends CustomPainter {
     this.cornerA,
     this.cornerB,
     this.crosshair,
+    this.showMarks = true,
   });
 
-  _GridPainter copyWith({double? zoom, Offset? pan, Offset? crosshair}) => _GridPainter(
+  _GridPainter copyWith({double? zoom, Offset? pan, Offset? crosshair, bool? showMarks}) =>
+      _GridPainter(
         image: image,
         grid: grid,
         zoom: zoom ?? this.zoom,
@@ -1192,6 +1299,7 @@ class _GridPainter extends CustomPainter {
         cornerA: cornerA,
         cornerB: cornerB,
         crosshair: crosshair ?? this.crosshair,
+        showMarks: showMarks ?? this.showMarks,
       );
 
   Offset _s(Offset p) => p * zoom + pan;
@@ -1244,7 +1352,7 @@ class _GridPainter extends CustomPainter {
     canvas.drawCircle(r.topLeft, 5, Paint()..color = lineColor);
 
     for (final (label, m) in [('1', cornerA), ('2', cornerB)]) {
-      if (m == null) continue;
+      if (m == null || !showMarks) continue;
       final p = _s(m);
       final mark = Paint()
         ..color = Colors.white
@@ -1285,5 +1393,6 @@ class _GridPainter extends CustomPainter {
       old.bold != bold ||
       old.cornerA != cornerA ||
       old.cornerB != cornerB ||
-      old.crosshair != crosshair;
+      old.crosshair != crosshair ||
+      old.showMarks != showMarks;
 }

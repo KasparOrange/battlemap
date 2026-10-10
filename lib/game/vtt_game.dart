@@ -87,6 +87,10 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// so a newly loaded map replaces the old one, not just the first map.
   UvttMap? _loadedMap;
 
+  /// The view to restore after the same picture was re-gridded (centre as
+  /// a fraction of the map, zoom × map width), or `null`.
+  ({double fx, double fy, double zw})? _regridView;
+
   /// Bumped per [_loadMap]; a decode that finishes after a newer load started
   /// discards itself instead of adding stale components.
   int _loadGeneration = 0;
@@ -272,6 +276,18 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     // `_mapImage == null`, so the first map's picture stayed for the whole app
     // run while fog, doors and grid already belonged to the next map.
     if (state.map != null && !identical(state.map, _loadedMap)) {
+      final prev = _loadedMap;
+      // The same picture re-gridded (grid editor): keep the view where it
+      // was instead of jumping back to the whole map.
+      _regridView = prev != null &&
+              identical(prev.imageBytes, state.map!.imageBytes) &&
+              _mapImage != null
+          ? (
+              fx: camera.viewfinder.position.x / prev.pixelWidth,
+              fy: camera.viewfinder.position.y / prev.pixelHeight,
+              zw: camera.viewfinder.zoom * prev.pixelWidth,
+            )
+          : null;
       _loadedMap = state.map;
       _loadMap(state.map!);
     } else if (state.map == null && _loadedMap != null) {
@@ -484,11 +500,16 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     if (pending != null) {
       // A resumed session's camera arrived while the picture decoded
       syncCamera(pending.x, pending.y, pending.zoom, pending.angle);
+    } else if (_regridView case final v?) {
+      // Same picture, new grid: same spot, same on-screen size.
+      camera.viewfinder.position = Vector2(v.fx * mapPixelW, v.fy * mapPixelH);
+      camera.viewfinder.zoom = v.zw / mapPixelW;
     } else {
       // Center camera on map and zoom to fit it in the viewport
       camera.viewfinder.position = Vector2(mapPixelW / 2, mapPixelH / 2);
       _zoomToFit(mapPixelW, mapPixelH);
     }
+    _regridView = null;
     if (tableDisplay) _applyTvView();
     viewRevision.value++;
   }

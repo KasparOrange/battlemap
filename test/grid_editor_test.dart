@@ -120,6 +120,68 @@ void main() {
     expect(s.grid.x, 0);
   });
 
+  testWidgets('a pinch in Move grid moves the view, never the grid', (tester) async {
+    final s = await open(tester, RasterGrid.whole(20, 15, picture));
+    await tester.tap(find.text('Move grid'));
+    await tester.pump();
+    final c = s.screenOf(const Offset(320, 240));
+    final f1 = await tester.startGesture(c, pointer: 1);
+    await f1.moveBy(const Offset(30, 0)); // the first finger slips
+    await tester.pump();
+    final f2 = await tester.startGesture(c + const Offset(0, 120), pointer: 2);
+    await tester.pump();
+    await f1.moveBy(const Offset(-40, -40));
+    await f2.moveBy(const Offset(40, 40));
+    await tester.pump();
+    await f1.up();
+    await f2.up();
+    await tester.pump();
+    expect(s.grid.x, 0);
+    expect(s.grid.cols, 20);
+    expect(find.byTooltip('Undo'), findsOneWidget);
+    expect(tester.widget<IconButton>(find.widgetWithIcon(IconButton, Icons.undo)).onPressed,
+        isNull, reason: 'a pinch leaves no undo step');
+  });
+
+  testWidgets('a pinch in 2 corners places no marks', (tester) async {
+    final s = await open(tester, RasterGrid.whole(20, 15, picture));
+    await tester.tap(find.text('2 corners'));
+    await tester.pump();
+    for (var i = 0; i < 3; i++) {
+      final c = s.screenOf(Offset(100.0 + 50 * i, 200));
+      final f1 = await tester.startGesture(c, pointer: 10 + 2 * i);
+      await f1.moveBy(const Offset(20, 0));
+      await tester.pump();
+      final f2 = await tester.startGesture(c + const Offset(0, 100), pointer: 11 + 2 * i);
+      await f2.moveBy(const Offset(0, 40));
+      await tester.pump();
+      await f1.up();
+      await f2.up();
+      await tester.pump();
+    }
+    expect(find.text('Mark 1: tap a grid corner.'), findsOneWidget);
+  });
+
+  testWidgets('in 2 corners, down follows across', (tester) async {
+    final s = await open(tester, RasterGrid.whole(20, 15, picture));
+    await tester.tap(find.text('2 corners'));
+    await tester.pump();
+    await tester.tapAt(s.screenOf(const Offset(32, 32)));
+    await tester.pump();
+    await tester.tapAt(s.screenOf(const Offset(32 + 320, 32 + 256)));
+    await tester.pump();
+    String across() => tester.widget<Text>(find.byKey(const ValueKey('gridEditorAcross'))).data!;
+    String down() => tester.widget<Text>(find.byKey(const ValueKey('gridEditorDown'))).data!;
+    expect((across(), down()), ('10', '8'));
+    await tester.ensureVisible(find.byTooltip('One square more across'));
+    await tester.tap(find.byTooltip('One square more across'));
+    await tester.pump();
+    await tester.tap(find.byTooltip('One square more across'));
+    await tester.pump();
+    // 12 across over 320 px = 26.7 px → 256 px down = 9.6 → 10.
+    expect((across(), down()), ('12', '10'));
+  });
+
   testWidgets('the arrows nudge by the chosen step', (tester) async {
     final s = await open(tester, RasterGrid.whole(20, 15, picture));
     await tester.ensureVisible(find.text('0.1 px'));

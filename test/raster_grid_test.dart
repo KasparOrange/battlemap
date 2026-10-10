@@ -133,6 +133,40 @@ void main() {
       expect(g.x, closeTo(23, 1e-9));
     });
 
+    test('cornerCounts picks counts both directions agree on', () {
+      // Vampire lair: 72 px squares, current guess 75 px → 17 × 12, not 16 × 12.
+      final g = grid60(w: 75, h: 75);
+      expect(g.cornerCounts(const Offset(10, 10), const Offset(10 + 17 * 72, 10 + 12 * 72),
+          square: true), (17, 12));
+      // Right to left, bottom to top: negative counts.
+      expect(g.cornerCounts(const Offset(10 + 17 * 72, 10 + 12 * 72), const Offset(10, 10),
+          square: true), (-17, -12));
+      // A mark on the same row: only the across axis counts.
+      expect(g.cornerCounts(const Offset(0, 0), const Offset(10 * 72, 5), square: true).$2, 0);
+      // Free squares round each axis on its own.
+      expect(grid60().cornerCounts(Offset.zero, const Offset(605, 290), square: false), (10, 5));
+    });
+
+    test('followingCount and cornersAgree', () {
+      expect(RasterGrid.followingCount(1400, 14, 1600), 16);
+      expect(RasterGrid.followingCount(1400, 14, -1600), -16);
+      expect(RasterGrid.followingCount(1400, 0, 1600), 0);
+      final ok = RasterGrid.cornersAgree(Offset.zero, const Offset(1400, 1600), 14, 16);
+      expect(ok.across, 100);
+      expect(ok.agree, isTrue);
+      final bad = RasterGrid.cornersAgree(Offset.zero, const Offset(1224, 864), 16, 12);
+      expect(bad.across, closeTo(76.5, 1e-9));
+      expect(bad.down, 72);
+      expect(bad.agree, isFalse);
+    });
+
+    test('a line a hair outside the edge is not a partial edge', () {
+      final g = RasterGrid.fromLines(
+          lineX: 0, lineY: 71.51, cellW: 72, cellH: 72, picture: const Size(1368, 1008));
+      expect(g.y, lessThan(0));
+      expect(g.hasPartialEdges, isFalse);
+    });
+
     test('acrossWidth fills the width from the left edge', () {
       final g = grid60().acrossWidth(25, square: true);
       expect(g.cellW, 40);
