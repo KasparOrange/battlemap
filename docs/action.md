@@ -65,6 +65,17 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   decoded at most 4096 px on the long side. Still to check on the real Xiaomi: memory and look of
   the castle at TV scale (36 px per square after the shrink).
 
+## map from a link + Store as (2026-10-10) — not in a build yet
+
+Dev server on the VPS has `/fetch` and `?format=` (Pillow installed; smoke-tested live: Dyson
+tavern fetched, PNG → lossless WebP 426 → 116 KB, a local address refused). The companion half
+needs the next tablet + web deploy. Then on the tablet:
+- Shared library ▸ paste a picture link (paste button) → squares dialog → listed; the notice says
+  what it became ("as WebP, 0.4 → 0.1 MB (lossless)")
+- a web page link and a Google Drive share link; a PDF link → page 1 rendered as usual
+- Store as: pick WebP, close and reopen the sheet → still WebP; the map looks the same on the TV
+- web companion: the paste button may find nothing (no clipboard API over plain http) → paste by hand
+
 ## games with several maps + shared map library (2026-10-10, 1.1.16+26) — needs a test at the table
 
 On box + tablet + web since 21:15, VPS dev server serves `/library` (archive 26-10-10 21:05).

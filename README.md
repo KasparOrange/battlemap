@@ -31,7 +31,8 @@ The same APK runs in two modes:
   Counts and lengths use steppers (±1/2/5/10, tap the number for a numpad). A game holds **several maps** (the
   tower's floors, town and cellar), each with its own fog, doors and tokens — switched in the
   Settings tab; maps come from the device or the **shared map library** on the VPS, which the
-  tablet browses and fills in a game and from the library. On Android the
+  tablet browses and fills in a game and from the library — from the device or from a pasted link
+  (picture, PDF, page, Drive/Dropbox), stored as WebP if wished. On Android the
   game view runs full screen (system bars hidden; a button on the map brings them back).
 
 The phone sends commands; the TV renders. Both communicate through a
@@ -66,8 +67,8 @@ lightweight Python WebSocket relay running on a VPS.
 | [GridEditorPage] | `lib/ui/grid_editor.dart` | The companion's full-screen grid editor (`showGridEditor`): fit a picture map's squares by hand — Move / Stretch / 2 corners / Known length (gridless maps), steps to 0.01 px, corner jumps, undo. |
 | [NumberStepper] | `lib/ui/number_stepper.dart` | `−10 −5 −2 −1 [n] +1 +2 +5 +10` with a numpad behind the number (`showNumpad`) — every count and length in the grid dialogs and Measure the TV. |
 | [TemplateDiscPanel] | `lib/ui/template_disc_panel.dart` | Measure tab ▸ Template disc: the acrylic AoE disc (radius rings, cubes, cones) on the map — show, turn, centre on the TV, its whole look configurable; drawn by `TemplateDiscComponent`, model `TemplateDisc`. |
-| [SharedLibrarySheet] | `lib/ui/shared_library_sheet.dart` | The companion's shared map library (`showSharedLibrarySheet`): the VPS's maps with thumbnails — add to the game / play, delete, upload from the device. |
-| [SharedLibraryClient] | `lib/network/shared_library.dart` | HTTP client for the VPS's shared map library (`/library` on the dev server). |
+| [SharedLibrarySheet] | `lib/ui/shared_library_sheet.dart` | The companion's shared map library (`showSharedLibrarySheet`): the VPS's maps with thumbnails — add to the game / play, delete, upload from the device or a link, "Store as" (WebP recommended). |
+| [SharedLibraryClient] | `lib/network/shared_library.dart` | HTTP client for the VPS's shared map library (`/library`, `/fetch` on the dev server); `StoreFormat` = what an upload is stored as. |
 | [TvOverviewMap] | `lib/ui/tv_overview_map.dart` | The companion's overview: the whole map with a box around what the players see; tap or drag to move the TV's window. |
 | [TvCalibrationStore] | `lib/storage/tv_calibration_store.dart` | The TV's own calibration (how wide its picture is), kept on the TV for every game. |
 | [DeployRestore] | `lib/update/deploy_restore.dart` | Rolling deploy: launch routes `/restore` (TV reopens its game) and `/companion`, plus the TV's restore snapshot. |
@@ -156,7 +157,7 @@ TV over the relay and checks both its state and its actual picture. Details: `do
 
 ```bash
 python3 tools/vtt_relay.py     # port 9090 — WebSocket hub between TV and phone
-python3 tools/dev_server.py    # port 4242 — web build, APK, map uploads (DM layer pictures and the shared map library kept)
+python3 tools/dev_server.py    # port 4242 — web build, APK, map uploads (DM layer pictures and the shared map library kept), link fetch + WebP conversion (needs Pillow)
 ```
 
 The relay listens for WebSocket connections from both the TV and the companion

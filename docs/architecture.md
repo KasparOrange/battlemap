@@ -61,7 +61,9 @@ Maps get into a game two ways, both under the map list:
   Why WebP (measured 2026-10-10 on the test maps): painted maps ~20 % smaller than JPEG 90 at
   41–42 dB (looks the same), line art lossless at a third of the PNG; TV memory is the same either
   way (a decoded picture costs its pixels, not its file). Caveat: lossy WebP halves the colour
-  resolution, so very thin coloured lines soften a little — PNG keeps them exact.
+  resolution, so very thin coloured lines soften a little — PNG keeps them exact. The paste
+  button reads the clipboard; the web companion is served over plain http, where browsers give no
+  clipboard API, so there it may find nothing (the notice says to paste by hand).
 
 Outside a game the library screen has the same two: **Upload Map / PDF** (into the shared library,
 then a new game on it) and **Shared library** ("Play" starts a new game after the session

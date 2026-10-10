@@ -242,6 +242,11 @@ unreadable. To *look* at a layout without the bench, load the SDK's real fonts i
 `RepaintBoundary` and save `toImage()` as PNG — the 2026-10-10 side-panel check, cheaper than
 emulator screenshots. Roboto has no `✓`: it renders as a box, so the UI writes such hints in words.
 
+`Hive.openBox` without `Hive.init` fails the widget test even inside a `try` (Hive's own pending
+future reports the error), and real Hive file IO under `testWidgets` can hang. A widget that
+remembers a setting gets it passed in and reports changes (`showSharedLibrarySheet` `storeAs` /
+`onStoreAsChanged`); the screen does the Hive part.
+
 Hive inside a `testWidgets` body: its file writes never finish under the test's fake clock, and a
 write left hanging holds the box, so every later open or write — even inside `tester.runAsync` —
 waits forever and the run hangs without a timeout message. Keep Hive out of widget tests (the

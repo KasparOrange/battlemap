@@ -35,6 +35,13 @@ only. Set up 2026-09-05: `flutter_tvos`, `path_provider_tvos`, `package_info_plu
 `wakelock_plus_tvos` are in the pubspec (no-ops elsewhere); the dependency bumps it forced are
 listed in `docs/apple-tv-dev.md` "what the tvOS build forced on the dependencies".
 
+## adopted: Pillow on the dev server — 2026-10-10
+
+**package:** `python3-pil` (apt, on the VPS) — `tools/dev_server.py` converts shared-library uploads
+(`?format=webp|jpeg|png`) and turns odd pictures from links (GIF, AVIF, TIFF) into PNG. Optional:
+without it maps are stored as they came. Why server-side: Flutter can't encode WebP, and the
+browser's canvas WebP encoder is missing in Safari.
+
 ## adopted: hive
 
 **package:** `hive` + `hive_flutter`

@@ -113,6 +113,9 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
    06 (upload it there first if missing) — "Loading …" on the tablet, 06 fogged on the TV; tap 05
    in the list: its fog and tokens are back; tap 06: its fog too. Back in the library the game is
    listed under the map on the table; resuming it keeps both maps.
+4. A map from a link (since #56): Shared library ▸ Store as WebP ▸ paste
+   `https://dysonlogos.blog/wp-content/uploads/2019/05/twelve-goats-tavern-grid.png` → the grid is
+   found, Upload → listed, the notice says "as WebP, 0.4 → 0.1 MB (lossless)"; add it to the game.
 
 **5. something goes wrong**
 1. Kill the TV app (`adb -s emulator-5556 shell am force-stop com.example.battlemap`), start it

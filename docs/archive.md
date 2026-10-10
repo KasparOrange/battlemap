@@ -23,6 +23,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- `fogRevealRects`: revealed squares shrink on the sides that border fog, inner corners get a notch (an even erosion), the map border stays; standard/soft/cloud draw all revealed squares as one path (no seams), atmospheric ignores it; `architecture.md` "Trim revealed edges", tracker #57
 	- incident: this session's commit script repeated the `open(p,'w').write(f(open(p).read()))` truncation (21:58) and emptied this file; rebuilt at once from HEAD + the 22:20 entry from the link-import session's transcript
 
+### 26-10-10 22:40 - 5adc8842 - docs sweep: map from a link
+- Konrad (/ty): docs sweep after the link import — README (features, sheet/client rows, dev server line), `action.md` test list for #56, `test-session.md` step 4.4 (Dyson link), `packages.md` Pillow on the dev server, `setup.md` Hive-in-widget-tests gotcha, `architecture.md` web clipboard caveat
+
 ### 26-10-10 22:20 - 5adc8842 - shared library: map from a link, Store as WebP
 - Konrad: the shared library upload should take a link too — paste button + free text field — with options to convert what is behind it; mark the best size/quality format (we once landed on WebP?) as recommended if it really is
 	- no earlier session (Mac or VPS transcripts) recorded a format decision; measured instead on the test maps: WebP 90 ~20 % under JPEG 90 at 41–42 dB on painted maps, lossless WebP a third of the PNG on Dyson line art (lossy is bigger there), PNG 4–5× the WebP on painted maps; WebP tops out at 16383 px (the 17100 px stress castle → JPEG)
