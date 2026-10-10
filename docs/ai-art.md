@@ -3,8 +3,9 @@
 Vision for generated art in battlemap (maps first, then characters, items, effects) and the
 design of the first piece: a **fully API-driven map pipeline** on Nano Banana 2.1. Status
 2026-10-10: **pipeline built and working** (`tools/mapgen/`, see "built"): doors drawn by
-battlemap, ruins as a layout flag, free checks + a Claude judge; prompt not tuned yet; no
-packed map loaded on a TV yet. **What we learned about getting good maps out of the model:
+battlemap, ruins as a layout flag, free checks + a Claude judge, a doorway fix pass, the test
+board built from the run data; test map = the fixed keep of run 5 (judge use 8/10); prompt
+not tuned yet; no packed map loaded on a TV yet. **What we learned about getting good maps out of the model:
 "learned so far".** Prices and model ids are from Google's own pricing page and changelog on
 that date — they churn (see "model churn").
 
@@ -162,7 +163,8 @@ in step (size, colours) when either changes.
 
 **Known gaps:** the QA score (edge strength on wall lines ÷ inside rooms, 0.9–1.3) does not
 rank images — the free checks and the judge do (`pack` follows the judge when it has run);
-no automatic redraw on a high issue; `est_cost` ignores thought tokens; style refs (`--refs`),
+no automatic redraw on a high issue; the doorway fix is its own command, not part of `paint`
+(crypt untried); `est_cost` ignores thought tokens; style refs (`--refs`),
 2K/4K and the batch tier untried; no packed map loaded on the TV yet (drawn doors are checked
 by unit tests and an offscreen render of the real component, not on a device).
 
@@ -249,7 +251,7 @@ guide's black rock gap and walls as flat black bars.
 `"ruined": true`, no ruin words in any text, prompt rule "every wall stays whole". All three
 keep every courtyard wall (run 1: broken in both draws). New failure in one draw: an invented
 exit through the south wall to the map edge — and that draw had the best QA score. Image 2 is
-packed as the test map (`out/keep/261010-173421-ruined/keep.dd2vtt`), with a grid preview
+packed as the test map of the day (`out/keep/261010-173421-ruined/keep.dd2vtt`), with a grid preview
 (`mapgen.py doors … --grid`). Another draw shows the yellow light dot as is. Re-judged in
 step 4 with the rail named in the judge prompt: all three retry (rails at every doorway,
 corridor ends two squares wide); image 2 stays the best (5/10) and the packed map.
@@ -321,7 +323,9 @@ flowchart LR
   B[style bible<br/>text + refs] --> P
   G --> N[Nano Banana 2.1<br/>API, VPS]
   P --> N
-  N --> Q[QA: checks + Claude judge<br/>redraw: planned]
+  N --> C[free checks<br/>openings, markers]
+  C --> F[doorway fix pass<br/>edit, paste back, wall copy]
+  F --> Q[Claude judge<br/>redraw: planned]
   Q --> R[resample to cols × ppg]
   R --> V[pack .dd2vtt<br/>walls/doors/lights from spec]
   V --> L[map library → TV]
@@ -354,7 +358,9 @@ flowchart LR
    painting), and the **free checks** (`check()`: wall edges that look open, guide markers
    left). The **judge** (`judge`, a Claude helper session) confirms or rejects the check's
    spots and finds the rest. `pack` takes the judge's best ("use", then score), unjudged the
-   image without a high issue, then fewest issues, then the score. No automatic retry yet.
+   image without a high issue, then fewest issues, then the score. The **doorway fix pass**
+   (`fix`, a separate command today) cleans a chosen painting's doorways before it is judged
+   and packed. No automatic retry yet.
 5. **Resample** to exactly `cols × ppg` by `rows × ppg` (the model's sizes are fixed, the grid
    is ours). Optional upscale on the Mac.
 6. **Pack `.dd2vtt`** — image (base64), `resolution` (`map_size`, `pixels_per_grid`),
