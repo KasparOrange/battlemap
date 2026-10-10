@@ -127,10 +127,12 @@ or from the Mac: `tools/deploy.sh tv` (rolling deploy, below). What it rests on,
 - **data kept**: the box's app is signed with the Mac's `~/.android/debug.keystore` (same SHA-256
   as the installed 1.1.1), so `install -r` keeps its library and sessions. A build signed with
   another key would need an uninstall, which wipes them.
-- **ports move**: wireless debugging gets a new port whenever it restarts. On 2026-10-10 the
-  box's TLS port died and it answered classic `adb tcpip` on `192.168.178.149:5555` instead;
-  `latrine android devices` retries known `:5555` addresses, the tablet needed Wireless
-  debugging switched on again (it stays paired).
+- **Wi-Fi changes drop wireless debugging**: Android switches it off whenever the Wi-Fi changes
+  access point or band (both devices at once on 2026-10-10 18:18). latrine therefore keeps every
+  device on classic adb at a fixed address as well — box `192.168.178.149:5555`, tablet
+  `192.168.178.199:5555` — which lasts until the device reboots; use those serials. After a
+  reboot switch Wireless debugging on once (the pairing stays) and latrine moves it back.
+  Never `adb kill-server`/`usb`/`disconnect` on port 5059: every session shares those devices.
 - **one companion**: a browser tab with the old web companion (built before the `replaced`
   message) keeps re-registering and fights the native app for the companion slot — close it or
   point it at `about:blank` before opening Companion Mode in the app.
