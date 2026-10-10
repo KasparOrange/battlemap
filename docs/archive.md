@@ -23,7 +23,8 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- found on the way: while the tablet had no socket, every 6th tap counted as a "send failure" and re-armed the reconnect timer with the next backoff step (1→3→10→30→60 s) — tapping during an outage pushed the reconnect out; likely most of the 65 s of 19:56
 	- commands made while not registered are dropped, not queued in the socket; the tablet says "Not connected to the TV — that wasn't sent" (once per 3 s); logged as `Dropped while offline` on the next registration
 	- backoff 1/2/3/5 s, a connection attempt without registration after 8 s is retried, the app resuming reconnects at once
-	- 1 new test (connecting drops); relay restarted on the VPS with the diagnostics; 1.1.14+24 on box + tablet
+	- 1 new test (connecting drops); relay restarted on the VPS with the diagnostics; 1.1.15+25 on box + tablet
+	- first new tablet lines: right after the deploy the app went to the background (`App lifecycle: paused`) and its socket died ~5 s later (1006) — Android cuts a paused app's connection; likely what happened at 19:56 (the tablet's screen off or another app in front)
 ### 26-10-10 20:50 - 9393ef96 - preview tint no longer on the TV
 - Konrad: with "Preview first", a tapped room shows blue on the tablet — and on the TV too, which must not happen
 	- `FogOfWarComponent.showPreview` (false on the TV, `tableDisplay`): staged squares stay plain fog for the players until applied; the companion's local mode keeps the tint
