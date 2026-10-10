@@ -23,7 +23,11 @@ Images to judge: {images}. For each out_N.jpg:
    - walls_kept: every cyan line is a standing painted wall: no gap, breach, exit, rubble or
      path through it. A ruined area may show damage INSIDE, never in its walls.
    - doorways_clean: every red doorway is an empty opening — no painted door, door leaf,
-     gate, bars or curtain (battlemap draws the doors itself).
+     gate, bars or curtain (battlemap draws the doors itself), and the floor runs straight
+     through it: no rail, beam, threshold bar or sill across the gap. Look at each doorway on
+     grid_N.jpg; a thin wooden line with a post at each end is such a rail (seen in every
+     draw of runs 2–3) — one issue per doorway that has it, severity medium (battlemap's door
+     covers it when shut; open, the doorway looks barred). A painted door or gate is high.
    - grid_or_text: true when the painting shows grid lines, text, labels or numbers (bad).
    - markers: true when guide colours are left in the art (a flat yellow dot at a light,
      magenta, red) instead of painted objects (bad).
@@ -36,12 +40,18 @@ Images to judge: {images}. For each out_N.jpg:
 4. Write {run}/judge_N.json (N as in out_N.jpg), exactly this shape:
    {{"image": "out_N.jpg", "walls_kept": true, "doorways_clean": true, "grid_or_text": false,
     "markers": false, "style_ok": true, "text_followed": true, "score": 7, "verdict": "use",
-    "issues": [{{"x": 24.5, "y": 16, "what": "path painted through the south wall", "severity": "high",
-                "source": "judge"}}],
+    "issues": [{{"x": 24.5, "y": 16, "title": "Exit through the south wall",
+                "what": "path painted through the south wall", "severity": "high", "source": "judge"}}],
+    "good": [{{"x": 25, "y": 12, "title": "Ruin inside, walls whole",
+              "what": "rubble and weeds inside the courtyard, every wall standing"}}],
     "rejected_checks": [{{"x": 18.5, "y": 6, "why": "a banner hangs over an intact wall"}}],
     "notes": "one sentence on the image as a whole"}}
    - x/y: the centre of the problem in squares (the middle of a wall edge between columns 24
      and 25 on line 16 is 24.5, 16).
+   - title: 2–5 words, a label for the spot; what: one sentence with the detail.
+   - good: up to 3 things the painting got right that matter for the pipeline (a layout
+     feature kept, a description followed), each on its spot — they become green pins on the
+     test board.
    - severity high = breaks play (a wall missing or added, a doorway blocked, a door painted
      in, grid or text); medium = visible flaw (marker left, text ignored); low = taste.
    - source: "check" for a confirmed pixel-check spot, "judge" for one you found.

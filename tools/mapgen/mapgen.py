@@ -10,14 +10,19 @@ Design: docs/ai-art.md.
 
 Usage:
   tools/mapgen/mapgen.py guide  layouts/crypt.json            # guide PNG only, free
-  tools/mapgen/mapgen.py paint  layouts/crypt.json --size 1K --n 2
+  tools/mapgen/mapgen.py paint  layouts/crypt.json --size 1K --n 2 --tag doorways --why "…"
+  tools/mapgen/mapgen.py pack   out/crypt/<run>                # the best image (judge first)
   tools/mapgen/mapgen.py pack   layouts/crypt.json out/crypt/<run>/out_1.jpg
   tools/mapgen/mapgen.py doors  layouts/crypt.json out/crypt/<run>/out_1.jpg [--open] [--grid]
   tools/mapgen/mapgen.py check  out/crypt/<run>            # free checks again (also part of paint)
-  tools/mapgen/mapgen.py judge  out/crypt/<run> [--wait]   # Claude helper session judges each image
+  tools/mapgen/mapgen.py judge  out/crypt/<run> [--wait] [--pack]  # Claude helper session judges each image
 
 Options for paint: --size 1K|2K|4K, --n N, --thinking minimal|medium|high,
---refs img... (style references), --prompt file (template), --pack (pack the best).
+--refs img... (style references), --prompt file (template), --tag name (run folder label),
+--why "…" (the run's question, shown on the board), --round N (board zone; default: the
+round of an earlier run with the same tag, else a new one), --judge (judge and wait),
+--pack (pack the best: by the judge with --judge, else by the free checks).
+paint, judge --wait and pack rebuild the horizon board (tools/mapgen/board.py) when it runs.
 
 API key: $GEMINI_API_KEY, else 1Password item $MAPGEN_OP_ITEM (vault dev).
 Model: $MAPGEN_MODEL (default gemini-nano-banana-2.1). Output: tools/mapgen/out/ (gitignored).
@@ -500,10 +505,41 @@ def review(spec, run, file):
     return issues
 
 
-def best_result(results):
-    """The image to pack: no high issue first, then fewest issues, then the QA score."""
-    return max(results, key=lambda r: (not any(i["severity"] == "high" for i in r.get("issues", [])),
-                                       -len(r.get("issues", [])), r["qa"]))
+def judged(run, file):
+    """The judge's verdict on one painting of `run` (judge_N.json), or None when not judged."""
+    f = Path(run) / f"judge_{Path(file).stem.split('_')[-1]}.json"
+    return json.loads(f.read_text()) if f.exists() else None
+
+
+def best_result(results, run=None):
+    """The image to pack. With judge verdicts in `run`: "use" first, then the judge's score;
+    otherwise (and as tie-break) no high free-check issue, fewest issues, then the QA score."""
+    def key(r):
+        j = judged(run, r["file"]) if run else None
+        return ((j or {}).get("verdict") == "use", (j or {}).get("score", 0),
+                not any(i["severity"] == "high" for i in r.get("issues", [])), -len(r.get("issues", [])), r["qa"])
+    return max(results, key=key)
+
+
+def next_round(tag):
+    """Board round for a new run: the round of an earlier run with the same tag (a crypt and a
+    keep painted for one question share a zone), else one past the highest round so far."""
+    rounds = []
+    for m in OUT.glob("*/*/meta.json"):
+        r = json.loads(m.read_text()).get("round")
+        if r is None:
+            continue
+        if tag and m.parent.name.split("-", 2)[2:] == [tag]:
+            return r
+        rounds.append(r)
+    return max(rounds, default=0) + 1
+
+
+def refresh_board():
+    """Rebuilds the horizon board from the run folders (board.py); a note when horizon is down."""
+    r = subprocess.run([sys.executable, str(HERE / "board.py")], capture_output=True, text=True)
+    print("board rebuilt (horizon battlemap-mapgen)" if r.returncode == 0
+          else "board: not rebuilt — horizon running? (tools/mapgen/board.py)")
 
 
 # ---------------------------------------------------------------- judge (Claude helper session)
@@ -524,7 +560,8 @@ def layout_text(spec):
 
 def judge(spec, run, model=None, wait=False):
     """Starts a Claude helper session (claude-bridge headless, subscription) that judges every
-    painting of `run` and writes judge_N.json per image; with `wait`, blocks until all exist."""
+    painting of `run` and writes judge_N.json per image; with `wait`, blocks until all exist
+    (exits when the session dies or after 15 min)."""
     meta = json.loads((run / "meta.json").read_text())
     files = [r["file"] for r in meta["results"]]
     checks = "\n".join(
@@ -588,6 +625,17 @@ def door_bounds(spec):
     return out
 
 
+def pack_run(spec, run, image=None, ppg=None, fmt="WEBP"):
+    """Packs a painting of `run` (default: [best_result], judge first) as <run>/<name>.dd2vtt
+    and records it as meta.json "packed" — the board marks that image."""
+    meta = json.loads((run / "meta.json").read_text())
+    file = Path(image).name if image else best_result(meta["results"], run)["file"]
+    pack(spec, run / file, run / f"{spec['name']}.dd2vtt", ppg, fmt)
+    meta["packed"] = file
+    (run / "meta.json").write_text(json.dumps(meta, indent=2))
+    return file
+
+
 def pack(spec, image_path, out_path, ppg=None, fmt="WEBP"):
     """Writes a .dd2vtt: the painting resampled to exact squares + walls/doors/lights from the spec.
 
@@ -636,8 +684,13 @@ def main():
     p.add_argument("--refs", nargs="*", default=[])
     p.add_argument("--prompt", default=str(HERE / "prompts" / "baseline.txt"))
     p.add_argument("--tag", default="", help="label for the run folder (e.g. a tuning variant)")
+    p.add_argument("--why", default="", help="the question this run answers (board zone text)")
+    p.add_argument("--round", type=int, help="board round (zone); default by tag, else a new one")
+    p.add_argument("--judge", action="store_true", help="judge the run and wait (before --pack)")
     p.add_argument("--pack", action="store_true")
-    k = sub.add_parser("pack"); k.add_argument("spec"); k.add_argument("image")
+    k = sub.add_parser("pack", help="pack a run's best image, or a given image, as .dd2vtt")
+    k.add_argument("spec", help="layout JSON, or a run folder (packs its best image)")
+    k.add_argument("image", nargs="?")
     k.add_argument("--ppg", type=int); k.add_argument("--png", action="store_true")
     o = sub.add_parser("doors", help="the painting with battlemap's doors drawn on (preview)")
     o.add_argument("spec"); o.add_argument("image"); o.add_argument("--open", action="store_true")
@@ -645,12 +698,17 @@ def main():
     c = sub.add_parser("check", help="free checks on a run again (openings, markers)"); c.add_argument("run")
     j = sub.add_parser("judge", help="a Claude helper session judges a run (subscription)")
     j.add_argument("run"); j.add_argument("--model"); j.add_argument("--wait", action="store_true")
+    j.add_argument("--pack", action="store_true", help="with --wait: pack the judge's best image")
     a = ap.parse_args()
 
-    if a.cmd in ("check", "judge"):
+    if a.cmd == "pack" and Path(a.spec).is_dir():
+        a.run, a.spec = a.spec, None
+    elif a.cmd == "pack" and a.image and (Path(a.image).resolve().parent / "meta.json").exists():
+        a.run = str(Path(a.image).resolve().parent)
+    if getattr(a, "run", None):
         run = Path(a.run).resolve()
         meta = json.loads((run / "meta.json").read_text())
-        a.spec = meta.get("layout") or str(HERE / "layouts" / f"{run.parent.name}.json")
+        a.spec = getattr(a, "spec", None) or meta.get("layout") or str(HERE / "layouts" / f"{run.parent.name}.json")
     spec = load_spec(a.spec)
     name = spec["name"]
     warnings = lint(spec)
@@ -667,6 +725,9 @@ def main():
                                        + ("_open" if a.open else "") + ("_grid" if a.grid else "") + ".jpg")
         door_preview(spec, img, a.open, a.grid).save(path, quality=90)
         print(path)
+    elif a.cmd == "pack" and getattr(a, "run", None):
+        pack_run(spec, run, a.image, a.ppg, "PNG" if a.png else "WEBP")
+        refresh_board()
     elif a.cmd == "pack":
         pack(spec, a.image, OUT / name / f"{name}.dd2vtt", a.ppg, "PNG" if a.png else "WEBP")
     elif a.cmd == "check":
@@ -675,7 +736,11 @@ def main():
             print(f"{r['file']}: " + ("; ".join(f"{i['what']} ({i['x']:g}, {i['y']:g})" for i in r["issues"]) or "clean"))
         (run / "meta.json").write_text(json.dumps(meta, indent=2))
     elif a.cmd == "judge":
-        judge(spec, run, a.model, a.wait)
+        judge(spec, run, a.model, a.wait or a.pack)
+        if a.pack:
+            pack_run(spec, run)
+        if a.wait or a.pack:
+            refresh_board()
     else:
         run = OUT / name / (time.strftime("%y%m%d-%H%M%S") + (f"-{a.tag}" if a.tag else ""))
         run.mkdir(parents=True)
@@ -704,11 +769,14 @@ def main():
         cost = PRICE[a.size] * a.n
         (run / "meta.json").write_text(json.dumps({
             "layout": str(Path(a.spec).resolve()), "model": MODEL, "size": a.size, "aspect": aspect, "thinking": a.thinking, "refs": a.refs,
-            "prompt_template": a.prompt, "lint": warnings, "est_cost_usd": round(cost, 4), "results": results}, indent=2))
+            "prompt_template": a.prompt, "lint": warnings, "est_cost_usd": round(cost, 4),
+            "round": a.round or next_round(a.tag), "why": a.why, "draw_doors": True, "results": results}, indent=2))
         print(f"run {run}  est. ${cost:.2f}")
+        if a.judge:
+            judge(spec, run, wait=True)
         if a.pack:
-            best = best_result(results)
-            pack(spec, run / best["file"], run / f"{name}.dd2vtt")
+            pack_run(spec, run)
+        refresh_board()
 
 
 if __name__ == "__main__":

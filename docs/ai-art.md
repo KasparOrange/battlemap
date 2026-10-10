@@ -60,26 +60,37 @@ the Gemini app is also wanted for hand exploration.
 | command | does | cost |
 |---|---|---|
 | `guide layouts/<name>.json` | renders the guide PNG only | free |
-| `paint layouts/<name>.json --size 1K\|2K\|4K --n N [--thinking …] [--refs …] [--tag …] [--pack]` | guide + prompt → model → overlay, door preview, free checks per image → `meta.json`; `--pack` packs the best (no high issue, fewest issues, then QA score) | per image, see prices |
-| `pack layouts/<name>.json <image> [--ppg N] [--png]` | writes `<name>.dd2vtt` (WebP image, walls/doors/lights from the layout, `"battlemap": {"draw_doors": true}`) | free |
+| `paint layouts/<name>.json --size 1K\|2K\|4K --n N [--thinking …] [--refs …] [--tag …] [--why "…"] [--round N] [--judge] [--pack]` | guide + prompt → model → overlay, door preview, free checks per image → `meta.json`; `--judge` judges and waits; `--pack` packs the best (judge first, see `pack`); rebuilds the board | per image, see prices |
+| `pack out/<name>/<run>` | packs the run's best image: judge verdict "use", then judge score; unjudged: no high check issue, fewest issues, QA score → `<run>/<name>.dd2vtt`, `"packed"` in `meta.json` | free |
+| `pack layouts/<name>.json <image> [--ppg N] [--png]` | writes `<name>.dd2vtt` (WebP image, walls/doors/lights from the layout, `"battlemap": {"draw_doors": true}`) — into the image's run folder (recorded as packed) when it has one | free |
 | `doors layouts/<name>.json <image> [--open] [--grid]` | the painting with battlemap's doors drawn on (`doors_N[_open][_grid].jpg`) — the TV look without a TV | free |
 | `check out/<name>/<run>` | the free checks again (they also run inside `paint`): issues into `meta.json`, `suspects_N.jpg`, `grid_N.jpg` | free |
-| `judge out/<name>/<run> [--wait] [--model …]` | a Claude helper session (subscription, `claude-bridge headless`) judges every image → `judge_N.json` | subscription |
+| `judge out/<name>/<run> [--wait] [--pack] [--model …]` | a Claude helper session (subscription, `claude-bridge headless`) judges every image → `judge_N.json`; `--pack` waits, then packs the judge's best; with `--wait` the board is rebuilt | subscription |
 
 Runs land in `tools/mapgen/out/<name>/<timestamp>-<tag>/` (gitignored): `guide.png`,
 `prompt.txt`, `out_N.jpg`, `overlay_N.jpg` (our walls cyan, doors red over the painting),
 `doors_N.jpg` (painting + battlemap's doors, shut), `grid_N.jpg` (painting at exact squares +
 grid, for coordinates), `suspects_N.jpg` (crops of what the free checks flagged), `judge_N.json`
 (after `judge`), `meta.json` (layout path, model, size, QA, issues, lint, token usage,
-estimated cost). Prompt template:
+estimated cost; for the board: `round`, `why` — the run's question —, optional `finding`
+added after looking, `packed`, `draw_doors`). Prompt template:
 `tools/mapgen/prompts/baseline.txt`. Sample layouts: `crypt` (16 × 16) and `keep` (32 × 18,
 16:9).
 
 **Board:** every test image lives on the horizon board **`battlemap-mapgen`** — guides,
-paintings with numbered pins on the features they show (pins in grid squares), the QA
-overlays, and blue slots for the next images. Konrad's rule (2026-10-10): **every new image
-from this test project goes onto that board**, reorganised as needed — add a plate to
-`PLATES` in `tools/mapgen/board.py` (or move a slot out of `NEXT`) and re-run it.
+paintings with numbered pins on the features they show (pins in grid squares), the small
+pictures (doors open, grid, QA overlay, check crops), and blue slots for the next images.
+Konrad's rule (2026-10-10): **every new image from this test project goes onto that board**.
+Since step 4 the board is **built from the run folders** (`tools/mapgen/board.py`): one zone
+per `round` (title from the tags, text from `why` + `finding`, totals and judge verdicts),
+one plate per painting — the doors preview as the image, the judge's verdict, score and note
+as its intro, pins from `judge_N.json` (`good` green, issues red/amber/grey by severity,
+rejected checks grey) or, unjudged, the free checks as amber "unconfirmed" pins; the packed
+image says PACKED. `paint`, `judge --wait` and `pack` rebuild it, so a run needs no edit there.
+Hand-written in `board.py`: the two test layouts, `NOTES` (what was seen by eye on runs 1–3,
+before the judge wrote `good`; their `id`s keep the walk `overview` working), the `NEXT`
+slots and Juri's zone. A new run joins the zone of an earlier run with the same tag (crypt
+and keep painted for one question), else opens the next round; `--round N` overrides.
 
 **Setup gotchas (2026-10-10):** the card's 3-D Secure check (Cardinal Commerce) is blocked
 by Cloudflare inside telescope → pay in a normal browser; Google Cloud in Germany takes card
@@ -124,7 +135,8 @@ prepaid €20, no auto-refill — a temporary home: Konrad's own account (ko) ha
   leaked dot does. Crops of each spot: `suspects_N.jpg`.
 - **Claude judge** (`judge`, prompt `prompts/judge.txt`): a helper session reads guide, painting,
   grid and overlay per image, confirms or rejects each check spot, finds the rest, writes
-  `judge_N.json` (flags, score 1–10, verdict use/retry, issues, rejected checks). Run 3 took
+  `judge_N.json` (flags, score 1–10, verdict use/retry, issues with a short `title`, up to
+  three `good` spots, rejected checks — `title` and `good` since step 4, for the board). Run 3 took
   ~5 min for 3 images: image 1 retry (the exit, confirmed), image 2 use 8/10 (the banner spot
   rejected with the right reason), image 3 use 5/10 (the dot, plus door-like pale strips in outer
   walls). It also caught what the checks can't: a torch painted 2.6 squares from its light,
@@ -141,7 +153,7 @@ the old marker. `mapgen.py doors` draws the same leaf in Python for the board �
 in step (size, colours) when either changes.
 
 **Known gaps:** the QA score (edge strength on wall lines ÷ inside rooms, 0.9–1.3) does not
-rank images — the free checks and the judge do; `--pack` ignores `judge_N.json` (step 4);
+rank images — the free checks and the judge do (`pack` follows the judge when it has run);
 no automatic redraw on a high issue; `est_cost` ignores thought tokens; style refs (`--refs`),
 2K/4K and the batch tier untried; no packed map loaded on the TV yet (drawn doors are checked
 by unit tests and an offscreen render of the real component, not on a device).
@@ -160,7 +172,7 @@ has its own lessons: "editing a published map" below.
 | A colour-coded guide as the first image + "the guide is exact, keep every wall" | walls land on our layout in every draw (overlay), 16:9 and 1:1 alike |
 | One text line per area, columns/rows 1-based | described things land where the text says: hearth on the north wall, banners in the corridor, bunks, ossuary shelves, stairs out of the crypt |
 | Props as magenta blocks + a text line | the knight's sarcophagus and the feasting table sit on their blocks |
-| Leave out what battlemap renders (doors now; later light, fire, water) | with a gap in the guide and "no doors" in the prompt: empty doorways in 4/4 draws |
+| Leave out what battlemap renders (doors now; later light, fire, water) | with a gap in the guide and "no doors" in the prompt: no painted door in 7/7 draws — but a thin rail across every doorway (failures) |
 | Damage as a layout flag (`"ruined": true`) + the blanket rule "every wall stays whole" | courtyard walls kept in 3/3 draws; with ruin words in the text they broke in 4/4 keep draws |
 | Draw 2–3 per layout, pick by checks + judge | draws under one prompt differ a lot (one clean, one breached); the QA score picks wrong |
 | Resample to exact squares on our side | the model's sizes are fixed (16:9 at 1K = 1376 × 768 ≈ 43 px/square); `pack` and `exact()` resample to cols × ppg |
@@ -175,7 +187,8 @@ has its own lessons: "editing a published map" below.
 | Invented exit: a path through a wall to the map edge | run 3, 1 of 3 | not asked for, the wall rule doesn't stop it → check `opening` + judge, redraw | caught, not prevented |
 | Guide colours painted flat: the yellow light dot left as is; black rock gap and near-black walls as flat black bars | run 3 (dot), run 2 (bars), 1 draw each | the legend says what to paint, not "never flat" → tuning: softer guide colours, "render every colour as texture" | caught (dot: check, bars: judge), not prevented |
 | Light source moved: torch ~2.6 squares from its light | run 3, 2 of 3 | the model puts a light on the nearest wall or hearth → judge flags; once battlemap renders lights ("paint the still") the painting holds none | open |
-| Doorway frames wider than the doorway eat the wall stub beside it; pale door-frame strips in outer walls read as exits | run 3 | the model decorates openings → judge flags (medium); prompt tuning | open |
+| A thin wooden rail (a post at each end) across every doorway — a shut door when battlemap's door is open | runs 2–3, 7 of 7 draws, every doorway (judge, step 4; by eye I had read it as "empty doorway / threshold only") | the model frames an opening like a door frame → prompt: "the floor runs straight through each doorway, no threshold, rail, sill or beam"; a free check for doorway edges that look closed | caught (judge, medium), not prevented |
+| Doorway frames wider than the doorway eat the wall stub beside it: the corridor ends open two squares wide where the layout has a one-square doorway; pale door-frame strips in outer walls read as exits | runs 2–3, every keep draw | the model decorates openings, and a 2-square corridor invites a 2-square opening → judge flags; prompt tuning, or doorways as wide as the corridor in the layout | caught (judge), not prevented |
 | The edge-gradient QA score does not rank | runs 1–3 (the top score was the breached draw twice) | use checks + judge; the score stays as a number in `meta.json` | known |
 
 **Measured:** 1K costs $0.034 and takes 16–32 s per image, 43–64 px per square: fine for
@@ -184,9 +197,15 @@ no visible gain at 1K. Untried: style refs, 2K/4K, batch tier.
 
 **Checks and judge in practice:** the free pixel check is fooled by objects hanging over a wall
 (a banner), the judge rejects those; a torch out of place or a doorway frame that eats a wall
-are judge-only. The judge needs `grid_N.jpg` to read coordinates, runs ~5 min for 3 images, and
-must run with `--permission-mode auto` and Read/Write only: a headless session can't answer a
-permission prompt, and under `acceptEdits` its first shell command hung it for good.
+are judge-only. The judge needs `grid_N.jpg` to read coordinates, runs 1–5 min for 2–3 images,
+and must run with `--permission-mode auto` and Read/Write only: a headless session can't answer
+a permission prompt, and under `acceptEdits` its first shell command hung it for good.
+**The judge is not stable yet:** the first run-3 judge called every doorway clean and gave the
+test map use 8/10; after one sentence about rails was added, the next judge found a rail at
+every doorway and the corridor ends two squares wide → retry 5/10 (still the best of the
+three). It sees what it is told to look for — name each failure in `judge.txt`, and better:
+hand it a crop per doorway (like `suspects_N.jpg`) so it checks every opening, not a 1376 px
+overview.
 
 ### Run log
 
@@ -197,8 +216,10 @@ Thinking `high` adds ~2.4k thought tokens (billed as text output, a fraction of 
 ~30 s; no visible gain at 1K. 1K gives only 50–64 px per square — finals need 4K.
 
 **Run 2 — doorways (2026-10-10, 4 images at 1K, ~14 cents):** guide without red bars,
-prompt "open doorways, no doors": all four paintings show empty openings, no red, no
-side-on doors. Battlemap's drawn doors sit cleanly in the wall line (board, zone "run 2").
+prompt "open doorways, no doors": all four paintings show openings without a painted door,
+no red, no side-on doors. Battlemap's drawn doors sit cleanly in the wall line (board, zone
+"run 2"). Judged later (step 4): a thin wooden rail crosses every doorway in all four — read
+by eye as "empty doorway" or "threshold only"; all four retry.
 Still open: ruin text breaks the courtyard walls (step 2 → run 3); one keep draw painted the
 guide's black rock gap and walls as flat black bars.
 
@@ -207,7 +228,9 @@ guide's black rock gap and walls as flat black bars.
 keep every courtyard wall (run 1: broken in both draws). New failure in one draw: an invented
 exit through the south wall to the map edge — and that draw had the best QA score. Image 2 is
 packed as the test map (`out/keep/261010-173421-ruined/keep.dd2vtt`), with a grid preview
-(`mapgen.py doors … --grid`). Another draw shows the yellow light dot as is.
+(`mapgen.py doors … --grid`). Another draw shows the yellow light dot as is. Re-judged in
+step 4 with the rail named in the judge prompt: all three retry (rails at every doorway,
+corridor ends two squares wide); image 2 stays the best (5/10) and the packed map.
 
 
 ## Next — pick up here (hand-off 2026-10-10)
@@ -218,12 +241,13 @@ the budget (prepaid €20 on Bao's account, usage below — AI Studio → Ausgab
 nico.zingerle), read "learned so far" before changing a prompt. Every new image goes onto the
 board (rule above).
 
-**Where it stands (2026-10-10, end of the second session):** steps 1–3 are done (runs 2 and 3
-on the board, judge results in run 3's `judge_N.json`); ≈ $1.10 of the €20 used (map runs
-≈ $0.55, Juri's edit ≈ $0.55). Test map for the table: the run-3 keep
-(`out/keep/261010-173421-ruined/keep.dd2vtt`, the judge's pick too, grid preview
-`doors_2_grid.jpg`). Next is step 4, the board built from run data — keep `juri_zone` in
-`board.py` (Juri's dungeon, hand-built) when the run plates become data-driven.
+**Where it stands (2026-10-10, third session):** steps 1–4 are done; runs 2 and 3 are judged
+(`judge_N.json`) and the board is built from the run folders. ≈ $1.10 of the €20 used (map
+runs ≈ $0.55, Juri's edit ≈ $0.55; judging is on the subscription). Test map for the table:
+the run-3 keep (`out/keep/261010-173421-ruined/keep.dd2vtt`, the judge's best at 5/10 —
+retry for the doorway rails and the two-square corridor ends; grid preview
+`doors_2_grid.jpg`). Judging run 2 found the rail across every doorway (failure catalogue) —
+the TV test shows how much it matters with battlemap's door open.
 
 **Steps, in order** (one at a time, each onto the board before the next):
 
@@ -232,16 +256,18 @@ on the board, judge results in run 3's `judge_N.json`); ≈ $1.10 of the €20 u
 2. ✅ **Ruins in the layout** (run 3) — `"ruined": true`, see the layout spec.
 3. ✅ **Judge** — free checks + Claude helper session, "judge (step 3)" above. Gemini Flash as
    judge only later, for unattended server runs (a "paint" button on the phone).
-4. **Board from data:** `board.py` builds plates from each run's `meta.json` + `judge_N.json`
-   (issues → pins automatically, verdict/score in the intro, rejected checks as grey notes)
-   instead of the hand-written `PLATES`. Also: `--pack` should prefer the judge's verdict
-   when `judge_N.json` exists (today it ranks by the free checks).
+4. ✅ **Board from data** — "board" above: zones per round from `meta.json`, pins from
+   `judge_N.json` (`good`, issues, rejected checks); `pack` follows the judge; `paint`,
+   `judge --wait`, `pack` rebuild the board. `paint --why "…" --judge --pack` is the whole
+   loop in one command.
 5. **On the TV:** the run-3 keep (and a crypt) on the Android bench (`tools/android_bench.sh`,
    AVD `bm_tv`): do fog, doors and room reveal match the painted walls; do the drawn doors read
    at TV size (the leaf is 0.14 squares thick) and swing on a tap from the phone?
 6. **4K finals + the tuning grid** (below), run by the helper session; this session gets a
    short summary + the board. The tuning grid now also targets the open rows of the failure
-   catalogue.
+   catalogue — first the doorway rail and the two-square corridor ends (prompt: "the floor
+   runs straight through each doorway"), with a per-doorway crop sheet for the judge so its
+   verdicts stop drifting.
 7. **Later, once battlemap has light / fire / water effects:** extend "paint the still,
    render what moves" — prompt for unlit sources and even lighting, render flames, light and
    water as layers (try list, not scheduled).
@@ -286,9 +312,9 @@ flowchart LR
    at 1K, final at 4K; aim for ≥ ~100 output px per square or detail turns to mush.
 4. **QA** — per image: the edge-overlap score, the overlay (our walls and doors over the
    painting), and the **free checks** (`check()`: wall edges that look open, guide markers
-   left). `--pack` takes the image without a high issue, then fewest issues, then the score.
-   The **judge** (`judge`, a Claude helper session) confirms or rejects the check's spots and
-   finds the rest. No automatic retry yet.
+   left). The **judge** (`judge`, a Claude helper session) confirms or rejects the check's
+   spots and finds the rest. `pack` takes the judge's best ("use", then score), unjudged the
+   image without a high issue, then fewest issues, then the score. No automatic retry yet.
 5. **Resample** to exactly `cols × ppg` by `rows × ppg` (the model's sizes are fixed, the grid
    is ours). Optional upscale on the Mac.
 6. **Pack `.dd2vtt`** — image (base64), `resolution` (`map_size`, `pixels_per_grid`),

@@ -122,15 +122,16 @@ rasterized to PNG on the phone first) go through the HTTP server, not the relay.
 ### AI-generated maps (experimental)
 
 ```bash
-tools/mapgen/mapgen.py paint tools/mapgen/layouts/crypt.json --size 1K --n 2 --pack
-tools/mapgen/mapgen.py judge tools/mapgen/out/crypt/<run> --wait   # Claude judges each draw
+tools/mapgen/mapgen.py paint tools/mapgen/layouts/crypt.json --size 1K --n 2 --why "…" --judge --pack
+tools/mapgen/mapgen.py judge tools/mapgen/out/crypt/<run> --pack   # Claude judges each draw, packs the best
 ```
 
 A layout we write (rooms, walls, doors, lights) is drawn as a colour-coded guide,
 Nano Banana 2.1 paints over it, and the result is packed with our walls into a
 `.dd2vtt` the TV loads like any map. The painting shows empty doorways; battlemap draws
 the doors itself and swings them open when the DM taps. Every draw gets free pixel checks
-(broken walls, leftover guide markers); a Claude helper session judges it on request.
+(broken walls, leftover guide markers); a Claude helper session judges it on request, and
+the map that gets packed is the judge's pick. Each run lands on the test board by itself.
 Needs a Gemini API key with billing. Design, state, what works and what fails with the
 model, next steps: `docs/ai-art.md`; test images on the horizon board `battlemap-mapgen`
 (`tools/mapgen/board.py`).

@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 18:28 - 0f0ee4a5 - AI maps: board from run data, pack follows the judge (ai-art step 4)
+- Konrad: continue the map pipeline → step 4
+	- `board.py` builds the run zones from the run folders: `meta.json` (`round`, `why`, `finding`, `packed`, `draw_doors`) + `judge_N.json` (`good` → green pins, issues by severity, rejected checks grey); hand-written only the layouts, `NOTES` (by-eye pins, keeping the walk's plate ids), `NEXT`, Juri's zone; zones packed into columns under 6,400 px
+	- `mapgen.py`: `pack <run>` takes the judge's best ("use", then score) and records it; `paint --why --round --judge`; `judge --pack`; paint / judge --wait / pack rebuild the board; judge prompt asks for a short `title` per issue and up to 3 `good` spots
+	- judged run 2 (crypt + keep) to try it: **a thin wooden rail crosses every doorway** in all 7 draws since run 2 — my by-eye notes ("empty doorway", "threshold only") were wrong; named it in `judge.txt`, re-judged run 3 → all retry, image 2 stays the packed test map (5/10, was use 8/10) → failure catalogue + "the judge is not stable yet" in `ai-art.md`
+	- backfilled `round`/`why`/`finding`/`packed` into the old runs' `meta.json` (local, gitignored)
+
 ### 26-10-10 18:27 - 93f94292 - showcase scene on the box, native companion on the tablet
 - Konrad: "open a map on the TV and show me a state of an impressive round half through a playthrough", then "make sure it works on the tablet, as a native app"
 	- vampire lair (04) in tabletop preset, session "The Countess's Lair — round 4": rooms revealed up to the ritual chamber, doors open, the party's route and a blood trail drawn, a 20 ft measure; driven over the VPS relay (first version with tokens dropped: tabletop is the focus)
