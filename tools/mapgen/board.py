@@ -160,6 +160,9 @@ NOTES = {
         (20, 12, GREEN, "Walls on grid lines", "The painted walls follow the grid squares, as the .dd2vtt expects (small picture with grid)."),
     ]},
     "keep/261010-173421-ruined/out_3": {"id": "r_keep3"},
+    # the first doorway edit pass: the trial that picked the plain edit over magenta holes
+    "keep/261010-192835-fix-doorways/out_1": {"sides": [
+        (OUT / "fixlab/compare.jpg", "Edit trial per doorway: original · plain edit · magenta holes (walls lost)")]},
 }
 
 SEVERITY = {"high": RED, "medium": AMBER, "low": GREY}
@@ -167,6 +170,7 @@ SEVERITY = {"high": RED, "medium": AMBER, "low": GREY}
 # run's doors are drawn by battlemap)
 SIDES = [("doors_{n}_open.jpg", "Same map, doors open"), ("doors_{n}_grid.jpg", "With battlemap's grid"),
          ("overlay_{n}.jpg", "QA overlay: our walls cyan, doorways red"), ("doorways_{n}.jpg", "Every doorway, close up"),
+         ("doorways_before.jpg", "The doorways before the edit pass"),
          ("suspects_{n}.jpg", "Pixel-check spots")]
 
 
@@ -183,6 +187,12 @@ def short(what):
 def labelled(entry):
     """(title, text) of a judge issue or "good" entry."""
     return (entry["title"], entry["what"]) if entry.get("title") else short(entry["what"])
+
+
+def src_tag(fix_of):
+    """'261010-190716-floor-through/out_2.jpg' → 'FLOOR-THROUGH IMAGE 2' (a fix run's source)."""
+    folder, file = fix_of.split("/")
+    return f"{folder.split('-', 2)[-1].upper()} IMAGE {Path(file).stem.split('_')[-1]}"
 
 
 def run_plates(run, meta):
@@ -207,7 +217,8 @@ def run_plates(run, meta):
             head = "**Not judged**" + (" — notes by eye." if note.get("pins") else " — free checks only.")
         stats = (f"{meta.get('size', '?')}" + (f", thinking {meta['thinking']}" if meta.get("thinking") else "")
                  + f", {r.get('seconds', 0):.0f} s, QA {r.get('qa', 0):.2f}.")
-        intro = " ".join(x for x in [head, note.get("intro", ""), stats,
+        fixed = f"Edit pass on `{meta['fix_of']}`." if meta.get("fix_of") else ""
+        intro = " ".join(x for x in [head, fixed, note.get("intro", ""), stats,
                                      f"**Packed** as `{layout}.dd2vtt`." if packed else ""] if x)
 
         pins = list(note.get("pins", []))
@@ -224,11 +235,13 @@ def run_plates(run, meta):
                      for i in r.get("issues", [])]
 
         out.append({"id": note.get("id") or f"{layout}_{run.name}_{n}".replace("-", "_"),
-                    "title": f"{layout.upper()} · {tag.upper()} · IMAGE {n}" + (" · PACKED" if packed else ""),
+                    "title": (f"{layout.upper()} · {src_tag(meta['fix_of'])} FIXED" if meta.get("fix_of")
+                              else f"{layout.upper()} · {tag.upper()} · IMAGE {n}") + (" · PACKED" if packed else ""),
                     "img": main, "name": f"{layout}-{run.name}-{n}.jpg", "grid": (cols, rows),
                     "width": 960 if cols / rows > 1.2 else 672, "intro": intro, "pins": pins,
                     "sides": [(run / f.format(n=n), label) for f, label in SIDES if (run / f.format(n=n)).exists()
-                              and (meta.get("draw_doors") or not f.startswith("doors"))]})
+                              and (meta.get("draw_doors") or not f.startswith("doors"))]
+                             + [(Path(f), label) for f, label in note.get("sides", []) if Path(f).exists()]})
     return out
 
 
@@ -260,7 +273,7 @@ def round_zone(rnd, runs):
 
 
 NEXT = [
-    ("On the TV", "The run-4 keep on the Android TV emulator: do fog, doors and room reveal line up with the painted walls?", BLUE),
+    ("On the TV", "The fixed run-4 keep (run 5) on the Android TV emulator: do fog, doors and room reveal line up with the painted walls?", BLUE),
     ("4K finals", "Both maps at 4K (~11 cents each): enough pixels per square for the table?", BLUE),
     ("Tuning grid", "Same layouts × variants: faint grid in the guide, legend as image, thinking minimal/medium/high, 1:1 vs 16:9.", BLUE),
     ("Style references", "3 reference images in one style: do maps from different layouts look like one campaign?", BLUE),

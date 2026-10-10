@@ -148,6 +148,7 @@ rasterized to PNG on the phone first) go through the HTTP server, not the relay.
 ```bash
 tools/mapgen/mapgen.py paint tools/mapgen/layouts/crypt.json --size 1K --n 2 --why "…" --judge --pack
 tools/mapgen/mapgen.py judge tools/mapgen/out/crypt/<run> --pack   # Claude judges each draw, packs the best
+tools/mapgen/mapgen.py fix tools/mapgen/out/crypt/<run> --judge --pack  # doorways cleaned up, packed
 ```
 
 A layout we write (rooms, walls, doors, lights) is drawn as a colour-coded guide,
@@ -155,7 +156,8 @@ Nano Banana 2.1 paints over it, and the result is packed with our walls into a
 `.dd2vtt` the TV loads like any map. The painting shows empty doorways; battlemap draws
 the doors itself and swings them open when the DM taps. Every draw gets free pixel checks
 (broken walls, leftover guide markers); a Claude helper session judges it on request, and
-the map that gets packed is the judge's pick. Each run lands on the test board by itself.
+the map that gets packed is the judge's pick. A fix-up pass cleans the doorways the model
+never leaves quite empty. Each run lands on the test board by itself.
 Needs a Gemini API key with billing. The same model also edits a published map: a photographed
 dungeon page with its labels removed and its secret rooms hidden as rock for the TV, and
 everything it removed as DM layers for the tablet (Juri's dungeon, on the table since

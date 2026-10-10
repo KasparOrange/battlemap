@@ -16,6 +16,7 @@ Usage:
   tools/mapgen/mapgen.py doors  layouts/crypt.json out/crypt/<run>/out_1.jpg [--open] [--grid]
   tools/mapgen/mapgen.py check  out/crypt/<run>            # free checks again (also part of paint)
   tools/mapgen/mapgen.py judge  out/crypt/<run> [--wait] [--pack]  # Claude helper session judges each image
+  tools/mapgen/mapgen.py fix    out/crypt/<run> [out_2.jpg] [--n N] [--judge] [--pack]  # doorway edit pass
 
 Options for paint: --size 1K|2K|4K, --n N, --thinking minimal|medium|high,
 --refs img... (style references), --prompt file (template), --tag name (run folder label),
@@ -43,7 +44,7 @@ import urllib.request
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "out"
@@ -84,6 +85,7 @@ def load_spec(path):
     """Loads a layout spec (JSON, grid units, origin top-left, x right, y down)."""
     spec = json.loads(Path(path).read_text())
     spec.setdefault("name", Path(path).stem)
+    spec["path"] = str(Path(path).resolve())
     spec.setdefault("areas", [])
     spec.setdefault("doors", [])
     spec.setdefault("lights", [])
@@ -625,6 +627,151 @@ def judge(spec, run, model=None, wait=False):
               + "; ".join(f"{i['what']} ({i['x']:g}, {i['y']:g})" for i in j.get("issues", [])))
 
 
+# ---------------------------------------------------------------- doorway edit pass
+
+
+def doorway_regions(spec):
+    """Rects [x0, y0, x1, y1] in squares around each doorway plus the wall unit right beside it
+    on each side: where the edit pass may change a painting (a rail across the gap, a missing
+    wall stub where a corridor end was opened over its full width)."""
+    walls = set(wall_units(spec))
+    out = []
+    for (x0, y0), (x1, y1) in sorted(door_edges(spec)):
+        if y0 == y1:
+            lo = x0 - (((x0 - 1, y0), (x0, y0)) in walls)
+            hi = x1 + (((x1, y0), (x1 + 1, y0)) in walls)
+            out.append([lo - 0.1, y0 - 0.4, hi + 0.1, y0 + 0.4])
+        else:
+            lo = y0 - (((x0, y0 - 1), (x0, y0)) in walls)
+            hi = y1 + (((x0, y1), (x0, y1 + 1)) in walls)
+            out.append([x0 - 0.4, lo - 0.1, x0 + 0.4, hi + 0.1])
+    return out
+
+
+def paste_regions(src, edit, spec, feather=4):
+    """`src` with `edit` pasted in only inside the doorway regions — the rest of an edit is never
+    taken (Juri: an edit that fixed what was asked dropped doors elsewhere). Each patch is
+    shifted by the mean colour difference on a ring around it, edges feathered."""
+    cols, rows = spec["grid"]
+    sx, sy = src.width / cols, src.height / rows
+    a0, a1 = np.asarray(src, dtype=np.float32), np.asarray(edit, dtype=np.float32)
+    out = a0.copy()
+    for x0, y0, x1, y1 in doorway_regions(spec):
+        box = (int(x0 * sx), int(y0 * sy), int(x1 * sx), int(y1 * sy))
+        m = Image.new("L", src.size, 0)
+        ImageDraw.Draw(m).rectangle(box, 255)
+        grow = lambda r: np.asarray(m.filter(ImageFilter.MaxFilter(2 * r + 1))) > 0
+        ring = grow(6) & ~grow(2)
+        shift = a0[ring].mean(0) - a1[ring].mean(0)
+        alpha = np.asarray(m.filter(ImageFilter.GaussianBlur(feather)), dtype=np.float32)[..., None] / 255
+        out = out * (1 - alpha) + (a1 + shift) * alpha
+    return Image.fromarray(out.clip(0, 255).astype(np.uint8))
+
+
+WALL_HALF = 0.22  # half the band copied by close_stubs, in squares: the painted wall (~0.3–0.35
+                  # thick in the keep runs) with its dark outlines — 0.17 left a faint strip
+
+
+def close_stubs(img, spec):
+    """Paints the wall unit right beside each doorway with a copy of the same wall line two
+    units further along (only the wall band, ±WALL_HALF across the line): the model opens a
+    doorway 1.5–2 squares wide where the layout has one (9 of 10 keep draws) and the edit
+    pass doesn't narrow it, while battlemap's door leaf is exactly one square. Free and
+    deterministic; a stub that was whole just gets a copy of its own wall."""
+    walls = set(wall_units(spec))
+    cols, rows = spec["grid"]
+    sx, sy = img.width / cols, img.height / rows
+    a = np.asarray(img, dtype=np.float32)
+    out = a.copy()
+    for (x0, y0), (x1, y1) in sorted(door_edges(spec)):
+        hor = y0 == y1
+        step = (lambda u, k: ((u[0][0] + k, u[0][1]), (u[1][0] + k, u[1][1]))) if hor else \
+               (lambda u, k: ((u[0][0], u[0][1] + k), (u[1][0], u[1][1] + k)))
+        sides = [(((x0 - 1, y0), (x0, y0)), -1), (((x1, y0), (x1 + 1, y0)), 1)] if hor else \
+                [(((x0, y0 - 1), (x0, y0)), -1), (((x0, y1), (x0, y1 + 1)), 1)]
+        for unit, d in sides:
+            donor = next((step(unit, d * k) for k in (2, 3) if unit in walls and step(unit, d * k) in walls
+                          and step(unit, d * k) not in door_edges(spec)), None)
+            if donor is None:
+                continue
+            (ux0, uy0), (ux1, uy1) = unit
+            box = ([ux0, uy0 - WALL_HALF, ux1, uy0 + WALL_HALF] if hor else [ux0 - WALL_HALF, uy0, ux0 + WALL_HALF, uy1])
+            px = [int(box[0] * sx), int(box[1] * sy), int(box[2] * sx), int(box[3] * sy)]
+            ox, oy = int(round((donor[0][0] - ux0) * sx)), int(round((donor[0][1] - uy0) * sy))
+            moved = a.copy()
+            moved[px[1]:px[3], px[0]:px[2]] = a[px[1] + oy:px[3] + oy, px[0] + ox:px[2] + ox]
+            m = Image.new("L", img.size, 0)
+            ImageDraw.Draw(m).rectangle([px[0], px[1], px[2] - 1, px[3] - 1], 255)
+            alpha = np.asarray(m.filter(ImageFilter.GaussianBlur(1)), dtype=np.float32)[..., None] / 255
+            out = out * (1 - alpha) + moved * alpha
+    return Image.fromarray(out.clip(0, 255).astype(np.uint8))
+
+
+def offset(a, b):
+    """Integer (dx, dy) that best lines up image b with a (phase correlation on grey levels)."""
+    f = np.fft.fft2(a.mean(2)) * np.conj(np.fft.fft2(b.mean(2)))
+    c = np.abs(np.fft.ifft2(f / (np.abs(f) + 1e-9)))
+    y, x = np.unravel_index(c.argmax(), c.shape)
+    return (int(x) if x < c.shape[1] // 2 else int(x) - c.shape[1],
+            int(y) if y < c.shape[0] // 2 else int(y) - c.shape[0])
+
+
+def fix(spec, src_run, file, n, tag="fix-doorways", why=""):
+    """Doorway edit pass: Nano Banana edits the painting (prompts/edit-doorways.txt: rails out),
+    only the doorway regions are pasted into the original, then [close_stubs] puts the wall
+    back beside each doorway so every opening is one square per door edge. Writes a
+    new run folder (out_N.jpg = composites, edit_N.png raw, doorways_before.jpg) and returns
+    (run, results) — check, judge, pack and the board treat it like any paint run."""
+    src = Image.open(src_run / file).convert("RGB")
+    run = OUT / spec["name"] / (time.strftime("%y%m%d-%H%M%S") + f"-{tag}")
+    run.mkdir(parents=True)
+    guide = render_guide(spec)
+    guide.save(run / "guide.png")
+    prompt = (HERE / "prompts" / "edit-doorways.txt").read_text()
+    (run / "prompt.txt").write_text(prompt)
+    doorway_sheet(spec, src).save(run / "doorways_before.jpg", quality=88)
+    size = json.loads((src_run / "meta.json").read_text()).get("size", "1K")
+    key, a0, results = api_key(), np.asarray(src, dtype=np.float32), []
+    for i in range(1, n + 1):
+        t0 = time.time()
+        data, mime, usage = generate(key, prompt, [src, guide], pick_aspect(spec), size, None)
+        (run / f"edit_{i}.png").write_bytes(data)
+        edit = Image.open(io.BytesIO(data)).convert("RGB").resize(src.size, Image.LANCZOS)
+        dx, dy = offset(a0, np.asarray(edit, dtype=np.float32))
+        if (dx, dy) != (0, 0):  # never seen (Juri: ≤ 0.02 px); a shifted edit would smear the patches
+            print(f"edit {i}: shifted by ({dx}, {dy}) px — rolled back into place", file=sys.stderr)
+            edit = Image.fromarray(np.roll(np.asarray(edit), (dy, dx), axis=(0, 1)))
+        path = run / f"out_{i}.jpg"
+        close_stubs(paste_regions(src, edit, spec), spec).save(path, quality=95)
+        results.append(finish_image(spec, guide, run, path, t0, usage))
+    cost = PRICE[size] * n
+    meta = {"layout": spec["path"], "model": MODEL,
+            "size": size, "aspect": pick_aspect(spec), "fix_of": f"{src_run.name}/{file}",
+            "prompt_template": str(HERE / "prompts" / "edit-doorways.txt"), "est_cost_usd": round(cost, 4),
+            "round": next_round(tag), "draw_doors": True,
+            "why": why or f"Doorway edit pass on {src_run.name}/{file}: rails out (edit, only the doorway "
+                          "regions pasted back), wall beside each doorway copied from further along the line.",
+            "results": results}
+    (run / "meta.json").write_text(json.dumps(meta, indent=2))
+    print(f"run {run}  est. ${cost:.2f}")
+    return run
+
+
+def finish_image(spec, guide, run, path, t0, usage):
+    """Everything a new painting gets: QA score + overlay, door preview, free checks with
+    doorway / grid / suspect sheets; returns its meta.json result entry."""
+    out_img = Image.open(path)
+    n = path.stem.split("_")[-1]
+    score, overlay = qa(spec, guide, out_img)
+    overlay.save(run / f"overlay_{n}.jpg", quality=85)
+    door_preview(spec, out_img).save(run / f"doors_{n}.jpg", quality=88)
+    issues = review(spec, run, path.name)
+    print(f"{path}  {out_img.size[0]}×{out_img.size[1]}  qa {score:.2f}  {time.time() - t0:.0f}s  "
+          + ("; ".join(f"{x['what']} ({x['x']:g}, {x['y']:g})" for x in issues) or "checks clean"))
+    return {"file": path.name, "qa": round(score, 3), "issues": issues, "size": out_img.size,
+            "seconds": round(time.time() - t0, 1), "usage": usage}
+
+
 # ---------------------------------------------------------------- pack
 
 
@@ -719,6 +866,10 @@ def main():
     j = sub.add_parser("judge", help="a Claude helper session judges a run (subscription)")
     j.add_argument("run"); j.add_argument("--model"); j.add_argument("--wait", action="store_true")
     j.add_argument("--pack", action="store_true", help="with --wait: pack the judge's best image")
+    f = sub.add_parser("fix", help="doorway edit pass on a painting → a new run (per image)")
+    f.add_argument("run"); f.add_argument("image", nargs="?", help="default: the run's packed image, else its best")
+    f.add_argument("--n", type=int, default=1); f.add_argument("--why", default="")
+    f.add_argument("--judge", action="store_true"); f.add_argument("--pack", action="store_true")
     a = ap.parse_args()
 
     if a.cmd == "pack" and Path(a.spec).is_dir():
@@ -755,6 +906,14 @@ def main():
             r["issues"] = review(spec, run, r["file"])
             print(f"{r['file']}: " + ("; ".join(f"{i['what']} ({i['x']:g}, {i['y']:g})" for i in r["issues"]) or "clean"))
         (run / "meta.json").write_text(json.dumps(meta, indent=2))
+    elif a.cmd == "fix":
+        file = a.image or meta.get("packed") or best_result(meta["results"], run)["file"]
+        new = fix(spec, run, Path(file).name, a.n, why=a.why)
+        if a.judge:
+            judge(spec, new, wait=True)
+        if a.pack:
+            pack_run(spec, new)
+        refresh_board()
     elif a.cmd == "judge":
         judge(spec, run, a.model, a.wait or a.pack)
         if a.pack:
@@ -777,15 +936,7 @@ def main():
             ext = "png" if "png" in mime else "jpg"
             path = run / f"out_{i}.{ext}"
             path.write_bytes(data)
-            out_img = Image.open(path)
-            score, overlay = qa(spec, guide, out_img)
-            overlay.save(run / f"overlay_{i}.jpg", quality=85)
-            door_preview(spec, out_img).save(run / f"doors_{i}.jpg", quality=88)
-            issues = review(spec, run, path.name)
-            results.append({"file": path.name, "qa": round(score, 3), "issues": issues, "size": out_img.size,
-                            "seconds": round(time.time() - t0, 1), "usage": usage})
-            print(f"{path}  {out_img.size[0]}×{out_img.size[1]}  qa {score:.2f}  {time.time() - t0:.0f}s  "
-                  + ("; ".join(f"{x['what']} ({x['x']:g}, {x['y']:g})" for x in issues) or "checks clean"))
+            results.append(finish_image(spec, guide, run, path, t0, usage))
         cost = PRICE[a.size] * a.n
         (run / "meta.json").write_text(json.dumps({
             "layout": str(Path(a.spec).resolve()), "model": MODEL, "size": a.size, "aspect": aspect, "thinking": a.thinking, "refs": a.refs,

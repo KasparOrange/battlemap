@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 19:41 - 0f0ee4a5 - AI maps: doorway edit pass (`mapgen.py fix`, run 5)
+- Konrad: go on the fix-up pass → rails out, wall stubs back
+	- trial on floor-through image 2: plain edit instruction removed every rail and kept the walls; magenta holes (Juri trick) erased the wall stubs → plain
+	- removing the rails showed the real width: openings 1.5–1.9 squares; the edit won't narrow them, a pixel check can't tell a missing stub (planks vs flagstones) → `close_stubs()` always copies the wall band (±0.22 squares, outlines included) from two units further along the line
+	- `fix <run> [image] [--n] [--judge] [--pack]` writes a new run (`fix_of`, `edit_N.png`, `doorways_before.jpg`); `finish_image()` shared with `paint`; board titles fix plates by their source
+	- results: image 2 retry 7 → use 8/10, the new test map; image 3's corridor ends fixed, retry for a wall break that was already there (the first judge missed it); ~$0.13
+
 ### 26-10-10 19:50 - a494e8fa - Juri's cave map + embedded grid detection
 - Konrad: Juri sent another map (Telegram, 1280 × 960, cave with a drawn grid) → on the TV once the table-view session is done, with everything built so far; devise a formula to detect a grid already drawn into a map; mid-way: deploy the table-view build to both devices
 	- formula (edge profile → autocorrelation → fraction rule → both axes agree → phase) prototyped in Python on all test maps, then `lib/model/grid_detect.dart`; the companion's upload runs it before the squares dialog (pre-fill, own-grid box, crop a grid that starts inside the picture) → `architecture.md` "embedded grid detection"

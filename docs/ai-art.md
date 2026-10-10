@@ -65,16 +65,18 @@ the Gemini app is also wanted for hand exploration.
 | `pack layouts/<name>.json <image> [--ppg N] [--png]` | writes `<name>.dd2vtt` (WebP image, walls/doors/lights from the layout, `"battlemap": {"draw_doors": true}`) — into the image's run folder (recorded as packed) when it has one | free |
 | `doors layouts/<name>.json <image> [--open] [--grid]` | the painting with battlemap's doors drawn on (`doors_N[_open][_grid].jpg`) — the TV look without a TV | free |
 | `check out/<name>/<run>` | the free checks again (they also run inside `paint`): issues into `meta.json`, `suspects_N.jpg`, `grid_N.jpg` | free |
+| `fix out/<name>/<run> [out_N.jpg] [--n N] [--judge] [--pack]` | doorway edit pass on one painting (default: the packed one) → a new run `<ts>-fix-doorways`: Nano Banana edits out the doorway rails (`prompts/edit-doorways.txt`), only the doorway regions are pasted back, the wall beside each doorway is copied from further along the line; checks, board, optional judge + pack | ~3 cents per draw (1K) |
 | `judge out/<name>/<run> [--wait] [--pack] [--model …]` | a Claude helper session (subscription, `claude-bridge headless`) judges every image → `judge_N.json`; `--pack` waits, then packs the judge's best; with `--wait` the board is rebuilt | subscription |
 
 Runs land in `tools/mapgen/out/<name>/<timestamp>-<tag>/` (gitignored): `guide.png`,
 `prompt.txt`, `out_N.jpg`, `overlay_N.jpg` (our walls cyan, doors red over the painting),
 `doors_N.jpg` (painting + battlemap's doors, shut), `grid_N.jpg` (painting at exact squares +
 grid, for coordinates), `doorways_N.jpg` (a close-up per doorway, labelled, for the judge),
-`suspects_N.jpg` (crops of what the free checks flagged), `judge_N.json`
+`suspects_N.jpg` (crops of what the free checks flagged), fix runs also `edit_N.png` (the raw
+edit) and `doorways_before.jpg`, `judge_N.json`
 (after `judge`), `meta.json` (layout path, model, size, QA, issues, lint, token usage,
 estimated cost; for the board: `round`, `why` — the run's question —, optional `finding`
-added after looking, `packed`, `draw_doors`). Prompt template:
+added after looking, `packed`, `draw_doors`; fix runs: `fix_of`). Prompt template:
 `tools/mapgen/prompts/baseline.txt`. Sample layouts: `crypt` (16 × 16) and `keep` (32 × 18,
 16:9).
 
@@ -159,9 +161,9 @@ no automatic redraw on a high issue; `est_cost` ignores thought tokens; style re
 2K/4K and the batch tier untried; no packed map loaded on the TV yet (drawn doors are checked
 by unit tests and an offscreen render of the real component, not on a device).
 
-## Learned so far — Nano Banana 2.1 for battle maps (runs 1–4, 2026-10-10)
+## Learned so far — Nano Banana 2.1 for battle maps (runs 1–5, 2026-10-10)
 
-Fifteen paintings at 1K over two layouts (crypt 16 × 16, keep 32 × 18), ≈ $0.65 with the first
+Fifteen paintings and four doorway edits at 1K over two layouts (crypt 16 × 16, keep 32 × 18), ≈ $0.80 with the first
 tests. The distilled rules; evidence is on the board (`battlemap-mapgen`) and in the run log
 below. Start every prompt change from here. Editing an existing map (Juri's labels-off job)
 has its own lessons: "editing a published map" below.
@@ -175,6 +177,7 @@ has its own lessons: "editing a published map" below.
 | Props as magenta blocks + a text line | the knight's sarcophagus and the feasting table sit on their blocks |
 | Leave out what battlemap renders (doors now; later light, fire, water) | with a gap in the guide and "no doors" in the prompt: no painted door in 7/7 draws — but a thin rail across every doorway (failures) |
 | Damage as a layout flag (`"ruined": true`) + the blanket rule "every wall stays whole" | courtyard walls kept in 3/3 draws; with ruin words in the text they broke in 4/4 keep draws |
+| Fix doorways after painting, don't prompt for them: edit pass (plain instruction, the guide as 2nd image) + paste back only the doorway regions + copy the wall beside each doorway from further along the line (`fix`) | run 5: rails gone in 2/2, every opening one square, ~0.5 % of the pixels changed, edit aligned to the pixel (offset 0, 0); judge retry 7 → use 8. The prompt alone cleared rails in 1 of 3 (run 4) |
 | Draw 2–3 per layout, pick by checks + judge | draws under one prompt differ a lot (one clean, one breached); the QA score picks wrong |
 | Resample to exact squares on our side | the model's sizes are fixed (16:9 at 1K = 1376 × 768 ≈ 43 px/square); `pack` and `exact()` resample to cols × ppg |
 
@@ -188,8 +191,9 @@ has its own lessons: "editing a published map" below.
 | Invented exit: a path through a wall to the map edge | run 3, 1 of 3 | not asked for, the wall rule doesn't stop it → check `opening` + judge, redraw | caught, not prevented |
 | Guide colours painted flat: the yellow light dot left as is; black rock gap and near-black walls as flat black bars | run 3 (dot), run 2 (bars), 1 draw each | the legend says what to paint, not "never flat" → tuning: softer guide colours, "render every colour as texture" | caught (dot: check, bars: judge), not prevented |
 | Light source moved: torch ~2.6 squares from its light | run 3, 2 of 3 | the model puts a light on the nearest wall or hearth → judge flags; once battlemap renders lights ("paint the still") the painting holds none | open |
-| A thin wooden rail (a post at each end) across every doorway — a shut door when battlemap's door is open | runs 2–4, 9 of 10 draws, every doorway (judge; by eye I had read it as "empty doorway / threshold only") | the model frames an opening like a door frame; the guide is clean there (checked) → run 4's prompt ("exactly as wide as the gap, the floor running straight through, no threshold, sill, beam, rail, bar, door frame or posts") cleared it in 1 of 3 → next: an edit pass that removes the rails, pasting back only the doorway patches | caught (judge, medium), not prevented |
-| Doorway frames wider than the doorway eat the wall stub beside it: the corridor ends open two squares wide where the layout has a one-square doorway; pale door-frame strips in outer walls read as exits | runs 2–4, 9 of 10 keep draws (the guide has the stub) | the model decorates openings, and a 2-square corridor invites a 2-square opening → judge flags; prompt tuning, or doorways as wide as the corridor in the layout | caught (judge), not prevented |
+| A thin wooden rail (a post at each end) across every doorway — a shut door when battlemap's door is open | runs 2–4, 9 of 10 draws, every doorway (judge; by eye I had read it as "empty doorway / threshold only") | the model frames an opening like a door frame; the guide is clean there (checked) → run 4's prompt ("exactly as wide as the gap, the floor running straight through, no threshold, sill, beam, rail, bar, door frame or posts") cleared it in 1 of 3 → `fix`: an edit pass removes them, only the doorway regions are pasted back | fixed after painting (run 5) |
+| Doorway frames wider than the doorway eat the wall stub beside it: the corridor ends open two squares wide where the layout has a one-square doorway; pale door-frame strips in outer walls read as exits | runs 2–4, 9 of 10 keep draws (the guide has the stub); hidden under the rail, measured after removing it: openings 1.5–1.9 squares | the model decorates openings, a 2-square corridor invites a 2-square opening; the edit pass ignores "make it narrower" → `fix` copies the wall band (±0.22 squares, outlines included) from two units further along the same line into the unit beside each doorway | fixed after painting (run 5); detection by pixels fails (planks vs flagstones look like a wall edge) so it always copies |
+| Walls drawn a little off the layout: the keep corridor's north wall half a square north of its line | run 4 + both fixes (judge) | geometry drifts up to ~0.5 square at 1K → 4K finals, tuning | open |
 | The edge-gradient QA score does not rank | runs 1–3 (the top score was the breached draw twice) | use checks + judge; the score stays as a number in `meta.json` | known |
 
 **Measured:** 1K costs $0.034 and takes 16–32 s per image, 43–64 px per square: fine for
@@ -209,7 +213,16 @@ hand it a crop per doorway (like `suspects_N.jpg`) so it checks every opening, n
 overview. Since run 4 it gets `doorways_N.jpg` and named every rail, doorway by doorway.
 A free check for rails doesn't work: the brightness step across a doorway (1.1–2.5 × the
 median wall edge) overlaps the floor seams inside rooms (planks, flagstones: 90th percentile
-0.8–1.7 ×) — so rails stay the judge's job.
+0.8–1.7 ×) — so rails stay the judge's job. The judge also misses things between sessions: a
+courtyard wall break in floor-through image 3 went unflagged by the first judge and was found
+by the one judging its fix (the pass hadn't touched that spot: mean pixel difference 1.5).
+
+**Edit pass in practice (run 5):** the plain instruction removed every rail and kept every wall;
+the Juri trick of blanking the spots in magenta and asking to fill them removed the rails too
+but erased the wall stubs next to them (board: the trial picture in run 5). Asked to narrow a
+too-wide opening ("continue the wall until the opening is as wide as the gap"), the edit does
+nothing — the wall copy does it. The copy band must include the wall's dark outlines (±0.22
+squares); at ±0.17 it read as a faint strip and the judge still saw a gap.
 
 ### Run log
 
@@ -242,7 +255,15 @@ through, the wall ending cleanly on both sides … no threshold, sill, beam, rai
 frame or posts"; judge with doorway close-ups. Rails gone in 1 of 3 (that one opened both
 corridor ends two squares wide instead); image 1 also let vines bury the courtyard walls.
 Image 2 is the only "use" (7/10: every wall stands, a rail at all five doorways, a second
-fireplace nobody asked for) → packed, the new test map. The prompt alone won't do it.
+fireplace nobody asked for) → packed. The prompt alone won't do it.
+
+**Run 5 — doorway edit pass (2026-10-10, 2 fixes of run 4 + 2 trial edits, ~13 cents):**
+`fix` on floor-through image 2: rails gone, walls beside the doorways copied in, every opening
+one square → judge **use 8/10** (was retry 7 for the rails; first composite without the wall
+copy: retry 6, the opening beside battlemap's door showed) — packed, **the test map**. On
+image 3 (doorways clean, corridor ends two squares wide): corridor ends fixed; retry 6 for a
+courtyard wall break that was in the painting already. Left on both: the corridor's north wall
+half a square off its line, lights painted 1.3–2 squares from where the layout puts them.
 
 
 ## Next — pick up here (hand-off 2026-10-10)
@@ -253,14 +274,13 @@ the budget (prepaid €20 on Bao's account, usage below — AI Studio → Ausgab
 nico.zingerle), read "learned so far" before changing a prompt. Every new image goes onto the
 board (rule above).
 
-**Where it stands (2026-10-10, third session):** steps 1–4 are done; runs 2–4 are judged
-(`judge_N.json`) and the board is built from the run folders. ≈ $1.20 of the €20 used (map
-runs ≈ $0.65, Juri's edit ≈ $0.55; judging is on the subscription). Test map for the table:
-the run-4 keep (`out/keep/261010-190716-floor-through/keep.dd2vtt`, judge "use" 7/10, every
-wall standing, a rail across each doorway; grid view `grid_2.jpg`; before it the run-3 keep).
-Open: the doorway rail (9 of 10 draws; run 4's prompt cleared it once) and the two-square
-corridor ends — next is the doorway edit pass below; the TV test shows how much the rail
-matters with battlemap's door open.
+**Where it stands (2026-10-10, third session):** steps 1–4 and the doorway edit pass are done;
+runs 2–5 are judged and the board is built from the run folders. ≈ $1.35 of the €20 used
+(map runs ≈ $0.80, Juri's edit ≈ $0.55; judging is on the subscription). Test map for the
+table: the fixed run-4 keep (`out/keep/261010-192835-fix-doorways/keep.dd2vtt`, judge use
+8/10: doorways empty and one square, every wall standing; left: the corridor's north wall half
+a square off, a second fireplace, lights a square or two from the layout's). The loop for a
+new map: `paint --why "…" --n 3 --judge`, then `fix <run> --judge --pack` on the best.
 
 **Steps, in order** (one at a time, each onto the board before the next):
 
@@ -273,20 +293,16 @@ matters with battlemap's door open.
    `judge_N.json` (`good`, issues, rejected checks); `pack` follows the judge; `paint`,
    `judge --wait`, `pack` rebuild the board. `paint --why "…" --judge --pack` is the whole
    loop in one command.
-5. **On the TV:** the run-4 keep (and a crypt) on the Android bench (`tools/android_bench.sh`,
+5. **On the TV:** the fixed run-4 keep (and a crypt) on the Android bench (`tools/android_bench.sh`,
    AVD `bm_tv`): do fog, doors and room reveal match the painted walls; do the drawn doors read
    at TV size (the leaf is 0.14 squares thick) and swing on a tap from the phone?
 6. **4K finals + the tuning grid** (below), run by the helper session; this session gets a
    short summary + the board. The tuning grid now also targets the open rows of the failure
    catalogue.
 
-**Doorway edit pass (proposed next, before or with step 6):** one Nano Banana edit per
-painting — "remove the thin rails and posts across the doorways; where a corridor end is open
-wider than its doorway, continue the wall" — then paste back only the doorway patches (the
-Juri recipe: edits keep geometry to the pixel, patches go into the original), re-check and
-re-judge. ~3–5 cents per map. Needs a `mapgen.py fix <run> <image>` that writes its result as
-a run (meta.json + out_1.jpg), so check, judge, board and pack work on it unchanged. Also
-try in the layout: corridor doorways as wide as the corridor.
+**Doorway edit pass** ✅ (run 5) — `mapgen.py fix`, see "edit pass in practice". Could become
+part of `paint` (fix every draw before judging, +3 cents each) once more layouts confirm it;
+the crypt is untried.
 7. **Later, once battlemap has light / fire / water effects:** extend "paint the still,
    render what moves" — prompt for unlit sources and even lighting, render flames, light and
    water as layers (try list, not scheduled).
