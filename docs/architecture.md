@@ -106,7 +106,9 @@ the tablet draws it faded) and **delete** (one tap, snackbar with Undo).
 
 **Fog tab:** Tool = Brush | Room | Circle (the interaction mode), Reveal | Hide, brush size
 (brush only) or radius in squares (circle only, − n +, 1–30, default 4), "Players see changes: Instantly | Preview first" (shadow mode; staged squares are
-applied or discarded under it), fog layer, reveal all / hide all.
+applied or discarded under it), fog layer, reveal all / hide all. The preview's tint (blue = will
+be revealed, red = will be hidden) shows on the tablet only; the TV draws staged squares as plain
+fog until they are applied (`FogOfWarComponent.showPreview`, off when `tableDisplay`).
 
 **Circle reveal (since 2026-10-10):** a tap reveals (or hides) the squares within the radius of
 the tapped square that can be reached from it without crossing a wall or a closed door

@@ -6,6 +6,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 20:50 - 9393ef96 - preview tint no longer on the TV
+- Konrad: with "Preview first", a tapped room shows blue on the tablet — and on the TV too, which must not happen
+	- `FogOfWarComponent.showPreview` (false on the TV, `tableDisplay`): staged squares stay plain fog for the players until applied; the companion's local mode keeps the tint
+	- 2 new render tests (`test/fog_preview_test.dart`); not in a build yet
+
 ### 26-10-10 20:37 - 303b3806 - token dialog: rename instead of the combat editor
 - Konrad: tapping a token's name opens a big "Edit" window that doesn't seem to work — what is it for?
 	- it was the digital-play editor (name, HP, ten conditions); its button row held a `Spacer` inside `AlertDialog.actions` (not a Flex) — in a release build that breaks the row, Save included

@@ -44,6 +44,12 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
   /// which let players see the whole dungeon dimly.)
   final bool forPlayers;
 
+  /// Whether the staged "Preview first" squares are tinted (blue = will be
+  /// revealed, red = will be hidden). `false` on the TV: the preview is the
+  /// DM's alone — before 2026-10-10 the TV showed the blue too, so players
+  /// saw which room was about to open.
+  final bool showPreview;
+
   // Cached paints -- not recreated per frame
   late final Paint _fogPaint = Paint()
     ..color = forPlayers ? const Color(0xFF000000) : const Color(0xB3000000);
@@ -80,7 +86,8 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
   /// [pixelsPerGrid] converts cell indices to pixel coordinates.
   /// [gridCols] and [gridRows] define the grid dimensions.
   /// [mapSize] sets the component bounds. [forPlayers] picks the opaque TV
-  /// fog over the DM's see-through phone fog.
+  /// fog over the DM's see-through phone fog. [showPreview] tints the staged
+  /// preview squares (off on the TV).
   FogOfWarComponent({
     required this.state,
     required this.pixelsPerGrid,
@@ -88,6 +95,7 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
     required this.gridRows,
     required Vector2 mapSize,
     this.forPlayers = false,
+    this.showPreview = true,
   }) : super(size: mapSize, priority: 10);
 
   @override
@@ -361,7 +369,9 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
   }
 
   /// Renders shadow mode previews (purple for staged reveal, red for staged hide).
+  /// Skipped on the TV ([showPreview] `false`).
   void _renderShadowCells(Canvas canvas) {
+    if (!showPreview) return;
     for (final index in state.shadowRevealCells) {
       if (!state.revealedCells.contains(index)) {
         canvas.drawRect(_cellRect(index), _shadowRevealPaint);
