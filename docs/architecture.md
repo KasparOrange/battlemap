@@ -74,6 +74,13 @@ its left; the map takes the rest of the row. ≥ 44 px targets, 14 px text. Slid
 scale, layer opacity) preview locally and send on release. Bulk buttons (Reveal all, Hide all, Clear drawings)
 confirm with a snackbar that offers Undo (`vtt.undo`).
 
+**Full screen (Android, since 2026-10-10):** during a game the companion hides Android's status
+and navigation bars (sticky immersive, `SystemBars` in `lib/ui/system_bars.dart`); a swipe in
+from the bottom edge shows them for a few seconds, the side-swipe back gesture keeps working.
+The button at the map's top right toggles it, stored on the device (Hive box
+`companionSettings`, default on); library and waiting screens keep the bars. The TV hides them
+for the whole run.
+
 **Fog tab:** Tool = Brush | Room (the interaction mode), Reveal | Hide, brush size (brush
 only), "Players see changes: Instantly | Preview first" (shadow mode; staged squares are
 applied or discarded under it), fog layer, reveal all / hide all.

@@ -26,6 +26,7 @@ import 'dev_log.dart';
 import 'dm_control_panel.dart';
 import 'library_cards.dart';
 import 'session_settings_dialog.dart';
+import 'system_bars.dart';
 
 /// Companion Mode screen — the DM's phone-based control surface.
 ///
@@ -120,6 +121,13 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// Minimum interval between two `vtt.setCamera` messages while linked.
   static const Duration _cameraSendInterval = Duration(milliseconds: 80);
 
+  /// The DM's full screen toggle: hide Android's system bars while the
+  /// game view is up ([SystemBars]). Stored on this device.
+  bool _fullscreen = true;
+
+  /// Whether the bars are hidden right now (what was last applied).
+  bool _barsHidden = false;
+
   bool get _isNetworked => !widget.localMode;
 
   @override
@@ -136,6 +144,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.addListener(_onStateChanged);
     _overlayImages.addListener(_onOverlayImagesChanged);
     if (_isNetworked) _connectRelay();
+    SystemBars.loadCompanionFullscreen().then((on) {
+      if (mounted) setState(() => _fullscreen = on);
+    });
   }
 
   @override
@@ -148,7 +159,28 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _relay?.dispose();
     _state.dispose();
     _overlayImages.dispose();
+    if (_barsHidden) SystemBars.show();
     super.dispose();
+  }
+
+  /// Hides the system bars while the game view is up and [_fullscreen] is
+  /// on, shows them everywhere else. Runs after the frame that changed the
+  /// view, and only when the wanted state differs from [_barsHidden].
+  void _syncSystemBars({required bool inGame}) {
+    final hide = inGame && _fullscreen && SystemBars.supported;
+    if (hide == _barsHidden) return;
+    _barsHidden = hide;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      hide ? SystemBars.hide() : SystemBars.show();
+    });
+  }
+
+  /// The full screen button on the map: flips [_fullscreen] and stores it.
+  void _toggleFullscreen() {
+    setState(() => _fullscreen = !_fullscreen);
+    DevLog.add('Companion: fullscreen ${_fullscreen ? 'on' : 'off'}');
+    SystemBars.saveCompanionFullscreen(_fullscreen);
   }
 
   void _onStateChanged() {
@@ -1105,6 +1137,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   @override
   Widget build(BuildContext context) {
     Widget body;
+    _syncSystemBars(
+      inGame: !(_isNetworked && (_tvView == 'library' || _tvView == 'waiting')),
+    );
     if (_isNetworked && _tvView == 'library') {
       body = _buildLibraryUI();
     } else if (_isNetworked && _tvView == 'waiting') {
@@ -1725,11 +1760,26 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
               child: _buildConnectionDot(),
             ),
 
+          // Full screen toggle (Android only — hides the system bars)
+          if (SystemBars.supported)
+            Positioned(
+              top: 16,
+              right: 16,
+              child: IconButton(
+                tooltip: _fullscreen ? 'Show system bars' : 'Full screen',
+                icon: Icon(
+                  _fullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                  color: Colors.white54,
+                ),
+                onPressed: _toggleFullscreen,
+              ),
+            ),
+
           // Map info
           if (_state.map != null)
             Positioned(
               top: 16,
-              right: 16,
+              right: SystemBars.supported ? 64 : 16,
               child: Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

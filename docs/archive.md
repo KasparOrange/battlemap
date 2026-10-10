@@ -6,6 +6,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:10 - companion full screen (Android system bars hidden)
+- Konrad: the tablet companion still shows Android's bottom bar — can it go, with a full screen toggle?
+	- nothing hid the bars before; `SystemBars` (sticky immersive / edge to edge, no-op off Android) — companion hides them in the game view when its toggle is on (map's top right, Hive `companionSettings`, default on), shows them on library / waiting and on leaving; TV hides them at start
+	- `architecture.md` "Full screen"; analyzed clean against HEAD (the working tree had another session's unfinished calibration rework)
+
 ### 26-10-10 18:59 - docs sweep: DM layers + rolling deploy
 - README: DM layers in "How it works", `DmOverlay` / `DeployRestore` in the tables, "Live deploy to the real box and tablet"; CLAUDE.md tracker: duplicate #42 → polish #43, rolling deploy #44 (first real run pending, ask Konrad first); action.md: stale "needs deploying" and "six tabs" fixed; setup.md: an old relay can survive SIGTERM holding live sockets → check `pgrep`, `kill -9`
 
