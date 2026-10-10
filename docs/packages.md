@@ -101,7 +101,7 @@ listed in `docs/apple-tv-dev.md` "what the tvOS build forced on the dependencies
 ## rejected
 
 ### objectbox
-**reason:** no web support. the companion runs as a web build in Safari. objectbox only works on native platforms.
+**reason:** no web support. the companion also runs as a web build (browser fallback). objectbox only works on native platforms.
 
 ### isar
 **reason:** web support is broken/stalled. the original isar 4.x project is abandoned. the isar-plus fork exists but adds maintenance risk.

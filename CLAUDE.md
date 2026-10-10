@@ -14,7 +14,7 @@ conditions stay on paper. No digital tokens or HP bars in current work. The "dig
 (tokens, combat tracking) is a stretch goal far down the roadmap — its existing code stays dormant
 behind session settings; don't polish or extend it. `docs/feature-ideas.md` "play modes".
 
-Both modes are the **same Flutter APK**. The TV box runs the APK. The phone runs the same app as a web build in Safari.
+Both modes are the **same Flutter APK**. The TV box (Android TV / Google TV) runs the APK; the DM's Android tablet/phone runs the same APK in Companion Mode. The web build (browser, e.g. Safari) remains a fallback companion.
 
 ## TV Remote Fallback Policy
 
@@ -76,11 +76,12 @@ Target TV device: **Xiaomi TV Box S 3rd Gen** (~$60-70)
 
 ## Development Workflow
 
-**This project is developed entirely from an iPhone via SSH to a VPS.**
+Outside: from the phone via SSH/mosh to the VPS. At home: on the Mac, against the Android bench
+(`tools/android_bench.sh`), checked by the bench robot (`tools/bench_bot.py run`, `docs/test-session.md`).
 
-1. Kaspar describes features via Claude Code on the VPS
+1. Konrad describes features via Claude Code
 2. Claude writes code
-3. Build web (`flutter build web --release`) for phone testing in Safari
+3. Build web (`flutter build web --release`) for the browser fallback companion
 4. Build APK (`flutter build apk --release`) for TV
 5. Deploy: copy APK to web dir, update version.json, restart dev server
 6. Test on phone + TV, report back
@@ -208,6 +209,7 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 36 | Rasterize PDFs on the phone | Done (1.1.4+14), needs phone test | pdfrx WASM in the web build renders page 1 → PNG → HTTP upload → `vtt.imageUploaded`; TV keeps legacy `vtt.pdfUploaded` |
 | 37 | Apple TV dev target (flutter-tvos) | Done (Mac) | `tvos/` host project + `_tvos` ports; runs on simulator + physical Apple TV; PDF maps need #36 |
 | 38 | Companion overhaul (camera, panel, ruler, measure, AoE, dead buttons) | Code done (2026-09-06, 1.1.5+15), needs phone + TV test | Fixed from the code read; what was changed: `docs/archive.md` 26-09-06 03:30; next steps `docs/action.md`; local bench in `docs/setup.md` |
+| 41 | Android bench + bench robot (Mac) | Done (2026-10-10) | Google TV + tablet emulators (`tools/android_bench.sh`); `tools/bench_bot.py` seeds 10 test maps and plays the game night over the relay (`bot` role), 59/59 — found and fixed 11 TV/companion bugs (`docs/archive.md` 26-10-10) |
 | 39 | Direct TV connection without relay (LAN / hotspot) | Not started | Legacy `lib/network/vtt_server.dart` is the starting point — keep it |
 | 40 | AI map pipeline (Nano Banana 2.1 API) | v0 works; doors drawn by battlemap, ruins in the layout, checks + Claude judge (2026-10-10) | `tools/mapgen/` layout → guide → model → `.dd2vtt`; `docs/ai-art.md` "built"; next steps: `docs/ai-art.md` § "Next — pick up here"; images on horizon board `battlemap-mapgen` |
 | 41 | DM-only picture layers | Code done (2026-10-10, 1.1.6+16), needs tablet + TV test | Companion Layers tab: many pictures over the map, eye/opacity/order, never on the TV; `docs/architecture.md` "DM layers", `relay-protocol.md` `vtt.setDmOverlays`; VPS dev_server restart keeps `uploads/dm/` |

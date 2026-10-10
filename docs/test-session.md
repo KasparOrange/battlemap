@@ -47,10 +47,13 @@ Sources: Dungeondraft exports from public GitHub repos (MasterCoookie/DND_Dreams
 mixtli/dungeon-lab, guebertn/DNDMaps) and Dyson Logos' blog ("Cartography by Dyson Logos",
 commercial map license). None of it is committed.
 
-**Predicted failure:** nothing in `lib/` downscales big images. 07's 17100×9600 image is ~650 MB
-decoded and above the Mali-G310's maximum texture size; 09 is ~144 MB decoded. Expect 07 to fail
-or crash the TV (2 GB RAM). The emulator has more headroom than the real box, so a pass on the
-bench does not clear it for the Xiaomi.
+**Big maps:** 07's 17100×9600 image showed an empty screen on the bench (above GPU texture
+limits, ~650 MB decoded); since 2026-10-10 map pictures are decoded at most 4096 px on the long
+side (`VttGame.maxMapTextureSide`) and 07 renders. The emulator has more headroom than the real
+box, so the Xiaomi still needs its own check (memory, look at 36 px per square).
+
+**Tabletop focus:** the scenes still place tokens — that keeps the dormant digital-mode code from
+regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes").
 
 ## scenes
 

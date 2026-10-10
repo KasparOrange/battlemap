@@ -6,6 +6,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - battlemap docs sweep (bench + Android companion)
+- end-of-session sweep: companion = Android APK (web build = fallback) in `CLAUDE.md`, `README.md`, `architecture.md` diagram, `packages.md`; README gained "Android bench and bench robot"; `CLAUDE.md` tracker row 41; `setup.md` local-bench venv path + relay takeover caveat; `test-session.md` big-map result + tabletop note; `action.md` state/deploy lines (59/59, deploy deferred by Konrad)
+
 ### 26-10-10 - battlemap focus: tabletop mode
 - Konrad: the focus is **tabletop mode** (real miniatures on the TV, no tokens/HP bars); the digital mode is a stretch goal far down the roadmap → written into `CLAUDE.md` (vision), `README.md`, `feature-ideas.md` "play modes" (tabletop = the "Pen & Paper" preset), `action.md` (token/NPC UX findings dropped)
 	- `bench_bot.py prep` now starts a tokenless tabletop game (preset settings sent with `nav.newSession`)

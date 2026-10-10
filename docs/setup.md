@@ -180,8 +180,9 @@ Everything on one machine so the companion can be tested without the VPS or a ph
 F=~/code/flutter-tvos/flutter/bin/flutter          # 3.47.2
 
 # 1. relay (needs the websockets module — use a venv, not system python)
-python3 -m venv /tmp/bm-venv && /tmp/bm-venv/bin/pip install websockets
-/tmp/bm-venv/bin/python tools/vtt_relay.py &        # :9090, logs to /tmp/battlemap.log
+V=~/.local/share/battlemap/venv                     # same venv as tools/android_bench.sh
+python3 -m venv $V && $V/bin/pip install websockets
+$V/bin/python tools/vtt_relay.py &                  # :9090, logs to /tmp/battlemap.log
 
 # 2. dev server serving this checkout's web build (uploads land in build/web/uploads)
 BATTLEMAP_WEB_DIR=$PWD/build/web python3 tools/dev_server.py &   # :4242
@@ -198,7 +199,8 @@ xcrun simctl io <sim id> screenshot tv.png            # TV screenshot
 # 5. phone: any browser at http://localhost:4242 → Companion Mode → Connect
 ```
 
-Caveats: the relay has **one table slot** — stop the simulator app before testing with the
+Caveats: the relay has **one table slot** — a second TV takes it over and the first one stops
+with "Another TV took over" (`relay-protocol.md`); stop the simulator app before testing with the
 real Apple TV on the VPS relay. Browser automation cannot see Flutter's canvas; drive it by
 screenshots + coordinates (Playwright), or enable Flutter semantics for labels
 (`docs/action.md` "planned workflow"). Test map: `test_assets/test_map.dd2vtt` (3.6 MB).

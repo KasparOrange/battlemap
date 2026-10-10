@@ -9,7 +9,8 @@ The 12-point companion bug list (found 2026-09-06 by a full code read, see archi
 tests green, web build compiles; dead code removed 2026-09-14 (`next` 3). What is fixed and how is in `archive.md` (entry 26-09-06) and
 in the docs it touched (`relay-protocol.md` "camera commands"/"tool overlays"/"state
 broadcast", `architecture.md` "interaction modes"). **Nothing has been tested on a real phone
-or TV yet.**
+or TV yet** — but since 2026-10-10 it runs end to end on the Android bench (emulators, bench robot
+59/59, a helper's UX click-through; see "direction: Android" below).
 
 Decision (2026-09-06): **the companion stays Flutter** (phone = whole map editor sharing
 renderer, state model and protocol with the TV). A Svelte surface only as a later *second*
@@ -53,11 +54,11 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   missing from the Google TV home row (launchable only via Settings ▸ Apps or adb). Fix before
   calling it a Google TV app.
 - **Bench robot (2026-10-10)**: `tools/bench_bot.py run --stress` plays the whole game night,
-  51/51 green after 5 fixes (`archive.md` 26-10-10 "bench robot"). Run it after every TV-side change.
-- **Needs deploying**: the fixes below and the bench-robot fixes only exist in the debug build on
-  the emulators.
-- **Relay takeover fix (2026-10-10) needs deploying**: restart the VPS relay with the new
-  `tools/vtt_relay.py`, ship the APK (`archive.md` 26-10-10 "relay takeover loop").
+  59/59 green; it and the UX review found 11 bugs, all fixed (`archive.md` 26-10-10). Run it after
+  every TV-side change; `bench_bot.py prep` leaves a tabletop game to play with by hand.
+- **Needs deploying** (Konrad: not now — first refine on the bench): all 2026-10-10 fixes exist only
+  in the debug build on the emulators. Deploy = restart the VPS relay with the new
+  `tools/vtt_relay.py` (`replaced` message, `bot` role), bump the version, build the release APK.
 - Device test (next 1) can now run on the bench first: TV emulator + tablet emulator, following
   `test-session.md` (scripted game night with 10 real maps, incl. a 30 MB stress map).
 - **Big maps**: confirmed on the bench (castle showed an empty screen), fixed — map pictures are

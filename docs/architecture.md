@@ -5,10 +5,10 @@
 the app turns a TV (laid flat) into a D&D battlemap. two devices connect through a VPS relay:
 
 ```
-phone (safari)          VPS (72.62.88.197)          TV (xiaomi box)
+tablet/phone (apk)      VPS (72.62.88.197)          TV (xiaomi box)
 ┌──────────────┐        ┌──────────────┐            ┌──────────────┐
 │ companion    │──ws────│ vtt_relay.py │────ws──────│ tv shell     │
-│ (web build)  │        │ port 9090    │            │ (apk)        │
+│ (or web)     │        │ port 9090    │            │ (apk)        │
 │              │──http──│ dev_server   │────http────│              │
 │              │        │ port 4242    │            │              │
 └──────────────┘        └──────────────┘            └──────────────┘

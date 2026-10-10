@@ -13,9 +13,9 @@ The same APK runs in two modes:
 - **TV Mode** -- the TV (a Xiaomi TV Box sideloaded via ADB) displays the
   battlemap fullscreen. It has no touch, no keyboard, no mouse. It connects to a
   VPS WebSocket relay and waits for a companion phone to pair.
-- **Companion Mode** -- the DM's phone (web build in Safari or APK) connects to
-  the same relay. All map loading, fog reveal, door toggling, token placement,
-  drawing, and camera control happens here.
+- **Companion Mode** -- the DM's Android tablet or phone (same APK; the web
+  build in a browser is a fallback) connects to the same relay. All map loading,
+  fog reveal, door toggling, measuring, drawing, and camera control happens here.
 
 The phone sends commands; the TV renders. Both communicate through a
 lightweight Python WebSocket relay running on a VPS.
@@ -94,6 +94,20 @@ flutter-tvos run -d <simulator-or-apple-tv> [--release]
 Hot reload on the tvOS simulator; `--release` on the physical Apple TV. The product
 stays the Xiaomi box.
 
+### Android bench and bench robot (Mac)
+
+```bash
+tools/android_bench.sh                                     # Google TV + tablet emulators, local relay + server
+P=~/.local/share/battlemap/venv/bin/python
+$P tools/bench_bot.py seed                                 # 10 real test maps into the TV library
+$P tools/bench_bot.py run --stress                         # scripted game night, report + screenshots
+$P tools/bench_bot.py prep                                 # a tabletop game in progress to play with
+```
+
+The emulators mirror the target devices (Google TV box, Android tablet). The robot drives the
+TV over the relay and checks both its state and its actual picture. Details: `docs/setup.md`
+"android bench", `docs/test-session.md`.
+
 ### VPS Relay and HTTP server
 
 ```bash
@@ -127,4 +141,4 @@ dart doc
 # Output in doc/api/
 ```
 
-See the `docs/` directory for additional design notes (if present).
+Design notes, live work and history are in `docs/` — start with `docs/action.md`.
