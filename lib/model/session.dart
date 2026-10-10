@@ -81,6 +81,17 @@ class SessionSettings {
   /// Whether fog retraction is animated (cells fade out when revealed).
   bool fogAnimation;
 
+  /// How far the edge of a revealed area is pulled in, in percent of a
+  /// square (0–45, default 0 = the reveal reaches the squares' edges).
+  ///
+  /// Trims every outer edge of a connected revealed area — the sides that
+  /// border fog, and the inner corners of L-shaped areas — so the players
+  /// see a little less at the rim (a wall drawn half into the next square
+  /// stays hidden). The map's own border is never trimmed. Set from the
+  /// tablet's Fog tab ("Trim revealed edges"); drawn by
+  /// [FogOfWarComponent] in the `standard`, `soft` and `cloud` [fogMode]s.
+  int fogEdgeInset;
+
   /// Whether global visual effects (flash, shake, fade, etc.) are enabled.
   bool globalEffects;
 
@@ -104,6 +115,7 @@ class SessionSettings {
     this.lightAnimations = false,
     this.fogMode = 'standard',
     this.fogAnimation = true,
+    this.fogEdgeInset = 0,
     this.globalEffects = true,
   });
 
@@ -174,6 +186,7 @@ class SessionSettings {
         'lightAnimations': lightAnimations,
         'fogMode': fogMode,
         'fogAnimation': fogAnimation,
+        'fogEdgeInset': fogEdgeInset,
         'globalEffects': globalEffects,
       };
 
@@ -200,6 +213,7 @@ class SessionSettings {
         lightAnimations: json['lightAnimations'] as bool? ?? false,
         fogMode: json['fogMode'] as String? ?? 'standard',
         fogAnimation: json['fogAnimation'] as bool? ?? true,
+        fogEdgeInset: ((json['fogEdgeInset'] as num?)?.toInt() ?? 0).clamp(0, 45),
         globalEffects: json['globalEffects'] as bool? ?? true,
       );
 
@@ -221,6 +235,7 @@ class SessionSettings {
         lightAnimations: lightAnimations,
         fogMode: fogMode,
         fogAnimation: fogAnimation,
+        fogEdgeInset: fogEdgeInset,
         globalEffects: globalEffects,
       );
 }

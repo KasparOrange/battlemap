@@ -1655,6 +1655,24 @@ class _DmControlPanelState extends State<DmControlPanel> {
           active: state.fogEnabled,
           onTap: cb.onToggleFog,
         ),
+        const SizedBox(height: 10),
+        // How far the rim of a revealed area is pulled in
+        const _GoldLabel('Trim revealed edges'),
+        const SizedBox(height: 2),
+        const Text(
+          'Shows a little less at the rim of every revealed area — '
+          'in % of a square.',
+          style: TextStyle(color: _kTextSecondary, fontSize: 12),
+        ),
+        const SizedBox(height: 4),
+        NumberStepper(
+          key: const ValueKey('fogEdgeInsetStepper'),
+          label: 'Trim revealed edges',
+          value: state.sessionSettings.fogEdgeInset.toDouble(),
+          max: 45,
+          unit: '%',
+          onChanged: (v) => _setFogEdgeInset(v.round()),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -1677,6 +1695,18 @@ class _DmControlPanelState extends State<DmControlPanel> {
         ),
       ],
     );
+  }
+
+  /// Sets [SessionSettings.fogEdgeInset] to [percent] of a square.
+  ///
+  /// Applied to the local state at once (so quick − / + taps build on each
+  /// other and the tablet's fog follows) and sent on with the session
+  /// settings ([DmCallbacks.onUpdateSessionSettings]), which reaches
+  /// the TV over the relay.
+  void _setFogEdgeInset(int percent) {
+    final updated = state.sessionSettings.copy()..fogEdgeInset = percent;
+    state.setSessionSettings(updated);
+    cb.onUpdateSessionSettings(updated);
   }
 
   // ─── Draw Tab ────────────────────────────────────────────

@@ -14,6 +14,10 @@ import '../../state/vtt_state.dart';
 /// - `'cloud'` -- organic cloud-shaped edges with animated bumps on boundaries.
 /// - `'atmospheric'` -- gradient opacity based on distance to revealed cells.
 ///
+/// [SessionSettings.fogEdgeInset] pulls the rim of every revealed area in
+/// by a part of a square (see [fogRevealRects]); the atmospheric mode
+/// ignores it.
+///
 /// When [SessionSettings.fogAnimation] is enabled, newly revealed cells
 /// animate with a 0.5-second fade-out instead of disappearing instantly.
 ///
@@ -146,6 +150,24 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
     }
   }
 
+  /// The edge trim in map pixels: [SessionSettings.fogEdgeInset] percent
+  /// of a square.
+  double get _inset =>
+      state.sessionSettings.fogEdgeInset.clamp(0, 45) / 100 * pixelsPerGrid;
+
+  /// One path of all revealed squares, their rim pulled in by [_inset].
+  ///
+  /// A single path (instead of one blurred rectangle per square) leaves no
+  /// faint seams between neighbouring squares.
+  Path _revealPath() {
+    final path = Path();
+    for (final r in fogRevealRects(state.revealedCells, gridCols, gridRows,
+        pixelsPerGrid.toDouble(), _inset)) {
+      path.addRect(r);
+    }
+    return path;
+  }
+
   /// Standard fog mode: sharp-edged cells with a 4px blur.
   ///
   /// Uses saveLayer + dstOut to cut revealed cells from the fog overlay.
@@ -155,11 +177,7 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
     // Draw fog + cut revealed cells
     canvas.saveLayer(bounds, _layerPaint);
     canvas.drawRect(bounds, _fogPaint);
-
-    for (final index in state.revealedCells) {
-      canvas.drawRect(_cellRect(index), _erasePaint);
-    }
-
+    canvas.drawPath(_revealPath(), _erasePaint);
     canvas.restore();
 
     _renderAnimatingCells(canvas);
@@ -172,11 +190,7 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
 
     canvas.saveLayer(bounds, _layerPaint);
     canvas.drawRect(bounds, _fogPaint);
-
-    for (final index in state.revealedCells) {
-      canvas.drawRect(_cellRect(index), _softErasePaint);
-    }
-
+    canvas.drawPath(_revealPath(), _softErasePaint);
     canvas.restore();
 
     _renderAnimatingCells(canvas);
@@ -194,14 +208,11 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
     canvas.drawRect(bounds, _fogPaint);
 
     // Build a combined path of all revealed cells with cloud edges
-    final path = Path();
+    final path = _revealPath();
     final ppg = pixelsPerGrid.toDouble();
+    final d = _inset;
 
-    for (final index in state.revealedCells) {
-      path.addRect(_cellRect(index));
-    }
-
-    // Add cloud bumps on boundary edges
+    // Add cloud bumps on boundary edges (moved in with the edge trim)
     for (final index in state.revealedCells) {
       final cellX = index % gridCols;
       final cellY = index ~/ gridCols;
@@ -212,25 +223,25 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
       if (cellY == 0 ||
           !state.revealedCells.contains((cellY - 1) * gridCols + cellX)) {
         _addCloudBumps(
-            path, Offset(x, y), Offset(x + ppg, y), ppg, index * 7 + 0);
+            path, Offset(x, y + d), Offset(x + ppg, y + d), ppg, index * 7 + 0);
       }
       // South
       if (cellY == gridRows - 1 ||
           !state.revealedCells.contains((cellY + 1) * gridCols + cellX)) {
-        _addCloudBumps(path, Offset(x, y + ppg), Offset(x + ppg, y + ppg),
-            ppg, index * 7 + 1);
+        _addCloudBumps(path, Offset(x, y + ppg - d),
+            Offset(x + ppg, y + ppg - d), ppg, index * 7 + 1);
       }
       // West
       if (cellX == 0 ||
           !state.revealedCells.contains(cellY * gridCols + cellX - 1)) {
         _addCloudBumps(
-            path, Offset(x, y), Offset(x, y + ppg), ppg, index * 7 + 2);
+            path, Offset(x + d, y), Offset(x + d, y + ppg), ppg, index * 7 + 2);
       }
       // East
       if (cellX == gridCols - 1 ||
           !state.revealedCells.contains(cellY * gridCols + cellX + 1)) {
-        _addCloudBumps(path, Offset(x + ppg, y), Offset(x + ppg, y + ppg),
-            ppg, index * 7 + 3);
+        _addCloudBumps(path, Offset(x + ppg - d, y),
+            Offset(x + ppg - d, y + ppg), ppg, index * 7 + 3);
       }
     }
 
@@ -396,4 +407,54 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
     final ppg = pixelsPerGrid.toDouble();
     return Rect.fromLTWH(cellX * ppg, cellY * ppg, ppg, ppg);
   }
+}
+
+/// The rectangles that make up the revealed area of a fog grid, its rim
+/// pulled in by [inset] map pixels — the shape [FogOfWarComponent] cuts out
+/// of the fog.
+///
+/// [cells] are the revealed cell indices of a [cols] × [rows] grid with
+/// squares [ppg] pixels wide. A square's side is moved in by [inset] where
+/// the neighbour across it is fogged; where both neighbours of a corner are
+/// revealed but the diagonal one is not (the inner corner of an L-shaped
+/// area), an [inset] × [inset] notch is left out, so the whole area shrinks
+/// evenly like an erosion. Outside the grid counts as revealed: the map's
+/// own border is never trimmed. [inset] is clamped to 0–45 % of [ppg];
+/// 0 gives one rectangle per square.
+///
+/// The rectangles touch or overlap; draw them as one path (nonzero fill)
+/// to get their union.
+///
+/// See also:
+/// - [SessionSettings.fogEdgeInset], the setting behind [inset].
+List<Rect> fogRevealRects(
+    Set<int> cells, int cols, int rows, double ppg, double inset) {
+  final d = inset.clamp(0.0, ppg * 0.45);
+  final rects = <Rect>[];
+  bool open(int x, int y) =>
+      x < 0 || y < 0 || x >= cols || y >= rows || cells.contains(y * cols + x);
+  for (final index in cells) {
+    final cx = index % cols;
+    final cy = index ~/ cols;
+    final x = cx * ppg;
+    final y = cy * ppg;
+    if (d == 0) {
+      rects.add(Rect.fromLTWH(x, y, ppg, ppg));
+      continue;
+    }
+    final n = open(cx, cy - 1), s = open(cx, cy + 1);
+    final w = open(cx - 1, cy), e = open(cx + 1, cy);
+    final l = w ? x : x + d, r = e ? x + ppg : x + ppg - d;
+    final t = n ? y : y + d, b = s ? y + ppg : y + ppg - d;
+    // Inner corners: both sides open, the diagonal fogged.
+    final nw = n && w && !open(cx - 1, cy - 1) ? d : 0.0;
+    final ne = n && e && !open(cx + 1, cy - 1) ? d : 0.0;
+    final sw = s && w && !open(cx - 1, cy + 1) ? d : 0.0;
+    final se = s && e && !open(cx + 1, cy + 1) ? d : 0.0;
+    final topCut = nw > 0 || ne > 0, bottomCut = sw > 0 || se > 0;
+    if (topCut) rects.add(Rect.fromLTRB(l + nw, t, r - ne, t + d));
+    rects.add(Rect.fromLTRB(l, topCut ? t + d : t, r, bottomCut ? b - d : b));
+    if (bottomCut) rects.add(Rect.fromLTRB(l + sw, b - d, r - se, b));
+  }
+  return rects;
 }

@@ -289,6 +289,25 @@ void main() {
       expect(find.text('1 square'), findsOneWidget);
     });
 
+    testWidgets('Fog tab: trim revealed edges with the number stepper',
+        (tester) async {
+      final state = await pump(tester, const Size(1280, 800));
+      await tester.tap(find.text('Fog'));
+      await tester.pumpAndSettle();
+      expect(find.text('Trim revealed edges'), findsOneWidget);
+
+      final stepper = find.byKey(const ValueKey('fogEdgeInsetStepper'));
+      final plus1 = find.descendant(of: stepper, matching: find.text('+1'));
+      await tester.ensureVisible(plus1);
+      await tester.pumpAndSettle();
+      await tester.tap(plus1);
+      await tester.pumpAndSettle();
+      await tester.tap(plus1);
+      await tester.pumpAndSettle();
+      expect(state.sessionSettings.fogEdgeInset, 2); // taps build on each other
+      expect(calls.where((c) => c == 'settings'), hasLength(2));
+    });
+
     testWidgets('Settings lists the game\'s maps and switches between them',
         (tester) async {
       await pump(tester, const Size(1280, 800), gameMaps: const [

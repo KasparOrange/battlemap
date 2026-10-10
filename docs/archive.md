@@ -1,7 +1,13 @@
 # Battlemap — archive (history, newest on top)
 
 Rule: **one entry per prompt that changed something** — in `docs/`, or in the code it
-governs. Never per session. Heading = `### 26-10-10 22:15 - TV set off - box stays awake for good, Juri gets the TV to-do
+governs. Never per session. Heading = `### 26-10-10 21:58 - fog edge trim - Fog tab: trim revealed edges
+- Konrad: a Fog tab setting for how much of the rim of a connected revealed area is shown — to show a little less around the edges — with the − / + stepper of the measuring dialog
+	- `SessionSettings.fogEdgeInset` (0–45 % of a square, default 0, per game, sent with `vtt.updateSessionSettings`); Fog tab "Trim revealed edges" with `NumberStepper`, applied locally at once so quick taps add up
+	- `fogRevealRects`: revealed squares shrink on the sides that border fog, inner corners get a notch (an even erosion), the map border stays; standard/soft/cloud draw all revealed squares as one path (no seams), atmospheric ignores it; `architecture.md` "Trim revealed edges", tracker #57
+	- incident: this session's commit script repeated the `open(p,'w').write(f(open(p).read()))` truncation (21:58) and emptied this file; rebuilt at once from HEAD + the 22:20 entry from the link-import session's transcript
+
+### 26-10-10 22:15 - TV set off - box stays awake for good, Juri gets the TV to-do
 - Konrad: the table TV went off (energy saving timer?) and the box remote does not bring it back — what happened; then: make the box robust and awake whenever in use; send Juri a to-do for the TV set's own buttons
 	- the box was fine (awake, 4 h uptime, not rebooted): at 21:40:02 the box logged the HDMI link lost — the old Thomson (TCL-built, EDID says TCL) hit its own 4 h auto standby; 6 s later a red-button press put the box to sleep. The TV NACKs every CEC message, so the box remote cannot wake it
 	- box: stay on while powered, screen timeout max, screensaver off, no CEC standby to the TV on sleep — set over latrine, `deploy.sh tv` reapplies it; `setup.md` "box asleep mid-game" + "TV set off, box fine"

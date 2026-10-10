@@ -180,9 +180,18 @@ the tablet draws it faded) and **delete** (one tap, notice with Undo).
 
 **Fog tab:** Tool = Brush | Room | Circle (the interaction mode), Reveal | Hide, brush size
 (brush only) or radius in squares (circle only, − n +, 1–30, default 4), "Players see changes: Instantly | Preview first" (shadow mode; staged squares are
-applied or discarded under it), fog layer, reveal all / hide all. The preview's tint (blue = will
+applied or discarded under it), fog layer, **Trim revealed edges**, reveal all / hide all. The preview's tint (blue = will
 be revealed, red = will be hidden) shows on the tablet only; the TV draws staged squares as plain
 fog until they are applied (`FogOfWarComponent.showPreview`, off when `tableDisplay`).
+
+**Trim revealed edges (since 2026-10-10):** a `NumberStepper` (0–45 % of a square, default 0,
+±1/2/5/10) that pulls the rim of every connected revealed area in, so the players see a little
+less at its edge (a wall drawn half into the next square stays under the fog). Stored per game
+as `SessionSettings.fogEdgeInset` and sent with `vtt.updateSessionSettings`; the tablet applies
+it locally at once. `fogRevealRects` shrinks each revealed square on the sides that border fog and
+leaves an inset × inset notch at inner corners (both neighbours revealed, the diagonal fogged), so
+the area erodes evenly; the map's own border is never trimmed. Standard, soft and cloud fog draw
+it (all revealed squares as one path now, so no seams between squares); atmospheric ignores it.
 
 **Circle reveal (since 2026-10-10):** a tap reveals (or hides) the squares within the radius of
 the tapped square that can be reached from it without crossing a wall or a closed door

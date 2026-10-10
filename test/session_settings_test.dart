@@ -104,6 +104,7 @@ void main() {
         'lightAnimations',
         'fogMode',
         'fogAnimation',
+        'fogEdgeInset',
         'globalEffects',
       };
       expect(json.keys.toSet(), expectedKeys);
@@ -225,5 +226,6 @@ void _expectEquivalent(SessionSettings actual, SessionSettings expected) {
       reason: 'lightAnimations');
   expect(actual.fogMode, expected.fogMode, reason: 'fogMode');
   expect(actual.fogAnimation, expected.fogAnimation, reason: 'fogAnimation');
+  expect(actual.fogEdgeInset, expected.fogEdgeInset, reason: 'fogEdgeInset');
   expect(actual.globalEffects, expected.globalEffects, reason: 'globalEffects');
 }
