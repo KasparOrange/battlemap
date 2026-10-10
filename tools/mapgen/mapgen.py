@@ -13,6 +13,8 @@ Usage:
   tools/mapgen/mapgen.py paint  layouts/crypt.json --size 1K --n 2
   tools/mapgen/mapgen.py pack   layouts/crypt.json out/crypt/<run>/out_1.jpg
   tools/mapgen/mapgen.py doors  layouts/crypt.json out/crypt/<run>/out_1.jpg [--open] [--grid]
+  tools/mapgen/mapgen.py check  out/crypt/<run>            # free checks again (also part of paint)
+  tools/mapgen/mapgen.py judge  out/crypt/<run> [--wait]   # Claude helper session judges each image
 
 Options for paint: --size 1K|2K|4K, --n N, --thinking minimal|medium|high,
 --refs img... (style references), --prompt file (template), --pack (pack the best).
@@ -334,7 +336,7 @@ def qa(spec, guide, out_img):
     return score, overlay
 
 
-def door_preview(spec, out_img, open_=False, grid=False):
+def door_preview(spec, out_img, open_=False, grid=False, doors=True):
     """The painting as the TV shows it: resampled to exact squares (as `pack` does) with
     doors drawn the way battlemap draws them (PortalComponent), optionally a grid on top.
 
@@ -353,7 +355,7 @@ def door_preview(spec, out_img, open_=False, grid=False):
         return [(hx + off + x * c - y * n, hy + off + x * n + y * c)
                 for x, y in ((x0, y0), (x1, y0), (x1, y1), (x0, y1))]
 
-    for (ax, ay), (bx, by) in door_bounds(spec):
+    for (ax, ay), (bx, by) in door_bounds(spec) if doors else []:
         hx, hy = ax * s, ay * s
         wall = math.atan2(by - ay, bx - ax)
         sign = 1 if -math.sin(wall) + math.cos(wall) >= 0 else -1
@@ -373,6 +375,197 @@ def door_preview(spec, out_img, open_=False, grid=False):
         for y in range(rows + 1):
             d.line([(0, y * s), (cols * s, y * s)], fill=(255, 255, 255, 110), width=lw)
     return img
+
+
+# ---------------------------------------------------------------- checks (free, no model)
+
+# A wall edge counts as open when BOTH its features fall this far below the image's median
+# wall edge: calibrated on the keep runs of 2026-10-10 (run 3 image 1's invented exit, the
+# courtyard gaps of runs 1–2). Relative to the image, so it holds across styles.
+OPEN_EDGE_RATIO = 0.45     # strongest brightness step across the line (wall outline)
+OPEN_SPREAD_RATIO = 0.6    # colour variation across the line (floor-wall-floor vs floor-floor)
+MARKER_RATIO = 0.05        # share of pure-yellow pixels around a light (a leaked dot: ~0.10,
+                           # painted flames: ~0.02 — flames are orange-yellow, the dot is R = G)
+
+
+def wall_units(spec):
+    """Every wall as unit edges ((x, y), (x+1, y)) or ((x, y), (x, y+1))."""
+    out = []
+    for (x0, y0), (x1, y1) in wall_segments(spec):
+        out += ([((x, y0), (x + 1, y0)) for x in range(x0, x1)] if y0 == y1
+                else [((x0, y), (x0, y + 1)) for y in range(y0, y1)])
+    return out
+
+
+def exact(spec, out_img):
+    """The painting at exact squares, as `pack` resamples it; returns (float array, px per square)."""
+    cols, rows = spec["grid"]
+    s = max(50, out_img.width // cols)
+    img = out_img.convert("RGB").resize((cols * s, rows * s), Image.LANCZOS)
+    return np.asarray(img, dtype=np.float32), s
+
+
+def across(a, s, edge, reach=0.9):
+    """Median colour per pixel row across a unit edge (−reach…+reach squares), over its middle 60 %."""
+    (x0, y0), (x1, y1) = edge
+    n, (H, W, _) = int(reach * s), a.shape
+    if y0 == y1:
+        c = int(y0 * s)
+        strip = a[c - n:c + n, int((x0 + 0.2) * s):int((x0 + 0.8) * s)] if n <= c <= H - n else None
+    else:
+        c = int(x0 * s)
+        strip = (a[int((y0 + 0.2) * s):int((y0 + 0.8) * s), c - n:c + n].transpose(1, 0, 2)
+                 if n <= c <= W - n else None)
+    return None if strip is None else np.median(strip, axis=1)
+
+
+def check(spec, out_img):
+    """Free checks of one painting against the layout; returns a list of issues.
+
+    - "opening": a wall edge that looks open — no outline across the line and the same
+      colours on both sides (an exit or breach the layout doesn't have). Map-edge walls are
+      skipped (no room to look across).
+    - "marker": a guide marker left in the art — the yellow light dot at a light, magenta
+      prop colour anywhere.
+    Issues carry x/y in grid squares (the edge's or light's centre) like the judge's.
+    """
+    a, s = exact(spec, out_img)
+    feats = []
+    for e in wall_units(spec):
+        prof = across(a, s, e)
+        if prof is None:
+            continue
+        lum, n = prof.mean(1), len(prof) // 2
+        step = float(np.abs(np.diff(lum))[n - int(0.45 * s):n + int(0.45 * s)].max())
+        spread = float(np.abs(prof - np.median(prof, 0)).mean())
+        feats.append((e, step, spread))
+    issues = []
+    if feats:
+        m_step = float(np.median([f[1] for f in feats]))
+        m_spread = float(np.median([f[2] for f in feats]))
+        for ((x0, y0), (x1, y1)), step, spread in feats:
+            if step < OPEN_EDGE_RATIO * m_step and spread < OPEN_SPREAD_RATIO * m_spread:
+                issues.append({"x": (x0 + x1) / 2, "y": (y0 + y1) / 2, "what": "opening",
+                               "severity": "high", "edge": [[x0, y0], [x1, y1]],
+                               "step": round(step / m_step, 2), "spread": round(spread / m_spread, 2)})
+    r_, g_, b_ = a[..., 0], a[..., 1], a[..., 2]
+    yellow = (r_ > 220) & (g_ > 220) & (b_ < 60) & (np.abs(r_ - g_) < 25)
+    for l in spec["lights"]:
+        cx, cy, r = int(l["x"] * s), int(l["y"] * s), max(2, int(0.2 * s))
+        box = yellow[max(cy - r, 0):cy + r, max(cx - r, 0):cx + r]
+        if box.size and box.mean() > MARKER_RATIO:
+            issues.append({"x": l["x"], "y": l["y"], "what": "marker: yellow light dot",
+                           "severity": "medium", "share": round(float(box.mean()), 2)})
+    magenta = (r_ > 200) & (b_ > 200) & (g_ < 80)
+    if magenta.mean() > 0.001:
+        ys, xs = np.nonzero(magenta)
+        issues.append({"x": round(float(xs.mean()) / s, 1), "y": round(float(ys.mean()) / s, 1),
+                       "what": "marker: magenta prop colour", "severity": "medium",
+                       "share": round(float(magenta.mean()), 4)})
+    return issues
+
+
+def issue_sheet(spec, out_img, issues):
+    """A strip of 3 × 3-square crops around each issue (red ring on the spot) for a look by eye."""
+    if not issues:
+        return None
+    a, s = exact(spec, out_img)
+    img = Image.fromarray(a.astype(np.uint8))
+    tiles = []
+    for i in issues:
+        cx, cy = i["x"] * s, i["y"] * s
+        t = img.crop((int(cx - 1.5 * s), int(cy - 1.5 * s), int(cx + 1.5 * s), int(cy + 1.5 * s)))
+        d = ImageDraw.Draw(t)
+        d.ellipse([1.1 * s, 1.1 * s, 1.9 * s, 1.9 * s], outline=(255, 40, 40), width=max(2, s // 25))
+        d.text((6, 4), f"{i['what']} @ {i['x']:g},{i['y']:g}", fill=(255, 255, 255))
+        tiles.append(t)
+    sheet = Image.new("RGB", (len(tiles) * (3 * s + 8) - 8, 3 * s), "white")
+    for k, t in enumerate(tiles):
+        sheet.paste(t, (k * (3 * s + 8), 0))
+    return sheet
+
+
+def review(spec, run, file):
+    """Free checks for one painting of a run: returns its issues; writes `grid_N.jpg` (the
+    painting at exact squares with a grid, for reading coordinates) and `suspects_N.jpg`."""
+    n = Path(file).stem.split("_")[-1]
+    img = Image.open(run / file)
+    door_preview(spec, img, grid=True, doors=False).save(run / f"grid_{n}.jpg", quality=88)
+    issues = check(spec, img)
+    sheet = issue_sheet(spec, img, issues)
+    if sheet:
+        sheet.save(run / f"suspects_{n}.jpg", quality=88)
+    else:
+        (run / f"suspects_{n}.jpg").unlink(missing_ok=True)
+    return issues
+
+
+def best_result(results):
+    """The image to pack: no high issue first, then fewest issues, then the QA score."""
+    return max(results, key=lambda r: (not any(i["severity"] == "high" for i in r.get("issues", [])),
+                                       -len(r.get("issues", [])), r["qa"]))
+
+
+# ---------------------------------------------------------------- judge (Claude helper session)
+
+
+def layout_text(spec):
+    """The layout in words for the judge: 0-based squares, rects as [x, y, w, h]."""
+    lines = []
+    for a in spec["areas"]:
+        flags = [a.get("kind", "floor")] + (["ruined"] if a.get("ruined") else []) + \
+                ([f"inside {a['in']}"] if a.get("in") else [])
+        lines.append(f"- area {a.get('id', '?')} rect {a['rect']} ({', '.join(flags)}): {a.get('desc', '')}")
+    lines += [f"- doorway on edge {list(a)}–{list(b)}" for a, b in sorted(door_edges(spec))]
+    lines += [f"- light at ({l['x']}, {l['y']})" for l in spec["lights"]]
+    lines += [f"- prop rect {p['rect']}: {p['desc']}" for p in spec["props"]]
+    return "\n".join(lines)
+
+
+def judge(spec, run, model=None, wait=False):
+    """Starts a Claude helper session (claude-bridge headless, subscription) that judges every
+    painting of `run` and writes judge_N.json per image; with `wait`, blocks until all exist."""
+    meta = json.loads((run / "meta.json").read_text())
+    files = [r["file"] for r in meta["results"]]
+    checks = "\n".join(
+        f"   - {r['file']}: " + ("; ".join(f"{i['what']} at ({i['x']:g}, {i['y']:g})" for i in r.get("issues", []))
+                                 or "nothing flagged")
+        for r in meta["results"])
+    cols, rows = spec["grid"]
+    prompt = (HERE / "prompts" / "judge.txt").read_text().format(
+        run=run, cols=cols, rows=rows, layout=layout_text(spec), checks=checks,
+        images=", ".join(files), setting=spec.get("setting", ""))
+    (run / "judge_prompt.txt").write_text(prompt)
+    for f in run.glob("judge_*.json"):
+        f.unlink()
+    # "auto": no permission prompts — a headless session has nobody to answer one, and with
+    # acceptEdits the first shell command hung the judge for good (2026-10-10).
+    cmd = ["claude-bridge", "headless", "new", "--cwd", str(HERE.parent.parent), "--permission-mode", "auto"]
+    sid = subprocess.run(cmd + (["--model", model] if model else []), capture_output=True, text=True,
+                         check=True).stdout.strip().split()[-1]
+    subprocess.run(["claude-bridge", "headless", "send", sid, "-"], input=prompt, text=True, check=True,
+                   capture_output=True)
+    (run / "judge_session.txt").write_text(sid + "\n")
+    print(f"judge session {sid} on {len(files)} images → {run}/judge_N.json")
+    if not wait:
+        return
+    want = [run / f"judge_{Path(f).stem.split('_')[-1]}.json" for f in files]
+    t0 = time.time()
+    while not all(w.exists() for w in want):
+        done = sum(w.exists() for w in want)
+        listing = subprocess.run(["claude-bridge", "headless", "list"], capture_output=True, text=True).stdout
+        if any(l.startswith(sid[:8]) and " gone " in l for l in listing.splitlines()):
+            sys.exit(f"judge: session {sid[:8]} ended with {done}/{len(want)} written — "
+                     f"see `claude-bridge thread {sid[:8]}`")
+        if time.time() - t0 > 900:
+            sys.exit(f"judge: timed out after 15 min, {done}/{len(want)} written — "
+                     f"see `claude-bridge thread {sid[:8]}`")
+        time.sleep(10)
+    time.sleep(2)  # let the last write finish
+    for w in want:
+        j = json.loads(w.read_text())
+        print(f"{w.name}: {j.get('verdict')} score {j.get('score')} · "
+              + "; ".join(f"{i['what']} ({i['x']:g}, {i['y']:g})" for i in j.get("issues", [])))
 
 
 # ---------------------------------------------------------------- pack
@@ -449,8 +642,15 @@ def main():
     o = sub.add_parser("doors", help="the painting with battlemap's doors drawn on (preview)")
     o.add_argument("spec"); o.add_argument("image"); o.add_argument("--open", action="store_true")
     o.add_argument("--grid", action="store_true", help="battlemap's grid on top, to check the fit")
+    c = sub.add_parser("check", help="free checks on a run again (openings, markers)"); c.add_argument("run")
+    j = sub.add_parser("judge", help="a Claude helper session judges a run (subscription)")
+    j.add_argument("run"); j.add_argument("--model"); j.add_argument("--wait", action="store_true")
     a = ap.parse_args()
 
+    if a.cmd in ("check", "judge"):
+        run = Path(a.run).resolve()
+        meta = json.loads((run / "meta.json").read_text())
+        a.spec = meta.get("layout") or str(HERE / "layouts" / f"{run.parent.name}.json")
     spec = load_spec(a.spec)
     name = spec["name"]
     warnings = lint(spec)
@@ -469,6 +669,13 @@ def main():
         print(path)
     elif a.cmd == "pack":
         pack(spec, a.image, OUT / name / f"{name}.dd2vtt", a.ppg, "PNG" if a.png else "WEBP")
+    elif a.cmd == "check":
+        for r in meta["results"]:
+            r["issues"] = review(spec, run, r["file"])
+            print(f"{r['file']}: " + ("; ".join(f"{i['what']} ({i['x']:g}, {i['y']:g})" for i in r["issues"]) or "clean"))
+        (run / "meta.json").write_text(json.dumps(meta, indent=2))
+    elif a.cmd == "judge":
+        judge(spec, run, a.model, a.wait)
     else:
         run = OUT / name / (time.strftime("%y%m%d-%H%M%S") + (f"-{a.tag}" if a.tag else ""))
         run.mkdir(parents=True)
@@ -489,16 +696,18 @@ def main():
             score, overlay = qa(spec, guide, out_img)
             overlay.save(run / f"overlay_{i}.jpg", quality=85)
             door_preview(spec, out_img).save(run / f"doors_{i}.jpg", quality=88)
-            results.append({"file": path.name, "qa": round(score, 3), "size": out_img.size,
+            issues = review(spec, run, path.name)
+            results.append({"file": path.name, "qa": round(score, 3), "issues": issues, "size": out_img.size,
                             "seconds": round(time.time() - t0, 1), "usage": usage})
-            print(f"{path}  {out_img.size[0]}×{out_img.size[1]}  qa {score:.2f}  {time.time() - t0:.0f}s")
+            print(f"{path}  {out_img.size[0]}×{out_img.size[1]}  qa {score:.2f}  {time.time() - t0:.0f}s  "
+                  + ("; ".join(f"{x['what']} ({x['x']:g}, {x['y']:g})" for x in issues) or "checks clean"))
         cost = PRICE[a.size] * a.n
         (run / "meta.json").write_text(json.dumps({
-            "model": MODEL, "size": a.size, "aspect": aspect, "thinking": a.thinking, "refs": a.refs,
+            "layout": str(Path(a.spec).resolve()), "model": MODEL, "size": a.size, "aspect": aspect, "thinking": a.thinking, "refs": a.refs,
             "prompt_template": a.prompt, "lint": warnings, "est_cost_usd": round(cost, 4), "results": results}, indent=2))
         print(f"run {run}  est. ${cost:.2f}")
         if a.pack:
-            best = max(results, key=lambda r: r["qa"])
+            best = best_result(results)
             pack(spec, run / best["file"], run / f"{name}.dd2vtt")
 
 

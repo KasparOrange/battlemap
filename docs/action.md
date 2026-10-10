@@ -69,10 +69,10 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
 A helper played a session on the bench as a first-time DM (14 findings). The 4 broken ones are
 fixed (archive 26-10-10 "UX review fixes"). Open, with the recommendation:
 
-1. **What players see**: NPC names + HP bars are drawn on the TV for every token → per-token
-   "show to players", NPCs hidden by default.
+1. ~~What players see: NPC names + HP bars on the TV~~ — dropped: tokens/HP belong to the
+   digital mode, a far-off stretch goal (focus = tabletop mode, `feature-ideas.md` "play modes").
 2. **Door markers on the TV**: loud green/orange boxes over the map's own doors → tablet only.
-3. **Tokens**: drag a token in any mode, tap opens its editor, refuse occupied squares.
+3. ~~Tokens: drag/tap/occupied squares~~ — dropped (digital mode).
 4. **Camera wording/framing**: "Fit on tablet" / "Fit on TV"; linked camera frames for the TV's screen.
 5. **Ruler**: appears at the TV view's centre, numbers stay upright.
 6. **Panel layout**: bottom panel eats 40–65 % of the tablet → side panel in landscape; Fog tab
@@ -100,6 +100,6 @@ phone undo stays greyed, no TV frame is drawn, and measure/`vtt.setCamera` are i
 ## other live work: AI map pipeline (#40)
 
 Separate sub-project, own hand-off: `ai-art.md` § "Next — pick up here" (doors drawn by
-battlemap and ruins in the layout — done 2026-10-10; next: Claude helper as judge, board
+battlemap, ruins in the layout, free checks + Claude judge — done 2026-10-10; next: board
 from data, TV test, 4K + tuning).
 Test images live on the horizon board `battlemap-mapgen`.

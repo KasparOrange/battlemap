@@ -60,11 +60,16 @@ the Gemini app is also wanted for hand exploration.
 | `guide layouts/<name>.json` | renders the guide PNG only | free |
 | `paint layouts/<name>.json --size 1K\|2K\|4K --n N [--thinking …] [--refs …] [--tag …] [--pack]` | guide + prompt → model → QA overlay per image → `meta.json`; `--pack` packs the best | per image, see prices |
 | `pack layouts/<name>.json <image> [--ppg N] [--png]` | writes `<name>.dd2vtt` (WebP image, walls/doors/lights from the layout, `"battlemap": {"draw_doors": true}`) | free |
-| `doors layouts/<name>.json <image> [--open]` | the painting with battlemap's doors drawn on (`doors_N[_open].jpg`) — the TV look without a TV | free |
+| `doors layouts/<name>.json <image> [--open] [--grid]` | the painting with battlemap's doors drawn on (`doors_N[_open][_grid].jpg`) — the TV look without a TV | free |
+| `check out/<name>/<run>` | the free checks again (they also run inside `paint`): issues into `meta.json`, `suspects_N.jpg`, `grid_N.jpg` | free |
+| `judge out/<name>/<run> [--wait] [--model …]` | a Claude helper session (subscription, `claude-bridge headless`) judges every image → `judge_N.json` | subscription |
 
 Runs land in `tools/mapgen/out/<name>/<timestamp>-<tag>/` (gitignored): `guide.png`,
 `prompt.txt`, `out_N.jpg`, `overlay_N.jpg` (our walls cyan, doors red over the painting),
-`doors_N.jpg` (painting + battlemap's doors, shut), `meta.json` (model, size, QA, token usage, estimated cost). Prompt template:
+`doors_N.jpg` (painting + battlemap's doors, shut), `grid_N.jpg` (painting at exact squares +
+grid, for coordinates), `suspects_N.jpg` (crops of what the free checks flagged), `judge_N.json`
+(after `judge`), `meta.json` (layout path, model, size, QA, issues, lint, token usage,
+estimated cost). Prompt template:
 `tools/mapgen/prompts/baseline.txt`. Sample layouts: `crypt` (16 × 16) and `keep` (32 × 18,
 16:9).
 
@@ -127,6 +132,22 @@ exit through the south wall to the map edge — and that draw had the best QA sc
 packed as the test map (`out/keep/261010-173421-ruined/keep.dd2vtt`), with a grid preview
 (`mapgen.py doors … --grid`). Another draw shows the yellow light dot as is.
 
+**Judge (step 3, 2026-10-10):** two layers, both write issues with x/y in squares.
+- **Free checks** (`check()`, inside every `paint`): a wall edge counts as *open* when both its
+  outline step and its colour spread across the line fall below 45 % / 60 % of the image's
+  median wall edge (relative, so style-independent); a *marker* is pure yellow (R = G) at a
+  light. Calibrated on all keep runs: every flagged opening I checked by eye was a real breach
+  except one banner hanging over a wall; painted flames don't trip the marker check, the one
+  leaked dot does. Crops of each spot: `suspects_N.jpg`.
+- **Claude judge** (`judge`, prompt `prompts/judge.txt`): a helper session reads guide, painting,
+  grid and overlay per image, confirms or rejects each check spot, finds the rest, writes
+  `judge_N.json` (flags, score 1–10, verdict use/retry, issues, rejected checks). Run 3 took
+  ~5 min for 3 images: image 1 retry (the exit, confirmed), image 2 use 8/10 (the banner spot
+  rejected with the right reason), image 3 use 5/10 (the dot, plus door-like pale strips in outer
+  walls). It also caught what the checks can't: a torch painted 2.6 squares from its light,
+  doorway frames that eat the wall stub beside a doorway. Runs with `--permission-mode auto`:
+  under `acceptEdits` its first shell command waited for an approval no one sees and hung.
+
 **Doors are battlemap's** (since run 2): the guide leaves a doorway as a gap, the `.dd2vtt`
 carries `"battlemap": {"draw_doors": true}` (other VTTs ignore it), and battlemap's
 `PortalComponent` draws a top-down wooden leaf in the wall line that swings open (~85°, 0.4 s,
@@ -149,10 +170,10 @@ device).
 the budget (prepaid €20 on Bao's account, ≈ $0.30 used by 2026-10-10 — AI Studio → Ausgaben,
 signed in as nico.zingerle). Every new image goes onto the board (rule above).
 
-**Where it stands (2026-10-10, end of the second session):** steps 1 and 2 are done (runs 2
-and 3 on the board); ≈ $0.55 of the €20 used. Test map for the table: the run-3 keep
-(`out/keep/261010-173421-ruined/keep.dd2vtt`, grid preview `doors_2_grid.jpg`). Next is
-step 3, the judge — first the free script check for openings we didn't ask for.
+**Where it stands (2026-10-10, end of the second session):** steps 1–3 are done (runs 2 and 3
+on the board, judge results in run 3's `judge_N.json`); ≈ $0.55 of the €20 used. Test map for
+the table: the run-3 keep (`out/keep/261010-173421-ruined/keep.dd2vtt`, the judge's pick too,
+grid preview `doors_2_grid.jpg`). Next is step 4, the board built from run data.
 
 **Findings from run 1 that set the order** (Konrad, 2026-10-10):
 
@@ -172,7 +193,7 @@ step 3, the judge — first the free script check for openings we didn't ask for
    it follows the project's one-feature-at-a-time rule.
 2. ✅ **Done 2026-10-10 (run 3).** **Ruins in the layout**, not in free text: an area flag (e.g. `"ruined": true`) that the
    prompt turns into "damage inside the room, every wall stays standing".
-3. **Judge.** Script checks in `mapgen.py` (free): marker pixels left (red, yellow light dots),
+3. ✅ **Done 2026-10-10 — see "Judge (step 3)" above.** **Judge.** Script checks in `mapgen.py` (free): marker pixels left (red, yellow light dots),
    painted-wall overlap with our wall lines, and **openings we didn't ask for** (run 3: an exit
    painted through a wall — the check that matters most now). Model judge = a **Claude helper session** on the
    subscription (`claude-bridge headless new --cwd ~/code/battlemap`, never `claude -p`): reads
@@ -181,7 +202,9 @@ step 3, the judge — first the free script check for openings we didn't ask for
    (x/y in grid squares). Gemini Flash as judge only later, for unattended server runs (a
    "paint" button on the phone).
 4. **Board from data:** `board.py` builds plates from each run's `meta.json` + `judge_N.json`
-   (issues → pins automatically) instead of the hand-written `PLATES`.
+   (issues → pins automatically, verdict/score in the intro, rejected checks as grey notes)
+   instead of the hand-written `PLATES`. Also: `--pack` should prefer the judge's verdict
+   when `judge_N.json` exists (today it ranks by the free checks).
 5. **On the TV:** packed crypt on the Android bench (`tools/android_bench.sh`, AVD `bm_tv`):
    do fog, doors and room reveal match the painted walls?
 6. **4K finals + the tuning grid** (below), run by the helper session; this session gets a
@@ -228,9 +251,11 @@ flowchart LR
 3. **Model call** — guide + style references (≤ 14 images total, ≤ 10 objects for 2.1;
    `--refs` exists but is untested) + prompt. Aspect ratio picked from the grid (16:9 → e.g. 32 × 18 squares fills the TV). Drafts
    at 1K, final at 4K; aim for ≥ ~100 output px per square or detail turns to mush.
-4. **QA** — v0 writes an edge-overlap score and an overlay (our walls and doors over the
-   painting) per image; `--pack` takes the best score. No automatic retry yet: the score does
-   not rank reliably, so the overlay is the check until the judge exists (Next, step 3).
+4. **QA** — per image: the edge-overlap score, the overlay (our walls and doors over the
+   painting), and the **free checks** (`check()`: wall edges that look open, guide markers
+   left). `--pack` takes the image without a high issue, then fewest issues, then the score.
+   The **judge** (`judge`, a Claude helper session) confirms or rejects the check's spots and
+   finds the rest. No automatic retry yet.
 5. **Resample** to exactly `cols × ppg` by `rows × ppg` (the model's sizes are fixed, the grid
    is ours). Optional upscale on the Mac.
 6. **Pack `.dd2vtt`** — image (base64), `resolution` (`map_size`, `pixels_per_grid`),

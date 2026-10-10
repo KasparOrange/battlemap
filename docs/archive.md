@@ -25,6 +25,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- **fog**: TV fog fully opaque (players saw the dungeon through 90 % fog), phone fog 70 % so the DM reads the layout; atmospheric mode's deep fog opaque on the TV (`FogOfWarComponent.forPlayers`)
 	- UX click-through of the companion handed to a helper agent; findings → `action.md`
 
+### 26-10-10 - judge (ai art step 3)
+- Konrad: "continue" → free checks in `mapgen.py` (`check()`: open-looking wall edges relative to the image's median, pure-yellow light dots; `suspects_N.jpg`, `grid_N.jpg`; run inside `paint`, `check <run>` re-runs; `--pack` prefers no high issue) — calibrated on all keep runs by eye
+- Claude judge: `judge <run> [--wait]` starts a `claude-bridge headless` helper with `prompts/judge.txt` → `judge_N.json`; run 3: retry / use 8 / use 5, agrees with the eye, rejected the banner false positive, found torch-vs-light and doorway-frame issues
+- the first judge hung on a permission prompt (acceptEdits + a shell command; Konrad asked if it was stuck) → `--permission-mode auto`, Read/Write only in the prompt, `--wait` exits when the session is gone
+
 ### 26-10-10 - ruins in the layout (ai art step 2) + grid preview
 - Konrad: "go" (step 2) → layout areas take `"ruined": true` (prompt: damage inside, walls whole), prompt rule "every wall stays whole", lint warns on wall-breaking words in texts (`meta.json` → `lint`); keep layout moved its ruin from text to the flag
 - run 3 (keep × 3, 1K, ~10 cents): all courtyard walls kept; one draw invented an exit through the south wall (and had the best QA score) → judge step now leads with an "unasked openings" check

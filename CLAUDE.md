@@ -9,6 +9,11 @@ A **Flutter app** that turns a TV (laid flat as a table surface) into a D&D digi
 
 **The phone controls everything. The TV only displays.**
 
+**Focus: tabletop mode.** The TV lies flat with **real miniatures** on it; HP, initiative and
+conditions stay on paper. No digital tokens or HP bars in current work. The "digital mode"
+(tokens, combat tracking) is a stretch goal far down the roadmap — its existing code stays dormant
+behind session settings; don't polish or extend it. `docs/feature-ideas.md` "play modes".
+
 Both modes are the **same Flutter APK**. The TV box runs the APK. The phone runs the same app as a web build in Safari.
 
 ## TV Remote Fallback Policy
@@ -204,7 +209,7 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 37 | Apple TV dev target (flutter-tvos) | Done (Mac) | `tvos/` host project + `_tvos` ports; runs on simulator + physical Apple TV; PDF maps need #36 |
 | 38 | Companion overhaul (camera, panel, ruler, measure, AoE, dead buttons) | Code done (2026-09-06, 1.1.5+15), needs phone + TV test | Fixed from the code read; what was changed: `docs/archive.md` 26-09-06 03:30; next steps `docs/action.md`; local bench in `docs/setup.md` |
 | 39 | Direct TV connection without relay (LAN / hotspot) | Not started | Legacy `lib/network/vtt_server.dart` is the starting point — keep it |
-| 40 | AI map pipeline (Nano Banana 2.1 API) | v0 works; doors drawn by battlemap, ruins in the layout (2026-10-10) | `tools/mapgen/` layout → guide → model → `.dd2vtt`; `docs/ai-art.md` "built"; next steps: `docs/ai-art.md` § "Next — pick up here"; images on horizon board `battlemap-mapgen` |
+| 40 | AI map pipeline (Nano Banana 2.1 API) | v0 works; doors drawn by battlemap, ruins in the layout, checks + Claude judge (2026-10-10) | `tools/mapgen/` layout → guide → model → `.dd2vtt`; `docs/ai-art.md` "built"; next steps: `docs/ai-art.md` § "Next — pick up here"; images on horizon board `battlemap-mapgen` |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |
 | 11 | Shape drawing tools | Not started | Circles, cones, area-of-effect markers |
