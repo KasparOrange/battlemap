@@ -65,6 +65,22 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   decoded at most 4096 px on the long side. Still to check on the real Xiaomi: memory and look of
   the castle at TV scale (36 px per square after the shrink).
 
+## games with several maps + shared map library (2026-10-10) — not in a build yet
+
+Built and checked on a throwaway TV emulator over the relay (archive 26-10-10 20:40). Before the
+first build with it reaches the tablet, **update the VPS dev server** (`git pull --ff-only` in
+`~/battlemap`, restart `dev_server.py`, `setup.md`): the new companion uploads to `/library`,
+which an old server doesn't have (uploads would fail). Then on the tablet + TV:
+- Settings tab ▸ Maps in this game: one row ("On the table"); From device → a picture map joins
+  the game, "Loading …" over the tablet's map until it's there; tap the first map → its fog and
+  tokens are back; the second one's too
+- Shared library: the uploaded map is listed with its thumbnail; Add to game on another map;
+  delete one (asks first); Upload from device fills it without opening
+- library screen: Shared library ▸ Play → session settings → new game; Upload Map / PDF still
+  starts a game; back in the library the game is listed under the map on its table
+- not done: removing a map from a game (only deleting it from the TV's library does), renaming
+  shared maps, the TV remote fallback for the switch (the TV shows no map list)
+
 ## table view (2026-10-10, 1.1.9+19) — needs the box + tablet
 
 Every map at one square = one inch in a centred window of whole squares — Konrad's measured

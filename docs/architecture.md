@@ -22,7 +22,7 @@ tablet/phone (apk)      VPS (72.62.88.197)          TV (xiaomi box)
 
 - **commands** flow phone → relay → TV (fog reveal, token place, door toggle, navigation)
 - **state** flows TV → relay → phone (fullState broadcast every 50ms when paired)
-- **maps** flow phone → VPS HTTP → TV HTTP download (large files bypass the relay); PDFs are rasterized to PNG on the phone first, so the TV only ever loads `.dd2vtt` or images
+- **maps** flow phone → VPS HTTP → TV HTTP download (large files bypass the relay); PDFs are rasterized to PNG on the phone first, so the TV only ever loads `.dd2vtt` or images. Since 2026-10-10 every upload goes into the **shared map library** on the VPS (below) and the TV keeps its own copy
 - **logs** flow TV (APK) → MwLog, our VictoriaLogs tenant `battlemap` on the same VPS (structured JSON lines, basic auth baked in at build time — `docs/setup.md` "logs"). The old `log_server.py` / `/tmp/battlemap.log` are retired (2026-09-05).
 
 ## TV storage
@@ -36,6 +36,50 @@ Hive boxes (lib/storage/map_library.dart):
   sessions     # session state JSON (fog, tokens, drawings, camera, DM layer list)
   thumbnails   # PNG map thumbnails, key map_<id> (made lazily, docs/sessions.md)
 ```
+
+## games with several maps + the shared map library (since 2026-10-10)
+
+A game (session) holds **several maps** — the tower's floors, the town and the cellar below it —
+and the DM switches between them in the companion's **Settings tab ▸ Maps in this game** (tap a
+map; "On the table" marks the current one). Each map keeps its own fog, doors, tokens, drawings,
+DM layers, ruler, table window and camera; the game's own things (name, session settings, brush,
+draw colour, tool) carry over. A switch is a save + resume on the TV (`TvShell._switchMap`,
+`Session.switchTo`), so it shows the map exactly like reopening a game; the companion shows
+"Loading <map>…" over its map until the new one has arrived.
+
+Maps get into a game two ways, both under the map list:
+- **From device** — pick a `.dd2vtt`, picture or PDF (squares dialog as before): it is uploaded into
+  the shared library, then joins the game.
+- **Shared library** — a sheet listing the VPS's shared maps (thumbnail, squares, size) with
+  "Add to game" per map, a delete per map (asks first; TVs keep their copies) and "Upload from
+  device" to fill the library without opening the map.
+
+Outside a game the library screen has the same two: **Upload Map / PDF** (into the shared library,
+then a new game on it) and **Shared library** ("Play" starts a new game after the session
+settings dialog). The TV downloads a shared map once and remembers its id (`serverMapId` on the
+library entry), so picking it again reuses the copy.
+
+```mermaid
+sequenceDiagram
+  participant T as tablet
+  participant V as VPS (dev_server /library)
+  participant R as relay
+  participant TV
+  T->>V: PUT /library/<file>?meta (+ /thumb)
+  V-->>T: entry {id, url, kind, squares}
+  T->>R: lib.openSharedMap {map, intoGame}
+  R->>TV: lib.openSharedMap
+  TV->>V: GET url (only if no copy with that serverMapId)
+  TV->>TV: save game, park current map, resume on the new one
+  TV->>R: vtt.downloadMap / chunks + vtt.fullState {sessionMapIds}
+  R->>T: map + state (tablet uses its just-uploaded bytes)
+```
+
+Code: `lib/model/session.dart` (`mapIds`, `parkedMaps`, `switchTo`, `withoutMap`),
+`lib/model/shared_map.dart`, `lib/network/shared_library.dart`, `lib/ui/shared_library_sheet.dart`,
+`TvShell._switchMap` / `_openSharedMap`, the Settings tab's `_buildGameMaps`
+(`dm_control_panel.dart`); protocol in `relay-protocol.md` "games with several maps" and
+"shared map library".
 
 ## interaction model
 
