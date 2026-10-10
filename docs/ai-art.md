@@ -59,6 +59,12 @@ Runs land in `tools/mapgen/out/<name>/<timestamp>-<tag>/` (gitignored): `guide.p
 `tools/mapgen/prompts/baseline.txt`. Sample layouts: `crypt` (16 × 16) and `keep` (32 × 18,
 16:9).
 
+**Board:** every test image lives on the horizon board **`battlemap-mapgen`** — guides,
+paintings with numbered pins on the features they show (pins in grid squares), the QA
+overlays, and blue slots for the next images. Konrad's rule (2026-10-10): **every new image
+from this test project goes onto that board**, reorganised as needed — add a plate to
+`PLATES` in `tools/mapgen/board.py` (or move a slot out of `NEXT`) and re-run it.
+
 **Account:** API key from 1Password `dev` → **Gemini API - battlemap (Bao billing)**
 (`$MAPGEN_OP_ITEM`, or `$GEMINI_API_KEY`). This is Bao's Google account (nico.zingerle),
 prepaid €20, no auto-refill — a temporary home: Konrad's own account (ko) has a project + key
