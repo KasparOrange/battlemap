@@ -9,6 +9,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 ### 26-10-10 22:50 - TV overscan - docs sweep
 - Konrad (/ty): docs sweep after the overscan fix — pivot inset now from what the TV shows (`architecture.md`), deploy state 1.1.20+30 (`action.md`), README calibration store, `sessions.md` `tableCols`/`tableRows` = visible squares, and a `setup.md` gotcha: a tablet-only deploy leaves the box on an older build (why the pivot "did not show"), check `versionName` per device first
 
+### 26-10-10 22:55 - dc488274 - box back after a power cut; docs sweep
+- Konrad: the box was unplugged in between — still reachable, everything deployed?
+	- box rebooted at 22:18, back on adb, battlemap closed on the Google TV home screen — relaunched with route `/restore`, the TV reopened its three-map game (session 173992e0) and paired with the relay
+	- box, tablet and web on 1.1.20+30 (the overscan session's deploy on top of 1.1.19+29); nothing uncommitted
+	- `setup.md` gotcha "box unplugged"
+
 ### 26-10-10 22:45 - dc488274 - session sweep: leftovers deployed, roadmap filled
 - Konrad: search all of today's sessions (subagents), deploy what is built, merge unmerged branches, put the unbuilt on the roadmap
 	- 39 transcripts read by four helper agents; no unmerged branches (GitHub's `claude/review-claude-md-BADKA` is merged, the VPS's stale `multi-map-sessions` was cherry-picked to main and deleted on GitHub), no extra worktrees or stashes

@@ -168,6 +168,12 @@ or from the Mac: `tools/deploy.sh tv` (rolling deploy, below). What it rests on,
   be switched off in the TV's menu, also from those buttons. How to tell which side died:
   `latrine android info xiaomi` (box awake? uptime?), and the box's logcat shows
   `hdcptx … link lost` when the TV goes away.
+- **box unplugged** (2026-10-10, 22:18): after a power cut the box boots to the Google TV home
+  screen and battlemap stays closed (no autostart). It is back on adb at `192.168.178.149:5555`
+  within a few minutes. Reopen the game it had open with
+  `latrine android shell "am start -S -n com.example.battlemap/.MainActivity --es route /restore" xiaomi`
+  — plain `/restore` uses the TV's own snapshot (Hive `deployRestore`); `tools/tv_ctl.py status`
+  then shows `"view": "game"` and the same session.
 
 ### rolling deploy (mid-game patch, since 2026-10-10)
 

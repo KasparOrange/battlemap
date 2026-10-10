@@ -136,7 +136,7 @@ corner. Check on the tablet + TV:
   new sessions named "Session N · <day>"
 - still open from the review: pinch/two-finger pan and the real Xiaomi remote (not testable on the bench)
 
-## template disc (2026-10-10, 1.1.17+27 on the box, 1.1.18+28 on tablet + web) — needs a test at the table
+## template disc (2026-10-10, on box + tablet + web since 1.1.19+29) — needs a test at the table
 
 Measure tab ▸ Template disc (`architecture.md` "Template disc"). Check on the table: size against
 the acrylic disc (20 ft ring = 4 in), dragging middle/edge and the knob with minis standing on
