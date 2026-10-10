@@ -17,17 +17,21 @@ Images to judge: {images}. For each out_N.jpg:
 1. Read guide.png (the guide the model repainted: black rock, dark grey walls, mid grey
    floor, gaps = doorways, blue water, brown rubble, green vegetation, yellow dots = lights,
    magenta = props), out_N.jpg (the painting), grid_N.jpg (the same painting at exact squares
-   with a white grid — count squares on it to give coordinates) and overlay_N.jpg (our walls
-   cyan and doorways red, drawn thin over the painting).
+   with a white grid — count squares on it to give coordinates), overlay_N.jpg (our walls
+   cyan and doorways red, drawn thin over the painting) and doorways_N.jpg (a close-up of
+   every doorway, labelled with its edge centre: judge each one there).
 2. Judge:
    - walls_kept: every cyan line is a standing painted wall: no gap, breach, exit, rubble or
      path through it. A ruined area may show damage INSIDE, never in its walls.
    - doorways_clean: every red doorway is an empty opening — no painted door, door leaf,
      gate, bars or curtain (battlemap draws the doors itself), and the floor runs straight
      through it: no rail, beam, threshold bar or sill across the gap. Look at each doorway on
-     grid_N.jpg; a thin wooden line with a post at each end is such a rail (seen in every
+     doorways_N.jpg; a thin wooden line with a post at each end is such a rail (seen in every
      draw of runs 2–3) — one issue per doorway that has it, severity medium (battlemap's door
      covers it when shut; open, the doorway looks barred). A painted door or gate is high.
+     Also check the width: the gap is exactly as long as the doorway edge (one square per
+     edge) and the wall continues beside it — a corridor end open over its full width where
+     the layout has a narrower doorway is a wall missing (high).
    - grid_or_text: true when the painting shows grid lines, text, labels or numbers (bad).
    - markers: true when guide colours are left in the art (a flat yellow dot at a light,
      magenta, red) instead of painted objects (bad).

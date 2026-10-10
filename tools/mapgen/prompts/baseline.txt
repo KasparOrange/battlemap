@@ -10,8 +10,11 @@ areas, where the damage stays inside the room. Fill the whole frame edge to edge
 
 Guide legend: black = solid rock outside the map, render as dark textured stone;
 dark grey bands = walls; mid grey = floor; a gap in a wall = an open doorway: paint
-it as an empty opening with the floor running through, a plain stone threshold at most;
-no doors, door leaves, gates, portcullises or curtains anywhere on the map;
+it as an empty opening exactly as wide as the gap, the floor running straight through
+from one side to the other, the wall ending cleanly on both sides and continuing right
+beside it — nothing standing or lying in the gap: no threshold, sill, beam, rail, bar,
+door frame or posts; no doors, door leaves, gates, portcullises or curtains anywhere on
+the map;
 blue = water; brown = rubble; green = vegetation;
 yellow dots = light sources (braziers, torches); magenta = props described below.
 

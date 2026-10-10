@@ -470,32 +470,52 @@ def check(spec, out_img):
     return issues
 
 
-def issue_sheet(spec, out_img, issues):
-    """A strip of 3 × 3-square crops around each issue (red ring on the spot) for a look by eye."""
-    if not issues:
+def spot_sheet(spec, out_img, spots, ring=True):
+    """A strip of 3 × 3-square crops, one per spot (x, y, label), at exact squares; a red ring
+    marks the spot unless `ring` is False (doorways: the ring would hide what's in the gap)."""
+    if not spots:
         return None
     a, s = exact(spec, out_img)
-    img = Image.fromarray(a.astype(np.uint8))
+    img, u = Image.fromarray(a.astype(np.uint8)), max(s, 80)
     tiles = []
-    for i in issues:
-        cx, cy = i["x"] * s, i["y"] * s
+    for x, y, label in spots:
+        cx, cy = x * s, y * s
         t = img.crop((int(cx - 1.5 * s), int(cy - 1.5 * s), int(cx + 1.5 * s), int(cy + 1.5 * s)))
+        t = t.resize((3 * u, 3 * u), Image.LANCZOS)  # ≥ 80 px per square, readable for the judge
         d = ImageDraw.Draw(t)
-        d.ellipse([1.1 * s, 1.1 * s, 1.9 * s, 1.9 * s], outline=(255, 40, 40), width=max(2, s // 25))
-        d.text((6, 4), f"{i['what']} @ {i['x']:g},{i['y']:g}", fill=(255, 255, 255))
+        if ring:
+            d.ellipse([1.1 * u, 1.1 * u, 1.9 * u, 1.9 * u], outline=(255, 40, 40), width=max(2, u // 25))
+        d.rectangle([0, 0, 7 * len(label) + 10, 18], fill=(0, 0, 0))
+        d.text((5, 3), label, fill=(255, 255, 255))
         tiles.append(t)
-    sheet = Image.new("RGB", (len(tiles) * (3 * s + 8) - 8, 3 * s), "white")
+    sheet = Image.new("RGB", (len(tiles) * (3 * u + 8) - 8, 3 * u), "white")
     for k, t in enumerate(tiles):
-        sheet.paste(t, (k * (3 * s + 8), 0))
+        sheet.paste(t, (k * (3 * u + 8), 0))
     return sheet
+
+
+def issue_sheet(spec, out_img, issues):
+    """Crops around each issue of the free checks (red ring on the spot), for a look by eye."""
+    return spot_sheet(spec, out_img, [(i["x"], i["y"], f"{i['what']} @ {i['x']:g},{i['y']:g}") for i in issues])
+
+
+def doorway_sheet(spec, out_img):
+    """Crops centred on every doorway, labelled with the edge's centre: the judge checks each one
+    (a rail or bar across a gap hides in the full painting, 2026-10-10)."""
+    return spot_sheet(spec, out_img, [((x0 + x1) / 2, (y0 + y1) / 2, f"doorway {(x0 + x1) / 2:g},{(y0 + y1) / 2:g}")
+                                      for (x0, y0), (x1, y1) in sorted(door_edges(spec))], ring=False)
 
 
 def review(spec, run, file):
     """Free checks for one painting of a run: returns its issues; writes `grid_N.jpg` (the
-    painting at exact squares with a grid, for reading coordinates) and `suspects_N.jpg`."""
+    painting at exact squares with a grid, for reading coordinates), `doorways_N.jpg` (a crop
+    per doorway, for the judge) and `suspects_N.jpg`."""
     n = Path(file).stem.split("_")[-1]
     img = Image.open(run / file)
     door_preview(spec, img, grid=True, doors=False).save(run / f"grid_{n}.jpg", quality=88)
+    sheet = doorway_sheet(spec, img)
+    if sheet:
+        sheet.save(run / f"doorways_{n}.jpg", quality=88)
     issues = check(spec, img)
     sheet = issue_sheet(spec, img, issues)
     if sheet:

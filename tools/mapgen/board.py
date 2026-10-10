@@ -166,7 +166,8 @@ SEVERITY = {"high": RED, "medium": AMBER, "low": GREY}
 # small pictures under a plate's image, when the run folder has them (door ones only when the
 # run's doors are drawn by battlemap)
 SIDES = [("doors_{n}_open.jpg", "Same map, doors open"), ("doors_{n}_grid.jpg", "With battlemap's grid"),
-         ("overlay_{n}.jpg", "QA overlay: our walls cyan, doorways red"), ("suspects_{n}.jpg", "Pixel-check spots")]
+         ("overlay_{n}.jpg", "QA overlay: our walls cyan, doorways red"), ("doorways_{n}.jpg", "Every doorway, close up"),
+         ("suspects_{n}.jpg", "Pixel-check spots")]
 
 
 def short(what):
@@ -259,7 +260,7 @@ def round_zone(rnd, runs):
 
 
 NEXT = [
-    ("On the TV", "The run-3 keep on the Android TV emulator: do fog, doors and room reveal line up with the painted walls?", BLUE),
+    ("On the TV", "The run-4 keep on the Android TV emulator: do fog, doors and room reveal line up with the painted walls?", BLUE),
     ("4K finals", "Both maps at 4K (~11 cents each): enough pixels per square for the table?", BLUE),
     ("Tuning grid", "Same layouts × variants: faint grid in the guide, legend as image, thinking minimal/medium/high, 1:1 vs 16:9.", BLUE),
     ("Style references", "3 reference images in one style: do maps from different layouts look like one campaign?", BLUE),

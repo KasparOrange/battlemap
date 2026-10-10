@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 19:12 - 0f0ee4a5 - AI maps: doorway close-ups for the judge, run 4 (floor through the doorways)
+- Konrad: go on the doorway fix → prompt + per-doorway crops + one small keep run
+	- baseline prompt: a doorway is exactly as wide as its gap, floor straight through, no threshold, sill, beam, rail, bar, door frame or posts (it had allowed "a plain stone threshold at most")
+	- `review()` writes `doorways_N.jpg` (a labelled close-up per doorway, ≥ 80 px per square); `judge.txt` judges each doorway there and checks doorway width; the board shows it
+	- tried a free rail check: doorway brightness steps overlap floor seams → not separable, rails stay with the judge
+	- run 4 (keep × 3, ~$0.10): rails gone in 1 of 3, corridor ends still two squares wide in 2 of 3; image 2 the only "use" (7/10) → packed, new test map; next proposed: a doorway edit pass (`ai-art.md` "Doorway edit pass")
+
 ### 26-10-10 21:10 - companion full screen (Android system bars hidden)
 - Konrad: the tablet companion still shows Android's bottom bar — can it go, with a full screen toggle?
 	- nothing hid the bars before; `SystemBars` (sticky immersive / edge to edge, no-op off Android) — companion hides them in the game view when its toggle is on (map's top right, Hive `companionSettings`, default on), shows them on library / waiting and on leaving; TV hides them at start
