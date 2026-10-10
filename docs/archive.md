@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 18:27 - 93f94292 - showcase scene on the box, native companion on the tablet
+- Konrad: "open a map on the TV and show me a state of an impressive round half through a playthrough", then "make sure it works on the tablet, as a native app"
+	- vampire lair (04) in tabletop preset, session "The Countess's Lair — round 4": rooms revealed up to the ritual chamber, doors open, the party's route and a blood trail drawn, a 20 ft measure; driven over the VPS relay (first version with tokens dropped: tabletop is the focus)
+	- tablet (Tab A11+): native 1.1.6+16 installed through latrine's adb, Companion Mode, opens the session; the old web companion tab in Chrome was pointed at about:blank so it can't fight the app for the slot
+	- **VPS dev server hung**: single-threaded `HTTPServer`, one stalled client blocked every download (tablet map at 0 %) → restarted, and `tools/dev_server.py` is now a `ThreadingHTTPServer` (needs a pull + restart on the VPS)
+	- remote: OK (DPAD_CENTER) did not open TV Mode on the mode selector of 1.1.5, Enter did
+
 ### 26-10-10 18:22 - box on 1.1.6+16, tablet companion, rolling deploy
 - Konrad: deploy the new app on the TV, same game afterwards; bring the companion up in the tablet's browser; build mytube's rolling update into battlemap
 	- tablet (Tab A11+, Chrome) paired through latrine (`android pair`); box 1.1.5+15 → 1.1.6+16 by `latrine android install` from a clean worktree; the session was flushed via the library first and reopened with `nav.goToGame` (175 revealed, 5 doors — identical)
