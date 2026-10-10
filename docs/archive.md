@@ -6,7 +6,7 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
-### 26-10-10 - battlemap tabletop UX polish (UX review items 2, 4–7)
+### 26-10-10 - battlemap tabletop UX polish (UX review items 2, 4–7, 1.1.7+17)
 - Konrad: "build all of the recommendations" (tabletop-mode ones; tokens/HP dropped as digital mode) — built in a separate worktree while three other battlemap sessions edited the same files, rebased onto main
 	- **door markers DM-only**: `PortalComponent.showMarker` = `!isDisplay`; the TV draws nothing for Dungeondraft doors (their painted door is what players see); drawn AI-map doors show everywhere
 	- **ruler**: `vtt.toggleRuler` on show → the TV centres it in its own view, square to its screen (`VttGame.centerRulerInView`); rotate turns around the middle of the L instead of the corner; numbers counter-rotated (`RulerComponent.labelAngle`) so they stay upright on every screen

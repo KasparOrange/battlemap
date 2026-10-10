@@ -213,6 +213,7 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 39 | Direct TV connection without relay (LAN / hotspot) | Not started | Legacy `lib/network/vtt_server.dart` is the starting point — keep it |
 | 40 | AI map pipeline (Nano Banana 2.1 API) | v0 works; doors drawn by battlemap, ruins in the layout, checks + Claude judge (2026-10-10) | `tools/mapgen/` layout → guide → model → `.dd2vtt`; `docs/ai-art.md` "built"; next steps: `docs/ai-art.md` § "Next — pick up here"; images on horizon board `battlemap-mapgen` |
 | 41 | DM-only picture layers | Code done (2026-10-10, 1.1.6+16), needs tablet + TV test | Companion Layers tab: many pictures over the map, eye/opacity/order, never on the TV; `docs/architecture.md` "DM layers", `relay-protocol.md` `vtt.setDmOverlays`; VPS dev_server restart keeps `uploads/dm/` |
+| 42 | Tabletop UX polish (UX review 2026-10-10) | Code done (2026-10-10, 1.1.7+17), needs tablet + TV test | Side panel on landscape tablets, Fog tab Brush \| Room + "Players see changes", camera tab by screen, ruler centred + upright numbers, door markers DM-only, undo snackbars, library Continue card + thumbnails + dated names; `docs/archive.md` 26-10-10 "tabletop UX polish" |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |
 | 11 | Shape drawing tools | Not started | Circles, cones, area-of-effect markers |
