@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
 import '../game/vtt_game.dart';
@@ -16,6 +17,10 @@ import '../state/vtt_state.dart';
 /// [VttGame.onTvWindowDrag] as `vtt.setTableWindow`). Outside the box the
 /// map is dimmed — that part is off the table. In the whole-map or free
 /// view it shows the TV's screen rectangle and does not react to touch.
+///
+/// The drag claims the touch at once ([_EagerPanRecognizer]) — inside the
+/// scrolling Camera tab a vertical drag otherwise scrolled the panel instead
+/// of moving the window (found on the bench, 2026-10-10).
 ///
 /// Independent of the tablet's own camera, so the DM can stay zoomed in on
 /// a room while seeing the whole map here. Draws the picture the game has
@@ -62,10 +67,19 @@ class TvOverviewMap extends StatelessWidget {
           }
 
           return Center(
-            child: GestureDetector(
-              onTapUp: draggable ? (d) => moveTo(d.localPosition, done: true) : null,
-              onPanUpdate: draggable ? (d) => moveTo(d.localPosition, done: false) : null,
-              onPanEnd: draggable ? (_) => game.endTvWindowDrag() : null,
+            child: RawGestureDetector(
+              gestures: {
+                if (draggable)
+                  _EagerPanRecognizer:
+                      GestureRecognizerFactoryWithHandlers<_EagerPanRecognizer>(
+                    _EagerPanRecognizer.new,
+                    (r) => r
+                      ..onDown = ((d) => moveTo(d.localPosition, done: false))
+                      ..onUpdate = ((d) => moveTo(d.localPosition, done: false))
+                      ..onEnd = ((_) => game.endTvWindowDrag())
+                      ..onCancel = game.endTvWindowDrag,
+                  ),
+              },
               child: CustomPaint(
                 size: size,
                 painter: _OverviewPainter(
@@ -106,6 +120,16 @@ class TvOverviewMap extends StatelessWidget {
   }
 }
 
+/// A pan that wins the gesture arena on touch-down, so the scrollable
+/// panel around the overview never takes the drag.
+class _EagerPanRecognizer extends PanGestureRecognizer {
+  @override
+  void addAllowedPointer(PointerDownEvent event) {
+    super.addAllowedPointer(event);
+    resolve(GestureDisposition.accepted);
+  }
+}
+
 class _OverviewPainter extends CustomPainter {
   final ui.Image? image;
   final double scale;
@@ -124,6 +148,10 @@ class _OverviewPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final all = Offset.zero & size;
+    // The TV's screen can reach past the map (whole map on a 16:9 screen,
+    // zoomed out) — keep everything inside the picture.
+    canvas.save();
+    canvas.clipRect(all);
     final img = image;
     if (img != null) {
       canvas.drawImageRect(
@@ -137,8 +165,6 @@ class _OverviewPainter extends CustomPainter {
     }
     final w = window;
     if (w != null) {
-      canvas.save();
-      canvas.clipRect(all);
       canvas.drawPath(
         Path()
           ..fillType = PathFillType.evenOdd
@@ -152,7 +178,6 @@ class _OverviewPainter extends CustomPainter {
             ..color = _gold
             ..style = PaintingStyle.stroke
             ..strokeWidth = 2);
-      canvas.restore();
     }
     final q = screen;
     if (q != null) {
@@ -164,6 +189,7 @@ class _OverviewPainter extends CustomPainter {
           ..strokeWidth = 2,
       );
     }
+    canvas.restore();
     canvas.drawRect(
         all,
         Paint()

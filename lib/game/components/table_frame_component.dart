@@ -144,6 +144,17 @@ class TableFrameComponent extends Component {
       textAlign: TextAlign.center,
       textDirection: TextDirection.ltr,
     )..layout(maxWidth: maxWidth);
-    tp.paint(canvas, center ? at - Offset(tp.width / 2, 0) : at);
+    final topLeft = center ? at - Offset(tp.width / 2, 0) : at;
+    // A dark plate so the caption never sits on a bright grid line
+    final pad = tp.height * 0.25;
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(topLeft.dx - pad, topLeft.dy - pad / 2,
+            tp.width + 2 * pad, tp.height + pad),
+        Radius.circular(pad),
+      ),
+      Paint()..color = const Color(0xCC000000),
+    );
+    tp.paint(canvas, topLeft);
   }
 }

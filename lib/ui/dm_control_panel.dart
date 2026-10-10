@@ -1688,12 +1688,21 @@ class _DmControlPanelState extends State<DmControlPanel> {
   }
 
   /// Arrows that move the TV's table window by one square, only along the
-  /// axes where the map is bigger than the window.
+  /// axes where the map is bigger than the window; an arrow at the map's
+  /// edge is dimmed and does nothing.
   Widget _buildPanPad(TableLayout layout) {
+    final cols = state.map?.resolution.mapSize.dx.toInt() ?? 0;
+    final rows = state.map?.resolution.mapSize.dy.toInt() ?? 0;
+    bool canMove(int dx, int dy) =>
+        (dx < 0 && layout.col > 0) ||
+        (dx > 0 && layout.col < cols - layout.winCols) ||
+        (dy < 0 && layout.row > 0) ||
+        (dy > 0 && layout.row < rows - layout.winRows);
     Widget arrow(IconData icon, int dx, int dy) => Expanded(
           child: _GoldButton(
             icon: icon,
             label: '',
+            enabled: canMove(dx, dy),
             onTap: () => cb.onPanTable!(dx, dy),
           ),
         );
@@ -2309,18 +2318,22 @@ class _GoldButton extends StatelessWidget {
   /// Whether the button is in an active/highlighted state.
   final bool active;
 
+  /// Whether tapping does anything; a disabled button is dimmed.
+  final bool enabled;
+
   const _GoldButton({
     required this.icon,
     required this.label,
     required this.onTap,
     this.active = false,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final button = GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
       child: Container(
         constraints: const BoxConstraints(minHeight: _kTarget),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -2357,6 +2370,7 @@ class _GoldButton extends StatelessWidget {
         ),
       ),
     );
+    return enabled ? button : Opacity(opacity: 0.35, child: button);
   }
 }
 

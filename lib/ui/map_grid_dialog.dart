@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+// The DM panel's warm palette (dm_control_panel.dart), so this dialog looks
+// like the Measure the TV dialog next to it.
+const _bg = Color(0xFF1a1512);
+const _gold = Color(0xFFd4a76a);
+const _goldDim = Color(0xFF8a7044);
+const _border = Color(0xFF5a4a30);
+
 /// What the DM chose in [showMapGridDialog].
 typedef MapGridChoice = ({int cols, int rows, bool hasOwnGrid});
 
@@ -18,8 +25,8 @@ typedef MapGridChoice = ({int cols, int rows, bool hasOwnGrid});
 ///
 /// [askOwnGrid] adds "the picture has its own grid lines" (battlemap then
 /// draws none, remembered for the map); [warning] is shown above the
-/// buttons (e.g. that re-gridding clears the fog). Returns `null` on
-/// cancel.
+/// buttons once the counts differ from the initial ones (e.g. that
+/// re-gridding clears the fog). Returns `null` on cancel.
 ///
 /// See also:
 /// - [VttState.regridRaster], the in-game re-grid.
@@ -167,9 +174,15 @@ class _MapGridDialogState extends State<_MapGridDialog> {
     final size = widget.imageSize;
     final (table, warn) = _describe();
     final cell = size != null && _colCount > 0 ? size.width / _colCount : null;
+    final changed = _colCount != widget.initialCols ||
+        _rowCount != (widget.initialRows ?? _rowCount);
     return AlertDialog(
-      backgroundColor: const Color(0xFF1A1A2E),
-      title: Text(widget.title),
+      backgroundColor: _bg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: _border),
+      ),
+      title: Text(widget.title, style: const TextStyle(color: _gold)),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -180,38 +193,38 @@ class _MapGridDialogState extends State<_MapGridDialog> {
                   ? 'Picture ${size.width.round()} × ${size.height.round()} px. '
                       'Count the squares along the top edge; the rows follow.'
                   : 'How many squares does the map have?',
-              style: const TextStyle(color: Colors.white54, fontSize: 13),
+              style: const TextStyle(color: _goldDim, fontSize: 13),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 IconButton(
                   tooltip: 'One column less',
-                  icon: const Icon(Icons.remove, color: Colors.white70),
+                  icon: const Icon(Icons.remove, color: _gold),
                   onPressed: () => _setCols(_colCount - 1),
                 ),
                 Expanded(
                   child: TextField(
                     controller: _cols,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    style: const TextStyle(color: _gold, fontSize: 18),
                     decoration: _field('Columns'),
                     onChanged: (_) => _colsChanged(),
                   ),
                 ),
                 IconButton(
                   tooltip: 'One column more',
-                  icon: const Icon(Icons.add, color: Colors.white70),
+                  icon: const Icon(Icons.add, color: _gold),
                   onPressed: () => _setCols(_colCount + 1),
                 ),
                 const SizedBox(width: 8),
-                const Text('×', style: TextStyle(color: Colors.white38, fontSize: 18)),
+                const Text('×', style: TextStyle(color: _goldDim, fontSize: 18)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
                     controller: _rows,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    style: const TextStyle(color: _gold, fontSize: 18),
                     decoration: _field(_rowsByHand || size == null ? 'Rows' : 'Rows (auto)'),
                     onChanged: (_) => setState(() => _rowsByHand = true),
                   ),
@@ -221,10 +234,10 @@ class _MapGridDialogState extends State<_MapGridDialog> {
             if (cell != null) ...[
               const SizedBox(height: 6),
               Text('One square = ${cell.toStringAsFixed(cell < 20 ? 1 : 0)} px of the picture',
-                  style: const TextStyle(color: Colors.white38, fontSize: 12)),
+                  style: const TextStyle(color: _goldDim, fontSize: 12)),
             ],
             const SizedBox(height: 10),
-            Text(table, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(table, style: const TextStyle(color: _gold, fontSize: 13)),
             if (warn != null) ...[
               const SizedBox(height: 6),
               Text(warn, style: const TextStyle(color: Colors.orangeAccent, fontSize: 13)),
@@ -234,14 +247,17 @@ class _MapGridDialogState extends State<_MapGridDialog> {
               CheckboxListTile(
                 contentPadding: EdgeInsets.zero,
                 value: _ownGrid,
+                activeColor: _gold,
+                checkColor: _bg,
+                side: const BorderSide(color: _goldDim, width: 2),
                 onChanged: (v) => setState(() => _ownGrid = v ?? true),
                 title: const Text('The picture has its own grid lines',
-                    style: TextStyle(fontSize: 14)),
+                    style: TextStyle(color: _gold, fontSize: 14)),
                 subtitle: const Text('Then battlemap draws no grid over it.',
-                    style: TextStyle(color: Colors.white38, fontSize: 12)),
+                    style: TextStyle(color: _goldDim, fontSize: 12)),
               ),
             ],
-            if (widget.warning != null) ...[
+            if (widget.warning != null && changed) ...[
               const SizedBox(height: 8),
               Text(widget.warning!,
                   style: const TextStyle(color: Colors.orangeAccent, fontSize: 13)),
@@ -252,9 +268,14 @@ class _MapGridDialogState extends State<_MapGridDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: const Text('Cancel', style: TextStyle(color: _goldDim)),
         ),
         FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: _gold,
+            foregroundColor: _bg,
+            disabledBackgroundColor: _border,
+          ),
           onPressed: _colCount > 0 && _rowCount > 0
               ? () => Navigator.pop<MapGridChoice>(
                   context, (cols: _colCount, rows: _rowCount, hasOwnGrid: _ownGrid))
@@ -267,12 +288,12 @@ class _MapGridDialogState extends State<_MapGridDialog> {
 
   static InputDecoration _field(String label) => InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white38),
+        labelStyle: const TextStyle(color: _goldDim),
         enabledBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.white24),
+          borderSide: BorderSide(color: _border),
         ),
         focusedBorder: const UnderlineInputBorder(
-          borderSide: BorderSide(color: Colors.greenAccent),
+          borderSide: BorderSide(color: _gold),
         ),
       );
 }
