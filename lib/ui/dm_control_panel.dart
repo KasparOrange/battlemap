@@ -388,7 +388,20 @@ class DmControlPanel extends StatefulWidget {
 
 class _DmControlPanelState extends State<DmControlPanel> {
   bool _expanded = false;
-  int _activeTab = 0;
+
+  /// ID of the active tab. Being on a tab IS its mode ([_modeFor]): the
+  /// Draw tab draws, the Tokens tab places and moves tokens; tabs without
+  /// a mode of their own (Layers, Camera, Settings) use the Tokens mode.
+  late String _tab;
+
+  /// The Fog tab's tool (brush or room), kept while on other tabs so the
+  /// Fog tab comes back with the tool last picked there.
+  InteractionMode _fogTool = InteractionMode.fogReveal;
+
+  /// When the panel last asked the TV for a mode. Until the TV's echo is
+  /// back (state broadcasts are throttled), an older mode in the state is
+  /// not a reason to switch tabs ([_onStateChanged]).
+  DateTime _modeRequestedAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Local preview of the draw width slider while dragging (sent on release).
   double? _widthPreview;
@@ -405,36 +418,144 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   /// All possible tab definitions: icon, label, and tab ID.
   static const _allTabs = [
-    (Icons.shield, 'Combat', 'combat'),
+    (Icons.person_pin, 'Tokens', 'tokens'),
     (Icons.cloud, 'Fog', 'fog'),
     (Icons.brush, 'Draw', 'draw'),
     (Icons.straighten, 'Measure', 'measure'),
+    (Icons.shield, 'Combat', 'combat'),
+    (Icons.layers, 'Layers', 'layers'),
     (Icons.videocam, 'Camera', 'camera'),
     (Icons.tune, 'Settings', 'settings'),
-    (Icons.layers, 'Layers', 'layers'),
   ];
 
   /// Returns the list of tabs visible given current [SessionSettings].
   ///
-  /// Hides tabs when all their features are disabled:
-  /// - Combat tab hidden when tokens + hpBars + conditions + aoeTemplates all off
+  /// - Tokens (the normal mode, leftmost), Fog, Camera, Settings are
+  ///   always shown
   /// - Draw tab hidden when drawingTools off
   /// - Measure tab hidden when measureTool off
+  /// - Combat tab (AoE templates, digital play) shown when aoeTemplates on
   /// - Layers tab (DM-only pictures) shown when the host provides
   ///   [DmCallbacks.onAddDmOverlays]
-  /// - Fog, Camera, Settings are always shown
   List<(IconData, String, String)> get _visibleTabs {
     final s = state.sessionSettings;
-    final hasCombat = s.tokens || s.hpBars || s.conditions || s.aoeTemplates;
     return [
-      if (hasCombat) _allTabs[0], // Combat
-      _allTabs[1],                // Fog (always)
+      _allTabs[0],                     // Tokens (always)
+      _allTabs[1],                     // Fog (always)
       if (s.drawingTools) _allTabs[2], // Draw
       if (s.measureTool) _allTabs[3],  // Measure
-      if (cb.onAddDmOverlays != null) _allTabs[6], // Layers
-      _allTabs[4],                // Camera (always)
-      _allTabs[5],                // Settings (always)
+      if (s.aoeTemplates) _allTabs[4], // Combat
+      if (cb.onAddDmOverlays != null) _allTabs[5], // Layers
+      _allTabs[6],                     // Camera (always)
+      _allTabs[7],                     // Settings (always)
     ];
+  }
+
+  /// Index of the active tab in [tabs]; falls back to the Tokens tab (and
+  /// makes it active) when the active tab got hidden by the settings.
+  int _activeIndex(List<(IconData, String, String)> tabs) {
+    final i = tabs.indexWhere((t) => t.$3 == _tab);
+    if (i >= 0) return i;
+    _tab = 'tokens';
+    return 0;
+  }
+
+  /// The interaction mode the tab [tabId] stands for. Tabs without a tool
+  /// of their own fall back to the normal mode, [InteractionMode.token].
+  InteractionMode _modeFor(String tabId) => switch (tabId) {
+        'fog' => _fogTool,
+        'draw' => InteractionMode.draw,
+        'measure' => InteractionMode.measure,
+        'combat' => InteractionMode.aoe,
+        _ => InteractionMode.token,
+      };
+
+  /// The tab that owns [mode] (for following a mode set elsewhere), or
+  /// `null` when that tab is hidden.
+  String? _tabFor(InteractionMode mode) {
+    final id = switch (mode) {
+      InteractionMode.token => 'tokens',
+      InteractionMode.fogReveal || InteractionMode.roomReveal => 'fog',
+      InteractionMode.draw => 'draw',
+      InteractionMode.measure => 'measure',
+      InteractionMode.aoe => 'combat',
+    };
+    return _visibleTabs.any((t) => t.$3 == id) ? id : null;
+  }
+
+  /// Whether being on [tabId] fits [mode] (the Fog tab has two tools).
+  bool _tabFits(String tabId, InteractionMode mode) => tabId == 'fog'
+      ? mode == InteractionMode.fogReveal || mode == InteractionMode.roomReveal
+      : _modeFor(tabId) == mode;
+
+  /// Asks the TV for [mode] through the matching callback.
+  void _requestMode(InteractionMode mode) {
+    if (mode == InteractionMode.fogReveal ||
+        mode == InteractionMode.roomReveal) {
+      _fogTool = mode;
+    }
+    if (state.interactionMode == mode) return;
+    _modeRequestedAt = DateTime.now();
+    switch (mode) {
+      case InteractionMode.token:
+        cb.onSetTokenMode();
+      case InteractionMode.fogReveal:
+        cb.onSetFogMode();
+      case InteractionMode.roomReveal:
+        cb.onSetRoomRevealMode();
+      case InteractionMode.draw:
+        cb.onSetDrawMode();
+      case InteractionMode.measure:
+        cb.onSetMeasureMode();
+      case InteractionMode.aoe:
+        cb.onSetAoeMode();
+    }
+  }
+
+  /// Follows a mode set elsewhere (the TV restored a game, another
+  /// companion, the bench robot) by switching to the tab that owns it —
+  /// unless the panel just asked for a mode and the TV's echo is still on
+  /// its way.
+  void _onStateChanged() {
+    final mode = state.interactionMode;
+    if (_tabFits(_tab, mode)) {
+      if (_tab == 'fog') _fogTool = mode;
+      return;
+    }
+    if (DateTime.now().difference(_modeRequestedAt) <
+        const Duration(milliseconds: 1500)) {
+      return;
+    }
+    final id = _tabFor(mode);
+    if (id == null || !mounted) return;
+    setState(() {
+      _tab = id;
+      if (id == 'fog') _fogTool = mode;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final mode = state.interactionMode;
+    _tab = _tabFor(mode) ?? 'tokens';
+    if (_tab == 'fog') _fogTool = mode;
+    state.addListener(_onStateChanged);
+  }
+
+  @override
+  void didUpdateWidget(DmControlPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.state != widget.state) {
+      oldWidget.state.removeListener(_onStateChanged);
+      widget.state.addListener(_onStateChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    state.removeListener(_onStateChanged);
+    super.dispose();
   }
 
   @override
@@ -522,7 +643,6 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// The side layout's vertical tab rail, undo/redo at its foot.
   Widget _buildRail() {
     final tabs = _visibleTabs;
-    if (_activeTab >= tabs.length) _activeTab = 0;
     return SizedBox(
       width: _kRailWidth,
       child: Column(
@@ -558,7 +678,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              _visibleTabs.length > _activeTab ? _visibleTabs[_activeTab].$2 : 'DM',
+              _visibleTabs[_activeIndex(_visibleTabs)].$2,
               style: const TextStyle(
                 color: _kTextPrimary,
                 fontSize: 15,
@@ -603,8 +723,6 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// Builds the bottom tab bar. Tapping the active tab toggles the content.
   Widget _buildTabBar() {
     final tabs = _visibleTabs;
-    // Clamp _activeTab to valid range
-    if (_activeTab >= tabs.length) _activeTab = 0;
     return Row(
       children: [
         for (int i = 0; i < tabs.length; i++)
@@ -616,24 +734,25 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// One tab of the bottom bar or (with [rail]) of the side rail: icon over
   /// label, the active tab marked on the edge facing the content (top in
   /// the bar, left in the rail). Tapping the active tab folds or unfolds
-  /// the content; another tab switches to it and unfolds.
+  /// the content (the mode stays); another tab switches to it, unfolds and
+  /// switches the map to that tab's mode ([_modeFor]).
   Widget _buildTabButton(int i, List<(IconData, String, String)> tabs,
       {bool rail = false}) {
-    final marked = _activeTab == i && _expanded;
+    final active = _activeIndex(tabs) == i;
+    final marked = active && _expanded;
     const mark = BorderSide(color: _kAccentGold, width: 2);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
+        if (active) {
+          setState(() => _expanded = !_expanded);
+          return;
+        }
         setState(() {
-          if (_activeTab == i) {
-            _expanded = !_expanded;
-          } else {
-            _activeTab = i;
-            _expanded = true;
-          }
+          _tab = tabs[i].$3;
+          _expanded = true;
         });
-        // Auto-activate measure mode when opening the Measure tab
-        if (tabs[i].$3 == 'measure' && _expanded) cb.onSetMeasureMode();
+        _requestMode(_modeFor(_tab));
       },
       child: Container(
         height: rail ? 64 : 56,
@@ -647,14 +766,14 @@ class _DmControlPanelState extends State<DmControlPanel> {
           children: [
             Icon(
               tabs[i].$1,
-              color: _activeTab == i ? _kAccentGold : _kAccentGoldDim,
+              color: active ? _kAccentGold : _kAccentGoldDim,
               size: 22,
             ),
             const SizedBox(height: 2),
             Text(
               tabs[i].$2,
               style: TextStyle(
-                color: _activeTab == i ? _kTextPrimary : _kTextSecondary,
+                color: active ? _kTextPrimary : _kTextSecondary,
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
@@ -669,9 +788,10 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// visible tab's ID string.
   Widget _buildTabContent() {
     final tabs = _visibleTabs;
-    if (_activeTab >= tabs.length) return const SizedBox.shrink();
-    final tabId = tabs[_activeTab].$3;
+    final tabId = tabs[_activeIndex(tabs)].$3;
     switch (tabId) {
+      case 'tokens':
+        return _buildTokensTab();
       case 'combat':
         return _buildCombatTab();
       case 'fog':
@@ -709,124 +829,122 @@ class _DmControlPanelState extends State<DmControlPanel> {
     }
   }
 
-  /// Builds the Combat tab: token placement toggle, token list with
-  /// HP controls, a clear-all button, and the AoE template controls.
-  Widget _buildCombatTab() {
+  // ─── Tokens Tab ──────────────────────────────────────────
+
+  /// Builds the Tokens tab, the normal mode (leftmost): being on it places
+  /// and moves tokens on the map — markers that remember where the players'
+  /// miniatures and the monsters stand. Lists the tokens (tap one to name
+  /// or delete it) and clears them all.
+  Widget _buildTokensTab() {
     final tokens = state.tokens;
-    final s = state.sessionSettings;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (s.tokens) ...[
+        const Text(
+          'Tap an empty square to place a token, drag a token to move it. '
+          'Tap a door to open or close it.',
+          style: TextStyle(color: _kTextSecondary, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        if (tokens.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'No tokens yet',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _kTextSecondary,
+                fontSize: _kText,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          )
+        else ...[
+          for (final token in tokens) ...[
+            _buildTokenRow(token),
+            const SizedBox(height: 6),
+          ],
+          const SizedBox(height: 4),
           _GoldButton(
-            icon: Icons.person_pin,
-            label: 'Place Token',
-            active: state.interactionMode == InteractionMode.token,
-            onTap: cb.onSetTokenMode,
+            icon: Icons.delete_outline,
+            label: 'Clear All Tokens',
+            onTap: cb.onClearTokens,
           ),
-          const SizedBox(height: 8),
-          if (tokens.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 12),
-              child: Text(
-                'Switch to token mode and tap the map',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: _kTextSecondary,
-                  fontSize: _kText,
-                  fontStyle: FontStyle.italic,
+        ],
+      ],
+    );
+  }
+
+  // ─── Combat Tab ──────────────────────────────────────────
+
+  /// Builds the Combat tab (digital play, AoE templates on): being on it
+  /// places AoE templates; shape, size and clear.
+  Widget _buildCombatTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Tap the map to place. Drag to aim a cone or line, or to move a circle or square.',
+          style: TextStyle(color: _kTextSecondary, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        const _GoldLabel('Shape'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            for (final entry in {
+              AoeShape.circle: Icons.circle_outlined,
+              AoeShape.cone: Icons.pie_chart_outline,
+              AoeShape.line: Icons.horizontal_rule,
+              AoeShape.square: Icons.crop_square,
+            }.entries) ...[
+              if (entry.key != AoeShape.circle) const SizedBox(width: 6),
+              Expanded(
+                child: _Chip(
+                  active: state.aoeShape == entry.key,
+                  onTap: () => _setAoeTool(entry.key, state.aoeRadius),
+                  child: Icon(
+                    entry.value,
+                    color: state.aoeShape == entry.key ? _kAccentGold : _kAccentGoldDim,
+                    size: _kIcon,
+                  ),
                 ),
               ),
-            )
-          else ...[
-            for (final token in tokens) ...[
-              _buildTokenRow(token),
-              const SizedBox(height: 6),
             ],
-            const SizedBox(height: 4),
-            _GoldButton(
-              icon: Icons.delete_outline,
-              label: 'Clear All Tokens',
-              onTap: cb.onClearTokens,
-            ),
           ],
-        ],
-        if (s.aoeTemplates) ...[
-          if (s.tokens) ...[
-            const SizedBox(height: 12),
-            Container(height: 1, color: _kBorderGold),
-            const SizedBox(height: 10),
-          ],
-          _GoldButton(
-            icon: Icons.my_location,
-            label: 'AoE Mode',
-            active: state.interactionMode == InteractionMode.aoe,
-            onTap: cb.onSetAoeMode,
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Tap the map to place. Drag to aim a cone or line, or to move a circle or square.',
-            style: TextStyle(color: _kTextSecondary, fontSize: 12),
-          ),
-          const SizedBox(height: 8),
-          const _GoldLabel('Shape'),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              for (final entry in {
-                AoeShape.circle: Icons.circle_outlined,
-                AoeShape.cone: Icons.pie_chart_outline,
-                AoeShape.line: Icons.horizontal_rule,
-                AoeShape.square: Icons.crop_square,
-              }.entries) ...[
-                if (entry.key != AoeShape.circle) const SizedBox(width: 6),
-                Expanded(
-                  child: _Chip(
-                    active: state.aoeShape == entry.key,
-                    onTap: () => _setAoeTool(entry.key, state.aoeRadius),
-                    child: Icon(
-                      entry.value,
-                      color: state.aoeShape == entry.key ? _kAccentGold : _kAccentGoldDim,
-                      size: _kIcon,
+        ),
+        const SizedBox(height: 8),
+        const _GoldLabel('Size'),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            for (final ft in [10, 15, 20, 30, 60]) ...[
+              if (ft != 10) const SizedBox(width: 6),
+              Expanded(
+                child: _Chip(
+                  active: (state.aoeRadius * 5).round() == ft,
+                  onTap: () => _setAoeTool(state.aoeShape, ft / 5.0),
+                  child: Text(
+                    '$ft',
+                    style: TextStyle(
+                      color: (state.aoeRadius * 5).round() == ft
+                          ? _kTextPrimary
+                          : _kTextSecondary,
+                      fontSize: _kText,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-              ],
+              ),
             ],
-          ),
-          const SizedBox(height: 8),
-          const _GoldLabel('Size'),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              for (final ft in [10, 15, 20, 30, 60]) ...[
-                if (ft != 10) const SizedBox(width: 6),
-                Expanded(
-                  child: _Chip(
-                    active: (state.aoeRadius * 5).round() == ft,
-                    onTap: () => _setAoeTool(state.aoeShape, ft / 5.0),
-                    child: Text(
-                      '$ft',
-                      style: TextStyle(
-                        color: (state.aoeRadius * 5).round() == ft
-                            ? _kTextPrimary
-                            : _kTextSecondary,
-                        fontSize: _kText,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 8),
-          _GoldButton(
-            icon: Icons.close,
-            label: 'Clear AoE',
-            onTap: cb.onClearAoe,
-          ),
-        ],
+          ],
+        ),
+        const SizedBox(height: 8),
+        _GoldButton(
+          icon: Icons.close,
+          label: 'Clear AoE',
+          onTap: cb.onClearAoe,
+        ),
       ],
     );
   }
@@ -1193,7 +1311,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
             (Icons.meeting_room, 'Room'),
           ],
           selected: tool,
-          onSelect: (i) => i == 0 ? cb.onSetFogMode() : cb.onSetRoomRevealMode(),
+          onSelect: (i) => _requestMode(
+              i == 0 ? InteractionMode.fogReveal : InteractionMode.roomReveal),
         ),
         const SizedBox(height: 4),
         Text(
@@ -1339,11 +1458,9 @@ class _DmControlPanelState extends State<DmControlPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _GoldButton(
-          icon: Icons.brush,
-          label: 'Draw Mode',
-          active: state.interactionMode == InteractionMode.draw,
-          onTap: cb.onSetDrawMode,
+        const Text(
+          'Drag on the map to draw. The players see it on the TV.',
+          style: TextStyle(color: _kTextSecondary, fontSize: 12),
         ),
         const SizedBox(height: 10),
         // Color dots
@@ -1451,13 +1568,6 @@ class _DmControlPanelState extends State<DmControlPanel> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _GoldButton(
-          icon: Icons.straighten,
-          label: 'Measure Mode',
-          active: state.interactionMode == InteractionMode.measure,
-          onTap: cb.onSetMeasureMode,
-        ),
-        const SizedBox(height: 4),
         const Text(
           'Drag on the map to measure. Tap to clear. The players see the line on the TV.',
           style: TextStyle(color: _kTextSecondary, fontSize: 12),

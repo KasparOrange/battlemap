@@ -175,8 +175,6 @@ class _SessionSettingsDialogState extends State<_SessionSettingsDialog> {
 
                     // ── Tools ─────────────────────────────────────
                     _buildSectionHeader('Tools'),
-                    _buildToggle('Tokens', Icons.person_pin, _settings.tokens,
-                        (v) => setState(() { _settings.tokens = v; _detectTemplate(); })),
                     _buildToggle('Measure', Icons.straighten, _settings.measureTool,
                         (v) => setState(() { _settings.measureTool = v; _detectTemplate(); })),
                     _buildToggle('Ruler', Icons.square_foot, _settings.ruler,

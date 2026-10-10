@@ -188,7 +188,10 @@ class VttState extends ChangeNotifier {
   /// See also:
   /// * [InteractionMode] for the available modes.
   /// * [setInteractionMode] to change the active mode.
-  InteractionMode interactionMode = InteractionMode.fogReveal;
+  ///
+  /// Starts in [InteractionMode.token], the normal mode (the companion's
+  /// leftmost Tokens tab).
+  InteractionMode interactionMode = InteractionMode.token;
 
   // --- Tokens ---
 

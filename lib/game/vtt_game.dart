@@ -1001,6 +1001,8 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       case InteractionMode.draw:
         break; // No-op
       case InteractionMode.token:
+        // The normal mode: doors open and close here too
+        if (_tryTogglePortal(worldPos)) return;
         _tokenTapAt(worldPos);
       case InteractionMode.measure:
         // Tap clears the previous measurement

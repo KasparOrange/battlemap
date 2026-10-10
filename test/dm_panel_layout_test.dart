@@ -123,6 +123,49 @@ void main() {
       expect(tester.getSize(find.byType(DmControlPanel)).width, 800);
     });
 
+    testWidgets('being on a tab is its mode, Tokens leftmost', (tester) async {
+      final state = await pump(tester, const Size(1280, 800));
+      // Tokens is the first tab and the normal mode
+      expect(tester.getTopLeft(find.text('Tokens')).dy,
+          lessThan(tester.getTopLeft(find.text('Fog')).dy));
+      expect(state.interactionMode, InteractionMode.token);
+
+      await tester.tap(find.text('Draw').last);
+      await tester.pumpAndSettle();
+      expect(calls, ['drawMode']);
+      expect(find.text('Draw Mode'), findsNothing); // no extra mode button
+      state.setInteractionMode(InteractionMode.draw); // the TV's echo
+
+      // Tapping the active tab only folds it; the mode stays
+      await tester.tap(find.text('Draw').last);
+      await tester.pumpAndSettle();
+      expect(calls, ['drawMode']);
+
+      await tester.tap(find.text('Tokens').last);
+      await tester.pumpAndSettle();
+      expect(calls, ['drawMode', 'tokenMode']);
+
+      // Tabs without a mode of their own fall back to the Tokens mode
+      state.setInteractionMode(InteractionMode.measure);
+      calls.clear();
+      await tester.tap(find.text('Camera').last);
+      await tester.pumpAndSettle();
+      expect(calls, ['tokenMode']);
+    });
+
+    testWidgets('a mode set elsewhere switches to its tab', (tester) async {
+      final state = await pump(tester, const Size(1280, 800));
+      await tester.tap(find.text('Tokens').last); // unfold, no request
+      await tester.pumpAndSettle();
+      expect(find.text('No tokens yet'), findsOneWidget);
+
+      state.setInteractionMode(InteractionMode.draw);
+      await tester.pumpAndSettle();
+      expect(find.text('Drag on the map to draw. The players see it on the TV.'),
+          findsOneWidget);
+      expect(calls, isEmpty);
+    });
+
     testWidgets('Fog tab: Brush | Room and when players see changes',
         (tester) async {
       final state = await pump(tester, const Size(1280, 800));

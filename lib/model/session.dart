@@ -26,9 +26,11 @@ class SessionSettings {
   /// Whether freehand drawing tools are available.
   bool drawingTools;
 
-  /// Whether digital token placement is enabled.
-  ///
-  /// Typically `false` in pen-and-paper mode (physical miniatures are used).
+  /// Legacy switch for digital token placement. Tokens are always on now
+  /// (they remember where miniatures and monsters stand, also at the
+  /// tabletop): the companion's Tokens tab no longer reads this and the
+  /// settings dialog no longer shows it. Kept for the presets and old
+  /// session files.
   bool tokens;
 
   /// Whether the distance measurement tool is available.

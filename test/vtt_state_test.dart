@@ -690,7 +690,7 @@ void main() {
   group('interaction mode and draw settings', () {
     test('setInteractionMode changes mode', () {
       final state = VttState();
-      expect(state.interactionMode, InteractionMode.fogReveal);
+      expect(state.interactionMode, InteractionMode.token);
 
       state.setInteractionMode(InteractionMode.draw);
       expect(state.interactionMode, InteractionMode.draw);

@@ -10,7 +10,8 @@ A **Flutter app** that turns a TV (laid flat as a table surface) into a D&D digi
 **The phone controls everything. The TV only displays.**
 
 **Focus: tabletop mode.** The TV lies flat with **real miniatures** on it; HP, initiative and
-conditions stay on paper. No digital tokens or HP bars in current work. The "digital mode"
+conditions stay on paper. Tokens are in (since 2026-10-10) as plain position markers for players
+and monsters — the companion's leftmost, default tab; no HP bars in current work. The "digital mode"
 (tokens, combat tracking) is a stretch goal far down the roadmap — its existing code stays dormant
 behind session settings; don't polish or extend it. `docs/feature-ideas.md` "play modes".
 
@@ -231,6 +232,7 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 45 | Companion full screen (Android) | Done (2026-10-10, 1.1.8+18 on the tablet; the TV half waits for the box deploy) | Game view hides the system bars (sticky immersive), toggle at the map's top right, stored in Hive `companionSettings`; `lib/ui/system_bars.dart`, `docs/architecture.md` "Full screen" |
 | 46 | Table view: 1 square = 1 inch, 34 × 19 window | Code done (2026-10-10, 1.1.9+19), bench-checked (relay probe 25/25, bench robot 57/57), needs the box + tablet | TV calibration on the TV (measuring bar dialog), every map at 1 inch in a centred window of whole squares (mask), big maps pan from the tablet (frame grip, overview map, arrows), whole-map view, `mapFit` record + window in the session, grid drawn or not remembered per map, picture maps re-griddable; `docs/architecture.md` "table view", `docs/archive.md` 26-10-10 "table view" |
 | 47 | Embedded grid detection | Code done (2026-10-10, in 2b36ba3), not in a build yet | Companion upload finds a grid drawn into a picture map (`lib/model/grid_detect.dart`): pre-fills cols × rows, ticks "own grid lines", crops a grid that starts inside the picture; `docs/architecture.md` "embedded grid detection" |
+| 48 | DM panel: tabs are modes + Tokens tab | Code done (2026-10-10), not in a build yet, needs the tablet | Being on a tab is its mode (no mode buttons); new leftmost Tokens tab = the normal mode (place, move, list, name; door taps); `docs/architecture.md` "Tabs are modes" |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |
 | 11 | Shape drawing tools | Not started | Circles, cones, area-of-effect markers |
