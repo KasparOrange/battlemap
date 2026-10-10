@@ -238,6 +238,26 @@ file fully before opening it for writing — `open(p,'w').write(f(open(p).read()
 Whether the tablet's bars are hidden: `ANDROID_ADB_SERVER_PORT=5059 adb -s <tablet> shell dumpsys
 window | grep navigationBars` → `visible=false`.
 
+### remote site: the table at Juri's from afar (prepared 2026-10-10, not set up yet)
+
+The box (`192.168.178.149`) and the tablet (`192.168.178.199`) stand at Juri's. Off his Wi-Fi the
+Mac reaches them through **Tailscale on Juri's Windows PC as a subnet router** — routes for the
+two devices only (`/32`, so they also win over a home FRITZ!Box on the same `192.168.178.0/24`).
+Juri runs `tools/remote-site/battlemap-remote-setup.cmd` (one file: batch that elevates, then
+runs its own PowerShell tail): installs Tailscale (winget, else the MSI), checks both devices on
+:5555, `tailscale up --unattended --advertise-routes=…/32,…/32 --hostname=battlemap-table` with a
+`tskey-` auth key or a login link he sends Konrad, optional "never sleep on AC" (old values
+saved in `%ProgramData%\battlemap-remote`). `battlemap-remote-remove.cmd` undoes all of it.
+Explained to him on the horizon board `battlemap-remote` (walk `explain`, built by
+`tools/remote-site/build_board.py`).
+
+Konrad's side, once: approve the two routes in the Tailscale admin, disable key expiry for
+`battlemap-table`, ACL = his devices → the two `/32` on port 5555 only, Tailscale on the Mac;
+then `latrine android connect 192.168.178.149:5555` and deploy as usual. After a box reboot the
+classic :5555 is gone — someone at Juri's switches Wireless debugging on, then connect to the
+port it shows; latrine moves it back to :5555. Without the PC: the relay's `update.download`
+(an OK on the TV each time).
+
 ## testing
 
 ```bash

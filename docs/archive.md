@@ -6,6 +6,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 22:45 - remote site - Juri's PC as the door to the table
+- Konrad: reach box + tablet from afar once he leaves Juri's — prepare it, message Juri with scripts and a canvas walk
+	- `tools/remote-site/`: setup + remove scripts for Windows (Tailscale subnet router, two `/32` routes), board builder + walk; `setup.md` "remote site"
+	- horizon board `battlemap-remote` (walk `explain`), shared by link; Telegram message to Juri with both scripts
+
 ### 26-10-10 22:50 - TV overscan - docs sweep
 - Konrad (/ty): docs sweep after the overscan fix — pivot inset now from what the TV shows (`architecture.md`), deploy state 1.1.20+30 (`action.md`), README calibration store, `sessions.md` `tableCols`/`tableRows` = visible squares, and a `setup.md` gotcha: a tablet-only deploy leaves the box on an older build (why the pivot "did not show"), check `versionName` per device first
 
