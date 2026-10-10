@@ -19,6 +19,10 @@ import '../../state/vtt_state.dart';
 /// - [VttState.rulerX], [VttState.rulerY] -- corner position in grid coords.
 /// - [VttState.rulerRotation] -- orientation (0, 90, 180, 270 degrees).
 ///
+/// The numbers stay upright on this device's screen whatever the ruler's
+/// rotation and the camera's ([viewAngle]): each one is turned back by the
+/// sum of both ([labelAngle]).
+///
 /// The ruler can be dragged on the phone in any interaction mode while it
 /// is visible ([VttGame] hit-tests the arms, then calls
 /// [VttState.setRulerPosition]).
@@ -30,8 +34,8 @@ import '../../state/vtt_state.dart';
 /// - [VttGame], which creates this component during map load.
 /// - [DmControlPanel], which provides the toggle and rotation controls.
 class RulerComponent extends PositionComponent {
-  /// Length of each arm in grid squares.
-  static const double armLengthSquares = 10;
+  /// Length of each arm in grid squares ([VttState.rulerArmSquares]).
+  static const double armLengthSquares = VttState.rulerArmSquares;
 
   /// Width of each arm in grid squares (thick enough to grab and read).
   static const double armWidthSquares = 0.6;
@@ -41,6 +45,10 @@ class RulerComponent extends PositionComponent {
 
   /// World pixels per grid square, used for spacing tick marks.
   final double pixelsPerGrid;
+
+  /// The camera's rotation in radians ([Viewfinder.angle]), read every
+  /// frame to keep the numbers upright on screen. `null` = unrotated.
+  final double Function()? viewAngle;
 
   /// Fill paint for the wooden ruler body (85% opacity warm brown).
   static final _woodFill = Paint()..color = const Color(0xD95C3A1E);
@@ -68,11 +76,13 @@ class RulerComponent extends PositionComponent {
   ///
   /// [pixelsPerGrid] sets the spacing between tick marks and every other
   /// dimension. [mapSize] sets the component's bounding box so it renders
-  /// regardless of camera position.
+  /// regardless of camera position. [viewAngle] supplies the camera
+  /// rotation for upright numbers.
   RulerComponent({
     required this.state,
     required this.pixelsPerGrid,
     required Vector2 mapSize,
+    this.viewAngle,
   }) : super(
           size: mapSize,
           priority: 25,
@@ -103,6 +113,23 @@ class RulerComponent extends PositionComponent {
     }
   }
 
+  /// Turn, in radians, that makes a label upright on screen inside the
+  /// ruler's frame: the ruler is drawn turned by [rulerRotation] degrees and
+  /// the world appears turned by `-cameraAngle` (Flame), so the label undoes
+  /// the sum.
+  static double labelAngle(int rulerRotation, double cameraAngle) =>
+      cameraAngle - rulerRotation * pi / 180;
+
+  /// Paints [painter] centred on [center], turned by [angle].
+  static void _paintLabel(
+      Canvas canvas, TextPainter painter, Offset center, double angle) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    if (angle != 0) canvas.rotate(angle);
+    painter.paint(canvas, Offset(-painter.width / 2, -painter.height / 2));
+    canvas.restore();
+  }
+
   @override
   void render(Canvas canvas) {
     if (!state.rulerVisible) return;
@@ -115,6 +142,9 @@ class RulerComponent extends PositionComponent {
     final halfTickLength = 0.12 * pixelsPerGrid;
     final cornerSize = 0.2 * pixelsPerGrid;
     final n = armLengthSquares.toInt();
+    // Labels sit in the middle of the band between the ticks and the inner edge
+    final labelBand = (tickLength - armWidth) / 2;
+    final labelTurn = labelAngle(state.rulerRotation, viewAngle?.call() ?? 0);
 
     canvas.save();
     canvas.translate(cornerX, cornerY);
@@ -149,11 +179,7 @@ class RulerComponent extends PositionComponent {
         );
       }
       if (i > 0 && i - 1 < _numberPainters.length) {
-        final painter = _numberPainters[i - 1];
-        painter.paint(
-          canvas,
-          Offset(x - painter.width / 2, -armWidth + tickLength + 0.02 * pixelsPerGrid),
-        );
+        _paintLabel(canvas, _numberPainters[i - 1], Offset(x, labelBand), labelTurn);
       }
     }
 
@@ -174,11 +200,7 @@ class RulerComponent extends PositionComponent {
         );
       }
       if (i > 0 && i - 1 < _numberPainters.length) {
-        final painter = _numberPainters[i - 1];
-        painter.paint(
-          canvas,
-          Offset(-armWidth + tickLength + 0.02 * pixelsPerGrid, y - painter.height / 2),
-        );
+        _paintLabel(canvas, _numberPainters[i - 1], Offset(labelBand, y), labelTurn);
       }
     }
 

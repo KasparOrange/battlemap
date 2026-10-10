@@ -1312,6 +1312,8 @@ class _TvShellState extends State<TvShell> {
         // Ruler overlay
         case 'vtt.toggleRuler':
           _state.toggleRuler();
+          // Appear where the players look, not at the map's corner
+          if (_state.rulerVisible) _game?.centerRulerInView();
         case 'vtt.setRulerPosition':
           _state.setRulerPosition(
             (msg['x'] as num).toDouble(),

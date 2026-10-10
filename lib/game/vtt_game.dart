@@ -371,6 +371,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
       state: state,
       pixelsPerGrid: map.resolution.pixelsPerGrid.toDouble(),
       mapSize: mapSizeVec,
+      viewAngle: () => camera.viewfinder.angle,
     );
     world.add(_ruler!);
 
@@ -530,6 +531,21 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// Used for `vtt.setCamera` on the TV and "match TV" on the phone.
   void applyCamera(double x, double y, double zoom, double angle) {
     syncCamera(x, y, zoom.clamp(minZoom, maxZoom), angle);
+  }
+
+  /// Puts the ruler in the middle of this game's view, its L square to the
+  /// screen (rotation = the camera's, snapped to 90°).
+  ///
+  /// Called when the ruler is shown — on the TV for `vtt.toggleRuler`, so it
+  /// appears where the players look instead of at the map's corner.
+  /// No-op without a map.
+  void centerRulerInView() {
+    final map = state.map;
+    if (map == null) return;
+    final ppg = map.resolution.pixelsPerGrid.toDouble();
+    final c = camera.viewfinder.position;
+    final quarterTurns = (camera.viewfinder.angle / (pi / 2)).round();
+    state.placeRuler(c.x / ppg, c.y / ppg, quarterTurns * 90);
   }
 
   /// Stores the TV's camera (phone side) for the viewport outline and

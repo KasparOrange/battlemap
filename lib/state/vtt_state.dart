@@ -318,6 +318,11 @@ class VttState extends ChangeNotifier {
   /// Ruler rotation in degrees (0, 90, 180, or 270).
   int rulerRotation = 0;
 
+  /// Length of each ruler arm in grid squares (the L's bounding square).
+  ///
+  /// See also: [RulerComponent.armLengthSquares], which draws with it.
+  static const double rulerArmSquares = 10;
+
   /// Fine-tune zoom multiplier for scale calibration (0.5 to 2.0).
   ///
   /// Applied on top of [calibratedBaseZoom] to allow the DM to fine-tune
@@ -1151,9 +1156,46 @@ class VttState extends ChangeNotifier {
   }
 
   /// Rotates the ruler 90 degrees clockwise, cycling 0 -> 90 -> 180 -> 270 -> 0.
+  ///
+  /// Turns around the middle of the L ([rulerCenter]), so the ruler stays
+  /// where the DM put it instead of swinging around its corner off the view.
   void rotateRulerCW() {
-    rulerRotation = (rulerRotation + 90) % 360;
+    final c = rulerCenter;
+    placeRuler(c.dx, c.dy, rulerRotation + 90);
+  }
+
+  /// Middle of the ruler's L (centre of its bounding square), in grid
+  /// coordinates. See [placeRuler].
+  Offset get rulerCenter {
+    final d = _rulerCornerToCenter(rulerRotation);
+    return Offset(rulerX + d.dx, rulerY + d.dy);
+  }
+
+  /// Places the ruler with its L centred on ([centerX], [centerY]) (grid
+  /// coordinates) at [rotation] degrees (any multiple of 90, normalised to
+  /// 0..270).
+  ///
+  /// Used when the ruler is shown ([VttGame.centerRulerInView]: middle of
+  /// the TV's view, square to its screen) and by [rotateRulerCW]. Does not
+  /// fire [onRulerMoved] — the TV places it and broadcasts the result.
+  void placeRuler(double centerX, double centerY, int rotation) {
+    rulerRotation = ((rotation % 360) + 360) % 360;
+    final d = _rulerCornerToCenter(rulerRotation);
+    rulerX = centerX - d.dx;
+    rulerY = centerY - d.dy;
     notifyListeners();
+  }
+
+  /// Vector from the ruler's corner to the middle of its L: half an arm
+  /// along +x and half along -y (the arms' directions, see
+  /// [RulerComponent]), turned by [rotation] degrees.
+  static Offset _rulerCornerToCenter(int rotation) {
+    final a = rotation * pi / 180;
+    const h = rulerArmSquares / 2;
+    // (h, -h) rotated by a; rounded so 90° steps stay on exact grid values.
+    double r(double v) => (v * 1e9).roundToDouble() / 1e9;
+    return Offset(r(h * (cos(a) + sin(a))),
+        r(h * (sin(a) - cos(a))));
   }
 
   /// Sets the scale slider factor, clamped to the range `[0.5, 2.0]`.

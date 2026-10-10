@@ -1762,6 +1762,35 @@ void main() {
       expect(state.rulerRotation, 0);
     });
 
+    test('rotateRulerCW() turns around the middle of the L', () {
+      final state = VttState()..placeRuler(12, 8, 0);
+      expect(state.rulerCenter, const Offset(12, 8));
+      for (final deg in [90, 180, 270, 0]) {
+        state.rotateRulerCW();
+        expect(state.rulerRotation, deg);
+        expect(state.rulerCenter.dx, closeTo(12, 1e-9));
+        expect(state.rulerCenter.dy, closeTo(8, 1e-9));
+      }
+    });
+
+    test('placeRuler() centres the L and normalises the rotation', () {
+      final state = VttState()..placeRuler(10, 10, 0);
+      // Unrotated: corner half an arm left of and below the centre
+      expect(state.rulerX, 10 - VttState.rulerArmSquares / 2);
+      expect(state.rulerY, 10 + VttState.rulerArmSquares / 2);
+      state.placeRuler(3, 4, -90);
+      expect(state.rulerRotation, 270);
+      expect(state.rulerCenter.dx, closeTo(3, 1e-9));
+      expect(state.rulerCenter.dy, closeTo(4, 1e-9));
+    });
+
+    test('placeRuler() does not fire onRulerMoved (the TV places it)', () {
+      var moved = false;
+      final state = VttState()..onRulerMoved = (_, _) => moved = true;
+      state.placeRuler(5, 5, 90);
+      expect(moved, isFalse);
+    });
+
     test('setScaleFactor() clamps to 0.5-2.0', () {
       final state = VttState();
       state.setScaleFactor(1.5);

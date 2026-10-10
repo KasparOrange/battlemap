@@ -981,7 +981,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onSetAoe: (t) => _state.setAoe(t),
       onClearAoe: _state.clearAoe,
       // Ruler
-      onToggleRuler: _state.toggleRuler,
+      onToggleRuler: () {
+        _state.toggleRuler();
+        if (_state.rulerVisible) _game.centerRulerInView();
+      },
       onRotateRuler: _state.rotateRulerCW,
       onSetScaleFactor: _state.setScaleFactor,
       // Session settings
