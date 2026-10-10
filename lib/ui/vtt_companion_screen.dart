@@ -170,6 +170,47 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     );
   }
 
+  /// Confirms a one-tap bulk action (reveal all, hide all, clear drawings)
+  /// with a snackbar offering Undo.
+  ///
+  /// [changed] is whether the action did anything; [staged] whether it only
+  /// staged fog in shadow mode (nothing reached the players, nothing to
+  /// undo — the snackbar points at the apply button). [onUndo] undoes the
+  /// action (`vtt.undo` on the TV, or the local undo).
+  ///
+  /// See also: [_buildCallbacks], which wraps the panel's bulk buttons.
+  void _confirmBulk(String done, {
+    required bool changed,
+    bool staged = false,
+    required VoidCallback onUndo,
+  }) {
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(staged
+            ? '$done in the preview — tap ✓ to show the players'
+            : changed
+                ? done
+                : 'Nothing changed'),
+        backgroundColor: Colors.white24,
+        duration: Duration(seconds: changed && !staged ? 5 : 2),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        action: changed && !staged
+            ? SnackBarAction(label: 'Undo', onPressed: onUndo)
+            : null,
+      ),
+    );
+  }
+
+  /// Number of fog cells of the loaded map (0 without a map).
+  int get _totalCells {
+    final map = _state.map;
+    if (map == null) return 0;
+    return map.resolution.mapSize.dx.toInt() * map.resolution.mapSize.dy.toInt();
+  }
+
   /// Marks a loading action as started and arms a 30-second timeout.
   ///
   /// Returns `false` if another action is already in progress (double-tap
@@ -840,8 +881,19 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       return DmCallbacks(
         onLoadMap: _pickAndUploadMap,
         onToggleFog: c.sendToggleFog,
-        onRevealAll: c.sendRevealAll,
-        onHideAll: c.sendHideAll,
+        // Bulk actions: decided from the TV's mirrored state, before sending
+        onRevealAll: () {
+          final changed = _state.revealedCells.length < _totalCells;
+          c.sendRevealAll();
+          _confirmBulk('Whole map revealed',
+              changed: changed, staged: _state.shadowMode, onUndo: c.sendUndo);
+        },
+        onHideAll: () {
+          final changed = _state.revealedCells.isNotEmpty;
+          c.sendHideAll();
+          _confirmBulk('Whole map hidden',
+              changed: changed, staged: _state.shadowMode, onUndo: c.sendUndo);
+        },
         onToggleGrid: c.sendToggleGrid,
         onToggleWalls: c.sendToggleWalls,
         onToggleRevealMode: c.sendToggleRevealMode,
@@ -859,7 +911,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         onSetTokenMode: () => c.sendSetInteractionMode('token'),
         onSetDrawColor: (color) => c.sendSetDrawColor(color.toARGB32()),
         onSetDrawWidth: (width) => c.sendSetDrawWidth(width),
-        onClearDrawings: c.sendClearDrawings,
+        onClearDrawings: () {
+          final changed = _state.strokes.isNotEmpty;
+          c.sendClearDrawings();
+          _confirmBulk('Drawings cleared', changed: changed, onUndo: c.sendUndo);
+        },
         onUndoStroke: c.sendUndoStroke,
         onClearTokens: c.sendClearTokens,
         onEditToken: (id, {name, maxHp, currentHp, conditions}) =>
@@ -931,13 +987,20 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onLoadMap: _pickAndUploadMap,
       onToggleFog: _state.toggleFog,
       onRevealAll: () {
-        if (_state.map != null) {
-          final total = _state.map!.resolution.mapSize.dx.toInt() *
-              _state.map!.resolution.mapSize.dy.toInt();
-          _state.revealAll(total);
-        }
+        if (_state.map == null) return;
+        final changed = _state.revealedCells.length < _totalCells;
+        final staged = _state.shadowMode;
+        _state.revealAll(_totalCells);
+        _confirmBulk('Whole map revealed',
+            changed: changed, staged: staged, onUndo: _state.undo);
       },
-      onHideAll: _state.hideAll,
+      onHideAll: () {
+        final changed = _state.revealedCells.isNotEmpty;
+        final staged = _state.shadowMode;
+        _state.hideAll();
+        _confirmBulk('Whole map hidden',
+            changed: changed, staged: staged, onUndo: _state.undo);
+      },
       onToggleGrid: _state.toggleGrid,
       onToggleWalls: _state.toggleWalls,
       onToggleRevealMode: _state.toggleRevealMode,
@@ -958,7 +1021,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onSetTokenMode: () => _state.setInteractionMode(InteractionMode.token),
       onSetDrawColor: (color) => _state.setDrawColor(color),
       onSetDrawWidth: (width) => _state.setDrawWidth(width),
-      onClearDrawings: _state.clearDrawings,
+      onClearDrawings: () {
+        final changed = _state.strokes.isNotEmpty;
+        _state.clearDrawings();
+        _confirmBulk('Drawings cleared', changed: changed, onUndo: _state.undo);
+      },
       onUndoStroke: _state.undoStroke,
       onClearTokens: _state.clearTokens,
       onEditToken: (id, {name, maxHp, currentHp, conditions}) =>
