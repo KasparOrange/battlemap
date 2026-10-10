@@ -1,0 +1,121 @@
+{
+  "name": "keep",
+  "grid": [
+    32,
+    18
+  ],
+  "setting": "the ground floor of a ruined border keep",
+  "areas": [
+    {
+      "id": "great hall",
+      "rect": [
+        2,
+        2,
+        12,
+        9
+      ],
+      "desc": "wooden floorboards, long feasting table, a cold hearth on the north wall"
+    },
+    {
+      "id": "kitchen",
+      "rect": [
+        2,
+        11,
+        8,
+        5
+      ],
+      "desc": "stone floor, ovens, barrels and sacks"
+    },
+    {
+      "id": "corridor",
+      "rect": [
+        14,
+        6,
+        6,
+        2
+      ],
+      "desc": "stone corridor with faded banners"
+    },
+    {
+      "id": "armory",
+      "rect": [
+        20,
+        2,
+        10,
+        6
+      ],
+      "desc": "weapon racks, a broken armor stand"
+    },
+    {
+      "id": "courtyard ruin",
+      "kind": "rubble",
+      "rect": [
+        20,
+        8,
+        10,
+        8
+      ],
+      "desc": "collapsed section open to the sky, fallen masonry, weeds pushing through"
+    },
+    {
+      "id": "barracks",
+      "rect": [
+        11,
+        11,
+        7,
+        5
+      ],
+      "desc": "bunks and footlockers"
+    }
+  ],
+  "doors": [
+    {
+      "x": 13,
+      "y": 6,
+      "side": "e"
+    },
+    {
+      "x": 19,
+      "y": 6,
+      "side": "e"
+    },
+    {
+      "x": 5,
+      "y": 10,
+      "side": "s"
+    },
+    {
+      "x": 24,
+      "y": 7,
+      "side": "s"
+    },
+    {
+      "x": 12,
+      "y": 10,
+      "side": "s"
+    }
+  ],
+  "lights": [
+    {
+      "x": 8,
+      "y": 2.3,
+      "range": 6
+    },
+    {
+      "x": 4,
+      "y": 15.6,
+      "range": 4
+    }
+  ],
+  "props": [
+    {
+      "rect": [
+        5,
+        5,
+        6,
+        2
+      ],
+      "desc": "long feasting table with benches"
+    }
+  ]
+}

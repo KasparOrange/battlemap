@@ -2,8 +2,9 @@
 
 Vision for generated art in battlemap (maps first, then characters, items, effects) and the
 design of the first piece: a **fully API-driven map pipeline** on Nano Banana 2.1. Status
-2026-10-10: **design only, nothing built, no API key yet.** Prices and model ids are from
-Google's own pricing page and changelog on that date — they churn (see "model churn").
+2026-10-10: **pipeline v0 built and working** (`tools/mapgen/`, see "built"); prompt v0
+untuned; no packed map loaded on a TV yet. Prices and model ids are from Google's own
+pricing page and changelog on that date — they churn (see "model churn").
 
 ## Principles
 
@@ -41,6 +42,56 @@ A month of map development (drafts at 1K, a few dozen finals at 4K) is roughly *
 The $10 credit in AI Pro covers ~200 2K or ~90 4K images. **Recommendation:** for the
 pipeline, an AI Studio key with billing and a budget alert is enough; AI Pro only pays off if
 the Gemini app is also wanted for hand exploration.
+
+## Built (v0, 2026-10-10)
+
+`tools/mapgen/mapgen.py` (Python 3, Pillow + numpy; runs on the Mac or the VPS):
+
+| command | does | cost |
+|---|---|---|
+| `guide layouts/<name>.json` | renders the guide PNG only | free |
+| `paint layouts/<name>.json --size 1K\|2K\|4K --n N [--thinking …] [--refs …] [--tag …] [--pack]` | guide + prompt → model → QA overlay per image → `meta.json`; `--pack` packs the best | per image, see prices |
+| `pack layouts/<name>.json <image> [--ppg N] [--png]` | writes `<name>.dd2vtt` (WebP image, walls/doors/lights from the layout) | free |
+
+Runs land in `tools/mapgen/out/<name>/<timestamp>-<tag>/` (gitignored): `guide.png`,
+`prompt.txt`, `out_N.jpg`, `overlay_N.jpg` (our walls cyan, doors red over the painting),
+`meta.json` (model, size, QA, token usage, estimated cost). Prompt template:
+`tools/mapgen/prompts/baseline.txt`. Sample layouts: `crypt` (16 × 16) and `keep` (32 × 18,
+16:9).
+
+**Account:** API key from 1Password `dev` → **Gemini API - battlemap (Bao billing)**
+(`$MAPGEN_OP_ITEM`, or `$GEMINI_API_KEY`). This is Bao's Google account (nico.zingerle),
+prepaid €20, no auto-refill — a temporary home: Konrad's own account (ko) has a project + key
+(**Gemini API - battlemap**) but no billing yet. Without billing the API answers 429 with
+`free_tier_requests, limit: 0`: image models have no free tier.
+
+**Layout spec** — grid units, origin top-left:
+
+```json
+{"name": "crypt", "grid": [16, 16], "setting": "an old crypt", "outdoor": false,
+ "areas": [{"id": "hall", "rect": [3, 3, 10, 8], "desc": "…"},
+           {"id": "pool", "kind": "water", "in": "hall", "rect": [10, 8, 3, 3], "desc": "…"}],
+ "doors": [{"x": 7, "y": 11, "side": "n"}],
+ "lights": [{"x": 5, "y": 3.3, "range": 4, "color": "ffb060"}],
+ "props": [{"rect": [7, 5, 2, 3], "desc": "carved sarcophagus"}]}
+```
+
+- Every area is a room; **walls run between different rooms** and between a room and rock.
+  Terrain lying inside a room names its host with `"in"` (no walls around it).
+- Rooms that share a wall must touch (`rect`s adjacent); a door sits on one side (`n/s/e/w`)
+  of a cell on that shared edge.
+- `kind`: `floor` (default), `water`, `rubble`, `vegetation`, `solid` (pillars, rock).
+  `"outdoor": true` makes uncovered cells open ground instead of rock.
+
+**First results (prompt v0, 1K):** both sample maps keep our geometry almost exactly — walls,
+doors, the flooded corner, the corridor all land on the layout (overlay check by eye). The
+model paints doors where the red bars are, uses the `desc` text per room, keeps the grid off.
+Thinking `high` adds ~2.4k thought tokens (billed as text output, a fraction of a cent) and
+~30 s; no visible gain at 1K. 1K gives only 50–64 px per square — finals need 4K.
+
+**Known gaps:** the QA score (edge strength on wall lines ÷ inside rooms, 0.9–1.3 so far)
+does not yet separate good from bad — the overlay is the real check; `est_cost` ignores
+thought tokens; style refs (`--refs`) untested; no packed map loaded on the TV yet.
 
 ## Map pipeline
 

@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - ai art pipeline v0
+- Konrad: go API-driven, set up the key in telescope → AI Studio terms, project + key; first on dmcdoofman by mistake (deleted), then ko (no billing yet); billing paid on Bao's account (prepaid €20) → key in 1Password `Gemini API - battlemap (Bao billing)`
+	- learned: AI Studio prepaid billing; 3-D Secure card check is blocked inside telescope (Cloudflare) → pay in a normal browser; no PayPal for Google Cloud in Germany (card or bank debit); free tier = 0 image requests
+	- built `tools/mapgen/mapgen.py`: layout JSON → guide PNG → `gemini-nano-banana-2.1` (generateContent, imageConfig aspect/size, optional thinkingLevel) → QA overlay → `.dd2vtt` (WebP, walls between rooms, doors as portals, lights); sample layouts crypt + keep; prompt v0 in `prompts/baseline.txt`
+	- result: geometry held almost exactly on both layouts at 1K; ~$0.20 spent on tests
+	- docs: `ai-art.md` "built", `CLAUDE.md` tracker #40
+
 ### 26-10-10 - ai art pipeline design
 - Konrad: AI image generation for maps/characters/items/effects; pick a model; then focus on a fully API-driven map workflow on Nano Banana 2
 	- researched models (Midjourney, GPT Image 2, Nano Banana 2/2.1/Pro, FLUX.2, pixel/game-asset tools) → Nano Banana 2.1 via the Gemini API
