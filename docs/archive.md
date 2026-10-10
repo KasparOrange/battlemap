@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - ai art pipeline design
+- Konrad: AI image generation for maps/characters/items/effects; pick a model; then focus on a fully API-driven map workflow on Nano Banana 2
+	- researched models (Midjourney, GPT Image 2, Nano Banana 2/2.1/Pro, FLUX.2, pixel/game-asset tools) → Nano Banana 2.1 via the Gemini API
+	- learned: no subscription-style API quota — image models have no free tier, pay per image ($0.034–0.113, batch half); Google AI Pro (21,99 €) only adds $10/month Cloud credit; `gemini-3.1-flash-image` deprecated 2026-10-06 → `gemini-nano-banana-2.1`
+	- design: our layout spec is the truth, the model only repaints a color-coded guide image, QA checks wall alignment, output packed as `.dd2vtt` (no TV change); prompt baseline v0 + tuning plan
+	- docs: new `ai-art.md`, `CLAUDE.md` (docs table, tracker #40), `feature-ideas.md`
+
 ### 26-10-10 - battlemap android bench
 - Konrad: final devices are Android TV / Google TV + Android tablet/phone; develop on the Mac → Android bench set up instead of iPhone/Apple TV simulators
 	- installed `emulator` + `google-tv` API 34 and `google_apis` API 36 arm64 images; AVDs `bm_tv` (tv_1080p, 2 GB) and `bm_tablet` (pixel_tablet); `flutter config --jdk-dir` → Homebrew openjdk@17 (doctor could not find Java before)

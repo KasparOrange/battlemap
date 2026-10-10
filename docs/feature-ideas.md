@@ -57,6 +57,7 @@ these make the map visually stunning and give the DM atmosphere tools. no game m
 - [ ] **miniature spotlight** — dramatic light cone on a specific grid area. useful for "a beam of moonlight falls on the altar."
 
 ### planned
+- [ ] **AI-generated maps** — layout we own → Nano Banana paints it → `.dd2vtt` with exact walls/doors; also variants (night, burning) on the same geometry. design: `docs/ai-art.md` (#40)
 - [ ] **grid configuration after load** — re-adjust grid offset, rotation, scale after loading. drag handles. essential for PDF maps that don't align.
 - [ ] **session thumbnails** — capture game canvas as PNG for library browser.
 - [ ] **multiple maps per session** — switch between dungeon floors without losing state per floor.
