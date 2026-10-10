@@ -6,7 +6,10 @@ Endpoints:
   POST /upload      — upload a .dd2vtt file, returns {"filename": "..."}
   PUT  /upload/dm/<name> — DM-only layer picture, kept in uploads/dm/ (no cleanup)
   GET  /library     — the shared map library: {"maps": [entry, ...]}, newest first
-  PUT  /library/<name>?meta=<json> — add a map to the shared library, returns its entry
+  PUT  /library/<name>?meta=<json>[&format=webp|jpeg|png] — add a map to the shared
+                    library (converted first when format is given), returns its entry
+  GET  /fetch?url=<link> — download what a link points to (picture, PDF, .dd2vtt, or
+                    the picture on a web page) into uploads/, returns {url, name, size, kind}
   PUT  /library/<id>/thumb — the map's thumbnail (PNG), made by the companion
   DELETE /library/<id> — remove a map from the shared library
   GET  /uploads/*   — serve uploaded files
@@ -18,14 +21,27 @@ for a local bench — see docs/setup.md.
 """
 from __future__ import annotations
 
+import base64
+import io
+import ipaddress
 import json
 import os
+import re
+import socket
 import threading
 import time
 import urllib.parse
+import urllib.request
 import uuid
 from datetime import datetime, timezone
+from html import unescape
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+try:  # conversion needs Pillow (VPS: apt install python3-pil); without it maps stay as they are
+    from PIL import Image
+    Image.MAX_IMAGE_PIXELS = None  # big battle maps are fine, the size limit is MAX_UPLOAD_SIZE
+except ImportError:
+    Image = None
 
 WEB_DIR = os.environ.get("BATTLEMAP_WEB_DIR", "/home/kaspar/battlemap/build/web")
 UPLOAD_DIR = os.path.join(WEB_DIR, "uploads")
@@ -41,6 +57,11 @@ MAX_THUMB_SIZE = 2 * 1024 * 1024
 UPLOAD_MAX_AGE_DAYS = 7
 # Map metadata the companion may set (everything else is the server's)
 LIBRARY_META_KEYS = {"name", "kind", "gridCols", "gridRows", "hasOwnGrid", "grid"}
+# Formats a library upload can be stored as (?format=); see convert_picture()
+STORE_FORMATS = {"webp", "jpeg", "png"}
+WEBP_MAX_SIDE = 16383  # WebP's limit; bigger pictures are stored as JPEG instead
+WEBP_LOSSLESS_MAX_PIXELS = 50_000_000  # above this only lossy WebP is tried (encode time)
+FETCH_TIMEOUT = 30
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(DM_UPLOAD_DIR, exist_ok=True)
@@ -67,13 +88,22 @@ def library_save(maps: list[dict]) -> None:
     os.replace(tmp, LIBRARY_INDEX)
 
 
-def library_add(original_name: str, data: bytes, meta: dict) -> dict:
+def library_add(original_name: str, data: bytes, meta: dict, fmt: str | None = None) -> dict:
     """Stores a map file in the shared library and returns its entry.
 
     meta (from the companion) carries the display name, kind ("vtt" or
     "image"), the squares (gridCols/gridRows), hasOwnGrid and the raster grid;
-    unknown keys are dropped.
+    unknown keys are dropped. fmt ("webp", "jpeg", "png") converts the picture
+    first (convert_map); the entry then has originalSize and a convertNote.
+    A failed conversion stores the file as it came.
     """
+    original_size, note = len(data), None
+    if fmt in STORE_FORMATS:
+        try:
+            original_name, data, note = convert_map(original_name, data, fmt)
+        except (ValueError, KeyError) as e:
+            note = f"not converted: {e}"
+
     map_id = uuid.uuid4().hex[:12]
     ext = os.path.splitext(original_name)[1].lower() or ".dd2vtt"
     filename = f"{map_id}{ext}"
@@ -90,6 +120,8 @@ def library_add(original_name: str, data: bytes, meta: dict) -> dict:
         "addedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "thumbUrl": None,
     })
+    if fmt in STORE_FORMATS:
+        entry.update({"originalSize": original_size, "convertNote": note})
     with library_lock:
         maps = library_load()
         maps.insert(0, entry)
@@ -129,6 +161,188 @@ def library_delete(map_id: str) -> bool:
                 pass
         library_save([m for m in maps if m["id"] != map_id])
         return True
+
+
+def _encode(im, fmt: str, **kw) -> bytes:
+    buf = io.BytesIO()
+    im.save(buf, fmt, **kw)
+    return buf.getvalue()
+
+
+def convert_picture(data: bytes, fmt: str) -> tuple[bytes, str, str | None]:
+    """Re-encodes a picture as fmt ("webp", "jpeg" or "png").
+
+    Returns (bytes, extension, note). The pixels keep their size, so a picture
+    grid (pixel positions) stays valid. WebP = lossy quality 90 (looks the same,
+    measured 41-42 dB on painted maps) or lossless when that is no more than 1.5x
+    the lossy size (line art: a third of the PNG); a picture over 16383 px a side
+    becomes JPEG; when the WebP is bigger than the original, the original stays.
+    JPEG = quality 90, transparency flattened onto black (the TV's background).
+    Raises ValueError when the bytes are no picture or Pillow is missing.
+    """
+    if Image is None:
+        raise ValueError("Pillow missing")
+    try:
+        im = Image.open(io.BytesIO(data))
+        im.load()
+    except Exception as e:
+        raise ValueError(f"not a picture: {e}") from e
+    alpha = im.mode in ("RGBA", "LA", "PA") or (im.mode == "P" and "transparency" in im.info)
+    rgb = im.convert("RGBA" if alpha else "RGB")
+    note = None
+    if fmt == "webp" and max(rgb.size) > WEBP_MAX_SIDE:
+        fmt, note = "jpeg", f"over {WEBP_MAX_SIDE} px, stored as JPEG"
+    if fmt == "png":
+        return _encode(rgb, "PNG", optimize=True), ".png", note
+    if fmt == "jpeg":
+        if alpha:
+            flat = Image.new("RGB", rgb.size, (0, 0, 0))
+            flat.paste(rgb, mask=rgb.getchannel("A"))
+            rgb = flat
+        return _encode(rgb, "JPEG", quality=90, optimize=True), ".jpg", note
+    best = _encode(rgb, "WEBP", quality=90, method=4)
+    if rgb.width * rgb.height <= WEBP_LOSSLESS_MAX_PIXELS:
+        lossless = _encode(rgb, "WEBP", lossless=True, quality=80, method=4)
+        if len(lossless) <= len(best) * 1.5:
+            best, note = lossless, "lossless"
+    if len(best) >= len(data) and sniff_kind(data)[1] in (".webp", ".jpg", ".png"):
+        return data, sniff_kind(data)[1], "already smaller as it was"
+    return best, ".webp", note
+
+
+def convert_map(name: str, data: bytes, fmt: str) -> tuple[str, bytes, str | None]:
+    """convert_picture() for a library upload: a picture is re-encoded, a
+    .dd2vtt/.uvtt gets its embedded picture re-encoded (same pixels, so its
+    grid, walls and doors still fit). Returns (new name, bytes, note)."""
+    stem, ext = os.path.splitext(name)
+    if ext.lower() in (".dd2vtt", ".uvtt"):
+        doc = json.loads(data)
+        picture, new_ext, note = convert_picture(base64.b64decode(doc["image"]), fmt)
+        doc["image"] = base64.b64encode(picture).decode()
+        return name, json.dumps(doc).encode(), note
+    picture, new_ext, note = convert_picture(data, fmt)
+    return stem + new_ext, picture, note
+
+
+def sniff_kind(data: bytes) -> tuple[str | None, str | None]:
+    """(kind, extension) from the file's first bytes: image/pdf/vtt, or (None, None)."""
+    head = data[:16]
+    if head.startswith(b"\x89PNG"):
+        return "image", ".png"
+    if head.startswith(b"\xff\xd8"):
+        return "image", ".jpg"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image", ".webp"
+    if head.startswith(b"%PDF"):
+        return "pdf", ".pdf"
+    start = data[:4096]
+    if start.lstrip()[:1] == b"{" and (b'"image"' in start or b'"resolution"' in start):
+        return "vtt", ".dd2vtt"
+    return None, None
+
+
+def _check_public(url: str) -> None:
+    """Refuses links that are not http(s) or point into a private network
+    (the server must not become a door to the VPS's own services)."""
+    parts = urllib.parse.urlsplit(url)
+    if parts.scheme not in ("http", "https") or not parts.hostname:
+        raise ValueError("only http and https links")
+    try:
+        infos = socket.getaddrinfo(parts.hostname, parts.port or 443, proto=socket.IPPROTO_TCP)
+    except socket.gaierror as e:
+        raise ValueError(f"unknown host {parts.hostname}") from e
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if not ip.is_global:
+            raise ValueError("that address is not on the internet")
+
+
+class _CheckedRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _check_public(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_opener = urllib.request.build_opener(_CheckedRedirects)
+
+
+def resolve_link(url: str) -> str:
+    """Turns a share link into a direct download: Google Drive (file/d/<id>,
+    open?id=) and Dropbox (dl=0)."""
+    url = url.strip()
+    m = re.search(r"drive\.google\.com/(?:file/d/|open\?id=|uc\?(?:.*&)?id=)([\w-]{10,})", url)
+    if m:
+        return f"https://drive.google.com/uc?export=download&id={m.group(1)}"
+    if "dropbox.com" in url:
+        parts = urllib.parse.urlsplit(url)
+        q = dict(urllib.parse.parse_qsl(parts.query))
+        q["dl"] = "1"
+        return urllib.parse.urlunsplit(parts._replace(query=urllib.parse.urlencode(q)))
+    return url
+
+
+def _download(url: str) -> tuple[bytes, str, str]:
+    """GET url (public addresses only, MAX_UPLOAD_SIZE) -> (bytes, content type, file name)."""
+    _check_public(url)
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 battlemap"})
+    with _opener.open(req, timeout=FETCH_TIMEOUT) as resp:
+        data = resp.read(MAX_UPLOAD_SIZE + 1)
+        if len(data) > MAX_UPLOAD_SIZE:
+            raise ValueError(f"over {MAX_UPLOAD_SIZE // (1024 * 1024)} MB")
+        ctype = resp.headers.get_content_type()
+        disp = resp.headers.get("Content-Disposition", "")
+        m = re.search(r"filename\*=UTF-8''([^;]+)", disp) or re.search(r'filename="?([^";]+)', disp)
+        name = urllib.parse.unquote(m.group(1)) if m else \
+            urllib.parse.unquote(os.path.basename(urllib.parse.urlsplit(resp.geturl()).path))
+        return data, ctype, name
+
+
+def _picture_in_page(html: str, base: str) -> str | None:
+    """The page's main picture: og:image / twitter:image, a Google Drive
+    "can't scan for viruses" confirm form, else the first <img>."""
+    form = re.search(r'<form[^>]+action="([^"]*download[^"]*)"(.*?)</form>', html, re.S)
+    if form:
+        fields = dict(re.findall(r'name="([^"]+)"\s+value="([^"]*)"', form.group(2)))
+        return unescape(form.group(1)) + "?" + urllib.parse.urlencode(fields)
+    for pattern in (r'<meta[^>]+(?:property|name)="(?:og:image|twitter:image)(?::src)?"[^>]+content="([^"]+)"',
+                    r'<meta[^>]+content="([^"]+)"[^>]+(?:property|name)="(?:og:image|twitter:image)"',
+                    r'<link[^>]+rel="image_src"[^>]+href="([^"]+)"',
+                    r'<img[^>]+src="([^"]+)"'):
+        m = re.search(pattern, html, re.I)
+        if m:
+            return urllib.parse.urljoin(base, unescape(m.group(1)))
+    return None
+
+
+def fetch_link(url: str) -> dict:
+    """Downloads what url points to into uploads/ (7-day cleanup) and returns
+    {url, name, size, kind}: a picture, a PDF or a .dd2vtt as is, a web page's
+    main picture, any other picture Pillow reads (GIF, AVIF, TIFF, …) as PNG.
+    Raises ValueError with a reason the companion shows."""
+    link = resolve_link(url)
+    data, ctype, name = _download(link)
+    kind, ext = sniff_kind(data)
+    if kind is None and ctype in ("text/html", "application/xhtml+xml"):
+        picture = _picture_in_page(data[:2_000_000].decode("utf-8", "replace"), link)
+        if picture is None:
+            raise ValueError("no picture found on that page")
+        data, ctype, name = _download(picture)
+        kind, ext = sniff_kind(data)
+    if kind is None and Image is not None:
+        try:
+            data, ext, _ = convert_picture(data, "png")
+            kind = "image"
+        except ValueError:
+            pass
+    if kind is None:
+        raise ValueError(f"not a map file ({ctype})")
+    stem = os.path.splitext(name)[0].strip() or "map"
+    if os.path.splitext(name)[1].lower() == ".uvtt" and kind == "vtt":
+        ext = ".uvtt"
+    filename = f"{uuid.uuid4().hex[:12]}{ext}"
+    with open(os.path.join(UPLOAD_DIR, filename), "wb") as f:
+        f.write(data)
+    return {"url": f"/uploads/{filename}", "name": stem + ext, "size": len(data), "kind": kind}
 
 
 def cleanup_old_uploads():
@@ -173,9 +387,21 @@ class DevHandler(SimpleHTTPRequestHandler):
         return self.rfile.read(length)
 
     def do_GET(self):
-        if urllib.parse.urlsplit(self.path).path.rstrip("/") == "/library":
+        url = urllib.parse.urlsplit(self.path)
+        if url.path.rstrip("/") == "/library":
             with library_lock:
                 self.send_json({"maps": library_load()})
+            return
+        if url.path.rstrip("/") == "/fetch":
+            # Failures answer 200 with {"error"} so the companion can show why
+            link = urllib.parse.parse_qs(url.query).get("url", [""])[0]
+            try:
+                self.send_json(fetch_link(link))
+                print(f"Fetch: {link}")
+            except Exception as e:
+                print(f"Fetch failed: {link}: {e}")
+                self.send_json({"error": str(e) if isinstance(e, ValueError) else
+                                f"couldn't download: {e}"})
             return
         super().do_GET()
 
@@ -208,8 +434,10 @@ class DevHandler(SimpleHTTPRequestHandler):
             self.send_error(404)
             return
         name = urllib.parse.unquote(parts[1])
+        query = urllib.parse.parse_qs(url.query)
+        fmt = query.get("format", [None])[0]
         try:
-            meta = json.loads(urllib.parse.parse_qs(url.query).get("meta", ["{}"])[0])
+            meta = json.loads(query.get("meta", ["{}"])[0])
             if not isinstance(meta, dict):
                 raise ValueError("meta is not an object")
         except ValueError as e:
@@ -219,12 +447,12 @@ class DevHandler(SimpleHTTPRequestHandler):
         if data is None:
             return
         try:
-            entry = library_add(name, data, meta)
+            entry = library_add(name, data, meta, fmt)
         except Exception as e:
             print(f"Library upload error: {name}: {e}")
             self.send_error(500, "Upload failed")
             return
-        print(f"Library: {name} -> {entry['file']} ({len(data)} bytes)")
+        print(f"Library: {name} -> {entry['file']} ({len(data)} -> {entry['size']} bytes)")
         self.send_json(entry)
 
     def do_PUT(self):

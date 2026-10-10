@@ -93,7 +93,11 @@ files in `uploads/library/`, outside the 7-day cleanup):
 
 ```
 GET    /library                          → {"maps": [entry, ...]}   newest first
-PUT    /library/<file name>?meta=<json>  → entry      meta: name, kind (vtt|image), gridCols, gridRows, hasOwnGrid, grid
+PUT    /library/<file name>?meta=<json>[&format=webp|jpeg|png]
+                                         → entry      meta: name, kind (vtt|image), gridCols, gridRows, hasOwnGrid, grid
+                                                      format: converted first (also the picture inside a .dd2vtt)
+GET    /fetch?url=<link>                 → {url, name, size, kind} | {"error": "…"}   (always 200)
+                                                      the server downloads the link into uploads/ (7-day cleanup)
 PUT    /library/<id>/thumb               → entry      PNG made by the companion (MapThumbnails, 288 px)
 DELETE /library/<id>                     → {"deleted": id}   TVs keep their copies
 ```
@@ -102,7 +106,21 @@ An entry: `{"id": "aaffcbed3573", "name": "Tower floor 2", "kind": "image", "gri
 "gridRows": 15, "hasOwnGrid": true, "grid": {...}?, "file": "aaffcbed3573.png", "url":
 "/uploads/library/aaffcbed3573.png", "thumbUrl": "/uploads/library/aaffcbed3573.thumb.png" | null,
 "size": 7, "addedAt": "2026-10-10T18:01:04+00:00"}` — paths are relative, each device prefixes its
-own dev server.
+own dev server. A converted upload adds `"originalSize"` (bytes as sent) and `"convertNote"`
+(`"lossless"`, `"over 16383 px, stored as JPEG"`, `"already smaller as it was"`, `"not converted: …"` | null).
+
+**Conversion** (`convert_picture`, Pillow — on the VPS `python3-pil`): the pixels never change size,
+so a picture grid stays valid. `webp` = quality 90, or lossless when that is ≤ 1.5× the lossy size
+(line art; only tried up to 50 MP); over 16383 px a side (WebP's limit) → JPEG; a WebP bigger than
+the original keeps the original. `jpeg` = quality 90, transparency onto black. `png` = optimized.
+Without Pillow the file is stored as it came (`convertNote` says why).
+
+**`/fetch`** (`fetch_link`): http(s) only, public addresses only (every redirect checked), 30 s,
+200 MB. Google Drive (`/file/d/<id>`, `open?id=`, the "can't scan for viruses" confirm page) and
+Dropbox (`dl=1`) shares are turned into downloads; a web page gives its `og:image` /
+`twitter:image` / `image_src`, else its first `<img>`; the kind is sniffed from the bytes
+(PNG/JPEG/WebP/PDF/UVTT JSON), any other picture Pillow reads (GIF, AVIF, TIFF, BMP) becomes PNG.
+The companion then downloads that copy and prepares it like a picked file.
 
 `lib.openSharedMap` (companion → table) sends such an entry as `map`: the TV reuses its copy when a
 library map carries that `serverMapId`, else downloads the file and adds it (picture maps with their

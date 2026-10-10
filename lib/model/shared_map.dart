@@ -47,6 +47,14 @@ class SharedMap {
   /// File size in bytes.
   final int size;
 
+  /// Size of the file as uploaded when the server converted it
+  /// (`StoreFormat`), else `null`.
+  final int? originalSize;
+
+  /// The server's remark on the conversion ("lossless", "over 16383 px,
+  /// stored as JPEG", "not converted: …"), or `null`.
+  final String? convertNote;
+
   /// When the map was added (server time), or `null` if unknown.
   final DateTime? addedAt;
 
@@ -62,6 +70,8 @@ class SharedMap {
     this.grid,
     this.thumbUrl,
     this.size = 0,
+    this.originalSize,
+    this.convertNote,
     this.addedAt,
   });
 
@@ -100,6 +110,8 @@ class SharedMap {
         'url': url,
         'thumbUrl': thumbUrl,
         'size': size,
+        if (originalSize != null) 'originalSize': originalSize,
+        if (convertNote != null) 'convertNote': convertNote,
         if (addedAt != null) 'addedAt': addedAt!.toIso8601String(),
       };
 
@@ -119,6 +131,8 @@ class SharedMap {
             : null,
         thumbUrl: json['thumbUrl'] as String?,
         size: (json['size'] as num?)?.toInt() ?? 0,
+        originalSize: (json['originalSize'] as num?)?.toInt(),
+        convertNote: json['convertNote'] as String?,
         addedAt: DateTime.tryParse(json['addedAt'] as String? ?? ''),
       );
 }

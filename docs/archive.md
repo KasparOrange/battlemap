@@ -10,6 +10,13 @@ governs. Never per session. Heading = `### 26-10-10 22:05 - fog edge trim - docs
 	- `fogRevealRects`: revealed squares shrink on the sides that border fog, inner corners get a notch (an even erosion), the map border stays; standard/soft/cloud draw all revealed squares as one path (no seams), atmospheric ignores it; `architecture.md` "Trim revealed edges", tracker #57
 	- incident: this session's commit script repeated the `open(p,'w').write(f(open(p).read()))` truncation (21:58) and emptied this file; rebuilt at once from HEAD + the 22:20 entry from the link-import session's transcript
 
+### 26-10-10 22:20 - 5adc8842 - shared library: map from a link, Store as WebP
+- Konrad: the shared library upload should take a link too — paste button + free text field — with options to convert what is behind it; mark the best size/quality format (we once landed on WebP?) as recommended if it really is
+	- no earlier session (Mac or VPS transcripts) recorded a format decision; measured instead on the test maps: WebP 90 ~20 % under JPEG 90 at 41–42 dB on painted maps, lossless WebP a third of the PNG on Dyson line art (lossy is bigger there), PNG 4–5× the WebP on painted maps; WebP tops out at 16383 px (the 17100 px stress castle → JPEG)
+	- dev_server: `GET /fetch?url=` (public addresses only, redirects checked, Drive/Dropbox/page og:image, kind sniffed, other pictures → PNG) and `PUT /library/…&format=webp|jpeg|png` (also the picture inside a `.dd2vtt`; same pixels so grids stay valid; smaller original kept); Pillow installed on the VPS (`python3-pil`); 11 new server tests
+	- companion: link field + paste-and-fetch button + Store as chips (WebP · recommended, default As is per the opt-in rule, kept in Hive `libraryUpload`); a link runs the same grid detection + squares dialog (`_pickMapFile` split into pick + `_prepareMapFile`); the notice says what it became ("as WebP, 0.4 → 0.1 MB (lossless)")
+	- docs: `architecture.md` "shared map library", `relay-protocol.md` `/fetch` + conversion, `setup.md` Pillow, tracker #56
+
 ### 26-10-10 22:15 - TV set off - box stays awake for good, Juri gets the TV to-do
 - Konrad: the table TV went off (energy saving timer?) and the box remote does not bring it back — what happened; then: make the box robust and awake whenever in use; send Juri a to-do for the TV set's own buttons
 	- the box was fine (awake, 4 h uptime, not rebooted): at 21:40:02 the box logged the HDMI link lost — the old Thomson (TCL-built, EDID says TCL) hit its own 4 h auto standby; 6 s later a red-button press put the box to sleep. The TV NACKs every CEC message, so the box remote cannot wake it

@@ -306,7 +306,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _relay?.sendNewSession(mapId, name: name, settings: settings.toJson());
   }
 
-  /// When the last "not connected, not sent" snackbar showed
+  /// When the last "not connected, not sent" notice showed
   /// ([VttRelayClient.onCommandDropped]); throttles it to one per 3 s.
   DateTime? _lastDropNotice;
 
@@ -663,7 +663,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// no PDF engine (Apple TV has none; `docs/apple-tv-dev.md`).
   ///
   /// Returns `null` when cancelled or the file can't be used (with a
-  /// snackbar saying why).
+  /// notice saying why).
   Future<_PickedMap?> _pickMapFile() async {
     // Use FileType.any because Safari doesn't recognize .dd2vtt/.uvtt extensions
     // webFilePickerOptions: keep the pick alive while iOS Safari shows the
@@ -687,7 +687,18 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       return null;
     }
 
-    final nameLower = file.name.toLowerCase();
+    return _prepareMapFile(bytes, file.name);
+  }
+
+  /// Readies a map file's [bytes] (named [fileName]) for upload — the part
+  /// of [_pickMapFile] after the pick, also used for a map fetched from a
+  /// link ([_fetchLinkedMap]): `.dd2vtt`/`.uvtt` as is, PDFs rasterized,
+  /// pictures with their squares (grid detection + [showMapGridDialog]).
+  ///
+  /// Returns `null` when cancelled or the file can't be used (with a
+  /// notice saying why).
+  Future<_PickedMap?> _prepareMapFile(Uint8List bytes, String fileName) async {
+    final nameLower = fileName.toLowerCase();
     final isPdf = nameLower.endsWith('.pdf');
     final isImage = nameLower.endsWith('.png') || nameLower.endsWith('.jpg') ||
         nameLower.endsWith('.jpeg') || nameLower.endsWith('.webp');
@@ -695,7 +706,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     final needsGridConfig = isPdf || isImage;
 
     if (!isPdf && !isImage && !isVtt) {
-      DevLog.add('Companion: unsupported file type: ${file.name}');
+      DevLog.add('Companion: unsupported file type: ${fileName}');
       if (mounted) {
         _showSnack('Unsupported file. Use .dd2vtt, .uvtt, .pdf, .png, .jpg, or .webp files.',
             kind: NoticeKind.warning);
@@ -706,19 +717,19 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     // PDF: rasterize on the phone (roadmap #36). The TV never sees a PDF.
     // Rendered before the grid dialog, which needs the picture's size.
     Uint8List uploadBytes = bytes;
-    String uploadName = file.name;
+    String uploadName = fileName;
     Size? pictureSize;
     if (isPdf) {
       _showSnack('Rendering PDF page 1...');
       if (mounted) setState(() => _transferProgress = null);
       final rendered = await PdfHelper.renderPdfPage(bytes);
       if (rendered == null) {
-        DevLog.add('Companion: PDF render failed for "${file.name}"');
+        DevLog.add('Companion: PDF render failed for "${fileName}"');
         _showSnack('Could not render this PDF', kind: NoticeKind.error);
         return null;
       }
       uploadBytes = rendered['imageBytes'] as Uint8List;
-      uploadName = '${file.name.substring(0, file.name.length - 4)}.png';
+      uploadName = '${fileName.substring(0, fileName.length - 4)}.png';
       pictureSize = Size((rendered['width'] as num).toDouble(),
           (rendered['height'] as num).toDouble());
       DevLog.add('Companion: PDF rendered to ${rendered['width']}x${rendered['height']} '
@@ -749,7 +760,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     // No grid drawn in: the file name often states the squares
     // ("Tavern_30x40.jpg"); otherwise the DM measures something known.
     final named = needsGridConfig && detected == null
-        ? gridCountsFromName(file.name, pictureSize)
+        ? gridCountsFromName(fileName, pictureSize)
         : null;
     if (named != null) {
       detectedNote = 'The file name says ${named.cols} × ${named.rows} squares. '
@@ -783,7 +794,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     return _PickedMap(
       bytes: uploadBytes,
       fileName: uploadName,
-      name: file.name.replaceFirst(RegExp(r'\.[^.]+$'), ''),
+      name: fileName.replaceFirst(RegExp(r'\.[^.]+$'), ''),
       isVtt: isVtt,
       grid: gridConfig,
       size: pictureSize,
@@ -809,15 +820,50 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         imageHeight: size.height);
   }
 
+  /// Gets the map behind [link] for the shared library: the dev server
+  /// downloads it ([SharedLibraryClient.fetchLink] — a picture, PDF,
+  /// `.dd2vtt`, a page's main picture, a Drive or Dropbox share), this
+  /// device downloads that copy ([progress] 0..1) and readies it like a
+  /// picked file ([_prepareMapFile]). Returns `null` after a notice saying
+  /// why when it fails or the DM cancels.
+  Future<_PickedMap?> _fetchLinkedMap(
+      String link, void Function(double? progress) progress) async {
+    DevLog.add('Companion: fetching map link $link');
+    _showSnack('Getting the map behind the link...');
+    final FetchedLink fetched;
+    try {
+      fetched = await _sharedLibrary.fetchLink(link);
+    } on FormatException catch (e) {
+      DevLog.add('Companion: link fetch failed: ${e.message}');
+      _showSnack("Couldn't get the map: ${e.message}", kind: NoticeKind.error);
+      return null;
+    }
+    final bytes = await httpDownloadWeb(_sharedLibrary.absolute(fetched.url),
+        onProgress: progress);
+    progress(null);
+    if (bytes == null || bytes.isEmpty) {
+      _showSnack("Couldn't download the map from the server", kind: NoticeKind.error);
+      return null;
+    }
+    DevLog.add('Companion: link gave "${fetched.name}" '
+        '(${(bytes.length / 1024).round()} KB)');
+    if (!mounted) return null;
+    return _prepareMapFile(bytes, fetched.name);
+  }
+
   /// Uploads [picked] into the shared map library on the VPS
   /// ([SharedLibraryClient.upload]) with its kind and squares, then its
   /// thumbnail (in the background). Returns the new entry, or `null` after
-  /// a "Upload failed" snackbar.
+  /// an "Upload failed" notice.
+  ///
+  /// [storeAs] has the server convert the map first ([StoreFormat], the
+  /// shared library sheet's "Store as").
   ///
   /// The bytes are kept ([_lastUpload]) so the map isn't downloaded right
   /// back when the TV tells this device where to get it.
   Future<SharedMap?> _uploadToSharedLibrary(_PickedMap picked,
-      {required void Function(double progress) onProgress}) async {
+      {required void Function(double progress) onProgress,
+      StoreFormat storeAs = StoreFormat.original}) async {
     DevLog.add('Companion: uploading "${picked.fileName}" '
         '(${(picked.bytes.length / 1024).round()} KB) to the shared library');
     final shared = await _sharedLibrary.upload(
@@ -832,6 +878,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         grid: picked.grid?.grid?.toJson(),
       ),
       onProgress: onProgress,
+      storeAs: storeAs,
     );
     if (shared == null) {
       DevLog.add('Companion: shared library upload failed');
@@ -913,22 +960,30 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// Shows the shared map library ([showSharedLibrarySheet]): its maps open
   /// into the running game when [intoGame], else as a new game; its upload
   /// button only fills the library.
-  void _showSharedLibrary({required bool intoGame}) {
+  Future<void> _showSharedLibrary({required bool intoGame}) async {
     final inGame = {
       for (final m in _maps)
         if (_sessionMapIds.contains(m.id) && m.serverMapId != null) m.serverMapId!
     };
+    final storeAs = await loadStoreFormat();
+    if (!mounted) return;
     showSharedLibrarySheet(
       context,
       client: _sharedLibrary,
+      storeAs: storeAs,
+      onStoreAsChanged: saveStoreFormat,
       openLabel: intoGame ? 'Add to game' : 'Play',
       inGame: intoGame ? inGame : const {},
       onOpen: (map) => _openSharedMap(map, intoGame: intoGame),
-      onUpload: (progress) async {
-        final picked = await _pickMapFile();
+      onUpload: (source, progress) async {
+        final link = source.link;
+        final picked = link == null
+            ? await _pickMapFile()
+            : await _fetchLinkedMap(link, progress);
         if (picked == null) return null;
         progress(0.01);
-        return _uploadToSharedLibrary(picked, onProgress: progress);
+        return _uploadToSharedLibrary(picked,
+            onProgress: progress, storeAs: source.storeAs);
       },
     );
   }
@@ -972,7 +1027,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// (`local:<id>` URL). The picked bytes seed [_overlayImages], so a layer
   /// shows at once without downloading what was just uploaded.
   ///
-  /// Shows progress in the Layers tab and a snackbar with the result;
+  /// Shows progress in the Layers tab and a notice with the result;
   /// unsupported or unreadable files are skipped and counted.
   ///
   /// See also:

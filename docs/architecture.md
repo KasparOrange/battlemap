@@ -52,7 +52,16 @@ Maps get into a game two ways, both under the map list:
   the shared library, then joins the game.
 - **Shared library** — a sheet listing the VPS's shared maps (thumbnail, squares, size) with
   "Add to game" per map, a delete per map (asks first; TVs keep their copies) and "Upload from
-  device" to fill the library without opening the map.
+  device" to fill the library without opening the map. Below it a **link field**: type a link or
+  tap the paste button (clipboard in, fetched at once) — the dev server downloads what is behind it
+  (picture, PDF, `.dd2vtt`, a page's main picture, Drive/Dropbox shares; `relay-protocol.md`
+  `/fetch`), the tablet gets that copy and runs the usual grid detection + squares dialog. **Store
+  as** chips — WebP · recommended, JPEG, PNG, As is — have the server convert what goes in, from the
+  device or a link; the choice is kept on the tablet (Hive `libraryUpload`), "As is" until changed.
+  Why WebP (measured 2026-10-10 on the test maps): painted maps ~20 % smaller than JPEG 90 at
+  41–42 dB (looks the same), line art lossless at a third of the PNG; TV memory is the same either
+  way (a decoded picture costs its pixels, not its file). Caveat: lossy WebP halves the colour
+  resolution, so very thin coloured lines soften a little — PNG keeps them exact.
 
 Outside a game the library screen has the same two: **Upload Map / PDF** (into the shared library,
 then a new game on it) and **Shared library** ("Play" starts a new game after the session
