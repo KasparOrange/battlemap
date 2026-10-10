@@ -6,6 +6,15 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:05 - ef2b737d - Games with several maps + shared map library
+- Konrad: a session holds several maps — switch between them in the tablet's DM settings, and add maps not only from the device but from a shared map library on the server, filled from there and from outside a game
+	- model: `Session.mapIds` + `parkedMaps` (per-map fields `Session.perMapKeys`), `switchTo` / `withoutMap` (pure, tested); old sessions load with one map; deleting a map drops it from every game, deletes games where it was the only one
+	- TV: `vtt.switchMap` = save + park + resume (`TvShell._switchMap`); `lib.openSharedMap` downloads a shared map once (`MapLibraryEntry.serverMapId`) and adds it to the game or starts a new one; `vtt.fullState.sessionMapIds`; no double state listener when a game opens inside a game
+	- VPS: `dev_server.py` `/library` (list, upload with meta, thumbnail, delete; `uploads/library/index.json`, outside the 7-day cleanup); `tools/test_dev_server.py`
+	- tablet: Settings tab "Maps in this game" (rows, From device, Shared library); shared library sheet (Add to game / Play, delete, upload); library screen gets "Shared library"; every device upload goes into the shared library, its thumbnail made on the tablet; "Loading <map>…" overlay during a switch; just-uploaded bytes reused instead of downloading them back
+	- checks: 525 tests green (new: session switching, map deletion across games, SharedMap, panel map list, sheet); bench probe on a throwaway TV emulator with its own relay + dev server (ports 19090/14242 via `adb reverse`) so the shared bench stayed untouched — 20/20 (new game from the shared library, picture map joins, back and forth with each map's fog and tokens, same shared map reused, resume after the library, unknown map → error, shared copy deleted but the TV's plays on)
+	- worked in a git worktree (`../battlemap-multimap`) because other sessions were editing the same files; the tablet UI is widget-tested only, no device click-through yet
+
 ### 26-10-10 21:00 - 9393ef96 - 1.1.14+24 on box + tablet
 - Konrad: deploy → `deploy.sh tv tablet` from a clean worktree of 4b29370 (no preview tint on the TV, live circle resize, token rename dialog); TV 1.1.12 → 1.1.14, back in its game after 16 s; tablet 1.1.13 → 1.1.14, companion relaunched
 
