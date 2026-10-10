@@ -88,6 +88,7 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 3. Reveal one room: does fog stop at walls? Through an open door, does it continue?
 4. Fog tab ▸ Circle, radius 4, "Preview first": tap next to a wall — the blue circle stops at the
    wall and shows on the tablet only, the TV stays fogged; − / + resizes it; ✓ shows it on the TV.
+   Then Trim revealed edges to 15 %: the revealed rims pull in on both screens, the map border stays.
 5. Measure from the front door to the kitchen; the line and distance show on the TV while dragging.
 
 **3. the fight (04)**

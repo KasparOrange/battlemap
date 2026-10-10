@@ -103,6 +103,9 @@ Outside: from the phone via SSH/mosh to the VPS. At home: on the Mac, against th
 - GPU is the bottleneck — optimize draw calls and effects
 - Dispose textures when not in use (2 GB RAM)
 - All control elements must be **focusable** for TV remote fallback (see policy above)
+- Scripts that rewrite a file: read it fully first, then open it for writing —
+  `open(p,'w').write(f(open(p).read()))` truncates before it reads and empties the file (did so
+  twice on 2026-10-10, both times wiping other sessions' uncommitted edits)
 
 ### Quality and Testing Policy
 

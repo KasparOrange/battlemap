@@ -106,6 +106,7 @@ these add game mechanics on top of the pen & paper visuals.
 - [ ] **direct TV connection without relay** — play without internet (friend's place, hotspot): TV hosts the WebSocket server on the LAN, phone connects to its IP. Pre-relay design, legacy `lib/network/vtt_server.dart` (#39)
 - [ ] **companion overhaul** — independent phone camera + TV viewport outline, bottom-sheet DM panel, ruler/measure/AoE fixes; full list `docs/action.md` (#38)
 - [x] **tabletop UX polish** — side panel on landscape tablets, Fog tab Brush | Room, camera tab by screen, ruler centred on the TV, door markers DM-only, undo notices, library Continue card + thumbnails (#43, 2026-10-10)
+- [x] **trim revealed edges** — Fog tab number stepper (0–45 % of a square) pulls the rim of revealed areas in (#57, 2026-10-10)
 - [x] map library with persistent storage (Hive)
 - [x] session save/restore (auto-save, resume)
 - [x] in-app updates (Shorebird OTA + APK fallback)

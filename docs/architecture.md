@@ -299,12 +299,14 @@ cut square at the screen's edge.
   Known length tool) instead of "Fit on the picture".
 
 **Number stepper** (`NumberStepper`, `lib/ui/number_stepper.dart`, since 2026-10-10): the one
-control for every count and length in these dialogs, after MitWare's — `−10 −5 −2 −1 [ n ] +1 +2
+control for every count and length in these dialogs (and the Fog tab's "Trim revealed edges"), after MitWare's — `−10 −5 −2 −1 [ n ] +1 +2
 +5 +10` (the steps vary: 0.01–5 px for a square size, 1–10 mm for the TV), the biggest steps
 dropped where the row is too narrow, and a tap on the number opens a numpad (`showNumpad`; first
 key replaces, out-of-range keeps OK off, a hardware keyboard works too). Gotcha: the stepper
 measures its room with a `LayoutBuilder`, which cannot answer `AlertDialog`'s intrinsic-width
-query — a dialog holding one gives its content a fixed width (`SizedBox`), or it throws.
+query — a dialog holding one gives its content a fixed width (`SizedBox`), or it throws. In the
+DM panel's side rail (landscape tablet) only −2 −1 [ n ] +1 +2 fit — a widget test there finds
+"+1", not "+5".
 
 ## embedded grid detection (since 2026-10-10)
 

@@ -133,6 +133,15 @@ Fog tab ▸ Circle (`architecture.md` "Circle reveal"). Check with a Dungeondraf
   resizes the waiting circle on both; a brush stroke, room tap, new circle, ✓ or ✕ ends that
 - Room taps from the tablet now reach the TV (before 1.1.11 they changed only the tablet)
 
+## trim revealed edges (2026-10-10) — not in a build yet, then a test at the table
+
+Fog tab ▸ Trim revealed edges (`architecture.md` "Trim revealed edges"), 0–45 % of a square:
+- turn it to ~15 %: every revealed room's rim pulls in on the tablet and the TV, inner corners of
+  L-shaped rooms too; the map's border stays fully revealed
+- quick − / + taps add up; the value survives a restart of the game (stored per game)
+- does a wall drawn into the next square now stay hidden? Find the value that looks right on
+  Juri's maps and on a Dungeondraft map
+
 ## DM layers (2026-10-10, 1.1.6+16) — partly device-tested
 
 Companion Layers tab: DM-only pictures over the map (archive 26-10-10 "DM-only picture
