@@ -27,7 +27,8 @@ OUT = HERE / "out"
 
 GREEN, RED, AMBER, BLUE, PURPLE, GREY = "#16a34a", "#dc2626", "#d97706", "#2563eb", "#7c3aed", "#6b7280"
 PAD, TOP, GAP, EDGE_GAP = 48, 120, 24, 160   # zone padding, zone title band, piece gap, room for arrows
-MAX_H = 6400                                  # tallest column of zones
+RIGHT_W = 11000                               # run zones fill shelves this wide, oldest first
+PIN_CAP, NOTE_CHARS = 8, 150                  # per judged plate: most important pins, notes cut short
 CARD_W, TEXT_W = 320, 672
 
 EL, ED = [], []
@@ -184,6 +185,11 @@ def short(what):
     return title[:1].upper() + title[1:], rest[:1].upper() + rest[1:]
 
 
+def cut(text, n=NOTE_CHARS):
+    """`text` cut at a word boundary to about n characters (the full text stays in judge_N.json)."""
+    return text if len(text) <= n else text[:n].rsplit(" ", 1)[0].rstrip(",;:") + " …"
+
+
 def labelled(entry):
     """(title, text) of a judge issue or "good" entry."""
     return (entry["title"], entry["what"]) if entry.get("title") else short(entry["what"])
@@ -221,18 +227,24 @@ def run_plates(run, meta):
         intro = " ".join(x for x in [head, fixed, note.get("intro", ""), stats,
                                      f"**Packed** as `{layout}.dd2vtt`." if packed else ""] if x)
 
-        pins = list(note.get("pins", []))
+        pins = [(0, p) for p in note.get("pins", [])]  # (priority, pin): by eye first, then by weight
         if j:
-            pins += [(g["x"], g["y"], GREEN, *labelled(g)) for g in j.get("good", [])]
+            pins += [(3, (g["x"], g["y"], GREEN, *labelled(g))) for g in j.get("good", [])]
             for i in j.get("issues", []):
                 title, text = labelled(i)
-                pins.append((i["x"], i["y"], SEVERITY.get(i.get("severity"), AMBER), title,
-                             text + (" (pixel check, confirmed)" if i.get("source") == "check" else "")))
-            pins += [(c["x"], c["y"], GREY, "Check rejected", c["why"]) for c in j.get("rejected_checks", [])]
+                pins.append(({"high": 1, "medium": 2}.get(i.get("severity"), 4),
+                             (i["x"], i["y"], SEVERITY.get(i.get("severity"), AMBER), title,
+                              text + (" (pixel check, confirmed)" if i.get("source") == "check" else ""))))
+            pins += [(5, (c["x"], c["y"], GREY, "Check rejected", c["why"])) for c in j.get("rejected_checks", [])]
         elif not note.get("pins"):
-            pins += [(i["x"], i["y"], AMBER, "Pixel check: " + ("wall looks open" if i["what"] == "opening" else i["what"]),
-                      "Flagged by the free check, not confirmed — judge the run to sort it out.")
+            pins += [(2, (i["x"], i["y"], AMBER, "Pixel check: " + ("wall looks open" if i["what"] == "opening" else i["what"]),
+                          "Flagged by the free check, not confirmed — judge the run to sort it out."))
                      for i in r.get("issues", [])]
+        keep = sorted(range(len(pins)), key=lambda k: (pins[k][0], k))[:PIN_CAP]
+        dropped = len(pins) - len(keep)
+        pins = [(x, y, c, t, cut(text)) for k in sorted(keep) for x, y, c, t, text in [pins[k][1]]]
+        if dropped:
+            intro += f" (+{dropped} minor notes in `judge_{n}.json`.)"
 
         out.append({"id": note.get("id") or f"{layout}_{run.name}_{n}".replace("-", "_"),
                     "title": (f"{layout.upper()} · {src_tag(meta['fix_of'])} FIXED" if meta.get("fix_of")
@@ -269,13 +281,93 @@ def round_zone(rnd, runs):
     summary = "\n\n".join([" ".join(whys)] + [f"**Found:** {' '.join(finds)}"] * bool(finds) + [totals])
     plates = [p for r, m in sorted(runs, key=lambda rm: (rm[0].parent.name, rm[0].name)) for p in run_plates(r, m)]
     zid = f"run{rnd}" if rnd is not None else "run_new"
-    return zone_of(zid, title, summary, GREEN if rnd is not None else AMBER, 0, 0, plates, 2), tags
+    cols = 2 if len(plates) == 4 else min(len(plates), 3)  # wide and low: the board fits one screen
+    return zone_of(zid, title, summary, GREEN if rnd is not None else AMBER, 0, 0, plates, cols), tags
+
+
+# The journey so far, oldest first: what was tried, what worked or failed, what was decided —
+# the story the walk `journey` tells. Hand-written (history), one stage per step; update it
+# when a step changes the picture. (id, title, colour, picture, markdown)
+J = OUT / "keep"
+JOURNEY = [
+    ("j_idea", "THE IDEA", PURPLE, OUT / "keep/guide.png",
+     "**Decided:** we own the layout: walls, doors and lights as JSON on the grid. Our script draws it "
+     "as a **colour-coded guide**, Nano Banana 2.1 only **paints over it**, and the painting is packed "
+     "with **our walls** into a map file the TV already loads. Fog, doors and room reveal never depend "
+     "on what the model drew."),
+    ("j_run1", "RUN 1 · PROMPT V0", RED, J / "261010-163503-v0/out_1.jpg",
+     "**Worked:** the walls landed on the layout in every draw, and the text per room became furniture "
+     "in the right place.\n\n**Failed:** the **red door markers** leaked into the art, doors were drawn "
+     "**side-on**, the words \"collapsed\" and \"ruined\" made the model **break walls**, and the QA "
+     "score ranked the worst draw first."),
+    ("j_run2", "RUN 2 · BATTLEMAP DRAWS THE DOORS", GREEN, OUT / "crypt/261010-171713-doorways/doors_1_open.jpg",
+     "**Decided:** stop asking the model for doors. The guide leaves a **gap**, the prompt says "
+     "\"no doors\", and battlemap draws a **top-down wooden door** that swings open when the DM taps it."
+     "\n\n**Worked:** no painted doors, no red anywhere. A thin rail across each gap went unnoticed "
+     "until the board was built from data."),
+    ("j_run3", "RUN 3 · RUINS IN THE LAYOUT", GREEN, J / "261010-173421-ruined/suspects_1.jpg",
+     "**Decided:** damage is a **layout flag** (\"ruined\": true), not words in the text, plus the rule "
+     "\"every wall stays whole\".\n\n**Worked:** the courtyard kept **all its walls** in three of three "
+     "draws.\n\n**Failed:** one draw invented an **exit through the south wall** (picture), one left "
+     "the yellow light dot as it was."),
+    ("j_judge", "CHECKS + A CLAUDE JUDGE", PURPLE, J / "261010-173421-ruined/overlay_2.jpg",
+     "**Decided:** every painting gets a **free pixel check** (walls that look open, guide colours left "
+     "over) and a **Claude helper session as judge**: verdict, score and pinned issues per painting."
+     "\n\n**Learned:** the first judge **hung on a permission prompt** nobody could see. Now it runs "
+     "without prompts, reading and writing files only."),
+    ("j_juri", "SIDE QUEST · JURI'S DUNGEON", AMBER, OUT / "juri-dungeon/dungeon-map.png",
+     "Juri's photographed dungeon page: labels, secret-door marks and secret rooms removed, plus an "
+     "overlay of everything removed as a DM layer.\n\n**Learned:** edits keep geometry **to the "
+     "pixel**; never take the whole edit, **paste back only the patches**; blank a room in magenta to "
+     "turn it into rock."),
+    ("j_rail", "BOARD FROM DATA · THE RAIL", RED, J / "261010-173421-ruined/doorways_2.jpg",
+     "**Decided:** the board builds itself from each run's data and the judge's scorecards, and "
+     "packing follows the judge.\n\n**Found:** judging run 2 showed a **thin wooden rail across every "
+     "doorway**, in every draw since run 2. By eye I had read it as an empty doorway. The judge also "
+     "**drifts**: one painting went from 8 to 5 once the rail was named."),
+    ("j_run4", "RUN 4 · FLOOR THROUGH THE DOORWAYS", RED, J / "261010-190716-floor-through/doorways_3.jpg",
+     "**Tried:** the prompt asks for each doorway \"exactly as wide as the gap, the floor running "
+     "straight through\": no threshold, rail or posts. The judge gets a close-up of every doorway."
+     "\n\n**Result:** rails gone in only **one of three** draws (picture). The prompt alone won't do it."),
+    ("j_run5", "RUN 5 · THE DOORWAY FIX PASS", GREEN, J / "261010-192835-fix-doorways/doorways_1.jpg",
+     "**Decided:** fix the doorways after painting. A **plain edit** removes the rails (magenta holes "
+     "lost the walls), only the **doorway regions** are pasted back, and the wall beside each doorway is "
+     "**copied from further along the line**: under the rails, the openings were 1.5 to 2 squares wide."
+     "\n\n**Worked:** judge **retry 7 → use 8**, with about half a percent of the pixels changed."),
+    ("j_now", "WHERE WE ARE", BLUE, J / "261010-192835-fix-doorways/doors_1.jpg",
+     "**Test map:** the fixed keep. Doorways empty and one square, every wall standing, judge **use 8 "
+     "of 10**. About **$1.35 of the €20** spent.\n\n**Still open:** the corridor's north wall sits "
+     "**half a square off**, lights are painted a square or two from the layout's, and the judge's "
+     "scores drift.\n\n**Next:** the map **on the TV**, then 4K finals and a tuning grid, and the fix "
+     "pass folded into every paint."),
+]
+
+
+def journey_zone(x, y):
+    """The journey as a timeline, top to bottom: one small zone per stage (picture + text),
+    arrows between them; returns the zone."""
+    z = add("journey", "zone", x, y, 100, 100, {"title": "THE JOURNEY · 2026-10-10", "color": PURPLE, "titleSize": 64})
+    tw, mw, cy = 400, 860, 160
+    for i, (jid, title, color, img, md) in enumerate(JOURNEY):
+        src, iw, ih = media(img, f"{jid}.jpg")
+        th = round(tw * ih / iw)
+        mh = md_h(md, mw)
+        h = 80 + max(th, mh) + PAD
+        add(jid, "zone", PAD, cy, PAD + tw + 32 + mw + PAD, h, {"title": f"{i} · {title}", "color": color, "titleSize": 32}, "journey")
+        add(f"{jid}_img", "image", PAD, 80, tw, th, {"src": src, "label": title}, jid)
+        add(f"{jid}_md", "markdown", PAD + tw + 32, 80, mw, mh, {"md": md}, jid)
+        if i:
+            ED.append({"id": f"e_{JOURNEY[i - 1][0]}_{jid}", "from": JOURNEY[i - 1][0], "to": jid})
+        cy += h + 64
+    z["w"], z["h"] = PAD + PAD + tw + 32 + mw + PAD + PAD, cy - 64 + PAD
+    return z
 
 
 NEXT = [
     ("On the TV", "The fixed run-4 keep (run 5) on the Android TV emulator: do fog, doors and room reveal line up with the painted walls?", BLUE),
     ("4K finals", "Both maps at 4K (~11 cents each): enough pixels per square for the table?", BLUE),
-    ("Tuning grid", "Same layouts × variants: faint grid in the guide, legend as image, thinking minimal/medium/high, 1:1 vs 16:9.", BLUE),
+    ("Tuning grid", "Same layouts × variants, aimed at the open failures: walls half a square off, lights moved, extra fireplaces.", BLUE),
+    ("Fix inside paint", "Every draw gets the doorway fix pass before the judge (+3 cents each); try it on the crypt.", BLUE),
     ("Style references", "3 reference images in one style: do maps from different layouts look like one campaign?", BLUE),
     ("Variants, same walls", "Edit a final into night, burning, flooded — the geometry must not move.", BLUE),
     ("Outdoor map", "A forest clearing with a stream (\"outdoor\": true): no rock, open edges.", BLUE),
@@ -396,9 +488,9 @@ def main():
         "**Built from the run folders:** one zone per round, one plate per painting; pins come "
         "from the Claude judge's scorecard (or the free pixel checks), notes by eye on the "
         "early runs. Every paint, judge and pack rebuilds the board.\n\n"
-        "**State 2026-10-10:** run 1 (prompt v0): geometry held, door markers leaked red. "
-        "**Run 2**: doorways stay empty, battlemap draws the doors. **Run 3**: ruins marked in "
-        "the layout keep their walls; judged. Next images are the blue slots at the bottom.\n\n"
+        "**State 2026-10-10:** five runs and Juri's edit; the journey below tells the story — "
+        "what failed, what worked, what was decided. Test map: the fixed keep in run 5 (judge "
+        "use 8/10). Next images are the blue slots at the bottom.\n\n"
         "Source: `battlemap/docs/ai-art.md` · rebuilt by `tools/mapgen/board.py`.")
     add("intro", "markdown", 0, 0, TEXT_W, md_h(intro), {"md": intro, "color": PURPLE})
 
@@ -416,10 +508,11 @@ def main():
         if i:
             ED.append({"id": f"e_s{i}", "from": f"s_{steps[i - 1][0]}", "to": f"s_{sid}"})
 
-    # map: left column = start + pipeline + next slots; to the right, columns of zones in
-    # order — layouts, the runs by round, Juri's dungeon — each column under MAX_H tall.
-    # (horizon draws nothing when "fit" zooms below ~0.11, so the board stays wide, not tall.)
+    # map: left column = start + pipeline, the journey, next slots; to the right the zones in
+    # order — layouts, the runs by round, Juri's dungeon — on shelves RIGHT_W wide.
+    # (fit zooms out to any size — horizon MIN_ZOOM 0.02 — but a board near one screen's shape stays readable.)
     left_h = max(md_h(intro), len(steps) * 174)
+    jz = journey_zone(0, left_h + 352)
     zones = [zone_of("layouts", "TEST LAYOUTS",
                      "Two hand-written layouts, chosen to cover the legend (crypt) and the real "
                      "TV-sized case (keep). Pins mark what each one tests.", PURPLE, 0, 0, LAYOUTS, 2)]
@@ -429,15 +522,16 @@ def main():
         zones.append(z)
         runs.append((z["id"], tags))
     zones.append(juri_zone(0, 0))
-    cx, cy, colw = px + CARD_W + 352, 0, 0
+    rx = max(px + CARD_W, jz["w"]) + 352
+    cx, cy, shelf = rx, 0, 0
     for z in zones:
-        if cy and cy + z["h"] > MAX_H:
-            cx, cy, colw = cx + colw + 352, 0, 0
+        if cx > rx and cx + z["w"] > rx + RIGHT_W:
+            cx, cy, shelf = rx, cy + shelf + 352, 0
         z["x"], z["y"] = cx, cy
-        cy += z["h"] + 352
-        colw = max(colw, z["w"])
+        cx += z["w"] + 352
+        shelf = max(shelf, z["h"])
 
-    nz = add("next", "zone", 0, left_h + 352, 100, 100, {"title": "NEXT IMAGES", "color": BLUE, "titleSize": 64})
+    nz = add("next", "zone", 0, jz["y"] + jz["h"] + 352, 100, 100, {"title": "NEXT IMAGES", "color": BLUE, "titleSize": 64})
     add("next_sum", "markdown", PAD, 150, CARD_W * 2 + 32, 130,
         {"md": "Slots for the images this test project makes next. A slot becomes a plate on the right when its run is done.", "scale": 1.4}, "next")
     cx, cy = PAD, 150 + 220

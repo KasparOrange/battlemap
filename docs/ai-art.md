@@ -91,9 +91,14 @@ as its intro, pins from `judge_N.json` (`good` green, issues red/amber/grey by s
 rejected checks grey) or, unjudged, the free checks as amber "unconfirmed" pins; the packed
 image says PACKED. `paint`, `judge --wait` and `pack` rebuild it, so a run needs no edit there.
 Hand-written in `board.py`: the two test layouts, `NOTES` (what was seen by eye on runs 1–3,
-before the judge wrote `good`; their `id`s keep the walk `overview` working), the `NEXT`
-slots and Juri's zone. A new run joins the zone of an earlier run with the same tag (crypt
-and keep painted for one question), else opens the next round; `--round N` overrides.
+before the judge wrote `good`; their `id`s keep the walk `overview` working), **`JOURNEY`**
+(the timeline down the left: one stage per step — what was tried, what worked or failed, what
+was decided; update it when a step changes the picture), the `NEXT` slots and Juri's zone. A
+new run joins the zone of an earlier run with the same tag (crypt and keep painted for one
+question), else opens the next round; `--round N` overrides. Zones sit on shelves (`RIGHT_W`),
+plates show at most 8 pins with notes cut to 150 characters (the rest stays in
+`judge_N.json`). Walks: **`journey`** (the whole story, runs 1–5, ~5 min) and `overview`
+(run 1 only).
 
 **Setup gotchas (2026-10-10):** the card's 3-D Secure check (Cardinal Commerce) is blocked
 by Cloudflare inside telescope → pay in a normal browser; Google Cloud in Germany takes card
@@ -269,7 +274,7 @@ half a square off its line, lights painted 1.3–2 squares from where the layout
 ## Next — pick up here (hand-off 2026-10-10)
 
 **Start of a session on this sub-project:** read this file, open the board
-(`horizon open battlemap-mapgen`, walk: `horizon present battlemap-mapgen overview`), check
+(`horizon open battlemap-mapgen`, walk: `horizon present battlemap-mapgen journey`), check
 the budget (prepaid €20 on Bao's account, usage below — AI Studio → Ausgaben, signed in as
 nico.zingerle), read "learned so far" before changing a prompt. Every new image goes onto the
 board (rule above).

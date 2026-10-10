@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 19:52 - 0f0ee4a5 - AI maps: the journey on the board + walk `journey`
+- Konrad: show the development over time on the canvas (failures, successes, decisions) + a canvas walk of the whole journey and where we are
+	- `board.py`: `JOURNEY` timeline zone down the left (idea → run 1 → doors → ruins → checks + judge → Juri → the rail → run 4 → fix pass → where we are), each stage a picture + worked/failed/decided text
+	- board repacked: zones on shelves 11,000 px wide (was 18,900 px wide), run zones up to 3 plates a row, max 8 pins per plate, notes cut to 150 chars; the "~0.11 fit zoom" limit is outdated (horizon `MIN_ZOOM` 0.02)
+	- walk `journey` (~800 words, 43 cues) saved in the board's `presentations/`, played once
+
 ### 26-10-10 19:41 - 0f0ee4a5 - AI maps: doorway edit pass (`mapgen.py fix`, run 5)
 - Konrad: go on the fix-up pass → rails out, wall stubs back
 	- trial on floor-through image 2: plain edit instruction removed every rail and kept the walls; magenta holes (Juri trick) erased the wall stubs → plain
