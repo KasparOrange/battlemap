@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
+import 'dart:ui' show Canvas;
 
 import 'package:battlemap/game/components/portal_component.dart';
 import 'package:battlemap/model/uvtt_parser.dart';
@@ -58,15 +59,36 @@ void main() {
   });
 
   group('PortalComponent look', () {
-    PortalComponent portalFor(String uvtt) {
+    PortalComponent portalFor(String uvtt, {bool showMarker = true}) {
       final state = VttState()..loadMap(Uint8List.fromList(utf8.encode(uvtt)));
       return PortalComponent(
         portalIndex: 0,
         portal: state.map!.portals[0],
         state: state,
         pixelsPerGrid: state.map!.resolution.pixelsPerGrid,
+        showMarker: showMarker,
       );
     }
+
+    int drawCalls(PortalComponent portal) {
+      final canvas = _CountingCanvas();
+      portal.render(canvas);
+      return canvas.draws;
+    }
+
+    test('marker shows on the DM tablet', () {
+      expect(drawCalls(portalFor(_uvtt())), greaterThan(0));
+    });
+
+    test('marker is hidden on the players\' display', () {
+      expect(drawCalls(portalFor(_uvtt(), showMarker: false)), 0);
+    });
+
+    test('a drawn door shows on the players\' display too', () {
+      final portal =
+          portalFor(_uvtt(battlemap: {'draw_doors': true}), showMarker: false);
+      expect(drawCalls(portal), greaterThan(0));
+    });
 
     test('Dungeondraft-style map keeps the marker', () {
       expect(portalFor(_uvtt()).drawn, isFalse);
@@ -130,4 +152,15 @@ void main() {
       expect(DoorSwing.openAngle, greaterThan(pi / 3));
     });
   });
+}
+
+/// A [Canvas] that only counts `draw*` calls (transforms are ignored).
+class _CountingCanvas implements Canvas {
+  int draws = 0;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName.toString().contains('"draw')) draws++;
+    return null;
+  }
 }

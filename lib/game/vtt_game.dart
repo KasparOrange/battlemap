@@ -313,6 +313,8 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
         portal: map.portals[i],
         state: state,
         pixelsPerGrid: map.resolution.pixelsPerGrid,
+        // Door markers are for the DM; the TV shows the map's own doors.
+        showMarker: !isDisplay,
       );
       _portalComponents.add(portal);
       world.add(portal);

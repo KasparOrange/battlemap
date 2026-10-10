@@ -12,6 +12,8 @@ import '../../state/vtt_state.dart';
 /// Two looks, chosen per map by [UvttMap.drawDoors]:
 /// - **marker** (default — Dungeondraft maps paint their doors into the
 ///   image): a small box over the doorway, orange when closed, green when open.
+///   DM-only ([showMarker]): the TV draws nothing, the map's own painted door
+///   is what the players see.
 /// - **drawn door** (AI maps from `tools/mapgen`, whose image shows empty
 ///   doorways): a top-down wooden door leaf in the wall line that swings
 ///   open around its hinge at `bounds[0]` and shut again ([DoorSwing]).
@@ -40,6 +42,12 @@ class PortalComponent extends PositionComponent {
   /// Whether this portal renders as a drawn door instead of the marker,
   /// taken from [UvttMap.drawDoors] of the map loaded at construction.
   final bool drawn;
+
+  /// Whether the marker look is drawn at all — `true` on the DM's tablet,
+  /// `false` on the players' display (the TV), where the coloured boxes over
+  /// the painted doors only distracted. Drawn doors ignore it: they are the
+  /// door itself and show everywhere.
+  final bool showMarker;
 
   static const double _padding = 8.0;
 
@@ -77,11 +85,13 @@ class PortalComponent extends PositionComponent {
   ///
   /// Position and size are the doorway's bounding box (plus padding), in
   /// world pixels; [pixelsPerGrid] converts the grid-coordinate [portal].
+  /// [showMarker] hides the marker look on the players' display.
   PortalComponent({
     required this.portalIndex,
     required this.portal,
     required this.state,
     required this.pixelsPerGrid,
+    this.showMarker = true,
   })  : drawn = state.map?.drawDoors ?? false,
         super(priority: 6) {
     // Compute position and size from portal bounds
@@ -155,6 +165,7 @@ class PortalComponent extends PositionComponent {
       _renderDoor(canvas);
       return;
     }
+    if (!showMarker) return;
     final rect = size.toRect();
     canvas.drawRect(rect, isOpen ? _openPaint : _closedPaint);
     canvas.drawRect(rect, _borderPaint);
