@@ -29,7 +29,7 @@ two Python servers run on the VPS (the log server is retired — logs go to MwLo
 | service | port | purpose |
 |---------|------|---------|
 | `tools/vtt_relay.py` | 9090 | WebSocket relay between TV and phone |
-| `tools/dev_server.py` | 4242 | HTTP server: web build, APK download, map uploads |
+| `tools/dev_server.py` | 4242 | HTTP server: web build, APK download, map uploads (7-day cleanup; DM layer pictures in `uploads/dm/` are kept) |
 
 ### starting services
 

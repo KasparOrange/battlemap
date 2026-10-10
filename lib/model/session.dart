@@ -347,6 +347,10 @@ class Session {
   /// Scale slider factor for fine-tune zoom adjustment (0.5 to 2.0).
   double scaleSliderFactor;
 
+  /// DM-only picture layers (list of [DmOverlay.toJson] maps, bottom layer
+  /// first). The TV keeps them for the companion and never renders them.
+  List<Map<String, dynamic>> dmOverlayData;
+
   /// Feature toggles controlling which tools and visual layers are enabled.
   ///
   /// Defaults to [SessionSettings.penAndPaper] if not provided.
@@ -402,6 +406,7 @@ class Session {
     this.rulerY = 0,
     this.rulerRotation = 0,
     this.scaleSliderFactor = 1.0,
+    this.dmOverlayData = const [],
     SessionSettings? settings,
     this.cameraX = 0,
     this.cameraY = 0,
@@ -443,6 +448,7 @@ class Session {
         'rulerY': rulerY,
         'rulerRotation': rulerRotation,
         'scaleSliderFactor': scaleSliderFactor,
+        'dmOverlayData': dmOverlayData,
         'settings': settings.toJson(),
         'cameraX': cameraX,
         'cameraY': cameraY,
@@ -454,7 +460,8 @@ class Session {
   ///
   /// Expects keys matching [toJson] output. Fields added after the initial
   /// schema ([tokenData], [strokeData], [drawColorValue], [drawWidth],
-  /// [interactionMode], [isPdfSession]) fall back to defaults if absent,
+  /// [interactionMode], [isPdfSession], [dmOverlayData]) fall back to
+  /// defaults if absent,
   /// for backwards compatibility with older saved sessions.
   factory Session.fromJson(Map<String, dynamic> json) => Session(
         id: json['id'] as String,
@@ -492,6 +499,10 @@ class Session {
         rulerY: (json['rulerY'] as num?)?.toDouble() ?? 0,
         rulerRotation: json['rulerRotation'] as int? ?? 0,
         scaleSliderFactor: (json['scaleSliderFactor'] as num?)?.toDouble() ?? 1.0,
+        dmOverlayData: (json['dmOverlayData'] as List?)
+                ?.map((e) => Map<String, dynamic>.from(e as Map))
+                .toList() ??
+            const [],
         settings: json['settings'] != null
             ? SessionSettings.fromJson(json['settings'] as Map<String, dynamic>)
             : null,

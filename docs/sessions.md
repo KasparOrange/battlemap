@@ -33,6 +33,7 @@ sessions are stored on the TV's local disk and survive app restarts and updates.
 | `cameraX/Y/zoom/angle` | camera position and orientation |
 | `interactionMode` | active tool (fog/draw/token) |
 | `drawColor/drawWidth` | drawing tool settings |
+| `dmOverlayData` | DM-only picture layers (id, name, VPS url, visible, opacity) — stored for the phone, never drawn on the TV |
 
 ## what triggers auto-save
 

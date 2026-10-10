@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flame/game.dart' hide Route, Matrix4, Vector2, Vector3, Vector4;
 import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
+import 'package:uuid/uuid.dart';
 
 import '../network/http_upload_stub.dart'
     if (dart.library.html) '../network/http_upload.dart';
@@ -14,7 +15,9 @@ import '../network/file_picker_options_stub.dart'
 import '../network/relay_config.dart';
 import '../pdf_helper.dart';
 
+import '../game/dm_overlay_images.dart';
 import '../game/vtt_game.dart';
+import '../model/dm_overlay.dart';
 import '../model/map_library_entry.dart';
 import '../model/session.dart';
 import '../network/vtt_relay_client.dart';
@@ -67,6 +70,15 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   final VttState _state = VttState();
   late final VttGame _game;
 
+  /// Pictures of the DM-only layers — this device downloads and draws
+  /// them, the TV never does.
+  final DmOverlayImages _overlayImages =
+      DmOverlayImages(download: (url) => httpDownloadWeb(url));
+
+  /// Progress of a running layer upload (`null` = none), and its label.
+  double? _overlayUploadProgress;
+  String? _overlayUploadLabel;
+
   VttRelayClient? _relay;
   RelayConnectionState _relayState = RelayConnectionState.disconnected;
   StreamSubscription<RelayConnectionState>? _relaySub;
@@ -109,8 +121,13 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.isInteractive = true;
     // Networked: the phone camera is free (no calibration clamp) and shows
     // the TV's viewport as an outline. Local mode: the phone *is* the display.
-    _game = VttGame(state: _state, isDisplay: widget.localMode);
+    _game = VttGame(
+      state: _state,
+      isDisplay: widget.localMode,
+      dmOverlayImages: _overlayImages,
+    );
     _state.addListener(_onStateChanged);
+    _overlayImages.addListener(_onOverlayImagesChanged);
     if (_isNetworked) _connectRelay();
   }
 
@@ -119,13 +136,23 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _loadingTimeout?.cancel();
     _cameraSendTimer?.cancel();
     _state.removeListener(_onStateChanged);
+    _overlayImages.removeListener(_onOverlayImagesChanged);
     _relaySub?.cancel();
     _relay?.dispose();
     _state.dispose();
+    _overlayImages.dispose();
     super.dispose();
   }
 
-  void _onStateChanged() => setState(() {});
+  void _onStateChanged() {
+    _overlayImages.sync(_state.dmOverlays, enabled: _state.showDmOverlays);
+    setState(() {});
+  }
+
+  /// A layer picture finished loading (or failed) — refresh the Layers tab.
+  void _onOverlayImagesChanged() {
+    if (mounted) setState(() {});
+  }
 
   /// Shows a floating [SnackBar] with the given [msg].
   ///
@@ -326,6 +353,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.onAoeChanged = (t) =>
         t == null ? _relay!.sendClearAoe() : _relay!.sendSetAoe(t.toJson());
     _state.onRulerMoved = (x, y) => _relay!.sendSetRulerPosition(x, y);
+    _state.onDmOverlaysChanged = (overlays, rev) => _relay!
+        .sendSetDmOverlays(overlays.map((o) => o.toJson()).toList(), rev);
     _relaySub = _relay!.stateStream.listen((s) {
       if (s == RelayConnectionState.paired) {
         DevLog.add('Companion: paired with TV');
@@ -562,6 +591,116 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     }
   }
 
+  /// Lets the DM pick one or more pictures (PNG/JPG/WebP, or a PDF whose
+  /// first page is rasterized like a map PDF) and adds each as a DM-only
+  /// layer on top of the stack.
+  ///
+  /// Networked: each file is HTTP-PUT to `/upload/dm/<name>` on the VPS
+  /// (the dev server keeps `dm/` uploads, no 7-day cleanup) and the layer
+  /// list goes to the TV with the session ([VttState.onDmOverlaysChanged] →
+  /// `vtt.setDmOverlays`); the TV stores it but never loads the pictures.
+  /// Local mode: nothing is uploaded, the layer lives in memory
+  /// (`local:<id>` URL). The picked bytes seed [_overlayImages], so a layer
+  /// shows at once without downloading what was just uploaded.
+  ///
+  /// Shows progress in the Layers tab and a snackbar with the result;
+  /// unsupported or unreadable files are skipped and counted.
+  ///
+  /// See also:
+  /// - [DmOverlay], the layer model.
+  /// - [DmControlPanel], whose Layers tab edits the layers.
+  Future<void> _pickAndAddDmOverlays() async {
+    if (_overlayUploadProgress != null) return; // upload already running
+    final files = await FilePicker.pickFiles(
+      type: FileType.any,
+      webOptions: webFilePickerOptions(),
+    );
+    if (files.isEmpty) return;
+    setState(() {
+      _overlayUploadProgress = 0;
+      _overlayUploadLabel = 'Preparing ${files.length == 1 ? files.first.name : '${files.length} pictures'}…';
+    });
+    var added = 0;
+    final skipped = <String>[];
+    for (int i = 0; i < files.length; i++) {
+      final file = files[i];
+      final step = files.length == 1 ? '' : ' ${i + 1} of ${files.length}';
+      void progress(double p, String label) {
+        if (!mounted) return;
+        setState(() {
+          _overlayUploadProgress = (i + p) / files.length;
+          _overlayUploadLabel = label;
+        });
+      }
+
+      try {
+        var bytes = await file.readAsBytes();
+        var name = file.name;
+        final lower = name.toLowerCase();
+        final isPdf = lower.endsWith('.pdf');
+        final isImage = lower.endsWith('.png') || lower.endsWith('.jpg') ||
+            lower.endsWith('.jpeg') || lower.endsWith('.webp');
+        if (bytes.isEmpty || (!isPdf && !isImage)) {
+          DevLog.add('Companion: DM layer skipped "$name" '
+              '(${bytes.isEmpty ? 'empty' : 'unsupported type'})');
+          skipped.add(name);
+          continue;
+        }
+        if (isPdf) {
+          progress(0, 'Rendering PDF$step…');
+          final rendered = await PdfHelper.renderPdfPage(bytes);
+          if (rendered == null) {
+            DevLog.add('Companion: DM layer PDF render failed for "$name"');
+            skipped.add(name);
+            continue;
+          }
+          bytes = rendered['imageBytes'] as Uint8List;
+          name = '${name.substring(0, name.length - 4)}.png';
+        }
+
+        final id = const Uuid().v4();
+        String url;
+        if (_isNetworked) {
+          progress(0, 'Uploading$step: $name');
+          final uploadUrl =
+              '${RelayConfig.httpBase}/upload/dm/${Uri.encodeComponent(name)}';
+          final resp = await httpUpload(uploadUrl, bytes,
+              onProgress: (p) => progress(p, 'Uploading$step: $name'));
+          if (resp == null) {
+            DevLog.add('Companion: DM layer upload failed for "$name"');
+            skipped.add(name);
+            continue;
+          }
+          url = '${RelayConfig.httpBase}${resp['url']}';
+        } else {
+          url = 'local:$id';
+        }
+        DevLog.add('Companion: DM layer "$name" added '
+            '(${(bytes.length / 1024).round()} KB, $url)');
+        // put + add in one synchronous step: sync() keeps only listed ids.
+        _overlayImages.put(id, bytes);
+        _state.addDmOverlays([DmOverlay(id: id, name: name, url: url)]);
+        added++;
+      } catch (e) {
+        DevLog.add('Companion: DM layer "${file.name}" failed: $e');
+        skipped.add(file.name);
+      }
+    }
+    if (!mounted) return;
+    setState(() {
+      _overlayUploadProgress = null;
+      _overlayUploadLabel = null;
+    });
+    if (skipped.isEmpty) {
+      _showSnack(added == 1 ? 'Layer added — only you see it' : '$added layers added — only you see them');
+    } else {
+      _showSnack(
+        '${added > 0 ? '$added added, ' : ''}${skipped.length} skipped: ${skipped.join(', ')}',
+        color: Colors.orangeAccent,
+      );
+    }
+  }
+
   /// Shows a dialog for configuring grid dimensions when uploading a PDF map.
   ///
   /// PDFs have no embedded grid metadata (unlike `.dd2vtt` files), so the DM
@@ -785,6 +924,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
           _game.matchTvCamera();
         },
         onPhoneZoomToFit: _game.zoomToFit,
+        onAddDmOverlays: _pickAndAddDmOverlays,
       );
     }
     return DmCallbacks(
@@ -848,6 +988,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       onUpdateSessionSettings: _state.setSessionSettings,
       // Global effects
       onTriggerEffect: (effect) => _game.triggerEffect(effect),
+      onAddDmOverlays: _pickAndAddDmOverlays,
     );
   }
 
@@ -1394,6 +1535,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
           DmControlPanel(
             state: _state,
             callbacks: _buildCallbacks(),
+            dmOverlayImages: _overlayImages,
+            dmOverlayUploadProgress: _overlayUploadProgress,
+            dmOverlayUploadLabel: _overlayUploadLabel,
           ),
         ],
       ),

@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../model/aoe_template.dart';
+import '../model/dm_overlay.dart';
 import '../model/draw_stroke.dart';
 import '../model/map_token.dart';
 import '../model/session.dart';
@@ -247,6 +249,48 @@ class VttState extends ChangeNotifier {
   /// for relay forwarding. Coordinates are in grid squares.
   void Function(double x, double y)? onRulerMoved;
 
+  /// Called when the DM edits the [dmOverlays] list locally (add, remove,
+  /// reorder, visibility, opacity), for relay forwarding as
+  /// `vtt.setDmOverlays`. Receives the whole new list and its [dmOverlaysRev].
+  void Function(List<DmOverlay> overlays, int rev)? onDmOverlaysChanged;
+
+  // --- DM-only picture layers ---
+
+  /// DM-only picture layers over the map, bottom layer first.
+  ///
+  /// Part of the session: the TV stores and broadcasts the list (it is in
+  /// [toJson] and the saved [Session]) but never renders it — only a
+  /// [VttGame] given [DmOverlayImages] (the companion) draws them. Edited on
+  /// the phone through [addDmOverlays], [setDmOverlayVisible],
+  /// [setDmOverlayOpacity], [moveDmOverlay] and [removeDmOverlay]; the TV
+  /// takes the whole list with [setDmOverlaysFromRemote].
+  List<DmOverlay> dmOverlays = [];
+
+  /// Revision of [dmOverlays]: set by the phone on every local edit, stored
+  /// by the TV and echoed in `vtt.fullState`. [applyRemoteState] uses it to
+  /// ignore broadcasts that left the TV before the phone's last edit reached
+  /// it (they would flash the old list back for a round trip).
+  int dmOverlaysRev = 0;
+
+  /// Revision of the phone's last local layer edit that the TV has not
+  /// echoed yet, or `null` when nothing is pending.
+  int? _pendingDmOverlaysRev;
+
+  /// When [_pendingDmOverlaysRev] was set; after
+  /// [_dmOverlaysPendingTimeout] the phone takes the TV's list again.
+  DateTime? _pendingDmOverlaysSince;
+
+  /// How long the phone waits for the TV to echo a layer edit before it
+  /// accepts the TV's list again (a TV build without layer support never
+  /// echoes — but it also omits the list, so nothing is lost).
+  static const Duration _dmOverlaysPendingTimeout = Duration(seconds: 3);
+
+  /// Master switch for all DM layers on this device (the Layers tab's eye).
+  ///
+  /// Phone-local, not synced or saved: hides every layer at once (e.g. when
+  /// a player looks at the phone) and restores the per-layer choices.
+  bool showDmOverlays = true;
+
   // --- AoE tool settings (phone-local, not synced) ---
 
   /// Shape used for the next AoE template placed by tapping the map.
@@ -443,8 +487,8 @@ class VttState extends ChangeNotifier {
   }
 
   /// Clears everything that belongs to one session rather than to the map:
-  /// tokens, drawings, undo history, measure line, AoE template, ruler and
-  /// shadow edits.
+  /// tokens, drawings, undo history, measure line, AoE template, ruler,
+  /// shadow edits and DM picture layers.
   ///
   /// Called by [loadMap] and [loadPdfAsMap] so a new session starts clean —
   /// before 2026-10-10 tokens and drawings of the previous map carried over.
@@ -461,6 +505,10 @@ class VttState extends ChangeNotifier {
     rulerVisible = false;
     shadowRevealCells.clear();
     shadowHideCells.clear();
+    dmOverlays = [];
+    dmOverlaysRev = 0;
+    _pendingDmOverlaysRev = null;
+    _pendingDmOverlaysSince = null;
   }
 
   // ===== Undo / Redo =====
@@ -1130,6 +1178,121 @@ class VttState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ===== DM picture layers =====
+
+  /// Appends [overlays] on top of the existing layers (the last one ends up
+  /// topmost) and forwards the new list ([onDmOverlaysChanged]).
+  void addDmOverlays(List<DmOverlay> overlays) {
+    if (overlays.isEmpty) return;
+    _editDmOverlays([...dmOverlays, ...overlays]);
+  }
+
+  /// Shows or hides the layer [id]. Unknown ids are ignored.
+  void setDmOverlayVisible(String id, bool visible) =>
+      _replaceDmOverlay(id, (o) => o.copyWith(visible: visible));
+
+  /// Sets the opacity (`0.0`–`1.0`) of the layer [id].
+  ///
+  /// With [forward] `false` the change stays on this device — the Layers
+  /// tab previews while the slider moves and forwards once on release, so
+  /// the TV's echo cannot pull the slider back mid-drag.
+  void setDmOverlayOpacity(String id, double opacity, {bool forward = true}) =>
+      _replaceDmOverlay(id, (o) => o.copyWith(opacity: opacity), forward: forward);
+
+  /// Moves the layer [id] by [delta] places in the stack (positive = up,
+  /// towards the top), clamped to the stack's ends.
+  void moveDmOverlay(String id, int delta) {
+    final i = dmOverlays.indexWhere((o) => o.id == id);
+    if (i < 0) return;
+    final target = (i + delta).clamp(0, dmOverlays.length - 1);
+    if (target == i) return;
+    final list = [...dmOverlays];
+    final item = list.removeAt(i);
+    list.insert(target, item);
+    _editDmOverlays(list);
+  }
+
+  /// Removes the layer [id] and returns it with its former index (for an
+  /// undo snackbar, see [insertDmOverlay]), or `null` if it was not there.
+  ({DmOverlay overlay, int index})? removeDmOverlay(String id) {
+    final i = dmOverlays.indexWhere((o) => o.id == id);
+    if (i < 0) return null;
+    final list = [...dmOverlays];
+    final removed = list.removeAt(i);
+    _editDmOverlays(list);
+    return (overlay: removed, index: i);
+  }
+
+  /// Puts [overlay] back at [index] (clamped), e.g. to undo
+  /// [removeDmOverlay]. Does nothing if a layer with that id exists.
+  void insertDmOverlay(int index, DmOverlay overlay) {
+    if (dmOverlays.any((o) => o.id == overlay.id)) return;
+    final list = [...dmOverlays];
+    list.insert(index.clamp(0, list.length), overlay);
+    _editDmOverlays(list);
+  }
+
+  /// Flips [showDmOverlays] (this device only).
+  void toggleShowDmOverlays() {
+    showDmOverlays = !showDmOverlays;
+    notifyListeners();
+  }
+
+  /// Replaces the layer list with one received from the phone
+  /// (`vtt.setDmOverlays`, TV side). Not forwarded again.
+  void setDmOverlaysFromRemote(List<DmOverlay> overlays, int rev) {
+    dmOverlays = List.of(overlays);
+    dmOverlaysRev = rev;
+    notifyListeners();
+  }
+
+  void _replaceDmOverlay(String id, DmOverlay Function(DmOverlay) change,
+      {bool forward = true}) {
+    final i = dmOverlays.indexWhere((o) => o.id == id);
+    if (i < 0) return;
+    final list = [...dmOverlays];
+    list[i] = change(list[i]);
+    _editDmOverlays(list, forward: forward);
+  }
+
+  /// Installs a locally edited layer list, marks it pending until the TV
+  /// echoes its revision, notifies, and forwards it unless [forward] is
+  /// `false`.
+  void _editDmOverlays(List<DmOverlay> list, {bool forward = true}) {
+    dmOverlays = list;
+    if (forward) {
+      final now = DateTime.now();
+      // Strictly increasing even within one millisecond.
+      dmOverlaysRev = max(dmOverlaysRev + 1, now.millisecondsSinceEpoch);
+      _pendingDmOverlaysRev = dmOverlaysRev;
+      _pendingDmOverlaysSince = now;
+    }
+    notifyListeners();
+    if (forward) onDmOverlaysChanged?.call(List.unmodifiable(dmOverlays), dmOverlaysRev);
+  }
+
+  /// Takes the TV's layer list from a `vtt.fullState` [json] unless a local
+  /// edit is still waiting for its echo. A message without `dmOverlays`
+  /// (TV build without layer support) leaves the local list alone.
+  void _applyRemoteDmOverlays(Map<String, dynamic> json) {
+    final raw = json['dmOverlays'] as List?;
+    if (raw == null) return;
+    final remoteRev = (json['dmOverlaysRev'] as num?)?.toInt() ?? 0;
+    final pending = _pendingDmOverlaysRev;
+    if (pending != null) {
+      final since = _pendingDmOverlaysSince;
+      final expired = since == null ||
+          DateTime.now().difference(since) > _dmOverlaysPendingTimeout;
+      if (remoteRev != pending && !expired) return; // stale broadcast
+      _pendingDmOverlaysRev = null;
+      _pendingDmOverlaysSince = null;
+    }
+    dmOverlays = raw
+        .map((e) => DmOverlay.fromJson(Map<String, dynamic>.from(e as Map)))
+        .toList();
+    dmOverlaysRev = remoteRev;
+  }
+
   // ===== Serialization =====
 
   /// Serializes the full state to a JSON-compatible map for relay broadcast.
@@ -1137,7 +1300,8 @@ class VttState extends ChangeNotifier {
   /// Excludes [rawMapBytes] (sent separately as a chunked binary transfer)
   /// and [liveStroke] (sent via dedicated live-stroke messages). Includes
   /// all fog cells, portal states, display toggles, calibration, tokens,
-  /// strokes, draw settings, and the active interaction mode.
+  /// strokes, draw settings, the active interaction mode, and the DM layer
+  /// list ([dmOverlays] — metadata only, the TV never loads the pictures).
   Map<String, dynamic> toJson() => {
         'hasMap': map != null,
         'gridCols': map?.resolution.mapSize.dx.toInt(),
@@ -1168,6 +1332,8 @@ class VttState extends ChangeNotifier {
         'sessionSettings': sessionSettings.toJson(),
         'canUndo': canUndo,
         'canRedo': canRedo,
+        'dmOverlays': dmOverlays.map((o) => o.toJson()).toList(),
+        'dmOverlaysRev': dmOverlaysRev,
         'measure': measureStart != null && measureEnd != null
             ? {
                 'x1': measureStart!.dx,
@@ -1185,7 +1351,8 @@ class VttState extends ChangeNotifier {
   /// ([interactionMode], [tokens], [strokes], [drawColor], [drawWidth],
   /// `canUndo`/`canRedo`, `measure`) fall back to defaults if absent, for
   /// backwards compatibility. Phone-local tool settings ([aoeShape],
-  /// [aoeRadius]) are left untouched.
+  /// [aoeRadius], [showDmOverlays]) are left untouched; [dmOverlays] is
+  /// taken unless a local layer edit still waits for the TV's echo.
   ///
   /// This is the inverse of [toJson] and is called on the companion phone
   /// when it receives a `vtt.fullState` message from the TV.
@@ -1246,6 +1413,9 @@ class VttState extends ChangeNotifier {
     // keep reading the local stack)
     _remoteCanUndo = json['canUndo'] as bool?;
     _remoteCanRedo = json['canRedo'] as bool?;
+
+    // DM picture layers (absent from older TV builds → keep the local list)
+    _applyRemoteDmOverlays(json);
 
     // Measure line
     final m = json['measure'] as Map<String, dynamic>?;

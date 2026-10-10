@@ -75,6 +75,12 @@ relay sends ping every 20s. client sends ping every 15s. zombie detection at 30-
 Legacy (phone builds < 1.1.3): `vtt.pdfUploaded` with the raw PDF; the TV renders page 1 with
 pdfrx. Still handled by the TV; fails on tvOS.
 
+### DM layer pictures (phone → VPS only) — since 1.1.6
+1. phone HTTP PUTs a PNG/JPG/WebP (PDFs rasterized to PNG first) to `http://VPS:4242/upload/dm/<name>`
+2. the dev server stores it in `uploads/dm/` — **kept**, the 7-day cleanup only touches top-level uploads
+   (an older dev server ignores the `dm/` prefix and stores it top-level, 7-day expiry)
+3. phone adds the layer and sends `vtt.setDmOverlays` (below); **the TV never downloads the picture**
+
 ### download (TV → phone, for session resume)
 ```
 table → companion:  {"type": "vtt.downloadMap", "url": "http://...", "displayName": "..."}
@@ -173,6 +179,25 @@ it draws it as a dashed frame (see `camera.vw`/`vh` below).
 
 Measure coordinates are world pixels; AoE origin/radius and ruler position are grid squares.
 
+## DM layers (companion → table) — since 1.1.6
+
+```
+{"type": "vtt.setDmOverlays", "rev": 1760112000000, "overlays": [
+  {"id": "uuid", "name": "dm-map.png", "url": "http://72.62.88.197:4242/uploads/dm/ab12cd34ef56.png", "visible": true, "opacity": 0.6}
+]}
+```
+
+DM-only pictures layered over the map **on the phone only**. The phone sends the whole list
+(bottom layer first) after every edit — add, remove, reorder, eye, opacity (on slider release).
+The TV stores it with the session and echoes it in `vtt.fullState` (`dmOverlays`,
+`dmOverlaysRev`), so a reloaded phone gets its layers back — but it never downloads or draws
+the pictures (its `VttGame` has no `DmOverlayImages`).
+
+`rev` is the phone's edit revision (milliseconds, strictly increasing). Until a broadcast echoes
+the phone's last `rev` (or 3 s pass), the phone ignores the TV's list, so a broadcast that left
+the TV before the edit arrived cannot flash the old list back. A TV build without layer support
+ignores the command and omits the fields; the phone then keeps its list in memory only.
+
 ## state broadcast (table → companion)
 
 sent every 50ms when state changes:
@@ -193,7 +218,9 @@ sent every 50ms when state changes:
   "interactionMode": "fogReveal",
   "canUndo": true,  "canRedo": false,                      // since 1.1.5 — the TV's undo stacks; the phone's buttons read these
   "measure": {"x1": 100.0, "y1": 200.0, "x2": 500.0, "y2": 200.0} | null,   // since 1.1.5
-  "camera": {"x": 100.0, "y": 200.0, "zoom": 0.5, "angle": 0.0, "vw": 1920.0, "vh": 1080.0}   // vw/vh (viewport px) since 1.1.5
+  "camera": {"x": 100.0, "y": 200.0, "zoom": 0.5, "angle": 0.0, "vw": 1920.0, "vh": 1080.0},  // vw/vh (viewport px) since 1.1.5
+  "dmOverlays": [{"id": "...", "name": "...", "url": "...", "visible": true, "opacity": 0.6}],   // since 1.1.6 — see "DM layers"
+  "dmOverlaysRev": 1760112000000
 }
 ```
 

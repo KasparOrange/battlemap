@@ -70,7 +70,15 @@ TV", plus zoom/rotate buttons that act on the TV.
 
 **DM panel** (`lib/ui/dm_control_panel.dart`): a bottom sheet — tab bar at the bottom edge
 (thumb reach), content above it, tap the active tab to collapse. ≥ 44 px targets, 14 px text.
-Sliders (draw width, scale) preview locally and send on release.
+Sliders (draw width, scale, layer opacity) preview locally and send on release.
+
+**DM layers (since 2026-10-10):** the Layers tab adds any number of pictures (PNG/JPG/WebP, PDF
+page 1) that only the DM sees — a DM version of the map, notes, secrets. Each layer has an eye,
+an opacity slider, up/down and delete (undo snackbar); a master eye hides them all on this
+device. Pictures go phone → VPS (`uploads/dm/`, kept); the list (`DmOverlay`, metadata only)
+lives in the TV's session and comes back in `vtt.fullState`. Only the phone's `VttGame` gets a
+`DmOverlayImages` cache (download, decode ≤ 4096 px while visible, free when hidden), so only
+the phone has a `DmOverlayComponent` — the TV cannot draw a layer whatever its state says.
 
 ## rendering order (flame engine)
 
@@ -83,4 +91,5 @@ Sliders (draw width, scale) preview locally and send on release.
 | 4 | token layer | colored numbered circles |
 | 5 | walls | DM debug lines |
 | 6 | portals | door markers; on maps with `draw_doors` (AI maps) a top-down door leaf that swings open |
-| 10 | fog of war | dark overlay with reveal cutouts |
+| 10 | fog of war | dark overlay with reveal cutouts (opaque on the TV, 70 % on the phone) |
+| 12 | DM layers | **phone only**: DM-only pictures, each with eye + opacity, fitted into the map (aspect kept, centered); above the fog so secrets stay readable |

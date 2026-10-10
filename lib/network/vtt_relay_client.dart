@@ -741,6 +741,14 @@ class VttRelayClient {
   void sendSetScaleFactor(double factor) =>
       _send({'type': 'vtt.setScaleFactor', 'factor': factor});
 
+  /// Replaces the session's DM-only picture layer list on the TV
+  /// (`vtt.setDmOverlays`). [overlays] are [DmOverlay.toJson] maps, bottom
+  /// layer first; [rev] is the phone's edit revision the TV echoes back in
+  /// `vtt.fullState` ([VttState.dmOverlaysRev]). The TV stores the list but
+  /// never shows the pictures.
+  void sendSetDmOverlays(List<Map<String, dynamic>> overlays, int rev) =>
+      _send({'type': 'vtt.setDmOverlays', 'overlays': overlays, 'rev': rev});
+
   // --- Navigation commands (companion → table) ---
 
   /// Navigates the TV to the map library view.

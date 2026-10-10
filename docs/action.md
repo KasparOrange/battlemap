@@ -83,6 +83,15 @@ fixed (archive 26-10-10 "UX review fixes"). Open, with the recommendation:
 Not testable on the bench: pinch/two-finger pan, the real Xiaomi remote.
 
 ## kept on purpose: direct TV connection (no relay)
+## DM layers (2026-10-10, 1.1.6+16) — needs a device test
+
+Companion Layers tab: DM-only pictures over the map (archive 26-10-10 "DM-only picture
+layers"). Web build deployed to the VPS; **the box still runs 1.1.5+15**, which ignores
+`vtt.setDmOverlays` — layers work on the tablet but are not saved with the session until the
+box gets a 1.1.6 APK. Check on the tablet: add 2–3 pictures at once (and a PDF), eye, opacity,
+up/down, delete + undo, master eye; reload the page → layers come back (needs the new APK);
+the TV never shows them.
+
 
 `lib/network/vtt_server.dart` + `vtt_server_stub.dart` are the original pre-relay design:
 the TV hosts a WebSocket server on the LAN and the phone connects to its IP. Unreferenced

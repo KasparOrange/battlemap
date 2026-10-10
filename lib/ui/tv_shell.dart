@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../game/vtt_game.dart';
+import '../model/dm_overlay.dart';
 import '../model/draw_stroke.dart';
 import '../model/map_library_entry.dart';
 import '../model/map_token.dart';
@@ -724,6 +725,8 @@ class _TvShellState extends State<TvShell> {
       _state.rulerY = session.rulerY;
       _state.rulerRotation = session.rulerRotation;
       _state.scaleSliderFactor = session.scaleSliderFactor;
+      _state.dmOverlays =
+          session.dmOverlayData.map((o) => DmOverlay.fromJson(o)).toList();
       _state.sessionSettings = session.settings.copy();
       final modeName = session.interactionMode;
       _state.interactionMode = InteractionMode.values.firstWhere(
@@ -851,6 +854,7 @@ class _TvShellState extends State<TvShell> {
       rulerY: _state.rulerY,
       rulerRotation: _state.rulerRotation,
       scaleSliderFactor: _state.scaleSliderFactor,
+      dmOverlayData: _state.dmOverlays.map((o) => o.toJson()).toList(),
       cameraX: (camera['x'] as num).toDouble(),
       cameraY: (camera['y'] as num).toDouble(),
       cameraZoom: (camera['zoom'] as num).toDouble(),
@@ -1317,6 +1321,15 @@ class _TvShellState extends State<TvShell> {
           _state.rotateRulerCW();
         case 'vtt.setScaleFactor':
           _state.setScaleFactor((msg['factor'] as num).toDouble());
+
+        // DM-only picture layers: stored with the session, never drawn here
+        case 'vtt.setDmOverlays':
+          _state.setDmOverlaysFromRemote(
+            (msg['overlays'] as List? ?? const [])
+                .map((o) => DmOverlay.fromJson(Map<String, dynamic>.from(o as Map)))
+                .toList(),
+            (msg['rev'] as num?)?.toInt() ?? 0,
+          );
 
         // Session settings
         case 'vtt.updateSessionSettings':

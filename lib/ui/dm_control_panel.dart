@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../game/dm_overlay_images.dart';
 import '../model/aoe_template.dart';
+import '../model/dm_overlay.dart';
 import '../model/map_token.dart';
 import '../model/session.dart';
 import '../state/vtt_state.dart';
@@ -233,6 +235,14 @@ class DmCallbacks {
   /// Fits the whole map into the phone screen (phone camera only).
   final VoidCallback? onPhoneZoomToFit;
 
+  // ── DM picture layers ─────────────────────────────────────────────
+
+  /// Opens a picker for one or more pictures (or PDFs) to add as DM-only
+  /// layers. The Layers tab is shown only when this is provided. Edits of
+  /// existing layers go straight to [VttState] (its
+  /// [VttState.onDmOverlaysChanged] hook forwards them).
+  final VoidCallback? onAddDmOverlays;
+
   /// Creates a [DmCallbacks] with all required action handlers.
   const DmCallbacks({
     required this.onLoadMap,
@@ -281,13 +291,14 @@ class DmCallbacks {
     this.onSendView,
     this.onMatchTv,
     this.onPhoneZoomToFit,
+    this.onAddDmOverlays,
   });
 }
 
 /// DM control panel — a bottom sheet with a tab bar at the bottom edge.
 ///
 /// Designed for one-handed phone use: the tab bar (Combat, Fog, Draw,
-/// Measure, Camera, Settings) sits at the bottom within thumb reach, the
+/// Measure, Layers, Camera, Settings) sits at the bottom within thumb reach, the
 /// active tab's content opens above it, and tapping the active tab again
 /// collapses the content so only the tab bar remains. All targets are at
 /// least 44 px high with 14 px text and 20 px icons.
@@ -308,11 +319,24 @@ class DmControlPanel extends StatefulWidget {
   /// Action handlers invoked when the DM taps panel controls.
   final DmCallbacks callbacks;
 
+  /// The DM layer picture cache, for each layer's load status in the
+  /// Layers tab (`null` = no status shown).
+  final DmOverlayImages? dmOverlayImages;
+
+  /// Progress `0.0`–`1.0` of a running layer upload, `null` when idle.
+  final double? dmOverlayUploadProgress;
+
+  /// What the running layer upload is doing ("Uploading 2 of 3…").
+  final String? dmOverlayUploadLabel;
+
   /// Creates a DM control panel bound to [state] and [callbacks].
   const DmControlPanel({
     super.key,
     required this.state,
     required this.callbacks,
+    this.dmOverlayImages,
+    this.dmOverlayUploadProgress,
+    this.dmOverlayUploadLabel,
   });
 
   @override
@@ -332,6 +356,10 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// Whether "link TV to phone" is on (panel-local UI state).
   bool _cameraLinked = false;
 
+  /// Slider positions of DM layers whose opacity is being dragged (layer
+  /// id → value); the map previews live, the TV gets the value on release.
+  final Map<String, double> _opacityPreview = {};
+
   VttState get state => widget.state;
   DmCallbacks get cb => widget.callbacks;
 
@@ -343,6 +371,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
     (Icons.straighten, 'Measure', 'measure'),
     (Icons.videocam, 'Camera', 'camera'),
     (Icons.tune, 'Settings', 'settings'),
+    (Icons.layers, 'Layers', 'layers'),
   ];
 
   /// Returns the list of tabs visible given current [SessionSettings].
@@ -351,6 +380,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// - Combat tab hidden when tokens + hpBars + conditions + aoeTemplates all off
   /// - Draw tab hidden when drawingTools off
   /// - Measure tab hidden when measureTool off
+  /// - Layers tab (DM-only pictures) shown when the host provides
+  ///   [DmCallbacks.onAddDmOverlays]
   /// - Fog, Camera, Settings are always shown
   List<(IconData, String, String)> get _visibleTabs {
     final s = state.sessionSettings;
@@ -360,6 +391,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
       _allTabs[1],                // Fog (always)
       if (s.drawingTools) _allTabs[2], // Draw
       if (s.measureTool) _allTabs[3],  // Measure
+      if (cb.onAddDmOverlays != null) _allTabs[6], // Layers
       _allTabs[4],                // Camera (always)
       _allTabs[5],                // Settings (always)
     ];
@@ -525,6 +557,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
         return _buildCameraTab();
       case 'settings':
         return _buildSettingsTab();
+      case 'layers':
+        return _buildLayersTab();
       default:
         return const SizedBox.shrink();
     }
@@ -1408,6 +1442,197 @@ class _DmControlPanelState extends State<DmControlPanel> {
         ),
       ],
     );
+  }
+
+  // ─── Layers Tab ──────────────────────────────────────────
+
+  /// Builds the Layers tab: DM-only pictures over the map (this device
+  /// only, never on the TV).
+  ///
+  /// A master eye ([VttState.showDmOverlays]), "Add pictures"
+  /// ([DmCallbacks.onAddDmOverlays]) with upload progress, and one card per
+  /// layer, top layer first: eye, name + load status, move up/down, delete
+  /// (with an undo snackbar), and an opacity slider.
+  Widget _buildLayersTab() {
+    final layers = state.dmOverlays;
+    final uploading = widget.dmOverlayUploadProgress != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Pictures only you see, laid over the map — a DM version of the map, notes, secrets. The TV never shows them.',
+          style: TextStyle(color: _kTextSecondary, fontSize: 12),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.add_photo_alternate,
+                label: uploading ? 'Uploading…' : 'Add pictures',
+                onTap: uploading ? () {} : cb.onAddDmOverlays!,
+              ),
+            ),
+            if (layers.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Expanded(
+                child: _GoldToggle(
+                  icon: state.showDmOverlays ? Icons.visibility : Icons.visibility_off,
+                  label: 'Show layers',
+                  active: state.showDmOverlays,
+                  onTap: state.toggleShowDmOverlays,
+                ),
+              ),
+            ],
+          ],
+        ),
+        if (uploading) ...[
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: widget.dmOverlayUploadProgress,
+            color: _kAccentGold,
+            backgroundColor: _kAccentGoldDim.withValues(alpha: 0.3),
+          ),
+          if (widget.dmOverlayUploadLabel != null) ...[
+            const SizedBox(height: 4),
+            Text(widget.dmOverlayUploadLabel!,
+                style: const TextStyle(color: _kTextSecondary, fontSize: 12)),
+          ],
+        ],
+        const SizedBox(height: 10),
+        if (layers.isEmpty)
+          const Text(
+            'No layers yet. PNG, JPG, WebP or PDF (page 1); pick several at once.',
+            style: TextStyle(color: _kTextSecondary, fontSize: _kText),
+          )
+        else ...[
+          _GoldLabel('Layers (${layers.length}) — top first'),
+          const SizedBox(height: 4),
+          for (int i = layers.length - 1; i >= 0; i--)
+            _buildLayerCard(layers[i], isTop: i == layers.length - 1, isBottom: i == 0),
+        ],
+      ],
+    );
+  }
+
+  /// One layer card in the Layers tab (see [_buildLayersTab]).
+  Widget _buildLayerCard(DmOverlay layer, {required bool isTop, required bool isBottom}) {
+    final opacity = _opacityPreview[layer.id] ?? layer.opacity;
+    final status = widget.dmOverlayImages?.statusOf(layer.id);
+    final statusText = !layer.visible || !state.showDmOverlays
+        ? null
+        : switch (status) {
+            DmOverlayImageStatus.loading => 'Loading…',
+            DmOverlayImageStatus.failed => "Couldn't load — hide and show to retry",
+            _ => null,
+          };
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.fromLTRB(0, 2, 4, 2),
+      decoration: BoxDecoration(
+        color: layer.visible ? _kSurfaceActive : _kSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: layer.visible ? _kAccentGoldDim : _kBorderGold),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              _IconTarget(
+                icon: layer.visible ? Icons.visibility : Icons.visibility_off,
+                onTap: () => state.setDmOverlayVisible(layer.id, !layer.visible),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      layer.name,
+                      style: TextStyle(
+                        color: layer.visible ? _kTextPrimary : _kTextSecondary,
+                        fontSize: _kText,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (statusText != null)
+                      Text(
+                        statusText,
+                        style: TextStyle(
+                          color: status == DmOverlayImageStatus.failed
+                              ? Colors.redAccent
+                              : _kTextSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              _IconTarget(
+                icon: Icons.arrow_upward,
+                enabled: !isTop,
+                onTap: () => state.moveDmOverlay(layer.id, 1),
+              ),
+              _IconTarget(
+                icon: Icons.arrow_downward,
+                enabled: !isBottom,
+                onTap: () => state.moveDmOverlay(layer.id, -1),
+              ),
+              _IconTarget(
+                icon: Icons.delete_outline,
+                onTap: () => _removeLayer(layer),
+              ),
+            ],
+          ),
+          if (layer.visible)
+            Row(
+              children: [
+                const SizedBox(width: 12),
+                const Icon(Icons.opacity, color: _kAccentGoldDim, size: 18),
+                Expanded(
+                  child: _goldSlider(
+                    value: opacity,
+                    min: 0,
+                    max: 1,
+                    onChanged: (v) {
+                      setState(() => _opacityPreview[layer.id] = v);
+                      state.setDmOverlayOpacity(layer.id, v, forward: false);
+                    },
+                    onChangeEnd: (v) {
+                      setState(() => _opacityPreview.remove(layer.id));
+                      state.setDmOverlayOpacity(layer.id, v);
+                    },
+                  ),
+                ),
+                SizedBox(
+                  width: 40,
+                  child: Text(
+                    '${(opacity * 100).round()}%',
+                    style: const TextStyle(color: _kTextSecondary, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Removes [layer] and offers to put it back.
+  void _removeLayer(DmOverlay layer) {
+    final removed = state.removeDmOverlay(layer.id);
+    if (removed == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      content: Text('Removed "${layer.name}"'),
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 4),
+      action: SnackBarAction(
+        label: 'Undo',
+        onPressed: () => state.insertDmOverlay(removed.index, removed.overlay),
+      ),
+    ));
   }
 
   // ─── Settings Tab ────────────────────────────────────────

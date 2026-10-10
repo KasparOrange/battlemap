@@ -11,6 +11,7 @@ import '../model/draw_stroke.dart';
 import '../model/uvtt_map.dart';
 import '../state/vtt_state.dart';
 import 'components/aoe_template_component.dart';
+import 'components/dm_overlay_component.dart';
 import 'components/fog_of_war_component.dart';
 import 'components/global_effects_component.dart';
 import 'components/grid_overlay_component.dart';
@@ -24,6 +25,7 @@ import 'components/token_layer.dart';
 import 'components/torch_glow_component.dart';
 import 'components/tv_viewport_component.dart';
 import 'components/wall_component.dart';
+import 'dm_overlay_images.dart';
 import 'wall_grid.dart';
 
 export 'components/tv_viewport_component.dart' show CameraSnapshot;
@@ -57,6 +59,13 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// than the phone preview (free camera, TV viewport overlay).
   final bool isDisplay;
 
+  /// Picture cache for the DM-only layers ([VttState.dmOverlays]).
+  ///
+  /// Only the companion passes one; without it (the TV) no
+  /// [DmOverlayComponent] exists, so the TV cannot show DM layers no matter
+  /// what the state says.
+  final DmOverlayImages? dmOverlayImages;
+
   VttMapImageComponent? _mapImage;
 
   /// The [UvttMap] whose components are (being) built — compared by identity
@@ -70,6 +79,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   WallComponent? _wallComponent;
   final List<PortalComponent> _portalComponents = [];
   FogOfWarComponent? _fogOfWar;
+  DmOverlayComponent? _dmOverlays;
   StrokesComponent? _strokes;
   LiveStrokeComponent? _liveStroke;
   TokenLayer? _tokenLayer;
@@ -134,7 +144,8 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
 
   /// Creates the game for [state]. [isDisplay] is `true` on the TV and in
   /// the companion's local mode, `false` for the networked phone preview.
-  VttGame({required this.state, this.isDisplay = true});
+  /// Pass [dmOverlayImages] on the DM's device only (see the field).
+  VttGame({required this.state, this.isDisplay = true, this.dmOverlayImages});
 
   @override
   Color backgroundColor() => const Color(0xFF111111);
@@ -327,6 +338,16 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     _fogOfWar!.isVisible = state.fogEnabled;
     world.add(_fogOfWar!);
 
+    // DM-only picture layers (priority 12 — above the fog, companion only)
+    if (dmOverlayImages != null) {
+      _dmOverlays = DmOverlayComponent(
+        state: state,
+        images: dmOverlayImages!,
+        mapSize: mapSizeVec,
+      );
+      world.add(_dmOverlays!);
+    }
+
     // AoE template overlay (priority 15)
     _aoeComponent = AoeTemplateComponent(
       state: state,
@@ -433,6 +454,8 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     _portalComponents.clear();
     _fogOfWar?.removeFromParent();
     _fogOfWar = null;
+    _dmOverlays?.removeFromParent();
+    _dmOverlays = null;
     _aoeComponent?.removeFromParent();
     _aoeComponent = null;
     _measure?.removeFromParent();

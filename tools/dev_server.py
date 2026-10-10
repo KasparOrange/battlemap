@@ -4,6 +4,7 @@
 Endpoints:
   GET  /*           — serve static files from build/web/
   POST /upload      — upload a .dd2vtt file, returns {"filename": "..."}
+  PUT  /upload/dm/<name> — DM-only layer picture, kept in uploads/dm/ (no cleanup)
   GET  /uploads/*   — serve uploaded files
   POST /*           — receive browser console logs (legacy)
   OPTIONS /*        — CORS preflight
@@ -19,10 +20,14 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 
 WEB_DIR = os.environ.get("BATTLEMAP_WEB_DIR", "/home/kaspar/battlemap/build/web")
 UPLOAD_DIR = os.path.join(WEB_DIR, "uploads")
+# DM-only layer pictures (companion "Layers" tab). They belong to saved
+# sessions, so cleanup_old_uploads() (top-level files only) never touches them.
+DM_UPLOAD_DIR = os.path.join(UPLOAD_DIR, "dm")
 MAX_UPLOAD_SIZE = 200 * 1024 * 1024  # 200 MB
 UPLOAD_MAX_AGE_DAYS = 7
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(DM_UPLOAD_DIR, exist_ok=True)
 
 
 def cleanup_old_uploads():
@@ -67,6 +72,8 @@ class DevHandler(SimpleHTTPRequestHandler):
         # Generate unique filename to avoid collisions
         ext = os.path.splitext(original_name)[1] or ".dd2vtt"
         filename = f"{uuid.uuid4().hex[:12]}{ext}"
+        if original_name.startswith("dm/"):
+            filename = f"dm/{filename}"  # DM layer: kept, see DM_UPLOAD_DIR
         filepath = os.path.join(UPLOAD_DIR, filename)
 
         try:
