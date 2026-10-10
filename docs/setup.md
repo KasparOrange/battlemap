@@ -141,7 +141,10 @@ or from the Mac: `tools/deploy.sh tv` (rolling deploy, below). What it rests on,
   message) keeps re-registering and fights the native app for the companion slot — close it or
   point it at `about:blank` before opening Companion Mode in the app.
 - **tablet asleep**: when the tablet dozes, Android cuts the companion's relay socket
-  (logcat: `Software caused connection abort`); on wake it reconnects and the TV resends its game.
+  (logcat: `Software caused connection abort`; in MwLog `App lifecycle: paused`, then the relay's
+  `Disconnected closeCode=1006` ~5 s later). On wake it reconnects at once and the TV resends its
+  game; taps made while it was offline are dropped with "Not connected to the TV — that wasn't
+  sent" (since 1.1.15 — before, they waited in the socket and hit the TV all at once).
   Behind the PIN lock `latrine android shot` shows only black or the lock screen and adb can't
   unlock it — someone has to. `tools/tv_ctl.py status` says `"relayState": "paired"` once the
   companion is back (2026-10-10: the tablet slept right after `deploy.sh tablet`).
@@ -234,18 +237,18 @@ flutter build apk --release --dart-define=MWLOG_AUTH=$MWLOG_USER:$MWLOG_PASS
 # shorebird release / patch take the same --dart-define
 ```
 
-Query (from the Mac, my-tube repo — counts and capped samples, never dumps):
+Query from the Mac with `logq` (counts and capped samples, never dumps; `logq --help`):
 
 ```bash
-MWLOG_ENV=~/.config/mwlog/battlemap.env scripts/logq.sh count --since 2h
-MWLOG_ENV=~/.config/mwlog/battlemap.env scripts/logq.sh raw '_time:1d src:tv level:error'
-MWLOG_ENV=~/.config/mwlog/battlemap.env scripts/logq.sh grep 'paired|resume' --since 1d
+logq story --tenant battlemap --at 19:57 --around 5m    # "it broke at 19:57" — start here
+logq --tenant battlemap raw '_time:1d src:tv level:error'
+logq grep 'paired|resume' --tenant battlemap --since 1d
 python3 tools/diag.py status                         # query TV state (unchanged)
 ```
 
 Fields per entry: `app` (stream), `src` tv|companion|relay (stream), `level`, `tag`, `msg`, `ts`, plus
 whatever `extra` the call site adds. UI: `https://srv1189697.hstgr.cloud/select/vmui/` (admin,
-AccountID 2). `logq` (`~/.local/bin/logq --tenant battlemap`) is the quicker way from the Mac.
+AccountID 2).
 
 A line that can't be posted (the network is down — exactly when a relay drop happens) stays queued
 (up to 2000) and is retried every 5 s, so an outage's lines arrive afterwards.

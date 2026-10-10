@@ -63,7 +63,7 @@ See `docs/architecture.md` for the full system diagram. Key points:
 
 - **VPS relay** (`tools/vtt_relay.py`, port 9090) — WebSocket relay, both TV and phone connect as clients
 - **HTTP server** (`tools/dev_server.py`, port 4242) — serves web build, APK downloads, map file uploads
-- **Logs** go to MwLog (VictoriaLogs tenant `battlemap` on the same VPS) — `docs/setup.md` "logs"; `tools/log_server.py` is retired
+- **Logs** go to MwLog (VictoriaLogs tenant `battlemap` on the same VPS) from TV, companion and relay — `docs/setup.md` "logs" ("relay diagnostics" for drops and late commands); `tools/log_server.py` is retired
 - **Map files** travel phone → HTTP upload → VPS → HTTP download → TV (not through the relay)
 - **Commands** travel phone → relay → TV (small JSON messages)
 - **State** broadcasts TV → relay → phone (50ms throttle)

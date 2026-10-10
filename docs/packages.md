@@ -23,7 +23,7 @@ on the VPS). The battlemap is tenant `battlemap`; MyTube (the tvOS app) is tenan
 **why:** the old `tools/log_server.py` wrote to `/tmp` (lost at every reboot), only lived while
 someone started it by hand, and answering "what broke an hour ago" meant grepping a file over
 SSH. VictoriaLogs keeps 180 days, has a query language with regex + counts, a UI, and a
-token-cheap query script (`logq.sh` in the my-tube repo, `MWLOG_ENV=~/.config/mwlog/battlemap.env`).
+token-cheap query tool (`logq --tenant battlemap`, `~/.local/bin/logq`).
 
 **how:** `lib/network/remote_log.dart` posts JSON lines with basic auth; the credential comes from
 `--dart-define=MWLOG_AUTH=user:pass` (never in source — the repo is public). No new package.

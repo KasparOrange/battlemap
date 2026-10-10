@@ -39,7 +39,8 @@ enum LogLevel {
 ///
 /// Entries are batched in [_queue] and flushed asynchronously over HTTPS POST
 /// to `_remoteUrl` — MwLog (VictoriaLogs, tenant "battlemap"); query them with
-/// `logq.sh` from the my-tube repo or the vmui admin UI.
+/// `logq --tenant battlemap` or the vmui admin UI. The companion sets
+/// [setSource] to `companion`; the relay ships its own lines as `relay`.
 ///
 /// Use [debug], [info], [warn], or [error] for tagged level-aware logging.
 /// The legacy [send] and [sendEvent] entry points remain for compatibility

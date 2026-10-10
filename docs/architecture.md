@@ -23,7 +23,7 @@ tablet/phone (apk)      VPS (72.62.88.197)          TV (xiaomi box)
 - **commands** flow phone → relay → TV (fog reveal, token place, door toggle, navigation)
 - **state** flows TV → relay → phone (fullState broadcast every 50ms when paired)
 - **maps** flow phone → VPS HTTP → TV HTTP download (large files bypass the relay); PDFs are rasterized to PNG on the phone first, so the TV only ever loads `.dd2vtt` or images. Since 2026-10-10 every upload goes into the **shared map library** on the VPS (below) and the TV keeps its own copy
-- **logs** flow TV (APK) → MwLog, our VictoriaLogs tenant `battlemap` on the same VPS (structured JSON lines, basic auth baked in at build time — `docs/setup.md` "logs"). The old `log_server.py` / `/tmp/battlemap.log` are retired (2026-09-05).
+- **logs** flow TV and companion (APK, `src=tv` / `src=companion`) and the relay (`src=relay`) → MwLog, our VictoriaLogs tenant `battlemap` on the same VPS (structured JSON lines, basic auth baked in at build time — `docs/setup.md` "logs"; connection drops, outages and late commands: "relay diagnostics" there). The old `log_server.py` is retired (2026-09-05); `/tmp/battlemap.log` on the VPS now only holds the relay's per-message forwards.
 
 ## TV storage
 
