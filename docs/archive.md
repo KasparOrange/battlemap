@@ -1,7 +1,13 @@
 # Battlemap — archive (history, newest on top)
 
 Rule: **one entry per prompt that changed something** — in `docs/`, or in the code it
-governs. Never per session. Heading = `### YY-MM-DD HH:MM - <session id>`; body = nested
+governs. Never per session. Heading = `### 26-10-10 22:15 - TV set off - box stays awake for good, Juri gets the TV to-do
+- Konrad: the table TV went off (energy saving timer?) and the box remote does not bring it back — what happened; then: make the box robust and awake whenever in use; send Juri a to-do for the TV set's own buttons
+	- the box was fine (awake, 4 h uptime, not rebooted): at 21:40:02 the box logged the HDMI link lost — the old Thomson (TCL-built, EDID says TCL) hit its own 4 h auto standby; 6 s later a red-button press put the box to sleep. The TV NACKs every CEC message, so the box remote cannot wake it
+	- box: stay on while powered, screen timeout max, screensaver off, no CEC standby to the TV on sleep — set over latrine, `deploy.sh tv` reapplies it; `setup.md` "box asleep mid-game" + "TV set off, box fine"
+	- Juri on Telegram: switch off auto standby / no-signal power off / sleep timer from the TV's buttons, optional power-on-after-power-loss and T-Link
+
+### YY-MM-DD HH:MM - <session id>`; body = nested
 bullets. What was learned goes into the docs it belongs to (`architecture.md`, `setup.md`,
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.

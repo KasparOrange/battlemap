@@ -151,10 +151,22 @@ or from the Mac: `tools/deploy.sh tv` (rolling deploy, below). What it rests on,
 - **box asleep mid-game**: the TV app holds a wake lock (`WakelockPlus`, window flag
   `KEEP_SCREEN_ON`), but Google TV's energy saver — *inattentive sleep*, `secure
   attentive_timeout`, 4 h on the box — ignores wake locks and counts only remote keys, not the
-  tablet. After 4 h the box sleeps and HDMI-CEC switches the TV off. Set to `-1` (never) on the
-  box on 2026-10-10; `deploy.sh tv` sets it again on every deploy. Changing *Energy saver* in the
-  box's settings brings it back. Check: `dumpsys power | grep 'Attentive timeout'`. A TV set's own
-  "auto power off without remote input" (many TVs, often 4 h) is a separate menu on the TV.
+  tablet. Since 2026-10-10 the box stays awake in every app, home screen included, and
+  `deploy.sh tv` reapplies this on every deploy: `attentive_timeout -1`,
+  `global stay_on_while_plugged_in 7` (the box is always on mains, so it never sleeps),
+  `system screen_off_timeout` max, `secure sleep_timeout -1`, screensaver off
+  (`screensaver_enabled 0`, `screensaver_activate_on_sleep 0`), and
+  `cmd hdmi_control cec_setting set tv_send_standby_on_sleep 0` (the box no longer sends
+  the TV to standby when it sleeps). Changing *Energy saver* in the box's settings brings it
+  back. Check: `dumpsys power | grep -E 'Attentive timeout|mStayOn='`.
+- **TV set off, box fine** (2026-10-10, 21:40): the table TV is an old Thomson (made by TCL,
+  so its EDID says TCL). Its own EU auto standby turns it off 4 h after the last key on *its*
+  remote, and nothing on the box resets that. It doesn't answer HDMI-CEC (every
+  `<Text View On>` NACKs in `dumpsys hdmi_control`), so the box remote's red button only
+  toggles the box, not the TV. Wake it with the buttons on the TV itself; the auto standby has to
+  be switched off in the TV's menu, also from those buttons. How to tell which side died:
+  `latrine android info xiaomi` (box awake? uptime?), and the box's logcat shows
+  `hdcptx … link lost` when the TV goes away.
 
 ### rolling deploy (mid-game patch, since 2026-10-10)
 

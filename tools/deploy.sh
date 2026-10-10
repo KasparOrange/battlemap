@@ -16,7 +16,8 @@
 # (diag.status) → deploy.prepare (TV saves now, shows "Updating…", the tablet
 # gets a heads-up) → install -r over the Wi-Fi (data kept) → relaunch with the
 # route /restore?session=… → wait until the TV shows that game again.
-# Also switches the box's inattentive sleep off (it ignores the wake lock).
+# Also keeps the box awake for good (inattentive sleep, screen timeout,
+# screensaver off; no CEC standby to the TV) — docs/setup.md "box asleep mid-game".
 # tablet: install -r → relaunch with the route /companion (connects without
 # the mode selector; the TV resends its game). web: build → rsync to the VPS;
 # a tablet that uses the browser gets its Chrome tab reopened at …/#/companion.
@@ -104,8 +105,16 @@ if has tv; then
   t0=$(date +%s)
   # The app's wake lock keeps the screen on, but Google TV's energy saver
   # ("inattentive sleep", 4 h without a remote key) ignores wake locks and
-  # puts the box to sleep — HDMI-CEC then turns the TV off. Off for good.
-  latrine android shell "settings put secure attentive_timeout -1" "$TV_DEVICE" >/dev/null || true
+  # puts the box to sleep — HDMI-CEC then turns the TV off. Off for good,
+  # together with every other way the box dozes off: screen timeout (stay on
+  # while powered), screensaver, and the CEC standby it sends the TV on sleep.
+  latrine android shell "settings put secure attentive_timeout -1; \
+settings put global stay_on_while_plugged_in 7; \
+settings put system screen_off_timeout 2147483647; \
+settings put secure sleep_timeout -1; \
+settings put secure screensaver_enabled 0; \
+settings put secure screensaver_activate_on_sleep 0; \
+cmd hdmi_control cec_setting set tv_send_standby_on_sleep 0" "$TV_DEVICE" >/dev/null || true
   latrine android install "$APK" "$TV_DEVICE"
   latrine android shell "am start -S -n $PKG/.MainActivity --es route '$route'" "$TV_DEVICE" >/dev/null
   if [ "$view" = game ] && [ -n "$session" ]; then
