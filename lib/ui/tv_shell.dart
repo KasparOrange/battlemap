@@ -83,6 +83,10 @@ class _TvShellState extends State<TvShell> {
   // Relay
   late final VttRelayClient _relay;
   RelayConnectionState _relayState = RelayConnectionState.disconnected;
+
+  /// Focus of the "Take over" button shown after [RelayConnectionState.replaced],
+  /// so the remote's select key hits it right away (not the back arrow).
+  final FocusNode _takeOverFocus = FocusNode(debugLabel: 'takeOver');
   StreamSubscription<RelayConnectionState>? _relaySub;
   double? _transferProgress;
 
@@ -156,6 +160,7 @@ class _TvShellState extends State<TvShell> {
     _autoSaveTimer?.cancel();
     _relaySub?.cancel();
     _relay.dispose();
+    _takeOverFocus.dispose();
     _state.dispose();
     super.dispose();
   }
@@ -172,6 +177,12 @@ class _TvShellState extends State<TvShell> {
     _relaySub = _relay.stateStream.listen((s) {
       final wasPaired = _relayState == RelayConnectionState.paired;
       setState(() => _relayState = s);
+
+      if (s == RelayConnectionState.replaced) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _takeOverFocus.requestFocus();
+        });
+      }
 
       if (s == RelayConnectionState.paired) {
         RemoteLog.info('relay', 'Companion paired', {'state': 'paired'});
@@ -1394,6 +1405,8 @@ class _TvShellState extends State<TvShell> {
               RelayConnectionState.connecting => 'Connecting to relay...',
               RelayConnectionState.disconnected =>
                 'Connecting to ${RelayConfig.host}...',
+              RelayConnectionState.replaced =>
+                'Another TV took over the relay',
             },
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white38, fontSize: 18),
@@ -1515,8 +1528,13 @@ class _TvShellState extends State<TvShell> {
     );
   }
 
+  /// Builds the relay badge in the top-right corner.
+  ///
+  /// After [RelayConnectionState.replaced] (another TV registered as table)
+  /// it adds a focusable "Take over" button — reachable with the remote — that
+  /// calls [VttRelayClient.connect] to claim the relay slot back.
   Widget _buildRelayStatus() {
-    return Container(
+    final badge = Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black54,
@@ -1531,12 +1549,14 @@ class _TvShellState extends State<TvShell> {
               RelayConnectionState.connected => Icons.wifi_find,
               RelayConnectionState.connecting => Icons.cloud_sync,
               RelayConnectionState.disconnected => Icons.cloud_off,
+              RelayConnectionState.replaced => Icons.swap_horiz,
             },
             color: switch (_relayState) {
               RelayConnectionState.paired => Colors.greenAccent,
               RelayConnectionState.connected => Colors.orangeAccent,
               RelayConnectionState.connecting => Colors.orangeAccent,
               RelayConnectionState.disconnected => Colors.redAccent,
+              RelayConnectionState.replaced => Colors.redAccent,
             },
             size: 16,
           ),
@@ -1547,6 +1567,7 @@ class _TvShellState extends State<TvShell> {
               RelayConnectionState.connected => 'Waiting for companion...',
               RelayConnectionState.connecting => 'Connecting...',
               RelayConnectionState.disconnected => 'Disconnected',
+              RelayConnectionState.replaced => 'Another TV took over',
             },
             style: const TextStyle(
               color: Colors.white70,
@@ -1556,6 +1577,25 @@ class _TvShellState extends State<TvShell> {
           ),
         ],
       ),
+    );
+    if (_relayState != RelayConnectionState.replaced) return badge;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        badge,
+        const SizedBox(width: 8),
+        TextButton(
+          focusNode: _takeOverFocus,
+          onPressed: _relay.connect,
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white,
+            backgroundColor: Colors.black54,
+          ).copyWith(
+            overlayColor: WidgetStatePropertyAll(Colors.white.withValues(alpha: 0.2)),
+          ),
+          child: const Text('Take over'),
+        ),
+      ],
     );
   }
 

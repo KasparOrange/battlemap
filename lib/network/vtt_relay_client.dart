@@ -24,6 +24,12 @@ enum RelayConnectionState {
 
   /// Both table and companion are connected and messages flow freely.
   paired,
+
+  /// Another client registered with the same role and took over the relay
+  /// slot (the relay sent `replaced`). Automatic reconnection is off in this
+  /// state — otherwise two devices in the same role knock each other out
+  /// every second. Call [VttRelayClient.connect] to take the slot back.
+  replaced,
 }
 
 /// Unified WebSocket client that connects to the VPS relay server.
@@ -35,7 +41,8 @@ enum RelayConnectionState {
 ///
 /// Key features:
 /// - **Automatic reconnection** with exponential backoff (1 s, 3 s, 10 s,
-///   30 s, 60 s) after disconnects or send failures.
+///   30 s, 60 s) after disconnects or send failures — except after the relay
+///   says `replaced` ([RelayConnectionState.replaced]).
 /// - **Heartbeat** — sends a `ping` every 15 seconds and forces a reconnect
 ///   if no data arrives within 30 seconds.
 /// - **Chunked map transfer** — large binary map files are base64-encoded,
@@ -148,6 +155,10 @@ class VttRelayClient {
   Timer? _heartbeatTimer;
   bool _intentionalClose = false;
 
+  /// Set when the relay sent `replaced`: another device took this role, so
+  /// the client stays disconnected until [connect] is called again.
+  bool _replaced = false;
+
   // Heartbeat tracking
   DateTime _lastDataReceived = DateTime.now();
   static const Duration _pingInterval = Duration(seconds: 15);
@@ -211,13 +222,17 @@ class VttRelayClient {
   /// After calling this, listen to [stateStream] to observe connection
   /// progress. If the connection drops, the client automatically
   /// reconnects with exponential backoff.
+  ///
+  /// Also the way back after [RelayConnectionState.replaced]: registering
+  /// again takes the slot from whichever device holds it now.
   void connect() {
     _intentionalClose = false;
+    _replaced = false;
     _doConnect();
   }
 
   void _doConnect() {
-    if (_intentionalClose) return;
+    if (_intentionalClose || _replaced) return;
     _setState(RelayConnectionState.connecting);
 
     try {
@@ -274,6 +289,16 @@ class VttRelayClient {
         case 'pong':
           // Just update _lastDataReceived (already done above)
           break;
+
+        case 'replaced':
+          // Another device registered with our role. Stop here instead of
+          // reconnecting, or the two would take the slot from each other
+          // forever. The relay closes the socket right after this message.
+          _replaced = true;
+          _reconnectTimer?.cancel();
+          _stopHeartbeat();
+          _setState(RelayConnectionState.replaced);
+          debugPrint('VTT relay: replaced by another $role, not reconnecting');
 
         case 'peer_connected':
           _setState(RelayConnectionState.paired);
@@ -847,14 +872,14 @@ class VttRelayClient {
     _channel = null;
     _mapChunks = null;
     _mapChunksReceived = 0;
-    if (!_intentionalClose) {
+    if (!_intentionalClose && !_replaced) {
       _setState(RelayConnectionState.disconnected);
       _scheduleReconnect();
     }
   }
 
   void _scheduleReconnect() {
-    if (_intentionalClose) return;
+    if (_intentionalClose || _replaced) return;
     _reconnectTimer?.cancel();
     final backoffIndex = _reconnectAttempt.clamp(0, _backoffSeconds.length - 1);
     final delay = _backoffSeconds[backoffIndex];

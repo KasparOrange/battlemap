@@ -38,6 +38,31 @@ void main() {
     });
   });
 
+  group('replaced message', () {
+    test('sets state to replaced and keeps it', () async {
+      client.handleIncomingMessage(
+          jsonEncode({'type': 'registered', 'paired': true}));
+      client.handleIncomingMessage(
+          jsonEncode({'type': 'replaced', 'role': 'table'}));
+
+      expect(client.connectionState, RelayConnectionState.replaced);
+
+      // No reconnect fires: the 1 s backoff would have flipped the state.
+      await Future<void>.delayed(const Duration(milliseconds: 1200));
+      expect(client.connectionState, RelayConnectionState.replaced);
+    });
+
+    test('is not forwarded to onCommand', () {
+      final commands = <Map<String, dynamic>>[];
+      client.onCommand = commands.add;
+
+      client.handleIncomingMessage(
+          jsonEncode({'type': 'replaced', 'role': 'table'}));
+
+      expect(commands, isEmpty);
+    });
+  });
+
   group('peer_connected / peer_disconnected', () {
     test('peer_connected sets state to paired', () {
       client.handleIncomingMessage(

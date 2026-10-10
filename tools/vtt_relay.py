@@ -183,6 +183,13 @@ async def handler(ws, path=None):
                 if old and old != ws:
                     log.info("replace  %s (old connection)", role)
                     try:
+                        # Tell the old client why, so it stops auto-reconnecting
+                        # (two devices in one role would otherwise swap the slot
+                        # every second).
+                        await old.send(json.dumps({"type": "replaced", "role": role}))
+                    except Exception:
+                        pass
+                    try:
                         await old.close()
                     except Exception:
                         pass

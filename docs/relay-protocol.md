@@ -9,7 +9,15 @@ client → relay:  {"type": "register", "role": "table"|"companion"}
 relay → client:  {"type": "registered", "role": "...", "paired": true|false}
 relay → client:  {"type": "peer_connected"}
 relay → client:  {"type": "peer_disconnected"}
+relay → client:  {"type": "replaced", "role": "..."}   (to the OLD client, right before closing it)
 ```
+
+one slot per role, last registration wins (a restarted TV takes over its own zombie). the
+replaced client gets `replaced` and **stops auto-reconnecting** (`RelayConnectionState.replaced`):
+before 2026-10-10 two devices in one role took the slot from each other every second, both
+badges flashing. the TV then shows "Another TV took over" + a focused "Take over" button, the
+companion a "Reconnect" snackbar / button; both call `connect()` to claim the slot back.
+clients older than that ignore `replaced` and keep the old swap behaviour.
 
 ## heartbeat
 

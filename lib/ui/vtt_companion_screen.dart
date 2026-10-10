@@ -328,9 +328,20 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         DevLog.add('Companion: relay disconnected');
       } else if (s == RelayConnectionState.connected) {
         DevLog.add('Companion: relay connected, waiting for TV');
+      } else if (s == RelayConnectionState.replaced) {
+        DevLog.add('Companion: another companion took over the relay');
       }
       if (!mounted) return;
       setState(() => _relayState = s);
+      if (s == RelayConnectionState.replaced) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Text('Another phone took over the TV'),
+          duration: const Duration(days: 1),
+          action: SnackBarAction(label: 'Reconnect', onPressed: _relay!.connect),
+        ));
+      } else {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
     });
     _relay!.connect();
   }
@@ -912,13 +923,22 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-              _relayState == RelayConnectionState.paired
-                  ? 'Connected to TV'
-                  : _relayState == RelayConnectionState.connected
-                      ? 'Waiting for the TV...'
-                      : 'Connecting...',
+              switch (_relayState) {
+                RelayConnectionState.paired => 'Connected to TV',
+                RelayConnectionState.connected => 'Waiting for the TV...',
+                RelayConnectionState.replaced => 'Another phone took over the TV',
+                _ => 'Connecting...',
+              },
               style: const TextStyle(color: Colors.white38, fontSize: 18),
             ),
+            if (_relayState == RelayConnectionState.replaced) ...[
+              const SizedBox(height: 16),
+              FilledButton(
+                autofocus: true,
+                onPressed: _relay!.connect,
+                child: const Text('Reconnect'),
+              ),
+            ],
           ],
         );
   }
@@ -1444,6 +1464,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       case RelayConnectionState.connecting:
         dotColor = Colors.orangeAccent;
       case RelayConnectionState.disconnected:
+      case RelayConnectionState.replaced:
         dotColor = Colors.redAccent;
     }
 
