@@ -56,6 +56,8 @@ ms, its own clock). the receiver logs a message older than 1.5 s as `Late messag
 {"type": "lib.deleteSession", "sessionId": "uuid"}
 {"type": "lib.renameSession", "sessionId": "uuid", "name": "new name"}
 {"type": "lib.getThumbnail", "mapId": "uuid"}     // since 2026-10-10; ignored if the map has none
+{"type": "lib.openSharedMap", "map": {<shared library entry>}, "intoGame": true,
+ "name": "Session 1 · Sat 10 Oct", "settings": {...}}   // since 2026-10-10, see "shared map library"
 ```
 
 ## library (table → companion)
@@ -69,7 +71,49 @@ Each listed map carries `thumbnailAvailable`. The companion asks for those once 
 (`lib.getThumbnail`); the TV makes missing ones after every listing while it shows the library
 and pushes each `lib.thumbnail` unasked as soon as it's ready (`docs/sessions.md` "thumbnails").
 
+## games with several maps (since 2026-10-10)
+
+```
+companion → table:  {"type": "vtt.switchMap", "mapId": "uuid"}   // a TV library map id
+```
+
+Puts another map on the table **in the running game**: the TV saves the game, parks the current
+map's fog, doors, tokens, drawings, layers, ruler and table window in the session
+(`Session.switchTo`, `docs/sessions.md` "several maps") and resumes the game on `mapId` — its own
+state back if it was played in this game, a fresh start otherwise (the map joins the game). The
+map then reaches the companion as on a resume (`vtt.downloadMap` or chunks) and `vtt.fullState`
+names the game's maps in `sessionMapIds`. A `tv.error` outside a game or for a map the TV doesn't
+have. Maps new to the TV come in with `lib.openSharedMap` + `intoGame`.
+
+## shared map library (since 2026-10-10)
+
+Maps kept on the VPS for every game and every TV, filled from the companion (its "Shared library"
+sheet; every map uploaded from the device lands here too). HTTP on the dev server (`tools/dev_server.py`,
+files in `uploads/library/`, outside the 7-day cleanup):
+
+```
+GET    /library                          → {"maps": [entry, ...]}   newest first
+PUT    /library/<file name>?meta=<json>  → entry      meta: name, kind (vtt|image), gridCols, gridRows, hasOwnGrid, grid
+PUT    /library/<id>/thumb               → entry      PNG made by the companion (MapThumbnails, 288 px)
+DELETE /library/<id>                     → {"deleted": id}   TVs keep their copies
+```
+
+An entry: `{"id": "aaffcbed3573", "name": "Tower floor 2", "kind": "image", "gridCols": 20,
+"gridRows": 15, "hasOwnGrid": true, "grid": {...}?, "file": "aaffcbed3573.png", "url":
+"/uploads/library/aaffcbed3573.png", "thumbUrl": "/uploads/library/aaffcbed3573.thumb.png" | null,
+"size": 7, "addedAt": "2026-10-10T18:01:04+00:00"}` — paths are relative, each device prefixes its
+own dev server.
+
+`lib.openSharedMap` (companion → table) sends such an entry as `map`: the TV reuses its copy when a
+library map carries that `serverMapId`, else downloads the file and adds it (picture maps with their
+squares, `grid` and `hasOwnGrid` → `drawGrid: false`). `intoGame: true` with a game open → the map
+joins it (as `vtt.switchMap`); otherwise a new game named `name` with `settings` starts on it. The
+companion keeps the bytes it just uploaded and skips the download when the TV names that file.
+
 ## map transfer
+
+Since 2026-10-10 the companion uploads every map into the shared library (above) and opens it with
+`lib.openSharedMap`; the uploads below are what older companions (and `tools/bench_bot.py`) send.
 
 ### upload UVTT (phone → VPS → TV)
 1. phone HTTP PUTs file to `http://VPS:4242/upload/<filename>`
@@ -274,6 +318,7 @@ sent every 50ms when state changes:
   "tvView": "game",
   "activeMapId": "uuid",
   "activeSessionId": "uuid",
+  "sessionMapIds": ["uuid", "uuid"],    // since 2026-10-10: the game's maps in the order they joined (activeMapId among them); [] outside a game
   "hasMap": true,
   "revealedCells": [0, 1, 42, ...],
   "openPortals": [0, 3],

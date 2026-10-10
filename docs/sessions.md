@@ -36,6 +36,20 @@ sessions are stored on the TV's local disk and survive app restarts and updates.
 | `drawColor/drawWidth` | drawing tool settings |
 | `dmOverlayData` | DM-only picture layers (id, name, VPS url, visible, opacity) — stored for the phone, never drawn on the TV |
 
+## several maps in one game (since 2026-10-10)
+
+a session can hold more than one map. `mapId` is the map on the table and the fields above are
+its state; `mapIds` lists every map of the game in the order it joined, and `parkedMaps` keeps the
+state of each other map by map id — the per-map fields (`Session.perMapKeys`: fog, doors, grid
+and fog switches, table window, `mapFit`, tokens, drawings, map kind, ruler, DM layers, camera).
+switching (`Session.switchTo`) parks the table's map and brings the target's state back, or a
+fresh start for a map new to the game. name, settings, brush, draw colour and interaction mode
+belong to the game and carry over. sessions saved earlier load with one map.
+
+the library lists a game under the map on its table. deleting a map from the TV's library removes
+it from every game holding it (`Session.withoutMap`); a game whose only map it was is deleted, one
+that had it on the table moves on to its first other map.
+
 ## what triggers auto-save
 
 auto-save fires 2 seconds after the last state change. this batches rapid changes (like painting fog) into a single save. a pending save is flushed immediately before the session changes (new session, resume, back to the library) — before 2026-10-10 a switch inside the 2 s window lost the last edits. triggers:
@@ -84,4 +98,5 @@ session thumbnails (with the fog) are not built; the library's "Continue" card u
 
 sessions are JSON strings in the Hive box `sessions`, keyed by uuid. the session references a map by ID (the map is stored separately in the library, box `mapFiles`).
 
-if a map is deleted, all its sessions are deleted too.
+if a map is deleted, games that hold other maps keep those (see "several maps in one game");
+games on that map alone are deleted.
