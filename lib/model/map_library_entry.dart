@@ -1,3 +1,5 @@
+import 'raster_grid.dart';
+
 /// Metadata for a map stored in the TV's local [MapLibrary].
 ///
 /// Each entry corresponds to a `.dd2vtt` file or a PDF file on disk,
@@ -92,6 +94,14 @@ class MapLibraryEntry {
   /// starts the same way. The session records it too ([MapFit.drawGrid]).
   bool? drawGrid;
 
+  /// Where the squares lie on a picture map ([isImage] / [isPdf]), or
+  /// `null` = [pdfGridCols] × [pdfGridRows] stretched over the whole
+  /// picture (every map before 2026-10-10).
+  ///
+  /// Set by the upload (a detected or fine-tuned grid) and by re-gridding
+  /// in a game; its counts equal [pdfGridCols]/[pdfGridRows].
+  final RasterGrid? rasterGrid;
+
   /// Creates a [MapLibraryEntry] with the required metadata fields.
   ///
   /// For PDF maps, set [isPdf] to `true`. For raster image maps, set
@@ -113,12 +123,15 @@ class MapLibraryEntry {
     this.thumbnailPath,
     this.vpsUrl,
     this.drawGrid,
+    this.rasterGrid,
   });
 
   /// A copy with a new grid of [cols] × [rows] squares — for raster maps
   /// re-gridded in a game (`vtt.setMapGrid`), which sets both the listed
-  /// [gridCols]/[gridRows] and the user-configured [pdfGridCols]/[pdfGridRows].
-  MapLibraryEntry withGrid(int cols, int rows) => MapLibraryEntry(
+  /// [gridCols]/[gridRows] and the user-configured [pdfGridCols]/[pdfGridRows]
+  /// — placed by [grid] (`null` = stretched over the whole picture).
+  MapLibraryEntry withGrid(int cols, int rows, {RasterGrid? grid}) =>
+      MapLibraryEntry(
         id: id,
         displayName: displayName,
         fileSizeBytes: fileSizeBytes,
@@ -133,6 +146,7 @@ class MapLibraryEntry {
         thumbnailPath: thumbnailPath,
         vpsUrl: vpsUrl,
         drawGrid: drawGrid,
+        rasterGrid: grid,
       );
 
   /// Serializes this entry to a JSON-compatible map.
@@ -155,6 +169,7 @@ class MapLibraryEntry {
         'thumbnailPath': thumbnailPath,
         'vpsUrl': vpsUrl,
         'drawGrid': drawGrid,
+        if (rasterGrid != null) 'rasterGrid': rasterGrid!.toJson(),
       };
 
   /// Deserializes a [MapLibraryEntry] from a JSON map.
@@ -180,5 +195,6 @@ class MapLibraryEntry {
         thumbnailPath: json['thumbnailPath'] as String?,
         vpsUrl: json['vpsUrl'] as String?,
         drawGrid: json['drawGrid'] as bool?,
+        rasterGrid: RasterGrid.fromJson(json['rasterGrid']),
       );
 }

@@ -5,15 +5,17 @@ import 'package:flutter/material.dart';
 
 import '../../state/vtt_state.dart';
 import '../dm_overlay_images.dart';
+import 'map_image_component.dart';
 
 /// Draws the DM-only picture layers ([VttState.dmOverlays]) — companion only.
 ///
 /// Priority 12: above the fog (10), so secrets in unrevealed rooms stay
 /// readable through the DM's dark fog, below the AoE template (15),
 /// measure line, ruler and TV frame. Layers are drawn bottom-first, each
-/// with its own opacity, fitted inside the map bounds keeping the aspect
+/// with its own opacity, fitted inside the map picture keeping the aspect
 /// ratio and centered — a DM version of the map (same proportions) lines
-/// up exactly with the map.
+/// up exactly with the map, also under a picture grid
+/// ([VttState.rasterGrid]).
 ///
 /// Draws nothing while [VttState.showDmOverlays] is off. Pictures that are
 /// still loading are skipped.
@@ -45,7 +47,14 @@ class DmOverlayComponent extends PositionComponent {
       if (image == null) continue;
       final iw = image.width.toDouble();
       final ih = image.height.toDouble();
-      final scale = min(size.x / iw, size.y / ih);
+      // Layers fit the map picture: the whole map, or — for a raster map
+      // with a grid — where the picture lies under that grid.
+      final grid = state.rasterGrid;
+      final frame = grid == null
+          ? Rect.fromLTWH(0, 0, size.x, size.y)
+          : VttMapImageComponent.pictureRectOnMap(grid.rect,
+              Size(grid.pictureW, grid.pictureH), Size(size.x, size.y));
+      final scale = min(frame.width / iw, frame.height / ih);
       final w = iw * scale;
       final h = ih * scale;
       // The paint's alpha sets the picture's opacity.
@@ -53,7 +62,8 @@ class DmOverlayComponent extends PositionComponent {
       canvas.drawImageRect(
         image,
         Rect.fromLTWH(0, 0, iw, ih),
-        Rect.fromLTWH((size.x - w) / 2, (size.y - h) / 2, w, h),
+        Rect.fromLTWH(frame.left + (frame.width - w) / 2,
+            frame.top + (frame.height - h) / 2, w, h),
         _paint,
       );
     }

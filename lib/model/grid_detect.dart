@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:ui';
 
+import 'raster_grid.dart';
+
 /// A square grid found drawn into a picture map by [detectEmbeddedGrid].
 ///
 /// All lengths are in the **original** picture's pixels, even when the
@@ -89,6 +91,18 @@ class GridDetection {
     return offset;
   }
 
+  /// The found grid as battlemap's picture grid: lines through
+  /// [offsetX]/[offsetY], squares of [cellPx], whole squares only or with
+  /// [partialEdges] — no cropping needed.
+  RasterGrid toRasterGrid({bool partialEdges = false}) => RasterGrid.fromLines(
+        lineX: offsetX,
+        lineY: offsetY,
+        cellW: cellPx,
+        cellH: cellPx,
+        picture: pictureSize,
+        partialEdges: partialEdges,
+      );
+
   @override
   String toString() => 'GridDetection(${cellPx.toStringAsFixed(2)} px, '
       '$cols × $rows, offset ${offsetX.toStringAsFixed(1)}, '
@@ -126,8 +140,8 @@ class GridDetection {
 ///    Random texture almost never agrees on both axes.
 /// 5. **Phase** — the circular mean of the profile around the cell:
 ///    `arg Σ P(x)·e^{2πi·x/cell}` gives where the lines sit, so a grid that
-///    does not start at the picture's edge is cropped to whole squares
-///    ([GridDetection.crop]).
+///    does not start at the picture's edge lands on battlemap's squares
+///    ([GridDetection.toRasterGrid]).
 ///
 /// Tuned on Juri's maps, the test maps (`test_assets/maps`) and the AI
 /// pipeline's gridless pictures, which stone texture once fooled at 12 px.
@@ -199,8 +213,8 @@ GridDetection? detectEmbeddedGrid(
 /// so callers show progress.
 ///
 /// See also:
-/// - [GridDetection.crop] and [cropToGrid] for a grid that does not start
-///   at the picture's edge.
+/// - [GridDetection.toRasterGrid] for a grid that does not start at the
+///   picture's edge.
 Future<GridDetection?> detectGridInPicture(Uint8List bytes,
     {int maxSide = 3072}) async {
   ui.Codec? codec;
@@ -218,37 +232,6 @@ Future<GridDetection?> detectGridInPicture(Uint8List bytes,
     return null;
   } finally {
     image?.dispose();
-    codec?.dispose();
-  }
-}
-
-/// Cuts [bytes] (a decodable picture) down to [crop] and returns it as a
-/// PNG, so a drawn grid that starts inside the picture lands on battlemap's
-/// grid of `cols × rows` squares. `null` if the picture cannot be decoded.
-///
-/// See also:
-/// - [GridDetection.crop], where [crop] comes from.
-Future<Uint8List?> cropToGrid(Uint8List bytes, Rect crop) async {
-  ui.Codec? codec;
-  ui.Image? source;
-  ui.Image? cut;
-  try {
-    codec = await ui.instantiateImageCodec(bytes);
-    source = (await codec.getNextFrame()).image;
-    final w = crop.width.round(), h = crop.height.round();
-    final recorder = ui.PictureRecorder();
-    Canvas(recorder).drawImageRect(source, crop,
-        Rect.fromLTWH(0, 0, w.toDouble(), h.toDouble()), Paint());
-    final picture = recorder.endRecording();
-    cut = await picture.toImage(w, h);
-    picture.dispose();
-    final png = await cut.toByteData(format: ui.ImageByteFormat.png);
-    return png?.buffer.asUint8List();
-  } catch (_) {
-    return null;
-  } finally {
-    cut?.dispose();
-    source?.dispose();
     codec?.dispose();
   }
 }

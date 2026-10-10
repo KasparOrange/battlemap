@@ -6,9 +6,11 @@ import '../game/dm_overlay_images.dart';
 import '../model/aoe_template.dart';
 import '../model/dm_overlay.dart';
 import '../model/map_token.dart';
+import '../model/raster_grid.dart';
 import '../model/session.dart';
 import '../model/table_fit.dart';
 import '../state/vtt_state.dart';
+import 'grid_editor.dart';
 import 'map_grid_dialog.dart';
 import 'session_settings_dialog.dart';
 
@@ -232,8 +234,9 @@ class DmCallbacks {
   final void Function(int dx, int dy)? onPanTable;
 
   /// Lays a new grid of `cols` × `rows` squares over the open picture or PDF
-  /// map (Map squares). `null` hides the button.
-  final void Function(int cols, int rows)? onSetMapGrid;
+  /// map (Map squares, the grid editor) — placed by `grid`, or stretched
+  /// over the whole picture when it is `null`. `null` hides the buttons.
+  final void Function(int cols, int rows, RasterGrid? grid)? onSetMapGrid;
 
   /// Sends updated [SessionSettings] to the TV for the active session.
   ///
@@ -2109,6 +2112,12 @@ class _DmControlPanelState extends State<DmControlPanel> {
         if (raster && cb.onSetMapGrid != null) ...[
           const SizedBox(height: 6),
           _GoldButton(
+            icon: Icons.grid_on,
+            label: 'Fit the grid on the picture',
+            onTap: () => _fitGrid(context),
+          ),
+          const SizedBox(height: 6),
+          _GoldButton(
             icon: Icons.grid_4x4,
             label: 'Map squares: ${map.resolution.mapSize.dx.toInt()} × '
                 '${map.resolution.mapSize.dy.toInt()} — change',
@@ -2222,9 +2231,39 @@ class _DmControlPanelState extends State<DmControlPanel> {
       warning: 'The fog of this game is cleared (its squares change). '
           'Drawings, layers and tokens stay; the map keeps the new grid.',
       confirmLabel: 'Apply',
+      pictureBytes: map.imageBytes,
+      initialGrid: state.rasterGrid,
+      editorNote: _fineNote,
+      editorCountsNote: _countsNote,
     );
     if (choice == null) return;
-    cb.onSetMapGrid?.call(choice.cols, choice.rows);
+    cb.onSetMapGrid?.call(choice.cols, choice.rows, choice.grid);
+  }
+
+  static const _fineNote = 'Same counts: the fog of this game stays, only better aligned.';
+  static const _countsNote = 'The counts change: the fog of this game is cleared. '
+      'Drawings, layers and tokens stay.';
+
+  /// Opens the grid editor ([showGridEditor]) on the open picture/PDF map
+  /// and re-grids it with what the DM applies ([DmCallbacks.onSetMapGrid]).
+  Future<void> _fitGrid(BuildContext context) async {
+    final map = state.map;
+    final size = state.rasterImageSize;
+    if (map == null || size == null) return;
+    final start = state.rasterGrid ??
+        RasterGrid.whole(map.resolution.mapSize.dx.toInt(),
+            map.resolution.mapSize.dy.toInt(), size);
+    final g = await showGridEditor(
+      context,
+      pictureBytes: map.imageBytes,
+      initial: start,
+      tableCols: state.tableCols,
+      tableRows: state.tableRows,
+      note: _fineNote,
+      countsNote: _countsNote,
+    );
+    if (g == null || g.closeTo(start)) return;
+    cb.onSetMapGrid?.call(g.cols, g.rows, g.isWhole ? null : g);
   }
 
   /// "Measure the TV": calibrates one square = one inch.

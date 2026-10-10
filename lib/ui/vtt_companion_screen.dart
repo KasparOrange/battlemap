@@ -19,6 +19,7 @@ import '../game/dm_overlay_images.dart';
 import '../game/vtt_game.dart';
 import '../model/dm_overlay.dart';
 import '../model/grid_detect.dart';
+import '../model/raster_grid.dart';
 import '../model/map_library_entry.dart';
 import '../model/session.dart';
 import '../model/table_fit.dart';
@@ -562,6 +563,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       _state.loadPdfAsMap(bytes,
         gridCols: gridCols, gridRows: gridRows,
         imageWidth: w, imageHeight: h,
+        grid: RasterGrid.fromJson(last?['rasterGrid']),
       );
       _onMapReady();
     }).catchError((Object e) {
@@ -601,10 +603,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// `vtt.mapUploaded` command so the TV downloads and processes the map.
   ///
   /// For images and PDFs: looks for a grid drawn into the picture
-  /// ([detectGridInPicture]: a found one pre-fills the counts, and a grid
-  /// starting inside the picture is cropped to whole squares with
-  /// [cropToGrid]), shows a grid configuration dialog (no embedded grid
-  /// metadata), then uploads and sends `vtt.imageUploaded`.
+  /// ([detectGridInPicture]: a found one pre-fills the counts and its
+  /// position on the picture), shows a grid configuration dialog with the
+  /// grid editor behind "Fit on the picture" ([showGridEditor]), then
+  /// uploads and sends `vtt.imageUploaded` (with `grid` when the squares do
+  /// not simply stretch over the whole picture).
   /// **PDFs are rasterized here on the phone** ([PdfHelper.renderPdfPage],
   /// pdfrx's PDFium WASM build, first page, ≤ 4096 px) and uploaded as a PNG
   /// named `<file>.png` — the TV only ever receives an image map, so it needs
@@ -688,8 +691,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     }
 
     // A grid drawn into the picture pre-fills the squares; one that starts
-    // inside the picture is cut to whole squares so battlemap's grid lands
-    // on it (grid_detect.dart, docs/architecture.md "embedded grid").
+    // inside the picture is kept as a picture grid (no cropping — the game
+    // maps the grid onto the squares; grid_detect.dart, raster_grid.dart,
+    // docs/architecture.md "picture grid").
     GridDetection? detected;
     String? detectedNote;
     if (needsGridConfig) {
@@ -698,17 +702,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       if (detected != null) {
         final g = detected;
         detectedNote = 'Found a drawn grid: ${g.cols} × ${g.rows} squares of '
-            '${g.cellPx.toStringAsFixed(g.cellPx < 20 ? 1 : 0)} px.';
-        if (!g.aligned) {
-          final cut = await cropToGrid(uploadBytes, g.crop);
-          if (cut != null) {
-            uploadBytes = cut;
-            uploadName = uploadName.replaceFirst(RegExp(r'\.[^.]+$'), '.png');
-            pictureSize = Size(g.crop.width.roundToDouble(), g.crop.height.roundToDouble());
-            detectedNote = '$detectedNote Trimmed to whole squares (the grid '
-                'starts ${g.crop.left.round()} px in, ${g.crop.top.round()} px down).';
-          }
-        }
+            '${g.cellPx.toStringAsFixed(g.cellPx < 20 ? 1 : 0)} px'
+            '${g.aligned ? '' : ', starting ${g.offsetX.round()} px in, ${g.offsetY.round()} px down'}. '
+            'Check it with "Fit on the picture".';
       }
       DevLog.add('Companion: grid detection on "$uploadName": ${detected ?? 'none'}');
     }
@@ -726,6 +722,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         initialRows: detected?.rows,
         initialOwnGrid: detected != null,
         detectedNote: detectedNote,
+        pictureBytes: uploadBytes,
+        initialGrid: detected?.toRasterGrid(),
+        detected: detected,
         tableCols: _state.tableCols,
         tableRows: _state.tableRows,
         confirmLabel: 'Upload',
@@ -767,6 +766,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
               'gridCols': gridConfig!.cols,
               'gridRows': gridConfig.rows,
               'hasGrid': gridConfig.hasOwnGrid,
+              if (gridConfig.grid != null) 'grid': gridConfig.grid!.toJson(),
             }));
           } else {
             // UVTT: send mapUploaded
@@ -999,9 +999,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         onShowCalibration: c.sendShowCalibration,
         onSetTvCameraMode: (mode) => c.sendSetTvCameraMode(mode.name),
         onPanTable: c.sendPanTable,
-        onSetMapGrid: (cols, rows) {
-          c.sendSetMapGrid(cols, rows);
-          _showSnack('Map squares: $cols × $rows');
+        onSetMapGrid: (cols, rows, grid) {
+          c.sendSetMapGrid(cols, rows, grid: grid);
+          _showSnack(grid == null
+              ? 'Map squares: $cols × $rows'
+              : 'Grid: $cols × $rows squares of ${grid.cellW.toStringAsFixed(2)} px');
         },
         // Session settings
         onUpdateSessionSettings: (settings) =>
@@ -1102,7 +1104,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         if (_state.rulerVisible) _game.centerRulerInView();
       },
       onRotateRuler: _state.rotateRulerCW,
-      onSetMapGrid: (cols, rows) => _state.regridRaster(cols, rows),
+      onSetMapGrid: (cols, rows, grid) => _state.regridRaster(cols, rows, grid: grid),
       // Session settings
       onUpdateSessionSettings: _state.setSessionSettings,
       // Global effects

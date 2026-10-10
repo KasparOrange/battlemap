@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'relay_config.dart';
+import '../model/raster_grid.dart';
 
 /// Connection lifecycle states for the [VttRelayClient].
 ///
@@ -632,9 +633,16 @@ class VttRelayClient {
       _send({'type': 'vtt.setTableWindow', 'col': col, 'row': row});
 
   /// Lays a new grid of [cols] × [rows] squares over the open picture or
-  /// PDF map (fog of the game is cleared; the library keeps the grid).
-  void sendSetMapGrid(int cols, int rows) =>
-      _send({'type': 'vtt.setMapGrid', 'cols': cols, 'rows': rows});
+  /// PDF map; the library keeps it. [grid] places the squares exactly
+  /// (position, width, height — from the grid editor), without it they are
+  /// stretched over the whole picture. The game's fog stays when the counts
+  /// stay (`VttState.regridRaster`).
+  void sendSetMapGrid(int cols, int rows, {RasterGrid? grid}) => _send({
+        'type': 'vtt.setMapGrid',
+        'cols': cols,
+        'rows': rows,
+        if (grid != null) 'grid': grid.toJson(),
+      });
 
   /// Moves the TV camera to an absolute transform.
   ///

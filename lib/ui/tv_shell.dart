@@ -15,6 +15,7 @@ import '../model/dm_overlay.dart';
 import '../model/draw_stroke.dart';
 import '../model/map_library_entry.dart';
 import '../model/map_token.dart';
+import '../model/raster_grid.dart';
 import '../model/session.dart';
 import '../model/table_fit.dart';
 import '../network/http_download_stub.dart'
@@ -456,7 +457,12 @@ class _TvShellState extends State<TvShell> {
   Future<void> _downloadAndLoadImage(
     String url, String displayName, int gridCols, int gridRows, {
     bool? hasOwnGrid,
+    RasterGrid? grid,
   }) async {
+    if (grid != null) {
+      gridCols = grid.cols;
+      gridRows = grid.rows;
+    }
     try {
       _log('Downloading image from VPS: $url');
       _safeSetTransferProgress(0.0);
@@ -477,6 +483,7 @@ class _TvShellState extends State<TvShell> {
       final entry = await _library.addMap(
         imageBytes, displayName,
         isImage: true, pdfGridCols: gridCols, pdfGridRows: gridRows,
+        rasterGrid: grid,
       );
       entry.vpsUrl = url;
       // From the upload dialog: a picture with its own grid lines gets none
@@ -498,6 +505,7 @@ class _TvShellState extends State<TvShell> {
         imageBytes,
         gridCols: gridCols, gridRows: gridRows,
         imageWidth: width.toDouble(), imageHeight: height.toDouble(),
+        grid: grid,
       );
       _state.showGrid = entry.drawGrid ?? true;
       _ensureGame(); // frames the map on the table itself (table view)
@@ -589,6 +597,7 @@ class _TvShellState extends State<TvShell> {
           gridRows: gridRows,
           imageWidth: width.toDouble(),
           imageHeight: height.toDouble(),
+          grid: entry.rasterGrid,
         );
       } else if (entry?.isImage == true) {
         // Raw raster image (jpg/png/webp upload) — not UVTT JSON, so
@@ -605,6 +614,7 @@ class _TvShellState extends State<TvShell> {
           gridRows: entry.pdfGridRows ?? 15,
           imageWidth: width.toDouble(),
           imageHeight: height.toDouble(),
+          grid: entry.rasterGrid,
         );
       } else {
         _state.loadMap(bytes);
@@ -721,6 +731,7 @@ class _TvShellState extends State<TvShell> {
           gridRows: gridRows,
           imageWidth: width.toDouble(),
           imageHeight: height.toDouble(),
+          grid: entry?.rasterGrid,
         );
       } else if (loadAsImage) {
         // Raw raster image — decode for dimensions, then load as a synthetic
@@ -743,6 +754,7 @@ class _TvShellState extends State<TvShell> {
           gridRows: gridRows,
           imageWidth: width.toDouble(),
           imageHeight: height.toDouble(),
+          grid: entry?.rasterGrid,
         );
       } else {
         _state.loadMap(bytes);
@@ -863,19 +875,25 @@ class _TvShellState extends State<TvShell> {
   }
 
   /// Lays a new grid over the open raster map (`vtt.setMapGrid`): the
-  /// library entry keeps it for later games, fog of this game is cleared
-  /// (its squares changed), drawings, tokens and layers stay.
-  Future<void> _setMapGrid(int cols, int rows) async {
+  /// library entry keeps it for later games; drawings, tokens and layers
+  /// stay, and the fog too when only the squares' size or position changed
+  /// ([VttState.regridRaster]). [grid] places the squares exactly; without
+  /// it they are stretched over the whole picture.
+  Future<void> _setMapGrid(int cols, int rows, {RasterGrid? grid}) async {
     final id = _activeMapId;
     final entry = id == null ? null : _library.getEntry(id);
     if (entry == null || !(entry.isImage || entry.isPdf)) {
       _sendError('Only picture and PDF maps can be re-gridded');
       return;
     }
-    if (!_state.regridRaster(cols, rows)) return;
-    await _library.updateEntry(entry.withGrid(cols, rows));
+    if (!_state.regridRaster(cols, rows, grid: grid)) return;
+    final applied = _state.rasterGrid;
+    await _library.updateEntry(entry.withGrid(applied?.cols ?? cols,
+        applied?.rows ?? rows,
+        grid: applied == null || applied.isWhole ? null : applied));
     _sendLibraryListing();
-    RemoteLog.info('session', 'Map re-gridded to ${cols}x$rows', {'cols': cols, 'rows': rows});
+    RemoteLog.info('session', 'Map re-gridded: $applied',
+        {'cols': applied?.cols ?? cols, 'rows': applied?.rows ?? rows});
   }
 
   // ─── Auto-save ──────────────────────────────────────────
@@ -1372,6 +1390,7 @@ class _TvShellState extends State<TvShell> {
             msg['gridCols'] as int? ?? 20,
             msg['gridRows'] as int? ?? 15,
             hasOwnGrid: msg['hasGrid'] as bool?,
+            grid: RasterGrid.fromJson(msg['grid']),
           );
 
         // Diagnostics — respond with TV state
@@ -1519,6 +1538,7 @@ class _TvShellState extends State<TvShell> {
           _setMapGrid(
             (msg['cols'] as num).toInt(),
             (msg['rows'] as num).toInt(),
+            grid: RasterGrid.fromJson(msg['grid']),
           );
         case 'vtt.setCamera':
           _game?.applyCamera(

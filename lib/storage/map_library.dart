@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 
+import '../model/raster_grid.dart';
 import '../model/map_library_entry.dart';
 import '../model/session.dart';
 import '../model/uvtt_parser.dart';
@@ -58,6 +59,7 @@ class MapLibrary {
     bool isImage = false,
     int? pdfGridCols,
     int? pdfGridRows,
+    RasterGrid? rasterGrid,
   }) async {
     final id = _uuid.v4();
 
@@ -91,6 +93,7 @@ class MapLibrary {
       isImage: isImage,
       pdfGridCols: pdfGridCols,
       pdfGridRows: pdfGridRows,
+      rasterGrid: rasterGrid,
     );
 
     // Store entry in index

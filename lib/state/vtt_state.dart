@@ -8,6 +8,7 @@ import '../model/aoe_template.dart';
 import '../model/dm_overlay.dart';
 import '../model/draw_stroke.dart';
 import '../model/map_token.dart';
+import '../model/raster_grid.dart';
 import '../model/session.dart';
 import '../model/table_fit.dart';
 import '../model/undo_action.dart';
@@ -93,6 +94,15 @@ class VttState extends ChangeNotifier {
   /// Kept so [applyRemoteGrid] can lay a different grid over the same
   /// picture without decoding it again.
   Size? rasterImageSize;
+
+  /// Where the squares lie on the picture of a raster map — set by
+  /// [loadPdfAsMap], `null` for `.dd2vtt` maps or no map.
+  ///
+  /// The game stretches its [RasterGrid.rect] onto the map's squares
+  /// (`VttMapImageComponent`), so a grid that starts inside the picture or
+  /// has non-square squares needs no cropping. Synced as `rasterGrid` in
+  /// `vtt.fullState`; changed in a game by [regridRaster].
+  RasterGrid? rasterGrid;
 
   /// Whether the grid overlay is visible on the map.
   bool showGrid = true;
@@ -472,6 +482,7 @@ class VttState extends ChangeNotifier {
   void loadMap(Uint8List fileBytes) {
     rawMapBytes = fileBytes;
     rasterImageSize = null;
+    rasterGrid = null;
     final jsonString = utf8.decode(fileBytes);
     map = UvttParser.parse(jsonString);
     // Initialize portal states from file defaults
@@ -502,6 +513,13 @@ class VttState extends ChangeNotifier {
   /// Sets [rawMapBytes] to `null` since PDF bytes are stored separately
   /// in the [MapLibrary].
   ///
+  /// [grid] says where the squares lie on the picture (scaled with
+  /// [RasterGrid.forPicture] if it was set on another size); its counts
+  /// win over [gridCols]/[gridRows]. Without it the squares are stretched
+  /// over the whole picture ([RasterGrid.whole]). The map's own pixels per
+  /// square follow the grid's square width (as before grids existed), so
+  /// the picture is not scaled much on its way to the table.
+  ///
   /// See also:
   /// * [loadMap], which loads a `.dd2vtt` map from raw file bytes.
   /// * [MapLibraryEntry.isPdf], which flags entries as PDF maps.
@@ -510,8 +528,14 @@ class VttState extends ChangeNotifier {
     required int gridRows,
     required double imageWidth,
     required double imageHeight,
+    RasterGrid? grid,
   }) {
-    final pixelsPerGrid = imageWidth / gridCols;
+    final picture = Size(imageWidth, imageHeight);
+    final g = grid?.forPicture(picture) ??
+        RasterGrid.whole(gridCols, gridRows, picture);
+    gridCols = g.cols;
+    gridRows = g.rows;
+    final pixelsPerGrid = max(1.0, g.cellW);
 
     map = UvttMap(
       format: 0,
@@ -531,7 +555,8 @@ class VttState extends ChangeNotifier {
       imageBytes: imageBytes,
     );
     rawMapBytes = null; // PDF bytes stored separately in library
-    rasterImageSize = Size(imageWidth, imageHeight);
+    rasterImageSize = picture;
+    rasterGrid = g;
     openPortals.clear();
     revealedCells.clear();
     _resetSessionState();
@@ -565,45 +590,71 @@ class VttState extends ChangeNotifier {
         cols <= 0 || rows <= 0) {
       return false;
     }
-    final grid = current.resolution.mapSize;
-    if (grid.dx.toInt() == cols && grid.dy.toInt() == rows) return false;
+    final remote = RasterGrid.fromJson(json['rasterGrid'])?.forPicture(size) ??
+        RasterGrid.whole(cols, rows, size);
+    final mine = rasterGrid;
+    if (mine != null && mine.closeTo(remote, eps: 0.01)) return false;
     loadPdfAsMap(current.imageBytes,
-        gridCols: cols, gridRows: rows,
-        imageWidth: size.width, imageHeight: size.height);
+        gridCols: remote.cols, gridRows: remote.rows,
+        imageWidth: size.width, imageHeight: size.height, grid: remote);
     return true;
   }
 
-  /// Lays a new grid of [cols] × [rows] squares over the loaded raster map
-  /// (picture or PDF page) — the fitting tool for a picture whose grid was
-  /// counted wrong at upload (companion ▸ Map ▸ Map squares, TV side of
-  /// `vtt.setMapGrid`).
+  /// Lays a new grid over the loaded raster map (picture or PDF page) — the
+  /// fitting tool for a picture whose squares were counted or placed wrong
+  /// at upload (companion ▸ Map ▸ Map squares and the grid editor, TV side
+  /// of `vtt.setMapGrid`).
   ///
-  /// Keeps what does not depend on square numbers — drawings, tokens, DM
-  /// layers, the ruler, settings — and clears what does: revealed fog,
-  /// shadow edits, the undo history and the table window (the cell indices
-  /// mean other squares now). Returns `false` (and changes nothing) for a
-  /// `.dd2vtt` map, no map, a non-positive grid or the same grid.
-  bool regridRaster(int cols, int rows) {
+  /// [grid] places the squares exactly (position, square width and height);
+  /// without it [cols] × [rows] squares are stretched over the whole
+  /// picture. Keeps what does not depend on square numbers — drawings,
+  /// tokens, DM layers, the ruler, settings. When the counts stay the same
+  /// (a fine adjustment of size or position) the fog, shadow edits and the
+  /// table window stay too — square (3, 4) is still square (3, 4), only a
+  /// little better aligned; when they change those are cleared (the cell
+  /// indices mean other squares now) along with the undo history.
+  ///
+  /// Returns `false` (and changes nothing) for a `.dd2vtt` map, no map, a
+  /// non-positive grid or the same grid.
+  bool regridRaster(int cols, int rows, {RasterGrid? grid}) {
     final current = map;
     final size = rasterImageSize;
     if (current == null || size == null || cols <= 0 || rows <= 0) return false;
-    final grid = current.resolution.mapSize;
-    if (grid.dx.toInt() == cols && grid.dy.toInt() == rows) return false;
+    final next = grid?.forPicture(size) ?? RasterGrid.whole(cols, rows, size);
+    final before = rasterGrid ??
+        RasterGrid.whole(current.resolution.mapSize.dx.toInt(),
+            current.resolution.mapSize.dy.toInt(), size);
+    if (before.closeTo(next)) return false;
+    final sameSquares = before.cols == next.cols && before.rows == next.rows;
     final keepTokens = tokens;
     final keepStrokes = strokes;
     final keepOverlays = dmOverlays;
     final keepOverlaysRev = dmOverlaysRev;
     final keepRuler = rulerVisible;
     final keepMode = tvCameraMode;
+    final keepRevealed = Set<int>.of(revealedCells);
+    final keepShadowReveal = Set<int>.of(shadowRevealCells);
+    final keepShadowHide = Set<int>.of(shadowHideCells);
+    final keepCol = tableCol, keepRow = tableRow;
+    final keepUndo = List.of(_undoStack), keepRedo = List.of(_redoStack);
     loadPdfAsMap(current.imageBytes,
-        gridCols: cols, gridRows: rows,
-        imageWidth: size.width, imageHeight: size.height);
+        gridCols: next.cols, gridRows: next.rows,
+        imageWidth: size.width, imageHeight: size.height, grid: next);
     tokens = keepTokens;
     strokes = keepStrokes;
     dmOverlays = keepOverlays;
     dmOverlaysRev = keepOverlaysRev;
     rulerVisible = keepRuler;
     tvCameraMode = keepMode;
+    if (sameSquares) {
+      revealedCells = keepRevealed;
+      shadowRevealCells.addAll(keepShadowReveal);
+      shadowHideCells.addAll(keepShadowHide);
+      tableCol = keepCol;
+      tableRow = keepRow;
+      _undoStack.addAll(keepUndo);
+      _redoStack.addAll(keepRedo);
+    }
     notifyListeners();
     return true;
   }
@@ -1230,6 +1281,7 @@ class VttState extends ChangeNotifier {
     map = null;
     rawMapBytes = null;
     rasterImageSize = null;
+    rasterGrid = null;
     revealedCells.clear();
     openPortals.clear();
     fogEnabled = true;
@@ -1496,6 +1548,7 @@ class VttState extends ChangeNotifier {
         'hasMap': map != null,
         'gridCols': map?.resolution.mapSize.dx.toInt(),
         'gridRows': map?.resolution.mapSize.dy.toInt(),
+        if (rasterGrid != null) 'rasterGrid': rasterGrid!.toJson(),
         'portalCount': map?.portals.length ?? 0,
         'revealedCells': revealedCells.toList(),
         'openPortals': openPortals.toList(),

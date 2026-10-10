@@ -1,4 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+
+import '../model/grid_detect.dart';
+import '../model/raster_grid.dart';
+import 'grid_editor.dart';
 
 // The DM panel's warm palette (dm_control_panel.dart), so this dialog looks
 // like the Measure the TV dialog next to it.
@@ -7,8 +13,11 @@ const _gold = Color(0xFFd4a76a);
 const _goldDim = Color(0xFF8a7044);
 const _border = Color(0xFF5a4a30);
 
-/// What the DM chose in [showMapGridDialog].
-typedef MapGridChoice = ({int cols, int rows, bool hasOwnGrid});
+/// What the DM chose in [showMapGridDialog]: the counts, whether the
+/// picture has its own grid lines, and — when the squares do not simply
+/// stretch over the whole picture (a detected grid kept, or fitted in the
+/// grid editor) — where they lie ([grid], else `null`).
+typedef MapGridChoice = ({int cols, int rows, bool hasOwnGrid, RasterGrid? grid});
 
 /// Asks how many squares a picture or PDF map has — the grid that makes
 /// one square one inch on the table.
@@ -30,6 +39,11 @@ typedef MapGridChoice = ({int cols, int rows, bool hasOwnGrid});
 /// [detectGridInPicture] found (the counts then start from it). Returns
 /// `null` on cancel.
 ///
+/// With [pictureBytes] a "Fit on the picture" button opens the grid editor
+/// ([showGridEditor]) from [initialGrid] (or the typed counts) and returns
+/// what it applies. [initialGrid] (a detected grid) is returned as the
+/// choice's grid while the counts stay its counts.
+///
 /// See also:
 /// - [VttState.regridRaster], the in-game re-grid.
 /// - `vtt.imageUploaded` / `vtt.setMapGrid` in `docs/relay-protocol.md`.
@@ -46,6 +60,11 @@ Future<MapGridChoice?> showMapGridDialog(
   String? warning,
   String? detectedNote,
   String confirmLabel = 'OK',
+  Uint8List? pictureBytes,
+  RasterGrid? initialGrid,
+  GridDetection? detected,
+  String? editorNote,
+  String? editorCountsNote,
 }) {
   return showDialog<MapGridChoice>(
     context: context,
@@ -61,6 +80,11 @@ Future<MapGridChoice?> showMapGridDialog(
       warning: warning,
       detectedNote: detectedNote,
       confirmLabel: confirmLabel,
+      pictureBytes: pictureBytes,
+      initialGrid: initialGrid,
+      detected: detected,
+      editorNote: editorNote,
+      editorCountsNote: editorCountsNote,
     ),
   );
 }
@@ -85,6 +109,11 @@ class _MapGridDialog extends StatefulWidget {
   final String? warning;
   final String? detectedNote;
   final String confirmLabel;
+  final Uint8List? pictureBytes;
+  final RasterGrid? initialGrid;
+  final GridDetection? detected;
+  final String? editorNote;
+  final String? editorCountsNote;
 
   const _MapGridDialog({
     required this.title,
@@ -98,6 +127,11 @@ class _MapGridDialog extends StatefulWidget {
     required this.warning,
     required this.detectedNote,
     required this.confirmLabel,
+    required this.pictureBytes,
+    required this.initialGrid,
+    required this.detected,
+    required this.editorNote,
+    required this.editorCountsNote,
   });
 
   @override
@@ -286,6 +320,12 @@ class _MapGridDialogState extends State<_MapGridDialog> {
         ),
       ),
       actions: [
+        if (widget.pictureBytes != null && widget.imageSize != null)
+          TextButton.icon(
+            icon: const Icon(Icons.grid_on, color: _gold, size: 18),
+            label: const Text('Fit on the picture', style: TextStyle(color: _gold)),
+            onPressed: _fineTune,
+          ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel', style: TextStyle(color: _goldDim)),
@@ -297,13 +337,54 @@ class _MapGridDialogState extends State<_MapGridDialog> {
             disabledBackgroundColor: _border,
           ),
           onPressed: _colCount > 0 && _rowCount > 0
-              ? () => Navigator.pop<MapGridChoice>(
-                  context, (cols: _colCount, rows: _rowCount, hasOwnGrid: _ownGrid))
+              ? () => Navigator.pop<MapGridChoice>(context, (
+                    cols: _colCount,
+                    rows: _rowCount,
+                    hasOwnGrid: _ownGrid,
+                    grid: _keptGrid,
+                  ))
               : null,
           child: Text(widget.confirmLabel),
         ),
       ],
     );
+  }
+
+  /// The dialog's initial grid while the typed counts are still its
+  /// counts; otherwise the counts stretch over the picture (`null`).
+  RasterGrid? get _keptGrid {
+    final g = widget.initialGrid;
+    if (g == null || g.cols != _colCount || g.rows != _rowCount || g.isWhole) {
+      return null;
+    }
+    return g;
+  }
+
+  /// Opens the grid editor from the current choice and, when the DM
+  /// applies, closes this dialog with the fitted grid.
+  Future<void> _fineTune() async {
+    final size = widget.imageSize!;
+    final start = _keptGrid ??
+        RasterGrid.whole(_colCount > 0 ? _colCount : 20,
+            _rowCount > 0 ? _rowCount : (squareRowsFor(20, size) ?? 15), size);
+    final g = await showGridEditor(
+      context,
+      pictureBytes: widget.pictureBytes!,
+      initial: start,
+      detected: widget.detected,
+      tableCols: widget.tableCols,
+      tableRows: widget.tableRows,
+      confirmLabel: widget.confirmLabel,
+      note: widget.editorNote,
+      countsNote: widget.editorCountsNote,
+    );
+    if (g == null || !mounted) return;
+    Navigator.pop<MapGridChoice>(context, (
+      cols: g.cols,
+      rows: g.rows,
+      hasOwnGrid: _ownGrid,
+      grid: g.isWhole ? null : g,
+    ));
   }
 
   static InputDecoration _field(String label) => InputDecoration(

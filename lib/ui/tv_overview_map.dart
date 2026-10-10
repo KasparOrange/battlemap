@@ -84,6 +84,7 @@ class TvOverviewMap extends StatelessWidget {
                 size: size,
                 painter: _OverviewPainter(
                   image: game.mapImage,
+                  imageRect: game.mapImageRectOn(size),
                   scale: scale,
                   window: _windowRect(layout, scale),
                   screen: layout == null ? _screenQuad(scale) : null,
@@ -132,12 +133,14 @@ class _EagerPanRecognizer extends PanGestureRecognizer {
 
 class _OverviewPainter extends CustomPainter {
   final ui.Image? image;
+  final Rect imageRect;
   final double scale;
   final Rect? window;
   final List<Offset>? screen;
 
   _OverviewPainter({
     required this.image,
+    required this.imageRect,
     required this.scale,
     required this.window,
     required this.screen,
@@ -154,10 +157,12 @@ class _OverviewPainter extends CustomPainter {
     canvas.clipRect(all);
     final img = image;
     if (img != null) {
+      // A picture grid may leave dark margins (partial edge squares).
+      canvas.drawRect(all, Paint()..color = const Color(0xFF0B0B0B));
       canvas.drawImageRect(
         img,
         Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
-        all,
+        imageRect,
         Paint()..filterQuality = FilterQuality.medium,
       );
     } else {

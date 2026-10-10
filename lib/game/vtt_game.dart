@@ -298,13 +298,18 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     _clearMap();
     _mapLoading = true;
 
-    // Decode image, shrunk to maxMapTextureSide if the map is bigger
-    final longest = max(map.pixelWidth, map.pixelHeight);
+    // Decode image, shrunk to maxMapTextureSide if it is bigger. A raster
+    // map keeps its picture's proportions (its grid rectangle is mapped
+    // onto the squares at draw time); a .dd2vtt picture is the map's size.
+    final grid = state.rasterGrid;
+    final pictureW = grid?.pictureW ?? map.pixelWidth;
+    final pictureH = grid?.pictureH ?? map.pixelHeight;
+    final longest = max(pictureW, pictureH);
     final shrink = longest > maxMapTextureSide ? maxMapTextureSide / longest : 1.0;
     final codec = await ui.instantiateImageCodec(
       map.imageBytes,
-      targetWidth: shrink < 1 ? (map.pixelWidth * shrink).round() : null,
-      targetHeight: shrink < 1 ? (map.pixelHeight * shrink).round() : null,
+      targetWidth: shrink < 1 ? (pictureW * shrink).round() : null,
+      targetHeight: shrink < 1 ? (pictureH * shrink).round() : null,
     );
     final frame = await codec.getNextFrame();
     final image = frame.image;
@@ -326,6 +331,8 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     _mapImage = VttMapImageComponent(
       image: image,
       mapSize: mapSizeVec,
+      source: grid?.rect,
+      pictureSize: grid == null ? null : Size(grid.pictureW, grid.pictureH),
     );
     world.add(_mapImage!);
 
@@ -868,6 +875,17 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// not keep it: it is disposed when the map changes. Used by the
   /// companion's overview map.
   ui.Image? get mapImage => _mapImage?.image;
+
+  /// Where [mapImage] lies on the map, in map-sized units of a [Size]
+  /// `mapSize`: the whole map for a `.dd2vtt` picture, the picture under
+  /// its grid for a raster map ([VttMapImageComponent.pictureRectOnMap]).
+  Rect mapImageRectOn(Size mapSize) {
+    final c = _mapImage;
+    final src = c?.source;
+    if (c == null || src == null) return Offset.zero & mapSize;
+    return VttMapImageComponent.pictureRectOnMap(
+        src, c.pictureSize ?? Size(c.image.width.toDouble(), c.image.height.toDouble()), mapSize);
+  }
 
   /// The last TV camera received via [setTvViewport], or `null`.
   CameraSnapshot? get tvCamera => _tvCamera;
