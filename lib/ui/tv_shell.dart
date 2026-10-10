@@ -27,6 +27,7 @@ import '../model/aoe_template.dart';
 import '../state/vtt_state.dart';
 import '../storage/map_library.dart';
 import '../storage/map_thumbnails.dart';
+import '../update/deploy_restore.dart';
 import '../update/update_service_stub.dart'
     if (dart.library.io) '../update/update_service.dart';
 import '../util/file_signatures.dart';
@@ -69,8 +70,13 @@ enum TvView {
 /// - [VttRelayClient], the networking layer.
 /// - [VttGame], the Flame game engine component tree.
 class TvShell extends StatefulWidget {
-  /// Creates the TV shell widget.
-  const TvShell({super.key});
+  /// Set when the app was relaunched by a rolling deploy (initial route
+  /// `/restore`, see [DeployRestore]): the shell reopens the game that was
+  /// running before the update. `null` on a normal launch.
+  final RestoreTarget? restore;
+
+  /// Creates the TV shell widget; see [restore].
+  const TvShell({super.key, this.restore});
 
   @override
   State<TvShell> createState() => _TvShellState();
@@ -122,6 +128,10 @@ class _TvShellState extends State<TvShell> {
   // Auto-save
   Timer? _autoSaveTimer;
 
+  /// Clears the "Updating…" notice if no install follows a
+  /// `deploy.prepare` (see [_prepareForDeploy]).
+  Timer? _deployNoticeTimer;
+
   /// Logs an info-level message under the `tv` tag.
   ///
   /// The message goes to:
@@ -142,6 +152,7 @@ class _TvShellState extends State<TvShell> {
 
   void _setView(TvView view) {
     setState(() => _currentView = view);
+    _writeRestoreSnapshot();
     RemoteLog.info('nav', 'View: ${view.name}', {'view': view.name});
     if (view == TvView.game) {
       // The game has no focusable controls; park focus on the back button so
@@ -164,6 +175,7 @@ class _TvShellState extends State<TvShell> {
     _library.init().then((_) {
       _log('Library loaded: ${_library.entries.length} maps');
       if (mounted) setState(() {});
+      if (widget.restore != null) _restoreAfterDeploy(widget.restore!);
     });
     _connectRelay();
   }
@@ -175,6 +187,7 @@ class _TvShellState extends State<TvShell> {
     _broadcastTimer?.cancel();
     _autoSaveTimer?.cancel();
     _relaySub?.cancel();
+    _deployNoticeTimer?.cancel();
     _relay.dispose();
     _takeOverFocus.dispose();
     _backFocus.dispose();
@@ -187,6 +200,11 @@ class _TvShellState extends State<TvShell> {
   void _connectRelay() {
     _relay = VttRelayClient(role: 'table');
     _relay.onCommand = _handleCommand;
+    // A companion took over the slot (tablet replaced the phone): resend.
+    _relay.onPeerReconnected = () {
+      _log('Companion replaced — resending library and game');
+      _sendInitialState();
+    };
     _relay.onMapLoaded = _onMapReceived;
     _relay.onTransferProgress = (p) {
       setState(() => _transferProgress = p < 0 ? null : p);
@@ -796,6 +814,67 @@ class _TvShellState extends State<TvShell> {
     });
   }
 
+  /// Saves where the TV is (view, map, session) for a rolling deploy's
+  /// relaunch ([DeployRestore]). Called on every view change and session
+  /// save; cheap (one small Hive entry).
+  Future<void> _writeRestoreSnapshot() => DeployRestore.save(
+        view: _currentView.name,
+        mapId: _currentView == TvView.game ? _activeMapId : null,
+        sessionId: _currentView == TvView.game ? _activeSessionId : null,
+      );
+
+  /// Reopens the game that ran before a rolling deploy ([TvShell.restore]).
+  ///
+  /// Uses the session named in the launch route (read by `tools/deploy.sh`
+  /// from the old app's `diag.status`) or else the saved snapshot. Shows a
+  /// "restoring" overlay meanwhile; with nothing to restore the TV stays on
+  /// its start view.
+  Future<void> _restoreAfterDeploy(RestoreTarget target) async {
+    final t = target.sessionId != null ? target : await DeployRestore.load();
+    final sessionId = t?.sessionId;
+    if (sessionId == null) {
+      RemoteLog.info('restore', 'Deploy restore: no game to reopen');
+      return;
+    }
+    RemoteLog.info('restore', 'Deploy restore: reopening session', {'session': sessionId});
+    if (mounted) {
+      setState(() {
+        _isRendering = true;
+        _renderingLabel = 'Updated — reopening the game…';
+      });
+    }
+    try {
+      await _resumeSession(sessionId);
+    } finally {
+      if (mounted) setState(() => _isRendering = false);
+    }
+  }
+
+  /// Handles `deploy.prepare` (rolling deploy, `tools/deploy.sh`): saves the
+  /// session and the restore snapshot right now, shows "Updating…", and
+  /// answers `deploy.ready` so the script installs and the companion warns
+  /// the DM. The notice clears itself after 60 s if no install follows.
+  Future<void> _prepareForDeploy() async {
+    setState(() {
+      _isRendering = true;
+      _renderingLabel = 'Updating battlemap — back in a few seconds';
+    });
+    _deployNoticeTimer?.cancel();
+    _deployNoticeTimer = Timer(const Duration(seconds: 60), () {
+      if (mounted) setState(() => _isRendering = false);
+    });
+    _autoSaveTimer?.cancel();
+    if (_currentView == TvView.game) await _saveCurrentSession();
+    await _writeRestoreSnapshot();
+    RemoteLog.info('restore', 'Deploy prepare: saved', {'view': _currentView.name, 'session': _activeSessionId});
+    _relay.sendRaw(jsonEncode({
+      'type': 'deploy.ready',
+      'view': _currentView.name,
+      'mapId': _activeMapId,
+      'sessionId': _activeSessionId,
+    }));
+  }
+
   /// Saves the current session now if a debounced auto-save is pending.
   ///
   /// Call before the active session changes ([_startNewSession],
@@ -865,6 +944,7 @@ class _TvShellState extends State<TvShell> {
       settings: _state.sessionSettings.copy(),
     );
     await _library.saveSession(session);
+    await _writeRestoreSnapshot();
     RemoteLog.debug(
       'session',
       'Saved session "${session.name}" (${session.revealedCells.length} cells)',
@@ -1217,6 +1297,10 @@ class _TvShellState extends State<TvShell> {
         // Diagnostics — respond with TV state
         case 'diag.status':
           _sendDiagStatus();
+
+        // Rolling deploy: save now, the new build is about to be installed
+        case 'deploy.prepare':
+          _prepareForDeploy();
 
         // Update commands (legacy APK install)
         case 'update.check':

@@ -378,6 +378,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       }
     };
     _relay!.onTvLog = (msg) => DevLog.add('[TV] $msg');
+    // Rolling deploy: the TV saved its game and is about to restart.
+    _relay!.onDeployReady = (_) {
+      DevLog.add('Companion: TV is updating (deploy.ready)');
+      _showSnack('TV is updating — back in a few seconds', color: Colors.blueGrey);
+    };
     _relay!.onTvRendering = (active, label) {
       if (mounted) setState(() { _tvRendering = active; _tvRenderingLabel = label; });
     };

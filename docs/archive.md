@@ -6,6 +6,14 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 18:22 - box on 1.1.6+16, tablet companion, rolling deploy
+- Konrad: deploy the new app on the TV, same game afterwards; bring the companion up in the tablet's browser; build mytube's rolling update into battlemap
+	- tablet (Tab A11+, Chrome) paired through latrine (`android pair`); box 1.1.5+15 → 1.1.6+16 by `latrine android install` from a clean worktree; the session was flushed via the library first and reopened with `nav.goToGame` (175 revealed, 5 doors — identical)
+	- VPS: relay restarted on current main (the September process rejected the `bot` role; it lingered after SIGTERM holding the live sockets → `kill -9`); dev_server restarted for `uploads/dm/`
+	- **found: a companion taking over the slot got no map** — the TV ignored the second `peer_connected` while already paired → `VttRelayClient.onPeerReconnected`, TV resends library + game
+	- **rolling deploy**, after mytube's deploy restore: `tools/deploy.sh [tv] [web] [--here]` + `tools/tv_ctl.py` (relay bot: status, prepare, resume, wait-session); TV: `deploy.prepare` → save now + "Updating…" + `deploy.ready`; relaunch route `/restore?session=…` → `TvShell(restore:)` reopens the game; `DeployRestore` snapshot (Hive) as fallback; companion route `/companion` (web `#/companion`) skips the selector; `setup.md` "rolling deploy"
+	- `test/deploy_restore_test.dart` (9 tests), suite 398 green; first real run held — another session has a showcase scene on the box
+
 ### 26-10-10 - battlemap tabletop UX polish (UX review items 2, 4–7, 1.1.7+17)
 - Konrad: "build all of the recommendations" (tabletop-mode ones; tokens/HP dropped as digital mode) — built in a separate worktree while three other battlemap sessions edited the same files, rebased onto main
 	- **door markers DM-only**: `PortalComponent.showMarker` = `!isDisplay`; the TV draws nothing for Dungeondraft doors (their painted door is what players see); drawn AI-map doors show everywhere

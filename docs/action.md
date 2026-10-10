@@ -87,11 +87,16 @@ Not testable on the bench: pinch/two-finger pan, the real Xiaomi remote.
 ## DM layers (2026-10-10, 1.1.6+16) — needs a device test
 
 Companion Layers tab: DM-only pictures over the map (archive 26-10-10 "DM-only picture
-layers"). Web build deployed to the VPS; **the box still runs 1.1.5+15**, which ignores
-`vtt.setDmOverlays` — layers work on the tablet but are not saved with the session until the
-box gets a 1.1.6 APK. Check on the tablet: add 2–3 pictures at once (and a PDF), eye, opacity,
-up/down, delete + undo, master eye; reload the page → layers come back (needs the new APK);
-the TV never shows them.
+layers"). Deployed: web build on the VPS, 1.1.6+16 on the box (18:15). Check on the tablet:
+add 2–3 pictures at once (and a PDF), eye, opacity, up/down, delete + undo, master eye; reload
+the page → layers come back; the TV never shows them.
+
+## rolling deploy (2026-10-10) — first real run pending
+
+`tools/deploy.sh` (`setup.md` "rolling deploy"). The box's 1.1.6+16 predates the restore code,
+so the first run restores through the relay (session from `diag.status`, route
+`/restore?session=…`); from then on `deploy.prepare` + the snapshot work too. The same deploy
+ships the takeover fix (a companion replacing another got no map).
 
 
 `lib/network/vtt_server.dart` + `vtt_server_stub.dart` are the original pre-relay design:

@@ -166,6 +166,11 @@ Future<void> _startNewSession(String mapId, String name, {
 8. Restart dev server
 9. TV updates via in-app update button or Shorebird patch
 
+**Live development on the real box + tablet:** `tools/deploy.sh` (rolling deploy, `docs/setup.md`)
+puts a build on the TV and the web companion mid-game; the TV reopens the running game itself, the
+break is ~15 s. Deploy yourself when a change is ready, but batch changes — every deploy interrupts
+the table.
+
 API docs are then browsable at `http://<VPS_IP>:4242/api/`
 
 ## Progress Tracker
@@ -212,8 +217,9 @@ API docs are then browsable at `http://<VPS_IP>:4242/api/`
 | 41 | Android bench + bench robot (Mac) | Done (2026-10-10) | Google TV + tablet emulators (`tools/android_bench.sh`); `tools/bench_bot.py` seeds 10 test maps and plays the game night over the relay (`bot` role), 59/59 — found and fixed 11 TV/companion bugs (`docs/archive.md` 26-10-10) |
 | 39 | Direct TV connection without relay (LAN / hotspot) | Not started | Legacy `lib/network/vtt_server.dart` is the starting point — keep it |
 | 40 | AI map pipeline (Nano Banana 2.1 API) | v0 works; doors drawn by battlemap, ruins in the layout, checks + Claude judge (2026-10-10) | `tools/mapgen/` layout → guide → model → `.dd2vtt`; `docs/ai-art.md` "built"; next steps: `docs/ai-art.md` § "Next — pick up here"; images on horizon board `battlemap-mapgen` |
-| 41 | DM-only picture layers | Code done (2026-10-10, 1.1.6+16), needs tablet + TV test | Companion Layers tab: many pictures over the map, eye/opacity/order, never on the TV; `docs/architecture.md` "DM layers", `relay-protocol.md` `vtt.setDmOverlays`; VPS dev_server restart keeps `uploads/dm/` |
+| 42 | DM-only picture layers | Done (2026-10-10, 1.1.6+16, on the box + VPS), needs a tablet test | Companion Layers tab: many pictures over the map, eye/opacity/order, never on the TV; `docs/architecture.md` "DM layers", `relay-protocol.md` `vtt.setDmOverlays`; VPS dev_server restart keeps `uploads/dm/` |
 | 42 | Tabletop UX polish (UX review 2026-10-10) | Code done (2026-10-10, 1.1.7+17), needs tablet + TV test | Side panel on landscape tablets, Fog tab Brush \| Room + "Players see changes", camera tab by screen, ruler centred + upright numbers, door markers DM-only, undo snackbars, library Continue card + thumbnails + dated names; `docs/archive.md` 26-10-10 "tabletop UX polish" |
+| 43 | Rolling deploy (mid-game patch) | Done (2026-10-10) | `tools/deploy.sh [tv] [web]`: build while the old app runs, TV saves (`deploy.prepare`), install over the Wi-Fi, relaunch with `/restore` → same game again; tablet tab reopens at `#/companion`. `docs/setup.md` "rolling deploy" |
 | 9 | Custom sprite animations | Not started | Animated tokens, spell effects |
 | 10 | Visual effects | Not started | Glow, fog lighting, bloom |
 | 11 | Shape drawing tools | Not started | Circles, cones, area-of-effect markers |

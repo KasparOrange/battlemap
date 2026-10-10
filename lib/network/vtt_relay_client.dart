@@ -76,6 +76,16 @@ class VttRelayClient {
   /// forwarded here.
   void Function(Map<String, dynamic> msg)? onCommand;
 
+  /// Called when `peer_connected` arrives while already paired — a new
+  /// peer replaced the old one in its slot (relay takeover). The TV resends
+  /// its library and game then; before 2026-10-10 a takeover companion sat
+  /// on "Connected to TV" with no map.
+  void Function()? onPeerReconnected;
+
+  /// Called on `deploy.ready` (companion side): the TV is about to be
+  /// replaced by a rolling deploy and will be back in a few seconds.
+  void Function(Map<String, dynamic> msg)? onDeployReady;
+
   /// Called when a `vtt.fullState` message is received (companion side only).
   ///
   /// Contains the complete serialised [VttState] plus TV view metadata so
@@ -306,8 +316,15 @@ class VttRelayClient {
           debugPrint('VTT relay: replaced by another $role, not reconnecting');
 
         case 'peer_connected':
+          final wasPaired = _state == RelayConnectionState.paired;
           _setState(RelayConnectionState.paired);
           debugPrint('VTT relay: peer connected');
+          // A new peer took over the slot (e.g. the tablet replaced another
+          // companion): no state change, but the newcomer has nothing yet.
+          if (wasPaired) onPeerReconnected?.call();
+
+        case 'deploy.ready':
+          onDeployReady?.call(msg);
 
         case 'peer_disconnected':
           _setState(RelayConnectionState.connected);

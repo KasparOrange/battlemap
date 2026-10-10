@@ -233,6 +233,23 @@ sent every 50ms when state changes:
 Older TV builds omit `canUndo`/`canRedo` (the phone then falls back to its local stack),
 `measure` and `vw`/`vh` (no TV frame is drawn).
 
+## rolling deploy (since 1.1.6+16) — `tools/deploy.sh`
+
+```
+bot → table:        {"type": "deploy.prepare"}
+table → companion+bot: {"type": "deploy.ready", "view": "game", "mapId": "uuid", "sessionId": "uuid"}
+```
+
+`deploy.prepare`: the TV saves the session and its restore snapshot now and shows "Updating…";
+`deploy.ready` tells the script to install and the companion to show "TV is updating". The
+script reads `diag.status` before (view/map/session) and polls it after the relaunch until
+the same session is open again. See `setup.md` "rolling deploy".
+
+**Companion takeover:** when a companion replaces another one, the relay sends the TV a second
+`peer_connected` while it is already paired; since 1.1.6+16 the TV then resends library, map and
+state (`VttRelayClient.onPeerReconnected`). Older TVs left the new companion on "Connected to TV"
+— workaround: `nav.goToGame` with the open session (`tools/tv_ctl.py resume MAP SESSION`).
+
 ## update commands
 
 ```

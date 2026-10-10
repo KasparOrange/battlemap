@@ -124,6 +124,43 @@ latrine android app battlemap start --device xiaomi
 While another session works in this checkout, build in a throwaway `git worktree` so the two
 builds don't share `build/` and Gradle locks.
 
+### rolling deploy (mid-game patch, since 2026-10-10)
+
+Live development against the real box and tablet with a ~15 s break, modelled on mytube's
+"deploy restore" (`~/code/my-tube`, `MyTube/Player/DeployRestore.swift`):
+
+```bash
+tools/deploy.sh            # tv + web
+tools/deploy.sh tv         # APK onto the box, the running game comes back by itself
+tools/deploy.sh web        # web companion onto the VPS, the tablet's tab reopens connected
+tools/deploy.sh tv --here  # build the working tree instead of a clean worktree of HEAD
+```
+
+1. **build** first (clean worktree of HEAD by default — other sessions' unfinished edits never
+   ship); the old app keeps running meanwhile
+2. `tools/tv_ctl.py status` (relay, `bot` role) asks the TV where it is: view, map, session
+3. `deploy.prepare`: the TV saves the session *now*, writes its restore snapshot, shows
+   "Updating battlemap — back in a few seconds" and answers `deploy.ready` (the tablet shows a
+   snackbar). A TV build without it gets 3 s for its 2 s auto-save instead
+4. `latrine android install` (`install -r`, data kept) — this kills the old app
+5. relaunch with the initial route `/restore?session=…&map=…` (`am start --es route …`;
+   FlutterActivity hands the `route` extra to Flutter) → `main.dart` opens `TvShell(restore:)`
+   on top of the mode selector → `_restoreAfterDeploy` resumes the session (fog, doors, camera
+   from the saved session) behind an "Updated — reopening the game…" overlay
+6. `tv_ctl.py wait-session` until the TV shows that game again; prints the break in seconds
+
+Without the relay the route is plain `/restore` and the TV uses its own snapshot
+(`DeployRestore`, Hive box `deployRestore`: view + map + session, written on every view change
+and session save — the install SIGKILLs the app, nothing can be saved on the way out). A normal
+launch never restores. **web**: rsync like "deploying a web build from the Mac", then the
+tablet's Chrome tab is reopened at `…/?v=<time>#/companion` (same `application_id` → same tab;
+the query forces the reload, the `/companion` route connects without the mode selector).
+The TV resends its game to a companion that takes over the slot (`onPeerReconnected`).
+
+Needs: box + tablet paired with this Mac (`latrine android devices`), the bench venv
+(`~/.local/share/battlemap/venv`, created on first run), `~/.config/mwlog/battlemap.env`.
+Rule of thumb: batch changes — every TV deploy interrupts the table.
+
 ## testing
 
 ```bash

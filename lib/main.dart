@@ -7,6 +7,7 @@ import 'package:flutter_phoenix/flutter_phoenix.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'ui/tv_shell.dart';
+import 'update/deploy_restore.dart';
 import 'ui/vtt_companion_screen.dart';
 import 'ui/dev_screen.dart';
 
@@ -43,7 +44,25 @@ class BattlemapApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF1A1A2E),
       ),
       home: const ModeSelector(),
+      onGenerateInitialRoutes: _initialRoutes,
     );
+  }
+
+  /// The mode selector, plus — when launched with a restore route (rolling
+  /// deploy, [DeployRestore.parseRoute]) — the TV or the companion on top
+  /// of it, so back still leads to the selector.
+  ///
+  /// Android: `am start … --es route /restore`; web: `…/#/companion`.
+  static List<Route<dynamic>> _initialRoutes(String initialRoute) {
+    final target = DeployRestore.parseRoute(initialRoute);
+    return [
+      MaterialPageRoute(builder: (_) => const ModeSelector()),
+      if (target != null)
+        MaterialPageRoute(
+          builder: (_) =>
+              target.tv ? TvShell(restore: target) : const VttCompanionScreen(),
+        ),
+    ];
   }
 }
 
