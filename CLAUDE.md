@@ -45,6 +45,7 @@ Detailed documentation lives in `docs/`:
 | `docs/shorebird-setup.md` | OTA update setup (Shorebird code push) |
 | `docs/apple-tv-dev.md` | Apple TV as a dev target (flutter-tvos): setup + what it forced on dependencies, tvOS caveats, PDF rasterized on the phone |
 | `docs/ai-art.md` | Vision for AI-generated art + the API-driven map pipeline (Nano Banana 2.1): layout spec → guide image → model → QA → `.dd2vtt`; prompt baseline, prices |
+| `docs/test-session.md` | Realistic game-night test script + the test-map set (`tools/fetch_test_maps.py`) |
 | `docs/action.md` | **Live work** — the companion overhaul: bug list, decisions, planned workflow. Read first. |
 | `docs/archive.md` | History, newest on top: one entry per prompt that changed docs or code (append-only) |
 

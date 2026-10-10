@@ -1,0 +1,90 @@
+# test session — a realistic game night
+
+One evening of play, compressed into ~30 minutes, on the Android bench (`setup.md` "android bench")
+or the real devices. Each scene names what it exercises. Write down what breaks, with the scene
+number; fixing happens afterwards, from code (`action.md`).
+
+## maps
+
+`tools/fetch_test_maps.py --push <tablet serial>` downloads them into `test_assets/maps/`
+(gitignored — other people's maps, local testing only) and pushes them, plus `test_map.pdf`, to
+the tablet's Download folder. The grid size is in the file name.
+
+| file | what it is | why it's in the set |
+|---|---|---|
+| `01-eldrica-house-10x8.dd2vtt` | one small house, 2 doors, 4 lights | tiny map: fit-to-screen, zoom limits |
+| `02-small-home-16x18.uvtt` | blueprint-style house, **61 walls, 29 doors/windows** | `.uvtt` extension; door-heavy fog + wall occlusion |
+| `03-przerzut-16x16.dd2vtt` | tavern with a bar, 12 doors, 8 lights | the classic "you meet in a tavern" opener |
+| `04-vampire-lair-19x14.dd2vtt` | dungeon, 5 doors, 12 lights | combat map: tokens, AoE, measure |
+| `05-tower-ground-11x11.dd2vtt` / `06-tower-upper-11x11.dd2vtt` | two floors of one tower | switching maps mid-scene and back |
+| `07-STRESS-castle-114x64-30MB.dd2vtt` | huge castle, 2142 walls, 57 doors, 80 lights, **17100×9600 px** | upload progress, memory, texture size |
+| `08a-vampire-lair-image-19x14.jpg` | the image of 04, no walls | image upload path (jpg), grid must line up at 19×14 |
+| `08b-small-home-image-16x18.webp` | the image of 02, no walls | image upload path (webp), 16×18 |
+| `09-dyson-twelve-goats-tavern-6000px.png` | Dyson Logos line-art tavern with grid, 6000×6000 | big PNG; grid alignment by eye |
+| `../test_map.pdf` | the existing PDF map | PDF → PNG on the phone (#36) |
+
+Sources: Dungeondraft exports from public GitHub repos (MasterCoookie/DND_Dreams,
+mixtli/dungeon-lab, guebertn/DNDMaps) and Dyson Logos' blog ("Cartography by Dyson Logos",
+commercial map license). None of it is committed.
+
+**Predicted failure:** nothing in `lib/` downscales big images. 07's 17100×9600 image is ~650 MB
+decoded and above the Mali-G310's maximum texture size; 09 is ~144 MB decoded. Expect 07 to fail
+or crash the TV (2 GB RAM). The emulator has more headroom than the real box, so a pass on the
+bench does not clear it for the Xiaomi.
+
+## scenes
+
+**0. prep (before the players arrive)**
+1. TV: TV Mode. Tablet: Companion → Connect. Both show "connected".
+2. Upload 01–06 one after another. Every upload shows progress; each appears in the library on
+   both sides without a restart.
+3. TV remote fallback: on the TV, arrow keys + Return alone reach every library entry and the back
+   button.
+
+**1. the tavern (03)**
+1. Start a session on 03. The TV shows the whole map fogged.
+2. Place 4 player tokens at the door and 2 NPC tokens at the bar; move one by drag.
+3. Reveal the main room with the brush; the bar area stays hidden until "opened".
+4. Pinch and two-finger pan on the tablet: never paints fog.
+5. "TV follows the phone" on: the TV moves live with the tablet. "Match TV" jumps back.
+
+**2. the house (02)**
+1. Switch the session to 02. Tokens and fog from 03 are *not* carried over.
+2. Open and close several doors from the tablet; the TV updates within a moment.
+3. Reveal one room: does fog stop at walls? Through an open door, does it continue?
+4. Measure from the front door to the kitchen; the line and distance show on the TV while dragging.
+
+**3. the fight (04)**
+1. Start a new session on 04, place 5 tokens.
+2. AoE: a 20 ft circle (fireball) by tap, a 15 ft cone aimed by drag, change the size from the
+   panel — the template changes in place on both screens.
+3. Draw an arrow with the pen, change the width with the presets.
+4. Fog stroke → undo → redo; the buttons light up on the tablet.
+5. Ruler: 10 squares, rotate it on the Measure tab, drag it in any mode.
+
+**4. up the tower (05 → 06 → 05)**
+1. Session on 05: reveal half, place 2 tokens.
+2. Switch to 06, reveal a little, then back to 05: fog and tokens of 05 are exactly as left.
+
+**5. something goes wrong**
+1. Kill the TV app (`adb -s emulator-5556 shell am force-stop com.example.battlemap`), start it
+   again, TV Mode: the companion reconnects; resume the last session — fog, tokens, drawings back.
+2. Stop the relay for ~10 s and restart it: both sides show the disconnect and recover alone.
+3. Double-tap "load" on a session: it loads once.
+
+**6. improvised maps**
+1. Upload 08a and 08b: grid lines up with the drawn squares (19×14, 16×18)? If the app assumes
+   20×15, note it — image maps need a grid setting.
+2. Upload 09 (6000 px PNG): loads, pans smoothly, grid aligns?
+3. Upload `test_map.pdf`: the tablet rasterizes it, the TV gets an image.
+
+**7. stress**
+1. Upload 07 (30 MB): progress bar moves, the UI stays responsive.
+2. Open it on the TV: loads, or fails with a visible error (not a silent black screen / crash)?
+3. Afterwards, back to 04: memory released, the small map runs as smoothly as before.
+
+## after the run
+
+Note results per scene (works / broken + what was seen) in `action.md` "next", then fix one at a
+time. Logs: the debug APK on the bench logs to the Developer screen; `/tmp/bm_relay.out` shows
+every message the relay forwarded.

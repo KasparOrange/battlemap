@@ -13,6 +13,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- design: our layout spec is the truth, the model only repaints a color-coded guide image, QA checks wall alignment, output packed as `.dd2vtt` (no TV change); prompt baseline v0 + tuning plan
 	- docs: new `ai-art.md`, `CLAUDE.md` (docs table, tracker #40), `feature-ideas.md`
 
+### 26-10-10 - battlemap test maps
+- Konrad: "give me a realistic test case with battle maps from online" → `docs/test-session.md` (game night in 8 scenes) + `tools/fetch_test_maps.py` (10 maps into gitignored `test_assets/maps/`, pushed to the tablet emulator)
+	- sources: public GitHub Dungeondraft exports (no license → never committed) and a Dyson Logos tavern; 2-Minute Tabletop only serves previews without checkout, a sparse AI-generated inn map was dropped
+	- found while picking: no image downscaling in `lib/` → `action.md` prediction for the 30 MB map
+
 ### 26-10-10 - battlemap android bench
 - Konrad: final devices are Android TV / Google TV + Android tablet/phone; develop on the Mac → Android bench set up instead of iPhone/Apple TV simulators
 	- installed `emulator` + `google-tv` API 34 and `google_apis` API 36 arm64 images; AVDs `bm_tv` (tv_1080p, 2 GB) and `bm_tablet` (pixel_tablet); `flutter config --jdk-dir` → Homebrew openjdk@17 (doctor could not find Java before)

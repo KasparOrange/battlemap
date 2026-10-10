@@ -52,7 +52,11 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   and no `uses-feature` `android.software.leanback` / `touchscreen required=false` — so the app is
   missing from the Google TV home row (launchable only via Settings ▸ Apps or adb). Fix before
   calling it a Google TV app.
-- Device test (next 1) can now run on the bench first: TV emulator + tablet emulator.
+- Device test (next 1) can now run on the bench first: TV emulator + tablet emulator, following
+  `test-session.md` (scripted game night with 10 real maps, incl. a 30 MB stress map).
+- **Predicted: big maps break the TV** — nothing in `lib/` downscales images; a 17100×9600
+  Dungeondraft export exceeds the Mali texture limit and 2 GB RAM. Confirm with scene 7, then
+  downscale on load (decode with a target size).
 
 ## kept on purpose: direct TV connection (no relay)
 

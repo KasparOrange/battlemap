@@ -15,3 +15,4 @@ build/
 
 # Web build output
 build/web/
+test_assets/maps/
