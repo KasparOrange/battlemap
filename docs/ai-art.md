@@ -165,7 +165,7 @@ in step (size, colours) when either changes.
 rank images — the free checks and the judge do (`pack` follows the judge when it has run);
 no automatic redraw on a high issue; the doorway fix is its own command, not part of `paint`
 (crypt untried); `est_cost` ignores thought tokens; style refs (`--refs`),
-2K/4K and the batch tier untried; packed maps checked on the TV emulator only, not on the box
+2K/4K and the batch tier untried; the fixed keep is open on the box and tablet but not played
 yet (step 5).
 
 ## Learned so far — Nano Banana 2.1 for battle maps (runs 1–5, 2026-10-10)
@@ -282,7 +282,8 @@ nico.zingerle), read "learned so far" before changing a prompt. Every new image 
 board (rule above).
 
 **Where it stands (2026-10-10, third session):** steps 1–5 and the doorway edit pass are done;
-runs 2–5 are judged and the board is built from the run folders. ≈ $1.35 of the €20 used
+runs 2–5 are judged and the board is built from the run folders. The fixed keep is open on the
+table (box + tablet, session "AI keep", 1.1.12+22 with doors above the fog), not played yet. ≈ $1.35 of the €20 used
 (map runs ≈ $0.80, Juri's edit ≈ $0.55; judging is on the subscription). Test map for the
 table: the fixed run-4 keep (`out/keep/261010-192835-fix-doorways/keep.dd2vtt`, judge use
 8/10: doorways empty and one square, every wall standing; left: the corridor's north wall half
@@ -310,7 +311,9 @@ new map: `paint --why "…" --n 3 --judge`, then `fix <run> --judge --pack` on t
    beside it is revealed (`PortalComponent.forPlayers`); (b) the keep
    corridor's north wall, painted half a square high, lies under the fog when only the corridor
    is revealed (the known wall drift). Screenshots `tv_bench_*.jpg` in both run folders, on the
-   board; the real box is still open.
+   board. On the box the same evening: loaded as "AI keep" (a script upload needs a
+   `nav.newSession` after it, or the tablet keeps the old picture — `relay-protocol.md` "upload
+   UVTT"); the fix deployed with 1.1.12+22.
 6. **4K finals + the tuning grid** (below), run by the helper session; this session gets a
    short summary + the board. The tuning grid now also targets the open rows of the failure
    catalogue.

@@ -76,6 +76,11 @@ and pushes each `lib.thumbnail` unasked as soon as it's ready (`docs/sessions.md
 2. phone sends: `{"type": "vtt.mapUploaded", "url": "http://...", "displayName": "..."}`
 3. TV HTTP GETs the file from the URL
 
+The TV then starts "Session 1" on the new map **without** sending it to the companion — it assumes
+the sender is the companion and has the map already. A script uploading as `bot` (e.g. an AI map
+from `tools/mapgen`) must follow with `nav.newSession`, which sends the companion the map;
+otherwise the tablet shows the new grid over its old picture (found 2026-10-10).
+
 ### upload PDF or image (phone → VPS → TV) — since 1.1.3
 1. **PDF only:** phone renders page 1 to PNG itself (pdfrx PDFium-WASM, ≤ 4096 px) — the TV never
    sees a PDF, so it needs no PDF engine (Apple TV has none)

@@ -350,7 +350,7 @@ JOURNEY = [
      "**Test map:** the fixed keep. Doorways empty and one square, every wall standing, judge **use 8 "
      "of 10**. About **$1.35 of the €20** spent.\n\n**Still open:** the corridor's north wall sits "
      "**half a square off**, lights are painted a square or two from the layout's, and the judge's "
-     "scores drift.\n\n**Next:** the keep on the real box, then 4K finals and a tuning grid, and the fix "
+     "scores drift.\n\n**Next:** play the keep on the table (it is open on the box), then 4K finals and a tuning grid, and the fix "
      "pass folded into every paint."),
 ]
 
