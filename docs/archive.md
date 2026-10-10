@@ -10,7 +10,8 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 - Konrad: no way out of draw mode on the tablet; being on a tab should be its mode, not a button on the tab; a new leftmost tab for the normal mode with token placement, selection and management — tokens are needed at the tabletop after all, to remember where players and monsters stand
 	- `dm_control_panel.dart`: tabs by id; switching tabs requests the tab's mode (Layers/Camera/Settings → token), the active tab only folds; "Draw Mode", "Measure Mode", "Place Token", "AoE Mode" buttons gone; the panel follows a mode set elsewhere (1.5 s grace for its own request)
 	- new Tokens tab (always shown, leftmost); Combat keeps only AoE (shown when AoE templates are on); the settings dialog drops the Tokens switch; `VttState` starts in token mode; a door tap in token mode toggles the door
-	- 2 new widget tests, suite 463 green; not in a build yet, not seen on the tablet
+	- 2 new widget tests, suite 463 green
+	- deployed 1.1.10+20 with `tools/deploy.sh tv tablet` (clean worktree of HEAD): TV back in its game after 15 s, tablet relaunched into Companion Mode
 	- open: tapping a token on the map doesn't select it (the list does)
 
 ### 26-10-10 19:52 - 0f0ee4a5 - AI maps: the journey on the board + walk `journey`
