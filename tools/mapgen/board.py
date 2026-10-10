@@ -149,7 +149,9 @@ NOTES = {
     # doorway, the judge caught it (2026-10-10).
     "crypt/261010-171713-doorways/out_1": {"id": "d_crypt1", "pins": [
         (8, 14, GREEN, "No red anywhere", "Nothing of the old door marker is left to leak into the art."),
-    ]},
+    ], "sides": [
+        (OUT / "crypt/261010-171713-doorways/tv_bench_doors_open.jpg", "On the TV emulator: burial hall revealed, doors open"),
+        (OUT / "crypt/261010-171713-doorways/tv_bench_doors.jpg", "TV doors: closed · open (leaves under the fog) · all revealed")]},
     "crypt/261010-171713-doorways/out_2": {"id": "d_crypt2"},
     "keep/261010-171818-doorways/out_1": {"id": "d_keep1"},
     "keep/261010-171818-doorways/out_2": {"id": "d_keep2", "pins": [
@@ -163,7 +165,10 @@ NOTES = {
     "keep/261010-173421-ruined/out_3": {"id": "r_keep3"},
     # the first doorway edit pass: the trial that picked the plain edit over magenta holes
     "keep/261010-192835-fix-doorways/out_1": {"sides": [
-        (OUT / "fixlab/compare.jpg", "Edit trial per doorway: original · plain edit · magenta holes (walls lost)")]},
+        (OUT / "fixlab/compare.jpg", "Edit trial per doorway: original · plain edit · magenta holes (walls lost)"),
+        (OUT / "keep/261010-192835-fix-doorways/tv_bench_rooms.jpg", "On the TV emulator, 1 square = 1 inch: hall + corridor revealed"),
+        (OUT / "keep/261010-192835-fix-doorways/tv_bench_doors.jpg", "TV doors, rows: open · closed · all revealed; the open south door hides under the fog"),
+        (OUT / "keep/261010-192835-fix-doorways/tv_bench_all.jpg", "On the TV, all revealed")]},
 }
 
 SEVERITY = {"high": RED, "medium": AMBER, "low": GREY}
@@ -334,11 +339,17 @@ JOURNEY = [
      "lost the walls), only the **doorway regions** are pasted back, and the wall beside each doorway is "
      "**copied from further along the line**: under the rails, the openings were 1.5 to 2 squares wide."
      "\n\n**Worked:** judge **retry 7 → use 8**, with about half a percent of the pixels changed."),
+    ("j_tv", "ON THE TV (BENCH)", GREEN, J / "261010-192835-fix-doorways/tv_bench_rooms.jpg",
+     "**Tried:** the fixed keep and the crypt on the Android TV emulator at one square = one inch, "
+     "rooms revealed and doors toggled over the relay.\n\n**Worked:** the fog edge sits on the painted "
+     "walls, the drawn doors read at table size and swing; the double door opens from the middle."
+     "\n\n**Found:** a door that swings into a **fogged** room disappears under the fog, and the "
+     "corridor's north wall, half a square high, hides under the fog."),
     ("j_now", "WHERE WE ARE", BLUE, J / "261010-192835-fix-doorways/doors_1.jpg",
      "**Test map:** the fixed keep. Doorways empty and one square, every wall standing, judge **use 8 "
      "of 10**. About **$1.35 of the €20** spent.\n\n**Still open:** the corridor's north wall sits "
      "**half a square off**, lights are painted a square or two from the layout's, and the judge's "
-     "scores drift.\n\n**Next:** the map **on the TV**, then 4K finals and a tuning grid, and the fix "
+     "scores drift.\n\n**Next:** doors drawn above the fog, then 4K finals and a tuning grid, and the fix "
      "pass folded into every paint."),
 ]
 
@@ -364,7 +375,7 @@ def journey_zone(x, y):
 
 
 NEXT = [
-    ("On the TV", "The fixed run-4 keep (run 5) on the Android TV emulator: do fog, doors and room reveal line up with the painted walls?", BLUE),
+    ("Doors above the fog", "Bench finding: an open door into a fogged room vanishes. Draw a door leaf over the fog when a cell beside it is revealed.", BLUE),
     ("4K finals", "Both maps at 4K (~11 cents each): enough pixels per square for the table?", BLUE),
     ("Tuning grid", "Same layouts × variants, aimed at the open failures: walls half a square off, lights moved, extra fireplaces.", BLUE),
     ("Fix inside paint", "Every draw gets the doorway fix pass before the judge (+3 cents each); try it on the crypt.", BLUE),
@@ -488,7 +499,7 @@ def main():
         "**Built from the run folders:** one zone per round, one plate per painting; pins come "
         "from the Claude judge's scorecard (or the free pixel checks), notes by eye on the "
         "early runs. Every paint, judge and pack rebuilds the board.\n\n"
-        "**State 2026-10-10:** five runs and Juri's edit; the journey below tells the story — "
+        "**State 2026-10-10:** five runs, Juri's edit, the keep on the TV emulator; the journey below tells the story — "
         "what failed, what worked, what was decided. Test map: the fixed keep in run 5 (judge "
         "use 8/10). Next images are the blue slots at the bottom.\n\n"
         "Source: `battlemap/docs/ai-art.md` · rebuilt by `tools/mapgen/board.py`.")

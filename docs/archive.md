@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 20:05 - a9469a3d - AI maps step 5: the fixed keep on the TV emulator
+- Konrad: follow up on the map session's recommendation — put the fixed keep on the TV (step 5)
+	- the fixed run-4 keep and the run-2 crypt loaded on AVD `bm_tv` (installed 1.1.9) in the table view, rooms revealed with `vtt.roomReveal`, doors toggled with `vtt.togglePortal` over the relay (a throwaway `bench_bot` probe)
+	- fog edge on the painted walls, drawn doors read at table size and swing, the crypt's double door opens from the middle; no TV errors, ~420 MB
+	- found: a door swinging into a fogged room is hidden under the fog (fix proposed: leaf above the fog when a neighbouring cell is revealed); the corridor's north wall, half a square high, lies under the fog
+	- `docs/ai-art.md` step 5 ✅ + known gaps; board: `tv_bench_*.jpg` sides on the keep and crypt plates, journey stage "on the TV", next card "doors above the fog"
+
 ### 26-10-10 19:54 - 303b3806 - DM panel: tabs are modes, Tokens tab
 - Konrad: no way out of draw mode on the tablet; being on a tab should be its mode, not a button on the tab; a new leftmost tab for the normal mode with token placement, selection and management — tokens are needed at the tabletop after all, to remember where players and monsters stand
 	- `dm_control_panel.dart`: tabs by id; switching tabs requests the tab's mode (Layers/Camera/Settings → token), the active tab only folds; "Draw Mode", "Measure Mode", "Place Token", "AoE Mode" buttons gone; the panel follows a mode set elsewhere (1.5 s grace for its own request)

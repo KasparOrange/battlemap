@@ -165,8 +165,8 @@ in step (size, colours) when either changes.
 rank images — the free checks and the judge do (`pack` follows the judge when it has run);
 no automatic redraw on a high issue; the doorway fix is its own command, not part of `paint`
 (crypt untried); `est_cost` ignores thought tokens; style refs (`--refs`),
-2K/4K and the batch tier untried; no packed map loaded on the TV yet (drawn doors are checked
-by unit tests and an offscreen render of the real component, not on a device).
+2K/4K and the batch tier untried; packed maps checked on the TV emulator only, not on the box
+yet (step 5); an opened door that swings into a fogged room hides under the fog.
 
 ## Learned so far — Nano Banana 2.1 for battle maps (runs 1–5, 2026-10-10)
 
@@ -281,7 +281,7 @@ the budget (prepaid €20 on Bao's account, usage below — AI Studio → Ausgab
 nico.zingerle), read "learned so far" before changing a prompt. Every new image goes onto the
 board (rule above).
 
-**Where it stands (2026-10-10, third session):** steps 1–4 and the doorway edit pass are done;
+**Where it stands (2026-10-10, third session):** steps 1–5 and the doorway edit pass are done;
 runs 2–5 are judged and the board is built from the run folders. ≈ $1.35 of the €20 used
 (map runs ≈ $0.80, Juri's edit ≈ $0.55; judging is on the subscription). Test map for the
 table: the fixed run-4 keep (`out/keep/261010-192835-fix-doorways/keep.dd2vtt`, judge use
@@ -300,9 +300,16 @@ new map: `paint --why "…" --n 3 --judge`, then `fix <run> --judge --pack` on t
    `judge_N.json` (`good`, issues, rejected checks); `pack` follows the judge; `paint`,
    `judge --wait`, `pack` rebuild the board. `paint --why "…" --judge --pack` is the whole
    loop in one command.
-5. **On the TV:** the fixed run-4 keep (and a crypt) on the Android bench (`tools/android_bench.sh`,
-   AVD `bm_tv`): do fog, doors and room reveal match the painted walls; do the drawn doors read
-   at TV size (the leaf is 0.14 squares thick) and swing on a tap from the phone?
+5. ✅ **On the TV (bench)** — the fixed keep and the run-2 crypt on AVD `bm_tv` in the table view
+   (1 square = 1 inch, 34 × 19 window), rooms revealed with `vtt.roomReveal`, doors with
+   `vtt.togglePortal` (the phone's message; the tablet tap itself untested). The fog edge sits on
+   the painted walls; the drawn doors read at table size and swing, the crypt's double door opens
+   from the middle; no errors, ~420 MB on the TV. **Found:** (a) a door that swings into a fogged
+   room is drawn under the fog, so an opened door looks like a black gap until the next room is
+   revealed — fix: draw a leaf above the fog when a cell beside it is revealed; (b) the keep
+   corridor's north wall, painted half a square high, lies under the fog when only the corridor
+   is revealed (the known wall drift). Screenshots `tv_bench_*.jpg` in both run folders, on the
+   board; the real box is still open.
 6. **4K finals + the tuning grid** (below), run by the helper session; this session gets a
    short summary + the board. The tuning grid now also targets the open rows of the failure
    catalogue.
