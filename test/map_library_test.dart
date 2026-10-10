@@ -243,6 +243,40 @@ void main() {
 
       expect((await library.listSessions(mapId: entry.id)), isEmpty);
     });
+
+    test('a game with more maps loses only the deleted one', () async {
+      await library.init();
+      final a = await library.addMap(_makeMinimalUvttBytes(), 'Town');
+      final b = await library.addMap(_makeMinimalUvttBytes(), 'Dungeon');
+      // Town on the table, dungeon parked with fog
+      final game = Session(
+        id: 'game',
+        mapId: b.id,
+        name: 'Two maps',
+        createdAt: DateTime.utc(2026, 1, 1),
+        lastModifiedAt: DateTime.utc(2026, 1, 1),
+        revealedCells: [7],
+      ).switchTo(a.id);
+      await library.saveSession(game);
+
+      await library.deleteMap(a.id);
+
+      final left = await library.loadSession('game');
+      expect(left, isNotNull);
+      expect(left!.mapId, b.id);
+      expect(left.mapIds, [b.id]);
+      expect(left.parkedMaps, isEmpty);
+      expect(left.revealedCells, [7]);
+    });
+
+    test('entryForServerMap finds the copy of a shared map', () async {
+      await library.init();
+      final e = await library.addMap(_makeMinimalUvttBytes(), 'Shared');
+      expect(library.entryForServerMap('abc123'), isNull);
+      e.serverMapId = 'abc123';
+      await library.updateEntry(e);
+      expect(library.entryForServerMap('abc123')?.id, e.id);
+    });
   });
 
   group('MapLibrary session operations', () {

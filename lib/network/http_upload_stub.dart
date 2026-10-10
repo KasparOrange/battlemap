@@ -42,3 +42,20 @@ Future<Map<String, dynamic>?> httpUpload(
   }
   return null;
 }
+
+/// Sends an HTTP DELETE (native implementation using dart:io) and returns
+/// whether the server answered 2xx. Used for the shared map library
+/// (`SharedLibraryClient`).
+Future<bool> httpDelete(String url) async {
+  final client = HttpClient()..connectionTimeout = const Duration(seconds: 10);
+  try {
+    final response = await (await client.deleteUrl(Uri.parse(url))).close();
+    await response.drain<void>();
+    return response.statusCode >= 200 && response.statusCode < 300;
+  } catch (e) {
+    debugPrint('httpDelete (native): $url failed: $e');
+    return false;
+  } finally {
+    client.close();
+  }
+}

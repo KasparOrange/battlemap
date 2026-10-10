@@ -17,6 +17,7 @@ import '../model/map_library_entry.dart';
 import '../model/map_token.dart';
 import '../model/raster_grid.dart';
 import '../model/session.dart';
+import '../model/shared_map.dart';
 import '../model/table_fit.dart';
 import '../network/http_download_stub.dart'
     if (dart.library.io) '../network/http_download.dart';
@@ -126,6 +127,12 @@ class _TvShellState extends State<TvShell> {
   DateTime? _sessionCreatedAt;
   bool _isPdfSession = false;
   bool _isImageSession = false;
+
+  /// The open game's maps beyond the one on the table: all its map ids
+  /// ([Session.mapIds]) and the parked maps' state ([Session.parkedMaps]),
+  /// for the game [_SessionMaps.sessionId]. [_saveCurrentSession] keeps
+  /// them only while that game is open, so a new game starts with one map.
+  _SessionMaps? _sessionMaps;
 
   // Rendering spinner (for PDF render, map decode, etc.)
   bool _isRendering = false;
@@ -291,6 +298,7 @@ class _TvShellState extends State<TvShell> {
     stateJson['tvView'] = _currentView.name;
     stateJson['activeMapId'] = _activeMapId;
     stateJson['activeSessionId'] = _activeSessionId;
+    stateJson['sessionMapIds'] = _currentMapIds();
     final camera = _game?.getCameraState() ?? {'x': 0.0, 'y': 0.0, 'zoom': 1.0, 'angle': 0.0};
     _relay.sendFullState(stateJson, camera);
   }
@@ -446,6 +454,7 @@ class _TvShellState extends State<TvShell> {
       _sessionCreatedAt = DateTime.now();
 
       _setView(TvView.game);
+      _state.removeListener(_onStateChanged); // not twice if a game was open
       _state.addListener(_onStateChanged);
 
       // Initial save (mark as PDF session)
@@ -532,6 +541,7 @@ class _TvShellState extends State<TvShell> {
       _isImageSession = true;
 
       _setView(TvView.game);
+      _state.removeListener(_onStateChanged); // not twice if a game was open
       _state.addListener(_onStateChanged);
       await _saveCurrentSession();
       // Send rendered image to companion
@@ -643,6 +653,7 @@ class _TvShellState extends State<TvShell> {
       _sessionCreatedAt = DateTime.now();
 
       _setView(TvView.game);
+      _state.removeListener(_onStateChanged); // not twice if a game was open
       _state.addListener(_onStateChanged);
 
       // Apply session settings if provided
@@ -812,12 +823,14 @@ class _TvShellState extends State<TvShell> {
 
       _activeMapId = session.mapId;
       _activeSessionId = session.id;
+      _sessionMaps = _SessionMaps(session.id, session.mapIds, session.parkedMaps);
       _activeSessionName = session.name;
       _sessionCreatedAt = session.createdAt;
       _isPdfSession = loadAsPdf;
       _isImageSession = loadAsImage;
 
       _setView(TvView.game);
+      _state.removeListener(_onStateChanged); // not twice if a game was open
       _state.addListener(_onStateChanged);
 
       _game!.syncCamera(
@@ -854,6 +867,104 @@ class _TvShellState extends State<TvShell> {
       _log('ERROR in _resumeSession: $e');
       _log('Stack: ${stack.toString().split('\n').take(5).join(' | ')}');
       RemoteLog.error('session', 'resumeSession failed', {'error': '$e', 'sessionId': sessionId});
+    }
+  }
+
+  /// The open game's map ids, the table's map included — `[]` outside a
+  /// game. Sent as `sessionMapIds` in `vtt.fullState` for the companion's
+  /// map switcher.
+  List<String> _currentMapIds() {
+    final active = _activeMapId;
+    if (_activeSessionId == null || active == null) return const [];
+    final maps = _sessionMaps;
+    if (maps == null || maps.sessionId != _activeSessionId) return [active];
+    return [...maps.mapIds, if (!maps.mapIds.contains(active)) active];
+  }
+
+  /// Puts map [mapId] on the table in the open game (`vtt.switchMap`):
+  /// saves the game, parks the current map's fog, tokens and drawings
+  /// ([Session.switchTo]) and resumes the game on [mapId] — its own state
+  /// back if it was played in this game before, a fresh start otherwise.
+  ///
+  /// Reports a `tv.error` outside a game or for an unknown map.
+  Future<void> _switchMap(String mapId) async {
+    final sessionId = _activeSessionId;
+    if (_currentView != TvView.game || sessionId == null) {
+      _sendError('Switch map: no game is open');
+      return;
+    }
+    if (mapId == _activeMapId) {
+      _broadcastFullState();
+      return;
+    }
+    final entry = _library.getEntry(mapId);
+    if (entry == null) {
+      _sendError('Switch map: this TV has no map $mapId');
+      return;
+    }
+    try {
+      _autoSaveTimer?.cancel();
+      await _saveCurrentSession();
+      final session = await _library.loadSession(sessionId);
+      if (session == null) throw StateError('session $sessionId not saved');
+      final next = session.switchTo(mapId,
+          showGrid: entry.drawGrid ?? true,
+          isPdf: entry.isPdf,
+          isImage: entry.isImage);
+      await _library.saveSession(next);
+      RemoteLog.info('session', 'Switch map: "${entry.displayName}"',
+          {'session': sessionId, 'mapId': mapId, 'maps': next.mapIds.length});
+      await _resumeSession(next.id);
+      _sendLibraryListing();
+    } catch (e) {
+      _sendError('Could not switch the map: $e');
+    }
+  }
+
+  /// Opens a map from the shared library (`lib.openSharedMap`).
+  ///
+  /// Reuses the TV's copy when it has one ([MapLibrary.entryForServerMap]);
+  /// otherwise downloads [shared] from the VPS (progress on the TV) and adds
+  /// it to the library with its kind, squares (placed by its [RasterGrid]
+  /// when it has one) and grid choice. Then, with
+  /// [intoGame] and a game open, the map joins that game ([_switchMap]);
+  /// else a new game named [name] with [settings] starts on it.
+  Future<void> _openSharedMap(SharedMap shared,
+      {required bool intoGame, String? name, SessionSettings? settings}) async {
+    var entry = _library.entryForServerMap(shared.id);
+    if (entry == null) {
+      final url = '${RelayConfig.httpBase}${shared.url}';
+      _log('Shared map "${shared.name}": downloading $url');
+      _safeSetTransferProgress(0.0);
+      final bytes = await httpDownload(url, onProgress: _safeSetTransferProgress);
+      _safeSetTransferProgress(null);
+      if (bytes == null) {
+        _sendError('Could not download "${shared.name}" from the shared library');
+        return;
+      }
+      try {
+        final grid = shared.isImage ? RasterGrid.fromJson(shared.grid) : null;
+        entry = await _library.addMap(bytes, shared.name,
+            isImage: shared.isImage,
+            pdfGridCols: shared.isImage ? grid?.cols ?? shared.gridCols ?? 20 : null,
+            pdfGridRows: shared.isImage ? grid?.rows ?? shared.gridRows ?? 15 : null,
+            rasterGrid: grid);
+      } catch (e) {
+        _sendError('"${shared.name}" is not a map battlemap can read: $e');
+        return;
+      }
+      entry.vpsUrl = url;
+      entry.serverMapId = shared.id;
+      if (shared.isImage) entry.drawGrid = !shared.hasOwnGrid;
+      await _library.updateEntry(entry);
+      RemoteLog.info('library', 'Shared map added: "${shared.name}"',
+          {'serverMapId': shared.id, 'mapId': entry.id, 'sizeBytes': bytes.length});
+      _sendLibraryListing();
+    }
+    if (intoGame && _currentView == TvView.game && _activeSessionId != null) {
+      await _switchMap(entry.id);
+    } else {
+      await _startNewSession(entry.id, name ?? 'Session 1', settings: settings);
     }
   }
 
@@ -1042,6 +1153,10 @@ class _TvShellState extends State<TvShell> {
       rulerY: _state.rulerY,
       rulerRotation: _state.rulerRotation,
       dmOverlayData: _state.dmOverlays.map((o) => o.toJson()).toList(),
+      mapIds: _currentMapIds(),
+      parkedMaps: _sessionMaps?.sessionId == _activeSessionId
+          ? _sessionMaps!.parked
+          : null,
       cameraX: (camera['x'] as num).toDouble(),
       cameraY: (camera['y'] as num).toDouble(),
       cameraZoom: (camera['zoom'] as num).toDouble(),
@@ -1069,6 +1184,7 @@ class _TvShellState extends State<TvShell> {
       'mapCount': _library.entries.length,
       'activeMapId': _activeMapId,
       'activeSessionId': _activeSessionId,
+      'sessionMapIds': _currentMapIds(),
       'hasLoadedMap': _state.map != null,
       'hasGame': _game != null,
       'isPdfSession': _isPdfSession,
@@ -1290,6 +1406,7 @@ class _TvShellState extends State<TvShell> {
           type == 'vtt.hideAll' || type == 'vtt.calibrate' ||
           type == 'vtt.resetCalibration' || type == 'vtt.clearMap' ||
           type == 'vtt.setTvCameraMode' || type == 'vtt.setMapGrid' ||
+          type == 'vtt.switchMap' ||
           type == 'vtt.pdfUploaded' || type == 'vtt.imageUploaded' ||
           type == 'vtt.updateSessionSettings' ||
           type == 'vtt.triggerEffect') {
@@ -1401,6 +1518,32 @@ class _TvShellState extends State<TvShell> {
               _sendError('lib.renameSession failed: $e');
             }
           }();
+
+        // More than one map per game: put another one on the table
+        case 'vtt.switchMap':
+          final mapId = msg['mapId'] as String?;
+          if (mapId == null || mapId.isEmpty) {
+            _sendError('vtt.switchMap: missing or empty mapId');
+            return;
+          }
+          _switchMap(mapId);
+
+        // A map from the shared library: into the game, or a new game
+        case 'lib.openSharedMap':
+          final mapJson = msg['map'];
+          if (mapJson is! Map) {
+            _sendError('lib.openSharedMap: missing map');
+            return;
+          }
+          final settingsJson = msg['settings'] as Map<String, dynamic>?;
+          _openSharedMap(
+            SharedMap.fromJson(Map<String, dynamic>.from(mapJson)),
+            intoGame: msg['intoGame'] as bool? ?? false,
+            name: msg['name'] as String?,
+            settings: settingsJson != null
+                ? SessionSettings.fromJson(settingsJson)
+                : null,
+          );
 
         // Map uploaded to VPS — TV downloads via HTTP
         case 'vtt.mapUploaded':
@@ -2171,4 +2314,19 @@ class _FocusableCardState extends State<_FocusableCard> {
       ),
     );
   }
+}
+
+/// The maps of one open game beyond the table's: [mapIds] in the order
+/// they joined and the [parked] ones' state ([Session.parkedMaps]).
+class _SessionMaps {
+  /// The game these maps belong to ([Session.id]).
+  final String sessionId;
+
+  /// Every map of the game ([Session.mapIds]).
+  final List<String> mapIds;
+
+  /// The state of each map not on the table, by map id.
+  final Map<String, Map<String, dynamic>> parked;
+
+  _SessionMaps(this.sessionId, this.mapIds, this.parked);
 }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:file_picker/file_picker.dart';
@@ -15,6 +14,7 @@ import '../network/file_picker_options_stub.dart'
 import '../network/relay_config.dart';
 import '../network/remote_log_stub.dart'
     if (dart.library.io) '../network/remote_log.dart';
+import '../network/shared_library.dart';
 import '../pdf_helper.dart';
 
 import '../game/dm_overlay_images.dart';
@@ -24,6 +24,7 @@ import '../model/grid_detect.dart';
 import '../model/raster_grid.dart';
 import '../model/map_library_entry.dart';
 import '../model/session.dart';
+import '../model/shared_map.dart';
 import '../model/table_fit.dart';
 import '../network/vtt_relay_client.dart';
 import '../state/vtt_state.dart';
@@ -32,6 +33,8 @@ import 'dm_control_panel.dart';
 import 'library_cards.dart';
 import 'map_grid_dialog.dart';
 import 'session_settings_dialog.dart';
+import 'shared_library_sheet.dart';
+import '../storage/map_thumbnails.dart';
 import 'tv_overview_map.dart';
 import 'system_bars.dart';
 
@@ -108,6 +111,23 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   /// Map ids whose thumbnail was already asked for (once per app run).
   final Set<String> _thumbsAsked = {};
 
+  /// The running game's maps (TV library ids, `sessionMapIds` of
+  /// `vtt.fullState`) and the one on the table (`activeMapId`).
+  List<String> _sessionMapIds = const [];
+  String? _activeMapId;
+
+  /// The shared map library on the VPS.
+  final SharedLibraryClient _sharedLibrary = SharedLibraryClient();
+
+  /// The last map this device uploaded (server path + bytes): when the TV
+  /// then names that file in `vtt.downloadMap`, it loads from here instead
+  /// of downloading what was just uploaded.
+  ({String path, Uint8List bytes})? _lastUpload;
+
+  /// "Loading <map>…" over the map while the TV switches maps, or `null`.
+  String? _mapSwitchLabel;
+  Timer? _mapSwitchTimer;
+
   // Update state
   Map<String, dynamic>? _updateInfo;
   double? _updateDownloadProgress;
@@ -169,6 +189,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   @override
   void dispose() {
     _loadingTimeout?.cancel();
+    _mapSwitchTimer?.cancel();
     _cameraSendTimer?.cancel();
     _windowSendTimer?.cancel();
     _state.removeListener(_onStateChanged);
@@ -332,6 +353,16 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         DevLog.add('ERROR: state sync failed: $e');
         return;
       }
+      // The game's maps; another map on the table = a switch (also one
+      // started elsewhere): overlay until it has arrived here
+      final activeMap = msg['activeMapId'] as String?;
+      final switched = _tvView == 'game' &&
+          _activeMapId != null &&
+          activeMap != null &&
+          activeMap != _activeMapId;
+      _activeMapId = activeMap;
+      _sessionMapIds = (msg['sessionMapIds'] as List?)?.cast<String>() ?? const [];
+      if (switched && _mapSwitchLabel == null) _showMapSwitch('Loading the next map…');
       // Extract TV view state
       final view = msg['tvView'] as String?;
       if (!mounted) return;
@@ -368,6 +399,12 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       _loadMapBytes(bytes);
     };
     _relay!.onMapDownloadUrl = (url, name) {
+      final mine = _lastUpload;
+      if (mine != null && url.endsWith(mine.path)) {
+        DevLog.add('Companion: map "$name" is the one just uploaded — no download');
+        _loadMapBytes(mine.bytes);
+        return;
+      }
       DevLog.add('Companion: downloading map "$name" from VPS');
       _downloadMapFromVps(url);
     };
@@ -436,6 +473,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       DevLog.add('TV ERROR: $msg');
       // A failed command must not leave the double-tap guard armed.
       _endLoading();
+      _clearMapSwitch();
       if (mounted) setState(() => _loadingSessionId = null);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -549,6 +587,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       }
     }
     _loadingSessionId = null;
+    _clearMapSwitch();
+    _endLoading();
     // If TV is in game view, switch companion to game view now
     setState(() => _tvView = 'game');
   }
@@ -609,6 +649,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         _loadMapBytes(bytes);
       } else {
         DevLog.add('Companion: map download failed');
+        _clearMapSwitch();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content: Text("Couldn't download the TV's map — check the connection"),
@@ -617,32 +658,27 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       }
     } catch (e) {
       DevLog.add('Companion: map download error: $e');
+      _clearMapSwitch();
       if (mounted) setState(() => _transferProgress = null);
     }
   }
 
-  /// Opens a file picker for `.dd2vtt`/`.uvtt`, image, or `.pdf` files and
-  /// uploads the map to the VPS.
-  ///
-  /// For UVTT files: loads locally for immediate preview and sends a
-  /// `vtt.mapUploaded` command so the TV downloads and processes the map.
+  /// Lets the DM pick a map file on this device and readies it for upload:
+  /// `.dd2vtt`/`.uvtt` as is; pictures and PDFs with their squares.
   ///
   /// For images and PDFs: looks for a grid drawn into the picture
   /// ([detectGridInPicture]: a found one pre-fills the counts and its
-  /// position on the picture), shows a grid configuration dialog with the
-  /// grid editor behind "Fit on the picture" ([showGridEditor]), then
-  /// uploads and sends `vtt.imageUploaded` (with `grid` when the squares do
-  /// not simply stretch over the whole picture).
+  /// position on the picture) and asks for the squares
+  /// ([showMapGridDialog], with the grid editor behind "Fit on the picture",
+  /// [showGridEditor]).
   /// **PDFs are rasterized here on the phone** ([PdfHelper.renderPdfPage],
-  /// pdfrx's PDFium WASM build, first page, ≤ 4096 px) and uploaded as a PNG
+  /// pdfrx's PDFium WASM build, first page, ≤ 4096 px) and become a PNG
   /// named `<file>.png` — the TV only ever receives an image map, so it needs
-  /// no PDF engine (Apple TV has none; `docs/apple-tv-dev.md`). The legacy
-  /// `vtt.pdfUploaded` path on the TV stays for older phone builds.
+  /// no PDF engine (Apple TV has none; `docs/apple-tv-dev.md`).
   ///
-  /// See also:
-  /// - [showMapGridDialog], which asks for the squares of PDF/image maps.
-  /// - [TvShell._downloadAndLoadImage], the TV-side handler.
-  Future<void> _pickAndUploadMap() async {
+  /// Returns `null` when cancelled or the file can't be used (with a
+  /// snackbar saying why).
+  Future<_PickedMap?> _pickMapFile() async {
     // Use FileType.any because Safari doesn't recognize .dd2vtt/.uvtt extensions
     // webFilePickerOptions: keep the pick alive while iOS Safari shows the
     // Files sheet (the plugin default cancels it on window focus).
@@ -652,7 +688,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     );
     if (file == null) {
       DevLog.add('Companion: file picker cancelled');
-      return;
+      return null;
     }
     final bytes = await file.readAsBytes();
     if (bytes.isEmpty) {
@@ -666,7 +702,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
           ),
         );
       }
-      return;
+      return null;
     }
 
     final nameLower = file.name.toLowerCase();
@@ -687,7 +723,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
           ),
         );
       }
-      return;
+      return null;
     }
 
     // PDF: rasterize on the phone (roadmap #36). The TV never sees a PDF.
@@ -702,7 +738,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       if (rendered == null) {
         DevLog.add('Companion: PDF render failed for "${file.name}"');
         _showSnack('Could not render this PDF', color: Colors.redAccent);
-        return;
+        return null;
       }
       uploadBytes = rendered['imageBytes'] as Uint8List;
       uploadName = '${file.name.substring(0, file.name.length - 4)}.png';
@@ -738,7 +774,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     // whether the picture has its own grid lines
     MapGridChoice? gridConfig;
     if (needsGridConfig) {
-      if (!mounted) return;
+      if (!mounted) return null;
       gridConfig = await showMapGridDialog(
         context,
         title: 'Map squares',
@@ -754,64 +790,186 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         tableRows: _state.tableRows,
         confirmLabel: 'Upload',
       );
-      if (gridConfig == null) return; // user cancelled
+      if (gridConfig == null) return null; // user cancelled
     }
 
-    if (!_beginLoading()) return;
+    return _PickedMap(
+      bytes: uploadBytes,
+      fileName: uploadName,
+      name: file.name.replaceFirst(RegExp(r'\.[^.]+$'), ''),
+      isVtt: isVtt,
+      grid: gridConfig,
+      size: pictureSize,
+    );
 
+  }
+
+  /// Local mode's "Load Map": picks a file ([_pickMapFile]) and shows it on
+  /// this device — nothing is uploaded.
+  Future<void> _pickAndUploadMap() async {
+    final picked = await _pickMapFile();
+    if (picked == null) return;
+    if (picked.isVtt) {
+      _state.loadMap(picked.bytes);
+      return;
+    }
+    final size = picked.size ?? await _pictureSize(picked.bytes);
+    if (size == null) return;
+    _state.loadPdfAsMap(picked.bytes,
+        gridCols: picked.grid?.cols ?? 20,
+        gridRows: picked.grid?.rows ?? 15,
+        imageWidth: size.width,
+        imageHeight: size.height);
+  }
+
+  /// Uploads [picked] into the shared map library on the VPS
+  /// ([SharedLibraryClient.upload]) with its kind and squares, then its
+  /// thumbnail (in the background). Returns the new entry, or `null` after
+  /// a "Upload failed" snackbar.
+  ///
+  /// The bytes are kept ([_lastUpload]) so the map isn't downloaded right
+  /// back when the TV tells this device where to get it.
+  Future<SharedMap?> _uploadToSharedLibrary(_PickedMap picked,
+      {required void Function(double progress) onProgress}) async {
+    DevLog.add('Companion: uploading "${picked.fileName}" '
+        '(${(picked.bytes.length / 1024).round()} KB) to the shared library');
+    final shared = await _sharedLibrary.upload(
+      picked.fileName,
+      picked.bytes,
+      SharedMap.uploadMeta(
+        name: picked.name,
+        isImage: !picked.isVtt,
+        gridCols: picked.grid?.cols,
+        gridRows: picked.grid?.rows,
+        hasOwnGrid: picked.grid?.hasOwnGrid ?? false,
+        grid: picked.grid?.grid?.toJson(),
+      ),
+      onProgress: onProgress,
+    );
+    if (shared == null) {
+      DevLog.add('Companion: shared library upload failed');
+      _showSnack('Upload failed', color: Colors.redAccent);
+      return null;
+    }
+    _lastUpload = (path: shared.url, bytes: picked.bytes);
+    unawaited(_uploadSharedThumbnail(shared, picked));
+    return shared;
+  }
+
+  /// Makes [picked]'s thumbnail ([MapThumbnails]) and stores it with the
+  /// shared map — best effort, the library shows a map icon without one.
+  Future<void> _uploadSharedThumbnail(SharedMap shared, _PickedMap picked) async {
+    try {
+      final picture =
+          await MapThumbnails.mapPicture(picked.bytes, isImage: !picked.isVtt);
+      final png = picture == null ? null : await MapThumbnails.encode(picture);
+      if (png == null) return;
+      await _sharedLibrary.uploadThumbnail(shared.id, png);
+    } catch (e) {
+      DevLog.add('Companion: shared thumbnail failed: $e');
+    }
+  }
+
+  /// "Upload map" (library) and "From device" (in a game): picks a file,
+  /// puts it into the shared library and opens it on the TV — added to the
+  /// running game when [intoGame], else as a new game on it.
+  ///
+  /// See also:
+  /// - [_openSharedMap], the second half.
+  /// - [TvShell._openSharedMap], the TV side.
+  Future<void> _uploadAndOpen({required bool intoGame}) async {
+    if (_isLoading) return;
+    final picked = await _pickMapFile();
+    if (picked == null || !_beginLoading()) return;
     _showSnack('Uploading map...');
-    DevLog.add('Companion: uploading ${isPdf ? "rasterized PDF" : isImage ? "image" : "map"} '
-        '"$uploadName" (${(uploadBytes.length / 1024).round()} KB)');
+    if (mounted) setState(() => _transferProgress = 0.01);
+    final shared = await _uploadToSharedLibrary(picked, onProgress: (p) {
+      if (mounted) setState(() => _transferProgress = p);
+    });
+    if (mounted) setState(() => _transferProgress = null);
+    _endLoading();
+    if (shared == null) return;
+    await _openSharedMap(shared, intoGame: intoGame, askSettings: false);
+  }
 
-    // For UVTT files, load locally for immediate preview.
-    // For PDFs/images, don't load locally — the TV handles rendering.
-    if (isVtt) {
-      _state.loadMap(bytes);
+  /// Opens [map] from the shared library on the TV (`lib.openSharedMap`).
+  ///
+  /// [intoGame]: the map joins the running game and goes on the table
+  /// (an overlay shows until it arrives here). Otherwise a new game starts
+  /// on it — after the session settings dialog when [askSettings], named
+  /// like the library's new games ([defaultSessionName]).
+  Future<void> _openSharedMap(SharedMap map,
+      {required bool intoGame, bool askSettings = true}) async {
+    if (intoGame) {
+      if (!_beginLoading()) return;
+      DevLog.add('Companion: adding shared map "${map.name}" to the game');
+      _showMapSwitch('Loading "${map.name}"…');
+      _relay?.sendOpenSharedMap(map.toJson(), intoGame: true);
+      return;
     }
+    final local = _maps.where((m) => m.serverMapId == map.id).firstOrNull;
+    final played =
+        local == null ? 0 : _sessions.where((s) => s.mapId == local.id).length;
+    SessionSettings? settings;
+    if (askSettings) {
+      settings = await showSessionSettingsDialog(context);
+      if (settings == null) return; // cancelled
+    }
+    if (!_beginLoading()) return;
+    _showSnack('Loading session...');
+    _relay?.sendOpenSharedMap(map.toJson(),
+        intoGame: false,
+        name: defaultSessionName(played, DateTime.now()),
+        settings: settings?.toJson());
+  }
 
-    if (_isNetworked && _relay != null) {
-      // Upload to VPS via HTTP, then tell TV to download
-      if (mounted) setState(() => _transferProgress = 0.01);
-      try {
-        final uploadUrl = '${RelayConfig.httpBase}/upload/${Uri.encodeComponent(uploadName)}';
-        DevLog.add('Companion: uploading to $uploadUrl');
-        final resp = await httpUpload(uploadUrl, uploadBytes, onProgress: (p) {
-          if (mounted) setState(() => _transferProgress = p);
-        });
-        if (resp != null) {
-          final downloadUrl = '${RelayConfig.httpBase}${resp['url']}';
-          DevLog.add('Companion: upload done, telling TV to download');
-          _showSnack('Map uploaded');
-          if (needsGridConfig) {
-            // Image (or PDF rendered to PNG above): send with grid config
-            _relay!.sendRaw(jsonEncode({
-              'type': 'vtt.imageUploaded',
-              'url': downloadUrl,
-              'displayName': uploadName,
-              'gridCols': gridConfig!.cols,
-              'gridRows': gridConfig.rows,
-              'hasGrid': gridConfig.hasOwnGrid,
-              if (gridConfig.grid != null) 'grid': gridConfig.grid!.toJson(),
-            }));
-          } else {
-            // UVTT: send mapUploaded
-            _relay!.sendRaw(jsonEncode({
-              'type': 'vtt.mapUploaded',
-              'url': downloadUrl,
-              'displayName': file.name,
-            }));
-          }
-        } else {
-          DevLog.add('Companion: HTTP upload failed');
-          _showSnack('Upload failed', color: Colors.redAccent);
-          _endLoading();
-        }
-      } catch (e) {
-        DevLog.add('Companion: upload error: $e');
-        _showSnack('Upload failed', color: Colors.redAccent);
-        _endLoading();
-      }
-      if (mounted) setState(() => _transferProgress = null);
+  /// Shows the shared map library ([showSharedLibrarySheet]): its maps open
+  /// into the running game when [intoGame], else as a new game; its upload
+  /// button only fills the library.
+  void _showSharedLibrary({required bool intoGame}) {
+    final inGame = {
+      for (final m in _maps)
+        if (_sessionMapIds.contains(m.id) && m.serverMapId != null) m.serverMapId!
+    };
+    showSharedLibrarySheet(
+      context,
+      client: _sharedLibrary,
+      openLabel: intoGame ? 'Add to game' : 'Play',
+      inGame: intoGame ? inGame : const {},
+      onOpen: (map) => _openSharedMap(map, intoGame: intoGame),
+      onUpload: (progress) async {
+        final picked = await _pickMapFile();
+        if (picked == null) return null;
+        progress(0.01);
+        return _uploadToSharedLibrary(picked, onProgress: progress);
+      },
+    );
+  }
+
+  /// Puts the game's map [mapId] on the table (`vtt.switchMap`), with the
+  /// switch overlay until it has arrived here.
+  void _switchMap(String mapId) {
+    if (mapId == _activeMapId || !_beginLoading()) return;
+    final name = _maps.where((m) => m.id == mapId).firstOrNull?.displayName;
+    DevLog.add('Companion: switch map to $mapId');
+    _showMapSwitch('Loading "${name ?? 'map'}"…');
+    _relay?.sendSwitchMap(mapId);
+  }
+
+  /// Shows the map switch overlay with [label]; it clears when the new map
+  /// is here ([_onMapReady]), on a TV error, or after 60 s.
+  void _showMapSwitch(String label) {
+    _mapSwitchTimer?.cancel();
+    _mapSwitchTimer = Timer(const Duration(seconds: 60), _clearMapSwitch);
+    if (mounted) setState(() => _mapSwitchLabel = label);
+  }
+
+  /// Hides the map switch overlay.
+  void _clearMapSwitch() {
+    _mapSwitchTimer?.cancel();
+    _mapSwitchTimer = null;
+    if (mounted && _mapSwitchLabel != null) {
+      setState(() => _mapSwitchLabel = null);
     }
   }
 
@@ -1060,6 +1218,10 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         },
         onPhoneZoomToFit: _game.zoomToFit,
         onAddDmOverlays: _pickAndAddDmOverlays,
+        // The game's maps (Settings tab)
+        onSwitchMap: _switchMap,
+        onAddMapFromDevice: () => _uploadAndOpen(intoGame: true),
+        onOpenSharedLibrary: () => _showSharedLibrary(intoGame: true),
       );
     }
     return DmCallbacks(
@@ -1302,24 +1464,27 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
               ),
             ),
 
-            // Upload button
+            // Upload (into the shared library, then play) + shared library
             Padding(
               padding: const EdgeInsets.all(16),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.upload_file),
-                  label: const Text('Upload Map / PDF'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white.withValues(alpha: 0.1),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _libraryButton(
+                      icon: Icons.upload_file,
+                      label: 'Upload Map / PDF',
+                      onPressed: () => _uploadAndOpen(intoGame: false),
                     ),
                   ),
-                  onPressed: _pickAndUploadMap,
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _libraryButton(
+                      icon: Icons.cloud_outlined,
+                      label: 'Shared library',
+                      onPressed: () => _showSharedLibrary(intoGame: false),
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -1389,6 +1554,37 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       ),
     );
   }
+
+  /// A full-width button of the library's top row.
+  Widget _libraryButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton.icon(
+      icon: Icon(icon),
+      label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white.withValues(alpha: 0.1),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      onPressed: onPressed,
+    );
+  }
+
+  /// The running game's maps for the DM panel's Settings tab, in the order
+  /// they joined; names and thumbnails from the TV's library listing.
+  List<GameMap> get _gameMaps => [
+        for (final id in _sessionMapIds)
+          GameMap(
+            id: id,
+            name: _maps.where((m) => m.id == id).firstOrNull?.displayName ?? 'Map',
+            thumbnail: _thumbs[id],
+            active: id == _activeMapId,
+          ),
+      ];
 
   /// The most recently played session whose map is still in the library,
   /// or `null` — what the "continue" card offers.
@@ -1734,6 +1930,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
             tvOverview:
                 _isNetworked ? TvOverviewMap(game: _game, state: _state) : null,
             tvTableLayout: _isNetworked ? () => _game.tvTableLayout() : null,
+            gameMaps: _isNetworked ? _gameMaps : null,
           ),
         ],
       ),
@@ -1806,6 +2003,39 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                     color: Colors.white70,
                     fontSize: 12,
                     fontFamily: 'monospace',
+                  ),
+                ),
+              ),
+            ),
+
+          // Another map of the game is on its way (vtt.switchMap)
+          if (_mapSwitchLabel != null)
+            Positioned.fill(
+              child: ColoredBox(
+                color: Colors.black54,
+                child: Center(
+                  child: Container(
+                    width: 260,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A2E),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_mapSwitchLabel!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                        const SizedBox(height: 12),
+                        LinearProgressIndicator(
+                          value: _transferProgress,
+                          backgroundColor: Colors.white12,
+                          color: Colors.greenAccent,
+                          minHeight: 3,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1892,4 +2122,36 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     if (diff.inDays < 7) return '${diff.inDays}d ago';
     return '${dt.month}/${dt.day}';
   }
+}
+
+/// A map file picked on this device and readied for upload
+/// (`_VttCompanionScreenState._pickMapFile`).
+class _PickedMap {
+  /// The bytes to upload: the `.dd2vtt` file, or the picture (a PDF's page
+  /// 1 as PNG, possibly cropped to whole squares).
+  final Uint8List bytes;
+
+  /// File name to upload under (its extension tells the kind).
+  final String fileName;
+
+  /// Display name: the picked file's name without extension.
+  final String name;
+
+  /// Whether it's a `.dd2vtt`/`.uvtt` map (else a picture).
+  final bool isVtt;
+
+  /// The squares chosen for a picture, `null` for UVTT maps.
+  final MapGridChoice? grid;
+
+  /// The picture's size in pixels when known.
+  final Size? size;
+
+  const _PickedMap({
+    required this.bytes,
+    required this.fileName,
+    required this.name,
+    required this.isVtt,
+    this.grid,
+    this.size,
+  });
 }

@@ -118,15 +118,30 @@ class MapLibrary {
     // Delete thumbnail
     await _thumbsBox.delete('map_$mapId');
 
-    // Delete all sessions for this map
-    final sessions = await listSessions(mapId: mapId);
-    for (final s in sessions) {
-      await deleteSession(s.id);
+    // Games on this map lose it; a game whose only map it was goes too
+    for (final s in await listSessions()) {
+      if (!s.mapIds.contains(mapId)) continue;
+      final rest = s.withoutMap(mapId);
+      if (rest == null) {
+        await deleteSession(s.id);
+      } else {
+        await _sessionsBox.put(rest.id, jsonEncode(rest.toJson()));
+      }
     }
 
     // Remove from index
     await _mapIndexBox.delete(mapId);
     debugPrint('MapLibrary: deleted map $mapId');
+  }
+
+  /// The map downloaded from the shared server library entry
+  /// [serverMapId] ([MapLibraryEntry.serverMapId]), or `null` if this TV
+  /// doesn't have it yet.
+  MapLibraryEntry? entryForServerMap(String serverMapId) {
+    for (final e in entries) {
+      if (e.serverMapId == serverMapId) return e;
+    }
+    return null;
   }
 
   MapLibraryEntry? getEntry(String mapId) {
@@ -142,6 +157,9 @@ class MapLibrary {
 
   // --- Session operations ---
 
+  /// All saved sessions, newest first; with [mapId] only those whose active
+  /// map it is ([Session.mapId] — a game is listed under the map on its
+  /// table).
   Future<List<Session>> listSessions({String? mapId}) async {
     final sessions = <Session>[];
     for (final json in _sessionsBox.values) {

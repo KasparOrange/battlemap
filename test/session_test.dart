@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:battlemap/model/session.dart';
 
@@ -555,6 +557,101 @@ void main() {
       final restored = Session.fromJson(session.toJson());
       expect(restored.isPdfSession, isTrue);
       expect(restored.isImageSession, isFalse);
+    });
+  });
+
+  group('Session with more than one map (2026-10-10)', () {
+    Session game() => Session(
+          id: 'g',
+          mapId: 'town',
+          name: 'Night one',
+          createdAt: DateTime.utc(2026, 10, 10),
+          lastModifiedAt: DateTime.utc(2026, 10, 10),
+          revealedCells: [1, 2, 3],
+          openPortals: [4],
+          tokenData: [
+            {'id': 't1', 'gridX': 2, 'gridY': 3}
+          ],
+          tableCol: 5,
+          brushRadius: 2,
+          drawWidth: 7,
+          cameraX: 100,
+        );
+
+    test('old sessions have one map and nothing parked', () {
+      final json = game().toJson()
+        ..remove('mapIds')
+        ..remove('parkedMaps');
+      final s = Session.fromJson(json);
+      expect(s.mapIds, ['town']);
+      expect(s.parkedMaps, isEmpty);
+    });
+
+    test('switching to a new map parks the old one and starts fresh', () {
+      final s = game().switchTo('cellar', showGrid: false, isImage: true);
+      expect(s.mapId, 'cellar');
+      expect(s.mapIds, ['town', 'cellar']);
+      expect(s.revealedCells, isEmpty);
+      expect(s.openPortals, isEmpty);
+      expect(s.tokenData, isEmpty);
+      expect(s.tableCol, isNull);
+      expect(s.cameraX, 0);
+      expect(s.showGrid, isFalse);
+      expect(s.isImageSession, isTrue);
+      // The game's own settings carry over
+      expect(s.name, 'Night one');
+      expect(s.brushRadius, 2);
+      expect(s.drawWidth, 7);
+      expect(s.parkedMaps['town']!['revealedCells'], [1, 2, 3]);
+    });
+
+    test('switching back restores the parked map exactly', () {
+      final cellar = game().switchTo('cellar')
+        ..revealedCells = [9]
+        ..tokenData = [
+          {'id': 't9', 'gridX': 1, 'gridY': 1}
+        ];
+      final back = cellar.switchTo('town');
+      expect(back.mapId, 'town');
+      expect(back.mapIds, ['town', 'cellar']);
+      expect(back.revealedCells, [1, 2, 3]);
+      expect(back.openPortals, [4]);
+      expect(back.tokenData.single['id'], 't1');
+      expect(back.tableCol, 5);
+      expect(back.cameraX, 100);
+      expect(back.parkedMaps.keys, ['cellar']);
+      expect(back.parkedMaps['cellar']!['revealedCells'], [9]);
+      // ...and survives a save
+      final saved = Session.fromJson(
+          jsonDecode(jsonEncode(back.toJson())) as Map<String, dynamic>);
+      expect(saved.switchTo('cellar').tokenData.single['id'], 't9');
+    });
+
+    test('switching to the active map changes nothing', () {
+      final s = game().switchTo('town');
+      expect(s.mapIds, ['town']);
+      expect(s.revealedCells, [1, 2, 3]);
+      expect(s.parkedMaps, isEmpty);
+    });
+
+    test('the original session is untouched by a switch', () {
+      final g = game();
+      g.switchTo('cellar').parkedMaps['town']!['revealedCells'] = <int>[];
+      expect(g.revealedCells, [1, 2, 3]);
+      expect(g.parkedMaps, isEmpty);
+    });
+
+    test('withoutMap drops a parked map, moves on from the active one', () {
+      final two = game().switchTo('cellar'); // cellar active, town parked
+      final noTown = two.withoutMap('town')!;
+      expect(noTown.mapIds, ['cellar']);
+      expect(noTown.parkedMaps, isEmpty);
+      final noCellar = two.withoutMap('cellar')!;
+      expect(noCellar.mapId, 'town');
+      expect(noCellar.revealedCells, [1, 2, 3]);
+      expect(noCellar.mapIds, ['town']);
+      expect(game().withoutMap('town'), isNull);
+      expect(game().withoutMap('elsewhere')!.mapIds, ['town']);
     });
   });
 }

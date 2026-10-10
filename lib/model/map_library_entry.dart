@@ -85,6 +85,12 @@ class MapLibraryEntry {
   /// can fetch it directly via HTTP rather than chunked WebSocket transfer.
   String? vpsUrl;
 
+  /// The id of the entry in the shared map library on the VPS
+  /// (`/library`, `tools/dev_server.py`) this map was downloaded from, or
+  /// `null` for maps that came another way. Lets the TV reuse its copy
+  /// when the DM picks the same shared map again.
+  String? serverMapId;
+
   /// Whether battlemap draws its grid over this map, or `null` = not known
   /// yet (drawn).
   ///
@@ -122,6 +128,7 @@ class MapLibraryEntry {
     this.pdfGridRows,
     this.thumbnailPath,
     this.vpsUrl,
+    this.serverMapId,
     this.drawGrid,
     this.rasterGrid,
   });
@@ -145,6 +152,7 @@ class MapLibraryEntry {
         pdfGridRows: isPdf || isImage ? rows : pdfGridRows,
         thumbnailPath: thumbnailPath,
         vpsUrl: vpsUrl,
+        serverMapId: serverMapId,
         drawGrid: drawGrid,
         rasterGrid: grid,
       );
@@ -168,6 +176,7 @@ class MapLibraryEntry {
         'pdfGridRows': pdfGridRows,
         'thumbnailPath': thumbnailPath,
         'vpsUrl': vpsUrl,
+        'serverMapId': serverMapId,
         'drawGrid': drawGrid,
         if (rasterGrid != null) 'rasterGrid': rasterGrid!.toJson(),
       };
@@ -194,6 +203,7 @@ class MapLibraryEntry {
         pdfGridRows: json['pdfGridRows'] as int?,
         thumbnailPath: json['thumbnailPath'] as String?,
         vpsUrl: json['vpsUrl'] as String?,
+        serverMapId: json['serverMapId'] as String?,
         drawGrid: json['drawGrid'] as bool?,
         rasterGrid: RasterGrid.fromJson(json['rasterGrid']),
       );

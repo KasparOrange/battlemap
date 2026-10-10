@@ -111,3 +111,25 @@ Future<Map<String, dynamic>?> httpUpload(
     return null;
   }
 }
+
+/// Sends an HTTP DELETE (web implementation) and returns whether the
+/// server answered 2xx. Used for the shared map library (`SharedLibraryClient`).
+Future<bool> httpDelete(String url) async {
+  try {
+    final completer = Completer<bool>();
+    final xhr = web.XMLHttpRequest();
+    xhr.open('DELETE', url);
+    xhr.addEventListener('load', (web.Event _) {
+      completer.complete(xhr.status >= 200 && xhr.status < 300);
+    }.toJS);
+    xhr.addEventListener('error', ((web.Event _) {
+      completer.complete(false);
+    }).toJS);
+    xhr.timeout = 30000;
+    xhr.send();
+    return await completer.future;
+  } catch (e) {
+    debugPrint('httpDelete: $url failed: $e');
+    return false;
+  }
+}

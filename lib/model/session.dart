@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 /// Feature toggles controlling which tools and visual layers are enabled
 /// during a game session.
 ///
@@ -231,9 +233,11 @@ class SessionSettings {
 /// allows the DM to save mid-game, close the app, and resume later with
 /// everything restored.
 ///
-/// Each session is tied to a specific map via [mapId] (a [MapLibraryEntry.id]).
-/// Multiple sessions can reference the same map (e.g. different encounters
-/// on the same dungeon level).
+/// A session plays one map at a time — [mapId] (a [MapLibraryEntry.id]) —
+/// and can hold several ([mapIds]; the others wait in [parkedMaps] with
+/// their own fog, tokens and drawings, see [switchTo]). Multiple sessions
+/// can reference the same map (e.g. different encounters on the same
+/// dungeon level).
 ///
 /// Sessions are JSON-serializable for persistence to disk via [MapLibrary].
 ///
@@ -360,6 +364,33 @@ class Session {
   /// first). The TV keeps them for the companion and never renders them.
   List<Map<String, dynamic>> dmOverlayData;
 
+  // --- More than one map per game ---
+
+  /// Every map of this game ([MapLibraryEntry.id]s) in the order they were
+  /// added — always contains [mapId], the one on the table right now.
+  ///
+  /// A game holds several maps (the tower's floors, the town and the
+  /// dungeon below it); the DM switches between them in the companion's
+  /// Settings tab ([switchTo]). Sessions saved before 2026-10-10 have one.
+  List<String> mapIds;
+
+  /// The saved state of every map of this game except the active one, by
+  /// map id: the [perMapKeys] of [toJson] (fog, doors, tokens, drawings,
+  /// layers, ruler, table window, camera) as they were when the DM switched
+  /// away. The fields of the session itself hold the active map's state.
+  Map<String, Map<String, dynamic>> parkedMaps;
+
+  /// The [toJson] keys that belong to one map rather than to the game —
+  /// what [switchTo] parks and restores. Everything else (name, settings,
+  /// brush, draw colour, interaction mode) is the game's and carries over.
+  static const List<String> perMapKeys = [
+    'revealedCells', 'openPortals', 'showGrid', 'fogEnabled', 'showWalls',
+    'tvCameraMode', 'tableCol', 'tableRow', 'mapFit',
+    'tokenData', 'strokeData', 'isPdfSession', 'isImageSession',
+    'rulerVisible', 'rulerX', 'rulerY', 'rulerRotation', 'dmOverlayData',
+    'cameraX', 'cameraY', 'cameraZoom', 'cameraAngle',
+  ];
+
   /// Feature toggles controlling which tools and visual layers are enabled.
   ///
   /// Defaults to [SessionSettings.penAndPaper] if not provided.
@@ -417,12 +448,72 @@ class Session {
     this.rulerY = 0,
     this.rulerRotation = 0,
     this.dmOverlayData = const [],
+    List<String>? mapIds,
+    Map<String, Map<String, dynamic>>? parkedMaps,
     SessionSettings? settings,
     this.cameraX = 0,
     this.cameraY = 0,
     this.cameraZoom = 1,
     this.cameraAngle = 0,
-  }) : settings = settings ?? SessionSettings.penAndPaper();
+  })  : settings = settings ?? SessionSettings.penAndPaper(),
+        mapIds = mapIds == null || mapIds.isEmpty
+            ? [mapId]
+            : [...mapIds, if (!mapIds.contains(mapId)) mapId],
+        parkedMaps = parkedMaps ?? {};
+
+  /// This game with [targetMapId] on the table: the active map's state is
+  /// parked in [parkedMaps] and the target's parked state comes back, or —
+  /// for a map new to this game — a fresh start (all fogged, no tokens,
+  /// 1-inch table centred) with battlemap's grid per [showGrid] (the map's
+  /// [MapLibraryEntry.drawGrid]) and the map kind per [isPdf] / [isImage].
+  /// The target joins [mapIds] at the end. Returns this session unchanged
+  /// (a copy) when [targetMapId] is already active.
+  ///
+  /// Pure: the caller saves the result and loads it like a resumed session
+  /// (`TvShell._switchMap`).
+  Session switchTo(String targetMapId,
+      {bool showGrid = true, bool isPdf = false, bool isImage = false}) {
+    final json = _jsonCopy();
+    if (targetMapId == mapId) return Session.fromJson(json);
+    final parked = Map<String, dynamic>.from(json['parkedMaps'] as Map);
+    parked[mapId] = {for (final k in perMapKeys) k: json[k]};
+    final fresh = Session(
+      id: id,
+      mapId: targetMapId,
+      name: name,
+      createdAt: createdAt,
+      lastModifiedAt: lastModifiedAt,
+      showGrid: showGrid,
+      isPdfSession: isPdf,
+      isImageSession: isImage,
+    ).toJson();
+    final target = parked.remove(targetMapId) ??
+        {for (final k in perMapKeys) k: fresh[k]};
+    json
+      ..addAll(target)
+      ..['mapId'] = targetMapId
+      ..['mapIds'] = [...mapIds, if (!mapIds.contains(targetMapId)) targetMapId]
+      ..['parkedMaps'] = parked;
+    return Session.fromJson(json);
+  }
+
+  /// This game without map [removedMapId] (the map was deleted from the
+  /// library), or `null` when it was the game's only map. Removing the
+  /// active map puts the first remaining one on the table.
+  Session? withoutMap(String removedMapId) {
+    if (!mapIds.contains(removedMapId)) return Session.fromJson(_jsonCopy());
+    final rest = mapIds.where((m) => m != removedMapId).toList();
+    if (rest.isEmpty) return null;
+    final base = removedMapId == mapId ? switchTo(rest.first) : this;
+    final json = base._jsonCopy();
+    (json['parkedMaps'] as Map).remove(removedMapId);
+    json['mapIds'] = rest;
+    return Session.fromJson(json);
+  }
+
+  /// A deep copy of [toJson] — nothing shared with this session's lists.
+  Map<String, dynamic> _jsonCopy() =>
+      jsonDecode(jsonEncode(toJson())) as Map<String, dynamic>;
 
   /// Serializes this session to a JSON-compatible map.
   ///
@@ -460,6 +551,8 @@ class Session {
         'rulerY': rulerY,
         'rulerRotation': rulerRotation,
         'dmOverlayData': dmOverlayData,
+        'mapIds': mapIds,
+        'parkedMaps': parkedMaps,
         'settings': settings.toJson(),
         'cameraX': cameraX,
         'cameraY': cameraY,
@@ -517,6 +610,9 @@ class Session {
                 ?.map((e) => Map<String, dynamic>.from(e as Map))
                 .toList() ??
             const [],
+        mapIds: (json['mapIds'] as List?)?.map((e) => e as String).toList(),
+        parkedMaps: (json['parkedMaps'] as Map?)?.map((k, v) =>
+            MapEntry(k as String, Map<String, dynamic>.from(v as Map))),
         settings: json['settings'] != null
             ? SessionSettings.fromJson(json['settings'] as Map<String, dynamic>)
             : null,

@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart' show Uint8List;
 import 'package:flutter/material.dart';
 
 import '../game/dm_overlay_images.dart';
@@ -285,6 +286,21 @@ class DmCallbacks {
   /// [VttState.onDmOverlaysChanged] hook forwards them).
   final VoidCallback? onAddDmOverlays;
 
+  // ── Maps of the game (networked mode only) ────────────────────────
+
+  /// Puts the game's map with this TV library id on the table
+  /// (`vtt.switchMap`). With it the Settings tab lists the game's maps
+  /// ([DmControlPanel.gameMaps]) instead of a single "Load Map" button.
+  final void Function(String mapId)? onSwitchMap;
+
+  /// Picks a map file on this device, puts it into the shared library and
+  /// adds it to the game.
+  final VoidCallback? onAddMapFromDevice;
+
+  /// Opens the shared map library on the VPS to add one of its maps to the
+  /// game (or fill it).
+  final VoidCallback? onOpenSharedLibrary;
+
   /// Creates a [DmCallbacks] with all required action handlers.
   const DmCallbacks({
     required this.onLoadMap,
@@ -341,6 +357,36 @@ class DmCallbacks {
     this.onMatchTv,
     this.onPhoneZoomToFit,
     this.onAddDmOverlays,
+    this.onSwitchMap,
+    this.onAddMapFromDevice,
+    this.onOpenSharedLibrary,
+  });
+}
+
+/// One map of the running game, as the Settings tab lists it.
+///
+/// See also:
+/// * [DmControlPanel.gameMaps], the list.
+/// * [Session.mapIds], where the TV keeps a game's maps.
+class GameMap {
+  /// The map's id in the TV's library ([MapLibraryEntry.id]).
+  final String id;
+
+  /// The map's name.
+  final String name;
+
+  /// Its thumbnail PNG from the TV, or `null` (a map icon is shown).
+  final Uint8List? thumbnail;
+
+  /// Whether this map is on the table right now.
+  final bool active;
+
+  /// Creates a game map row's data.
+  const GameMap({
+    required this.id,
+    required this.name,
+    this.thumbnail,
+    this.active = false,
   });
 }
 
@@ -386,6 +432,11 @@ class DmControlPanel extends StatefulWidget {
   /// ([VttGame.tvTableLayout]) — for the Camera tab's info line and arrows.
   final TableLayout? Function()? tvTableLayout;
 
+  /// The running game's maps for the Settings tab's switcher, the one on
+  /// the table marked [GameMap.active]; `null` = no switcher (local mode
+  /// shows "Load Map").
+  final List<GameMap>? gameMaps;
+
   /// Creates a DM control panel bound to [state] and [callbacks].
   const DmControlPanel({
     super.key,
@@ -396,6 +447,7 @@ class DmControlPanel extends StatefulWidget {
     this.dmOverlayUploadLabel,
     this.tvOverview,
     this.tvTableLayout,
+    this.gameMaps,
   });
 
   @override
@@ -2194,21 +2246,70 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Settings Tab ────────────────────────────────────────
 
-  /// Builds the Settings tab: load map; **Table scale** (one inch per
+  /// The Settings tab's **Maps in this game**: one row per map of the game
+  /// (tap another to put it on the table, [DmCallbacks.onSwitchMap]), then
+  /// "From device" and "Shared library" to add one.
+  List<Widget> _buildGameMaps(List<GameMap> maps) {
+    return [
+      const _GoldLabel('Maps in this game'),
+      const SizedBox(height: 4),
+      for (final m in maps) ...[
+        _GameMapRow(
+          map: m,
+          onTap: m.active ? null : () => cb.onSwitchMap!(m.id),
+        ),
+        const SizedBox(height: 6),
+      ],
+      Row(
+        children: [
+          if (cb.onAddMapFromDevice != null)
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.upload_file,
+                label: 'From device',
+                onTap: cb.onAddMapFromDevice!,
+              ),
+            ),
+          if (cb.onAddMapFromDevice != null && cb.onOpenSharedLibrary != null)
+            const SizedBox(width: 6),
+          if (cb.onOpenSharedLibrary != null)
+            Expanded(
+              child: _GoldButton(
+                icon: Icons.cloud_outlined,
+                label: 'Shared library',
+                onTap: cb.onOpenSharedLibrary!,
+              ),
+            ),
+        ],
+      ),
+      const SizedBox(height: 4),
+      const Text(
+        'Each map keeps its own fog, doors, tokens and drawings.',
+        style: TextStyle(color: _kTextSecondary, fontSize: 12),
+      ),
+    ];
+  }
+
+  /// Builds the Settings tab: the game's maps ([_buildGameMaps]; local mode:
+  /// Load Map); **Table scale** (one inch per
   /// square, the TV's squares, Measure the TV); **Grid** (draw battlemap's
   /// grid — remembered per map —, Map squares for picture/PDF maps, walls);
   /// effects.
   Widget _buildSettingsTab() {
     final map = state.map;
     final raster = state.rasterImageSize != null && map != null;
+    final gameMaps = widget.gameMaps;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _GoldButton(
-          icon: Icons.folder_open,
-          label: 'Load Map',
-          onTap: cb.onLoadMap,
-        ),
+        if (gameMaps != null && cb.onSwitchMap != null)
+          ..._buildGameMaps(gameMaps)
+        else
+          _GoldButton(
+            icon: Icons.folder_open,
+            label: 'Load Map',
+            onTap: cb.onLoadMap,
+          ),
         const SizedBox(height: 12),
         Container(height: 1, color: _kBorderGold),
         const SizedBox(height: 10),
@@ -2685,6 +2786,71 @@ class _GoldButton extends StatelessWidget {
       ),
     );
     return enabled ? button : Opacity(opacity: 0.35, child: button);
+  }
+}
+
+/// One map of the game in the Settings tab (≥ 44 px high): thumbnail, name,
+/// and "On the table" for the active one; tapping another switches to it.
+class _GameMapRow extends StatelessWidget {
+  /// The map shown.
+  final GameMap map;
+
+  /// Switches to this map; `null` for the map already on the table.
+  final VoidCallback? onTap;
+
+  const _GameMapRow({required this.map, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final thumb = map.thumbnail;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: _kTarget),
+        padding: const EdgeInsets.fromLTRB(6, 6, 12, 6),
+        decoration: BoxDecoration(
+          color: map.active ? _kSurfaceActive : _kSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: map.active ? _kAccentGold : _kBorderGold),
+        ),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: SizedBox(
+                width: 48,
+                height: 36,
+                child: thumb != null
+                    ? Image.memory(thumb, fit: BoxFit.cover, gaplessPlayback: true)
+                    : const ColoredBox(
+                        color: _kPanelBg,
+                        child: Icon(Icons.map, color: _kAccentGoldDim, size: _kIcon),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                map.name,
+                style: TextStyle(
+                  color: map.active ? _kTextPrimary : _kTextSecondary,
+                  fontSize: _kText,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            map.active
+                ? const Text('On the table',
+                    style: TextStyle(color: _kAccentGold, fontSize: 12))
+                : const Icon(Icons.swap_horiz, color: _kAccentGoldDim, size: _kIcon),
+          ],
+        ),
+      ),
+    );
   }
 }
 

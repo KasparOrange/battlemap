@@ -1131,6 +1131,30 @@ class VttRelayClient {
     _send(msg);
   }
 
+  /// Puts map [mapId] (a [MapLibraryEntry.id] on the TV) on the table in
+  /// the running game (`vtt.switchMap`). The game's other maps keep their
+  /// fog, tokens and drawings ([Session.switchTo]); a map new to the game
+  /// joins it.
+  void sendSwitchMap(String mapId) =>
+      _send({'type': 'vtt.switchMap', 'mapId': mapId});
+
+  /// Opens a map from the shared library (`lib.openSharedMap`): the TV
+  /// downloads it unless it has it already ([MapLibraryEntry.serverMapId]),
+  /// then adds it to the running game when [intoGame] is `true`, or starts
+  /// a new game on it named [name] with [settings].
+  ///
+  /// [map] is the [SharedMap.toJson] of the library entry.
+  void sendOpenSharedMap(Map<String, dynamic> map,
+      {required bool intoGame, String? name, Map<String, dynamic>? settings}) {
+    _send({
+      'type': 'lib.openSharedMap',
+      'map': map,
+      'intoGame': intoGame,
+      if (name != null) 'name': name,
+      if (settings != null) 'settings': settings,
+    });
+  }
+
   /// Sends updated [SessionSettings] to the TV for the active session.
   ///
   /// [settings] is the serialized [SessionSettings.toJson] map. The TV

@@ -72,10 +72,14 @@ void main() {
         onRotateRuler: rec('rotateRuler'),
         onUpdateSessionSettings: (_) => calls.add('settings'),
         onTriggerEffect: (_) => calls.add('effect'),
+        onSwitchMap: (id) => calls.add('switchMap:$id'),
+        onAddMapFromDevice: rec('addFromDevice'),
+        onOpenSharedLibrary: rec('sharedLibrary'),
       );
     }
 
-    Future<VttState> pump(WidgetTester tester, Size size) async {
+    Future<VttState> pump(WidgetTester tester, Size size,
+        {List<GameMap>? gameMaps}) async {
       calls = [];
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1.0;
@@ -89,7 +93,8 @@ void main() {
             child: ListenableBuilder(
               listenable: state,
               builder: (_, _) =>
-                  DmControlPanel(state: state, callbacks: callbacks()),
+                  DmControlPanel(
+                      state: state, callbacks: callbacks(), gameMaps: gameMaps),
             ),
           ),
         ),
@@ -281,6 +286,35 @@ void main() {
       await tester.pumpAndSettle();
       expect(state.revealRadius, 1); // never below one square
       expect(find.text('1 square'), findsOneWidget);
+    });
+
+    testWidgets('Settings lists the game\'s maps and switches between them',
+        (tester) async {
+      await pump(tester, const Size(1280, 800), gameMaps: const [
+        GameMap(id: 'town', name: 'Town', active: true),
+        GameMap(id: 'cellar', name: 'Cellar'),
+      ]);
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Maps in this game'), findsOneWidget);
+      expect(find.text('Load Map'), findsNothing);
+      expect(find.text('On the table'), findsOneWidget);
+
+      await tester.tap(find.text('Town')); // already on the table
+      await tester.tap(find.text('Cellar'));
+      await tester.tap(find.text('From device'));
+      await tester.tap(find.text('Shared library'));
+      expect(calls, ['switchMap:cellar', 'addFromDevice', 'sharedLibrary']);
+    });
+
+    testWidgets('without game maps (local mode) Settings keeps Load Map',
+        (tester) async {
+      await pump(tester, const Size(1280, 800));
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      expect(find.text('Maps in this game'), findsNothing);
+      await tester.tap(find.text('Load Map'));
+      expect(calls, ['loadMap']);
     });
   });
 }
