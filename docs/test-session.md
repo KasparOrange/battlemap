@@ -7,6 +7,7 @@ running (TV in TV Mode, tablet connected as companion):
 P=~/.local/share/battlemap/venv/bin/python
 $P tools/bench_bot.py seed          # upload the test maps into the TV library (once)
 $P tools/bench_bot.py run --stress  # play scenes 0–7, ~2 min, report + screenshots
+$P tools/bench_bot.py prep          # leave a game in progress to play with by hand
 ```
 
 The robot joins the relay as `bot` (next to the tablet, see `relay-protocol.md`), sends the

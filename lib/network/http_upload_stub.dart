@@ -3,13 +3,18 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
-/// Download bytes via HTTP GET (native implementation).
+import 'http_download.dart';
+
+/// Downloads bytes via HTTP GET — the native (Android/iOS/desktop) side of
+/// the web build's `httpDownloadWeb`.
+///
+/// Delegates to [httpDownload] (dart:io) and reports progress through
+/// [onProgress]. Returns `null` on any HTTP or network error. Until
+/// 2026-10-10 this returned `null` unconditionally, so a native companion
+/// (Android tablet) could never load the TV's map.
 Future<Uint8List?> httpDownloadWeb(String url, {
   void Function(double progress)? onProgress,
-}) async {
-  // Native uses httpDownload from http_download.dart instead
-  return null;
-}
+}) => httpDownload(url, onProgress: onProgress);
 
 /// Upload bytes via HTTP PUT (native implementation using dart:io).
 Future<Map<String, dynamic>?> httpUpload(

@@ -385,6 +385,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         _onMapReady();
       } else {
         DevLog.add('Companion: map download failed');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Couldn't download the TV's map — check the connection"),
+          ));
+        }
       }
     } catch (e) {
       DevLog.add('Companion: map download error: $e');

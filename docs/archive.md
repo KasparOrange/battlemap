@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - battlemap play-around prep + tablet map download
+- Konrad: "play around, realistic scenario, refine UI/UX" → `bench_bot.py prep` leaves a game in progress (tavern, 4 named heroes + 2 NPCs with HP, common room revealed)
+	- **the native companion could not download maps**: `httpDownloadWeb` in `http_upload_stub.dart` (the non-web side) returned `null` always — the Android tablet kept showing an old map. Now delegates to dart:io `httpDownload`; a failed download shows a snackbar
+	- **fog**: TV fog fully opaque (players saw the dungeon through 90 % fog), phone fog 70 % so the DM reads the layout; atmospheric mode's deep fog opaque on the TV (`FogOfWarComponent.forPlayers`)
+	- UX click-through of the companion handed to a helper agent; findings → `action.md`
+
 ### 26-10-10 - drawn doors (ai art step 1)
 - Konrad: continue the AI map hand-off → step 1 done: doors are no longer painted
 	- mapgen: guide leaves doorways as gaps (no red bar), prompt asks for empty doorways, `pack` writes `"battlemap": {"draw_doors": true}` and hinges a double door's second leaf at its far end; new `doors` command / `doors_N.jpg` previews

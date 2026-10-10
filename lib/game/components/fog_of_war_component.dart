@@ -36,8 +36,17 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
   /// Number of grid rows on the map.
   final int gridRows;
 
+  /// Whether this fog is drawn on the TV the players look at.
+  ///
+  /// The TV fog is fully opaque — players must not see the map through it.
+  /// The DM's phone draws it at 70 % so the DM can still read the layout
+  /// under the fog while planning reveals. (Both were 90 % before 2026-10-10,
+  /// which let players see the whole dungeon dimly.)
+  final bool forPlayers;
+
   // Cached paints -- not recreated per frame
-  final Paint _fogPaint = Paint()..color = const Color(0xE5000000);
+  late final Paint _fogPaint = Paint()
+    ..color = forPlayers ? const Color(0xFF000000) : const Color(0xB3000000);
   final Paint _erasePaint = Paint()
     ..color = const Color(0xFFFFFFFF)
     ..blendMode = BlendMode.dstOut
@@ -70,13 +79,15 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
   /// [state] provides access to revealed cells and session settings.
   /// [pixelsPerGrid] converts cell indices to pixel coordinates.
   /// [gridCols] and [gridRows] define the grid dimensions.
-  /// [mapSize] sets the component bounds.
+  /// [mapSize] sets the component bounds. [forPlayers] picks the opaque TV
+  /// fog over the DM's see-through phone fog.
   FogOfWarComponent({
     required this.state,
     required this.pixelsPerGrid,
     required this.gridCols,
     required this.gridRows,
     required Vector2 mapSize,
+    this.forPlayers = false,
   }) : super(size: mapSize, priority: 10);
 
   @override
@@ -273,7 +284,7 @@ class FogOfWarComponent extends PositionComponent with HasVisibility {
           0 => 0.35, // adjacent to revealed
           1 => 0.55,
           2 => 0.75,
-          _ => 0.90, // deep fog
+          _ => forPlayers ? 1.0 : 0.90, // deep fog: opaque on the TV
         };
 
         final paint = Paint()..color = Color.fromRGBO(0, 0, 0, opacity);

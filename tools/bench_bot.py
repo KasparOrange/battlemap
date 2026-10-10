@@ -11,6 +11,7 @@ Usage (bench running, TV in TV Mode, tablet connected as companion):
   tools/bench_bot.py run         # play docs/test-session.md, write a report
   tools/bench_bot.py run --stress  # also load the 30 MB castle (may crash the TV)
   tools/bench_bot.py all         # seed + run
+  tools/bench_bot.py prep        # leave a game in progress on the TV to play with by hand
 
 The report lands in build/bench-report/<time>/report.md (+ screenshots); `--open`
 also shows it in flagship's ledger pane (never by default: a run mustn't take
@@ -451,9 +452,38 @@ async def run(bot: Bot, rep: Report, stress: bool) -> None:
         rep.lines += [f"- `{e}`" for e in bot.errors]
 
 
+HEROES = [  # (name, hp, x, y) — a level-3 party walking into the tavern
+    ("Brakka", 31, 6, 9), ("Lirael", 18, 7, 9), ("Tobin", 22, 8, 10), ("Sefa", 24, 9, 9),
+]
+NPCS = [("Barkeep Ulm", 9, 10, 3), ("Hooded stranger", 27, 13, 4)]
+
+
+async def prep(bot: Bot) -> None:
+    """Leaves a realistic game in progress: the tavern, a party at the door, the
+    common room revealed, the barkeep and a stranger inside."""
+    await bot.send("lib.requestList")
+    await bot.until(lambda: bot.listing.get("maps"), 5)
+    mid = map_id(bot, "03-")
+    if not mid:
+        sys.exit("tavern map missing — run `bench_bot.py seed` first")
+    await bot.send("nav.newSession", mapId=mid, name="Game night — the tavern")
+    await bot.until(lambda: bot.state.get("activeMapId") == mid and bot.state.get("hasMap"), 30)
+    cols = bot.state["gridCols"]
+    for name, hp, x, y in HEROES + NPCS:
+        before = len(bot.state.get("tokens", []))
+        await bot.send("vtt.addToken", gridX=x, gridY=y)
+        await bot.until(lambda: len(bot.state["tokens"]) > before)
+        tok = bot.state["tokens"][-1]
+        await bot.send("vtt.editToken", id=tok["id"], name=name, maxHp=hp, currentHp=hp)
+    await bot.send("vtt.brushReveal", indices=rect(cols, 1, 1, 14, 6))  # common room
+    await bot.send("vtt.zoomToFit")
+    await asyncio.sleep(2.5)  # let auto-save write it
+    print(f"game in progress: {len(HEROES)} heroes, {len(NPCS)} NPCs, common room revealed")
+
+
 async def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["seed", "run", "all"])
+    parser.add_argument("command", choices=["seed", "run", "all", "prep"])
     parser.add_argument("--stress", action="store_true", help="also load the 30 MB castle in `run`")
     parser.add_argument("--open", action="store_true", help="show the report in ledger when done")
     args = parser.parse_args()
@@ -464,6 +494,8 @@ async def main() -> int:
     try:
         if args.command in ("seed", "all"):
             await seed(bot)
+        if args.command == "prep":
+            await prep(bot)
         if args.command in ("run", "all"):
             rep = Report(serial)
             try:
