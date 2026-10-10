@@ -64,7 +64,8 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 3. TV remote fallback: on the TV, arrow keys + Return alone reach every library entry and the back
    button.
 4. Once per TV: Settings ▸ Measure the TV… — the TV shows its one-inch squares and a 10-inch bar;
-   it must measure 25.4 cm (type what you measure, Apply, measure again). A 1-inch mini base then
+   it must measure 25.4 cm (type what you measure, Apply, measure again; the width stepper below
+   fine-tunes by 1–10 mm, a tap on its number opens a numpad). A 1-inch mini base then
    fits one square at every edge of the table.
 
 **1. the tavern (03)**

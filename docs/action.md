@@ -100,8 +100,9 @@ devices:
   the stepper, "Use this length"; then a mini on a door on the TV. A name like `Tavern_30x40.jpg`
   pre-fills the counts. All counts are steppers now (±1/2/5/10, tap the number → numpad); Measure
   the TV's fine tune is the picture width in mm (not built into a release yet)
-- Settings ▸ Grid ▸ "Fit the grid on the picture" in a game: the same counts keep the fog, new
-  counts clear it; "Map squares" is the quick count-only dialog
+- Settings ▸ Grid ▸ "Fit the grid on the picture" in a game (on a map battlemap draws the grid
+  over: "Set this map's scale on the picture", opening in Known length): the same counts keep the
+  fog, new counts clear it; "Map squares" is the quick count-only dialog
 
 ## tabletop UX polish (2026-10-10, since 1.1.7+17) — needs a device test
 
