@@ -49,13 +49,19 @@ relay sends ping every 20s. client sends ping every 15s. zombie detection at 30-
 {"type": "lib.deleteMap", "mapId": "uuid"}
 {"type": "lib.deleteSession", "sessionId": "uuid"}
 {"type": "lib.renameSession", "sessionId": "uuid", "name": "new name"}
+{"type": "lib.getThumbnail", "mapId": "uuid"}     // since 2026-10-10; ignored if the map has none
 ```
 
 ## library (table → companion)
 
 ```
 {"type": "lib.listing", "maps": [...], "sessions": [...]}
+{"type": "lib.thumbnail", "mapId": "uuid", "png": "<base64 PNG, longest side 288 px>"}   // since 2026-10-10
 ```
+
+Each listed map carries `thumbnailAvailable`. The companion asks for those once per app run
+(`lib.getThumbnail`); the TV makes missing ones after every listing while it shows the library
+and pushes each `lib.thumbnail` unasked as soon as it's ready (`docs/sessions.md` "thumbnails").
 
 ## map transfer
 
@@ -159,7 +165,7 @@ companion downloads from VPS via HTTP.
 
 `vtt.setCamera` sets the TV camera to an absolute transform (world center, zoom clamped to the
 TV's calibrated minimum, angle in radians). The phone sends it once for "send this view to the
-TV" and throttled (≥ 80 ms apart) while "TV follows the phone" is on. **The phone camera is
+TV" and throttled (≥ 80 ms apart) while "TV follows the tablet" is on. **The phone camera is
 independent of the TV camera** — the phone never applies the broadcast camera to its own view,
 it draws it as a dashed frame (see `camera.vw`/`vh` below).
 
@@ -170,7 +176,7 @@ it draws it as a dashed frame (see `camera.vw`/`vh` below).
 {"type": "vtt.setMeasure"}                                                        // no coords = clear
 {"type": "vtt.setAoe", "shape": "circle"|"cone"|"line"|"square", "originX": 5.5, "originY": 3.0, "radius": 4.0, "angle": 0.0}
 {"type": "vtt.clearAoe"}
-{"type": "vtt.toggleRuler"}
+{"type": "vtt.toggleRuler"}                              // on show, the TV centres the ruler in its view
 {"type": "vtt.setRulerPosition", "x": 3.25, "y": 7.5}   // corner, grid squares; sent while dragging the ruler on the phone
 {"type": "vtt.rotateRuler"}
 {"type": "vtt.undo"}

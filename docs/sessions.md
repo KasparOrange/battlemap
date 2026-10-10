@@ -48,13 +48,24 @@ auto-save fires 2 seconds after the last state change. this batches rapid change
 
 ## thumbnails
 
-thumbnails are generated lazily — NOT on every save.
+map thumbnails (built 2026-10-10, `lib/storage/map_thumbnails.dart`) are generated lazily — NOT
+on every save:
 
-when the library view is displayed:
-1. TV checks if thumbnail exists for each map/session
-2. if not: `thumbnailAvailable: false` in the listing
-3. TV generates missing thumbnails in the background
-4. companion shows placeholder for items without thumbnails
+1. every library listing reports `thumbnailAvailable` per map
+2. after the listing the TV makes the missing ones, one map at a time and only while it shows the
+   library (reading a big `.dd2vtt` costs memory a game needs on the 2 GB box): the `.dd2vtt`'s
+   image is extracted in a background isolate and decoded straight to 288 px on the long side,
+   then stored as PNG in the `thumbnails` Hive box and pushed as `lib.thumbnail`
+3. the companion asks for available ones (`lib.getThumbnail`) and shows the map icon until one
+   arrives. PDF maps get none; a map whose picture can't be decoded isn't retried until restart
+
+session thumbnails (with the fog) are not built; the library's "Continue" card uses the map's.
+
+## library on the companion
+
+- a **Continue** card on top resumes the most recently played session in one tap
+- each map row shows its thumbnail; new sessions are named "Session N · Sat 10 Oct" (number on
+  this map + the day it started) so game nights can be told apart without renaming
 
 ## storage format
 

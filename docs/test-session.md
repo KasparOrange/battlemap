@@ -69,7 +69,7 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 2. Place 4 player tokens at the door and 2 NPC tokens at the bar; move one by drag.
 3. Reveal the main room with the brush; the bar area stays hidden until "opened".
 4. Pinch and two-finger pan on the tablet: never paints fog.
-5. "TV follows the phone" on: the TV moves live with the tablet. "Match TV" jumps back.
+5. "TV follows the tablet" on: the TV moves live with the tablet. "Jump to TV" jumps back.
 
 **2. the house (02)**
 1. Switch the session to 02. Tokens and fog from 03 are *not* carried over.

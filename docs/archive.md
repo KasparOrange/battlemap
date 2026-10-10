@@ -6,6 +6,17 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - battlemap tabletop UX polish (UX review items 2, 4–7)
+- Konrad: "build all of the recommendations" (tabletop-mode ones; tokens/HP dropped as digital mode) — built in a separate worktree while three other battlemap sessions edited the same files, rebased onto main
+	- **door markers DM-only**: `PortalComponent.showMarker` = `!isDisplay`; the TV draws nothing for Dungeondraft doors (their painted door is what players see); drawn AI-map doors show everywhere
+	- **ruler**: `vtt.toggleRuler` on show → the TV centres it in its own view, square to its screen (`VttGame.centerRulerInView`); rotate turns around the middle of the L instead of the corner; numbers counter-rotated (`RulerComponent.labelAngle`) so they stay upright on every screen
+	- **camera tab by screen**: Tablet ("Fit on tablet", "Jump to TV") / TV ("TV follows the tablet", "Show my view on the TV", "Fit on TV", rotation); "Go to TV's view" was cut off at 320 px → "Jump to TV"
+	- **panel**: landscape tablet (`DmControlPanel.sideLayoutFor`) → right-edge rail (72 px, undo/redo at its foot) + 320 px content unfolding beside it (`AnimatedSize`, closes quicker than it opens); phones and portrait keep the bottom sheet
+	- **fog tab**: Tool Brush | Room segmented, hint line per tool, brush size only for the brush, "Players see changes: Instantly | Preview first" replaces "Live mode / Shadow mode"; `✓` glyph replaced by words (not in every font)
+	- **undo snackbar** after Reveal all / Hide all / Clear drawings (decided from the mirrored state before sending: no Undo when nothing changed or when shadow mode only staged)
+	- **library**: Continue card (most recent session, one tap), map thumbnails (TV makes them lazily, `lib/storage/map_thumbnails.dart`, new `lib.getThumbnail` / `lib.thumbnail`), new sessions named "Session N · Sat 10 Oct"
+	- verified: analyze clean, all tests green (+26: panel layouts, fog controls, ruler geometry, door markers, thumbnails, continue card, relay parsing); layouts rendered off-screen with Roboto (bench emulators were busy with other sessions) — no device test yet
+
 ### 26-10-10 18:08 - fb99b910 - Juri's dungeon: labels off, secret rooms hidden
 - Konrad: do Juri's Telegram request with Nano Banana → his photographed dungeon page as a clean map (labels, arrows, S/T marks gone, four secret rooms turned to rock) + a transparent overlay of everything removed; on the board `battlemap-mapgen` side by side and stacked
 	- learnings → `ai-art.md` "Editing a published map": edits keep geometry to the pixel, paste patches into the original with colour matching, blank a room in magenta before asking for rock, name the stone size, one job per call
