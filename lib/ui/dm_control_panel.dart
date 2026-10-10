@@ -1340,18 +1340,21 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Camera Tab ──────────────────────────────────────────
 
-  /// Builds the Camera tab: phone fit, TV zoom/rotate, and the TV link
-  /// controls (link, send view, match TV) when provided by the host.
+  /// Builds the Camera tab in two sections named after the screen they
+  /// move: **Tablet** (fit on tablet, go to the TV's view) and **TV** (TV
+  /// follows the tablet, show my view on the TV, zoom with fit on TV,
+  /// rotation). Without a TV link (local mode) only zoom and rotation of
+  /// this screen remain.
   Widget _buildCameraTab() {
     final hasLink = cb.onSetCameraLink != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (hasLink) ...[
-          const _GoldLabel('Phone'),
+          const _GoldLabel('Tablet'),
           const SizedBox(height: 4),
           const Text(
-            'Pinch and drag with two fingers to move the phone view. The dashed frame is what the TV shows.',
+            'Pinch and drag with two fingers to move your view. The dashed frame is what the TV shows.',
             style: TextStyle(color: _kTextSecondary, fontSize: 12),
           ),
           const SizedBox(height: 6),
@@ -1360,7 +1363,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
               Expanded(
                 child: _GoldButton(
                   icon: Icons.fit_screen,
-                  label: 'Fit map',
+                  label: 'Fit on tablet',
                   onTap: cb.onPhoneZoomToFit ?? () {},
                 ),
               ),
@@ -1368,7 +1371,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
               Expanded(
                 child: _GoldButton(
                   icon: Icons.center_focus_strong,
-                  label: 'Match TV',
+                  label: "Go to TV's view",
                   onTap: cb.onMatchTv ?? () {},
                 ),
               ),
@@ -1381,7 +1384,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
           const SizedBox(height: 4),
           _GoldToggle(
             icon: Icons.link,
-            label: 'TV follows the phone',
+            label: 'TV follows the tablet',
             active: _cameraLinked,
             onTap: () {
               setState(() => _cameraLinked = !_cameraLinked);
@@ -1391,12 +1394,12 @@ class _DmControlPanelState extends State<DmControlPanel> {
           const SizedBox(height: 6),
           _GoldButton(
             icon: Icons.send_to_mobile,
-            label: 'Send this view to the TV',
+            label: 'Show my view on the TV',
             onTap: cb.onSendView ?? () {},
           ),
           const SizedBox(height: 10),
         ],
-        const _GoldLabel('Zoom'),
+        _GoldLabel(hasLink ? 'TV zoom' : 'Zoom'),
         const SizedBox(height: 4),
         Row(
           children: [
@@ -1407,7 +1410,10 @@ class _DmControlPanelState extends State<DmControlPanel> {
             Expanded(
               flex: 2,
               child: _GoldButton(
-                  icon: Icons.fit_screen, label: 'Fit', onTap: cb.onZoomToFit),
+                icon: Icons.fit_screen,
+                label: hasLink ? 'Fit on TV' : 'Fit map',
+                onTap: cb.onZoomToFit,
+              ),
             ),
             const SizedBox(width: 6),
             Expanded(
@@ -1416,7 +1422,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
           ],
         ),
         const SizedBox(height: 10),
-        const _GoldLabel('Rotation'),
+        _GoldLabel(hasLink ? 'TV rotation' : 'Rotation'),
         const SizedBox(height: 4),
         Row(
           children: [

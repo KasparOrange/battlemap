@@ -966,15 +966,15 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         onSetCameraLink: (linked) {
           _cameraLinked = linked;
           if (linked) _queueCameraSend(_game.cameraSnapshot);
-          _showSnack(linked ? 'TV follows the phone' : 'TV camera unlinked');
+          _showSnack(linked ? 'TV follows the tablet' : 'TV stays where it is');
         },
         onSendView: () {
           c.sendSetCamera(_game.getCameraState());
-          _showSnack('View sent to TV');
+          _showSnack('TV shows your view');
         },
         onMatchTv: () {
           if (_game.tvCamera == null) {
-            _showSnack('No TV view received yet', color: Colors.orangeAccent);
+            _showSnack("The TV hasn't sent its view yet", color: Colors.orangeAccent);
             return;
           }
           _game.matchTvCamera();
