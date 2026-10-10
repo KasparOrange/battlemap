@@ -1015,10 +1015,12 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
           final cellY = (worldPos.y / ppg).floor();
           if (cellX >= 0 && cellX < _getGridCols() && cellY >= 0 && cellY < _getGridRows()) {
             final startIdx = cellY * _getGridCols() + cellX;
-            final roomCells = _wallGrid!.floodFill(startIdx);
-            state.revealRoom(roomCells);
+            _revealCells(_wallGrid!.floodFill(startIdx));
           }
         }
+      case InteractionMode.circleReveal:
+        if (_tryTogglePortal(worldPos)) return;
+        _circleRevealAt(worldPos);
       case InteractionMode.aoe:
         // AoE: tap places the active template's shape/size at this origin
         _aoeStart(worldPos);
@@ -1061,7 +1063,8 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
         _measureStart(worldPos);
         break;
       case InteractionMode.roomReveal:
-        break; // Room reveal is tap-only
+      case InteractionMode.circleReveal:
+        break; // Room and circle reveal are tap-only
       case InteractionMode.aoe:
         _aoeStart(worldPos);
         break;
@@ -1098,6 +1101,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
         _measureUpdate(worldPos);
         break;
       case InteractionMode.roomReveal:
+      case InteractionMode.circleReveal:
         break;
       case InteractionMode.aoe:
         _aoeUpdate(worldPos);
@@ -1130,6 +1134,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
         // Keep measurement visible until next interaction
         break;
       case InteractionMode.roomReveal:
+      case InteractionMode.circleReveal:
         break;
       case InteractionMode.aoe:
         break; // Keep template visible
@@ -1220,6 +1225,30 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     }
     final index = cellY * gridCols + cellX;
     state.toggleReveal(index);
+  }
+
+  /// Reveals or hides [cells] (by [VttState.revealMode], staged in shadow
+  /// mode) and forwards them to the TV through [VttState.onRoomReveal].
+  void _revealCells(Set<int> cells) {
+    if (cells.isEmpty) return;
+    state.revealRoom(cells);
+    state.onRoomReveal?.call(cells.toList());
+  }
+
+  /// The circle reveal: the squares within [VttState.revealRadius] of the
+  /// tapped square that are reachable from it without crossing a wall or a
+  /// closed door ([WallGrid.floodFillWithin]); a plain circle on a map
+  /// without walls.
+  void _circleRevealAt(Vector2 worldPos) {
+    final ppg = _getPixelsPerGrid();
+    final col = (worldPos.x / ppg).floor();
+    final row = (worldPos.y / ppg).floor();
+    final cols = _getGridCols();
+    final rows = _getGridRows();
+    if (col < 0 || col >= cols || row < 0 || row >= rows) return;
+    final r = state.revealRadius;
+    _revealCells(_wallGrid?.floodFillWithin(row * cols + col, r) ??
+        WallGrid.circleCells(col, row, r, cols, rows));
   }
 
   /// Paints the brush around [worldPos]; skipped while the finger stays in

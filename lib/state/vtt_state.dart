@@ -43,6 +43,11 @@ enum InteractionMode {
   /// Room reveal mode: tap a cell to flood-fill reveal all connected cells
   /// bounded by walls and closed portals.
   roomReveal,
+
+  /// Circle reveal mode: tap a cell to reveal (or hide) a circle of
+  /// [VttState.revealRadius] squares around it, stopped by walls and closed
+  /// portals like [roomReveal] (`WallGrid.floodFillWithin`).
+  circleReveal,
 }
 
 /// DM-controlled runtime state for the VTT table display.
@@ -172,6 +177,14 @@ class VttState extends ChangeNotifier {
   /// The brush uses a circular shape (cells beyond `r^2 + r` distance
   /// are excluded).
   int brushRadius = 1;
+
+  /// Radius in squares of the Fog tab's circle reveal
+  /// ([InteractionMode.circleReveal]), set with [setRevealRadius].
+  ///
+  /// Local to the device that taps: the circle's squares are worked out
+  /// there and sent as a cell list (`vtt.roomReveal`), so the TV never needs
+  /// the radius. Not part of [toJson].
+  int revealRadius = 4;
 
   /// Whether the brush reveals or hides fog.
   ///
@@ -410,6 +423,11 @@ class VttState extends ChangeNotifier {
   ///
   /// Set by [FogOfWarComponent] or the relay client.
   void Function(int index)? onPortalTap;
+
+  /// Called when a room or circle reveal changes a set of cells locally
+  /// ([InteractionMode.roomReveal], [InteractionMode.circleReveal]), so the
+  /// relay can forward the cells to the TV (`vtt.roomReveal`).
+  void Function(List<int> cells)? onRoomReveal;
 
   /// Called when a new token is added locally, for relay forwarding.
   void Function(MapToken token)? onTokenAdded;
@@ -903,7 +921,7 @@ class VttState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reveals or hides a set of cells (used by room-reveal flood fill).
+  /// Reveals or hides a set of cells (used by the room and circle reveals).
   ///
   /// In [shadowMode], routes cells to [shadowRevealCells] or
   /// [shadowHideCells]. In live mode, modifies [revealedCells] directly
@@ -915,7 +933,9 @@ class VttState extends ChangeNotifier {
   ///
   /// See also:
   /// * [WallGrid.floodFill], which computes the cell set.
-  /// * [InteractionMode.roomReveal], the mode that triggers this.
+  /// * [WallGrid.floodFillWithin], the circle reveal's cell set.
+  /// * [InteractionMode.roomReveal] and [InteractionMode.circleReveal], the
+  ///   modes that trigger this.
   void revealRoom(Set<int> cells) {
     if (shadowMode) {
       if (revealMode) {
@@ -1024,6 +1044,12 @@ class VttState extends ChangeNotifier {
   /// [radius] of `0` means single cell, `1` means 3x3, `2` means 5x5, etc.
   void setBrushRadius(int radius) {
     brushRadius = radius;
+    notifyListeners();
+  }
+
+  /// Sets [revealRadius], clamped to 1–30 squares.
+  void setRevealRadius(int radius) {
+    revealRadius = radius.clamp(1, 30);
     notifyListeners();
   }
 

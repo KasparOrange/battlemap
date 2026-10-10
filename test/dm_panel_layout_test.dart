@@ -60,6 +60,7 @@ void main() {
         onClearShadow: rec('clearShadow'),
         onSetRoomRevealMode: rec('roomMode'),
         onRoomReveal: (_) => calls.add('roomReveal'),
+        onSetCircleRevealMode: rec('circleMode'),
         onSetAoeMode: rec('aoeMode'),
         onSetAoe: (_) => calls.add('setAoe'),
         onClearAoe: rec('clearAoe'),
@@ -189,6 +190,32 @@ void main() {
       expect(calls, isNot(contains('toggleShadow')));
       await tester.tap(find.text('Preview first'));
       expect(calls, contains('toggleShadow'));
+    });
+
+    testWidgets('Fog tab: Circle tool with a radius in squares',
+        (tester) async {
+      final state = await pump(tester, const Size(1280, 800));
+      await tester.tap(find.text('Fog'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Circle'));
+      expect(calls, contains('circleMode'));
+      state.setInteractionMode(InteractionMode.circleReveal); // TV's echo
+      await tester.pumpAndSettle();
+      expect(find.text('4 squares'), findsOneWidget);
+      expect(find.text('Brush size'), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+      expect(state.revealRadius, 5);
+      expect(find.text('5 squares'), findsOneWidget);
+
+      state.setRevealRadius(1);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.remove));
+      await tester.pumpAndSettle();
+      expect(state.revealRadius, 1); // never below one square
+      expect(find.text('1 square'), findsOneWidget);
     });
   });
 }

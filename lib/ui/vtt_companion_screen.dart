@@ -425,6 +425,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     };
     _state.onBrushPaint = (indices) => _relay!.sendBrushReveal(indices);
     _state.onPortalTap = (index) => _relay!.sendTogglePortal(index);
+    _state.onRoomReveal = (cells) => _relay!.sendRoomReveal(cells);
     _state.onTokenAdded = (token) => _relay!.sendAddToken(token.gridX, token.gridY);
     _state.onTokenRemoved = (id) => _relay!.sendRemoveToken(id);
     _state.onTokenMoved = (id, x, y) => _relay!.sendMoveToken(id, x, y);
@@ -985,6 +986,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
         // Room reveal
         onSetRoomRevealMode: c.sendSetRoomRevealMode,
         onRoomReveal: (cells) => c.sendRoomReveal(cells),
+        onSetCircleRevealMode: () => c.sendSetInteractionMode('circleReveal'),
         // AoE
         onSetAoeMode: c.sendSetAoeMode,
         onSetAoe: (t) => c.sendSetAoe(t.toJson()),
@@ -1088,6 +1090,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
       // Room reveal
       onSetRoomRevealMode: () => _state.setInteractionMode(InteractionMode.roomReveal),
       onRoomReveal: (cells) => _state.revealRoom(cells.toSet()),
+      onSetCircleRevealMode: () =>
+          _state.setInteractionMode(InteractionMode.circleReveal),
       // AoE
       onSetAoeMode: () => _state.setInteractionMode(InteractionMode.aoe),
       onSetAoe: (t) => _state.setAoe(t),

@@ -342,4 +342,80 @@ class WallGrid {
 
     return visited;
   }
+
+  /// Whether the offset ([dc], [dr]) squares from a centre lies inside a
+  /// circle of [radius] squares — the same round shape as the fog brush
+  /// (`dc² + dr² ≤ r² + r`, so a radius of 1 is a plus, not a lone square).
+  static bool inCircle(int dc, int dr, int radius) =>
+      dc * dc + dr * dr <= radius * radius + radius;
+
+  /// Flood fill from [startCell] that stays inside a circle of [radius]
+  /// squares around it — the fog tab's circle reveal.
+  ///
+  /// Like [floodFill], it never crosses a wall or a closed portal, and it
+  /// only steps onto squares inside the circle ([inCircle]). So the circle
+  /// is cut off at the walls of the room it was tapped in: a square behind
+  /// a wall stays fogged even when it is close, unless an open door or a
+  /// gap inside the circle leads there.
+  ///
+  /// A [radius] of 0 returns only [startCell]. Returns an empty set if
+  /// [startCell] is out of bounds.
+  ///
+  /// See also:
+  /// * [circleCells], the same circle without walls (picture maps).
+  /// * [VttState.revealRoom], which reveals or hides the result.
+  Set<int> floodFillWithin(int startCell, int radius) {
+    if (startCell < 0 || startCell >= gridCols * gridRows) return {};
+    final c0 = startCell % gridCols;
+    final r0 = startCell ~/ gridCols;
+
+    final visited = <int>{startCell};
+    final queue = Queue<int>()..add(startCell);
+    const neighbors = [
+      (-1, 0, Direction.west),
+      (1, 0, Direction.east),
+      (0, -1, Direction.north),
+      (0, 1, Direction.south),
+    ];
+
+    while (queue.isNotEmpty) {
+      final cell = queue.removeFirst();
+      final col = cell % gridCols;
+      final row = cell ~/ gridCols;
+      final cellBlocked = blockedEdges[cell] ?? const {};
+      for (final (dc, dr, dir) in neighbors) {
+        final nc = col + dc;
+        final nr = row + dr;
+        if (nc < 0 || nc >= gridCols || nr < 0 || nr >= gridRows) continue;
+        if (!inCircle(nc - c0, nr - r0, radius)) continue;
+        final neighborIdx = nr * gridCols + nc;
+        if (visited.contains(neighborIdx)) continue;
+        if (cellBlocked.contains(dir)) continue;
+        visited.add(neighborIdx);
+        queue.add(neighborIdx);
+      }
+    }
+    return visited;
+  }
+
+  /// All squares of a [gridCols] × [gridRows] grid inside a circle of
+  /// [radius] squares around ([col], [row]), ignoring walls — the circle
+  /// reveal on a map without wall data.
+  ///
+  /// See also:
+  /// * [floodFillWithin], the same circle stopped by walls.
+  static Set<int> circleCells(
+      int col, int row, int radius, int gridCols, int gridRows) {
+    final cells = <int>{};
+    for (int dr = -radius; dr <= radius; dr++) {
+      for (int dc = -radius; dc <= radius; dc++) {
+        if (!inCircle(dc, dr, radius)) continue;
+        final c = col + dc;
+        final r = row + dr;
+        if (c < 0 || c >= gridCols || r < 0 || r >= gridRows) continue;
+        cells.add(r * gridCols + c);
+      }
+    }
+    return cells;
+  }
 }

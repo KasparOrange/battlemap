@@ -447,4 +447,60 @@ void main() {
           reason: 'cell (1,2) is outside the L');
     });
   });
+
+  group('WallGrid circle reveal', () {
+    test('without walls it is the brush-shaped circle', () {
+      final grid = WallGrid.fromMap(_makeMap(gridCols: 11, gridRows: 11), {});
+      final centre = 5 * 11 + 5;
+      expect(grid.floodFillWithin(centre, 4),
+          WallGrid.circleCells(5, 5, 4, 11, 11));
+      // r = 1: a plus plus the corners (1 + 1 ≤ 1 + 1) → 3 × 3
+      expect(grid.floodFillWithin(centre, 1).length, 9);
+      expect(grid.floodFillWithin(centre, 0), {centre});
+    });
+
+    test('a wall stops the circle — the next room stays fogged', () {
+      // Wall along x = 6 from top to bottom: columns 6+ are another room
+      final map = _makeMap(gridCols: 11, gridRows: 11, lineOfSight: [
+        [UvttPoint(6, 0), UvttPoint(6, 11)],
+      ]);
+      final grid = WallGrid.fromMap(map, {});
+      final cells = grid.floodFillWithin(5 * 11 + 4, 4);
+      expect(cells, isNotEmpty);
+      for (final c in cells) {
+        expect(c % 11, lessThan(6), reason: 'cell $c crossed the wall');
+      }
+      // Still reaches the full circle on its own side
+      expect(cells.contains(5 * 11 + 0), isTrue);
+      expect(cells.contains(5 * 11 + 5), isTrue);
+    });
+
+    test('a closed door blocks, an open door lets the circle through', () {
+      // Wall at x = 6 with a one-square door at rows 5..6
+      final map = _makeMap(gridCols: 11, gridRows: 11, lineOfSight: [
+        [UvttPoint(6, 0), UvttPoint(6, 5)],
+        [UvttPoint(6, 6), UvttPoint(6, 11)],
+      ], portals: [
+        _makePortal(6, 5, 6, 6),
+      ]);
+      final start = 5 * 11 + 4;
+      final closed = WallGrid.fromMap(map, {}).floodFillWithin(start, 4);
+      expect(closed.any((c) => c % 11 >= 6), isFalse);
+      final open = WallGrid.fromMap(map, {0}).floodFillWithin(start, 4);
+      expect(open.contains(5 * 11 + 7), isTrue);
+      // Through the door, but never outside the circle
+      for (final c in open) {
+        final dc = c % 11 - 4;
+        final dr = c ~/ 11 - 5;
+        expect(WallGrid.inCircle(dc, dr, 4), isTrue);
+      }
+    });
+
+    test('circleCells clips at the map edge', () {
+      final cells = WallGrid.circleCells(0, 0, 2, 5, 5);
+      expect(cells.every((c) => c >= 0 && c < 25), isTrue);
+      expect(cells.contains(0), isTrue);
+      expect(cells.contains(2), isTrue); // (2, 0): 4 ≤ 6
+    });
+  });
 }

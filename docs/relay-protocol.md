@@ -121,7 +121,13 @@ companion downloads from VPS via HTTP.
 {"type": "vtt.hideAll"}
 {"type": "vtt.toggleReveal", "index": 42}
 {"type": "vtt.brushReveal", "indices": [42, 43, 44]}
+{"type": "vtt.roomReveal", "cells": [42, 43, 44]}
 ```
+
+`vtt.roomReveal` carries the squares of a Room or Circle tap, worked out on the tablet
+(`WallGrid.floodFill` / `floodFillWithin`, walls and closed doors stop both); the TV reveals or
+hides them by its Reveal | Hide setting, staged when "Preview first" is on. The circle's radius
+never travels — it is the tablet's own setting.
 
 ## door commands (companion → table)
 
@@ -132,7 +138,7 @@ companion downloads from VPS via HTTP.
 ## drawing commands (companion → table)
 
 ```
-{"type": "vtt.setMode", "mode": "fogReveal"|"draw"|"token"}
+{"type": "vtt.setMode", "mode": "token"|"fogReveal"|"roomReveal"|"circleReveal"|"draw"|"measure"|"aoe"}
 {"type": "vtt.addStroke", "stroke": {"points": [[x,y],...], "color": "ffe53935", "width": 3.0}}   // color = ARGB hex string
 {"type": "vtt.strokeUpdate", "stroke": {...}|null}
 {"type": "vtt.strokeEnd"}

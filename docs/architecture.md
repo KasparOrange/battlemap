@@ -87,7 +87,7 @@ for the whole run.
 **Tabs are modes (since 2026-10-10):** being on a tab is its interaction mode, there are no
 mode buttons inside the tabs. **Tokens** (leftmost, the normal mode: tap an empty square places a
 token, drag moves it, tap a door opens/closes it; the list names or deletes them), **Fog** (its
-tool Brush | Room, remembered), **Draw**, **Measure**, **Combat** (AoE templates, digital play
+tool Brush | Room | Circle, remembered), **Draw**, **Measure**, **Combat** (AoE templates, digital play
 only); Layers, Camera and Settings use the Tokens mode. Switching tabs sends `vtt.setMode`;
 tapping the active tab only folds it, the mode stays. A mode set elsewhere (the TV restoring a
 game, the bench robot) switches the panel to the tab that owns it — not within 1.5 s of the
@@ -95,9 +95,18 @@ panel's own request, while the TV's echo is on its way. Tokens are always on now
 where the miniatures and monsters stand (`SessionSettings.tokens` is legacy, no longer shown).
 New games start in the Tokens mode.
 
-**Fog tab:** Tool = Brush | Room (the interaction mode), Reveal | Hide, brush size (brush
-only), "Players see changes: Instantly | Preview first" (shadow mode; staged squares are
+**Fog tab:** Tool = Brush | Room | Circle (the interaction mode), Reveal | Hide, brush size
+(brush only) or radius in squares (circle only, − n +, 1–30, default 4), "Players see changes: Instantly | Preview first" (shadow mode; staged squares are
 applied or discarded under it), fog layer, reveal all / hide all.
+
+**Circle reveal (since 2026-10-10):** a tap reveals (or hides) the squares within the radius of
+the tapped square that can be reached from it without crossing a wall or a closed door
+(`WallGrid.floodFillWithin`: flood fill that only steps onto squares inside the circle, same
+round shape as the brush, `dc² + dr² ≤ r² + r`). So it stops at the room's walls; an open door
+inside the circle lets it through. A map without walls (picture maps) gets the plain circle. A
+door tap still opens/closes the door. The tablet works out the squares and sends them like a
+room (`vtt.roomReveal`), so "Preview first" stages them for the DM to correct before applying.
+The radius is local to the tablet (`VttState.revealRadius`, not synced or saved).
 
 **Ruler:** shown via `vtt.toggleRuler`, the TV places it in the middle of its own view, square
 to its screen (`VttGame.centerRulerInView`); rotating turns it around the middle of the L

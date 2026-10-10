@@ -195,6 +195,10 @@ class DmCallbacks {
   /// Reveals a connected room given a list of cell indices.
   final void Function(List<int> cells) onRoomReveal;
 
+  /// Switches to circle-reveal interaction mode (tap reveals a circle of
+  /// [VttState.revealRadius] squares, stopped by walls).
+  final VoidCallback onSetCircleRevealMode;
+
   // ── AoE templates ─────────────────────────────────────────────────
 
   /// Switches to AoE template interaction mode.
@@ -300,6 +304,7 @@ class DmCallbacks {
     required this.onClearShadow,
     required this.onSetRoomRevealMode,
     required this.onRoomReveal,
+    required this.onSetCircleRevealMode,
     required this.onSetAoeMode,
     required this.onSetAoe,
     required this.onClearAoe,
@@ -394,7 +399,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// a mode of their own (Layers, Camera, Settings) use the Tokens mode.
   late String _tab;
 
-  /// The Fog tab's tool (brush or room), kept while on other tabs so the
+  /// The Fog tab's tool (brush, room or circle), kept while on other tabs so the
   /// Fog tab comes back with the tool last picked there.
   InteractionMode _fogTool = InteractionMode.fogReveal;
 
@@ -475,7 +480,10 @@ class _DmControlPanelState extends State<DmControlPanel> {
   String? _tabFor(InteractionMode mode) {
     final id = switch (mode) {
       InteractionMode.token => 'tokens',
-      InteractionMode.fogReveal || InteractionMode.roomReveal => 'fog',
+      InteractionMode.fogReveal ||
+      InteractionMode.roomReveal ||
+      InteractionMode.circleReveal =>
+        'fog',
       InteractionMode.draw => 'draw',
       InteractionMode.measure => 'measure',
       InteractionMode.aoe => 'combat',
@@ -483,17 +491,21 @@ class _DmControlPanelState extends State<DmControlPanel> {
     return _visibleTabs.any((t) => t.$3 == id) ? id : null;
   }
 
-  /// Whether being on [tabId] fits [mode] (the Fog tab has two tools).
+  /// The Fog tab's tools: brush, room, circle.
+  static const _fogTools = {
+    InteractionMode.fogReveal,
+    InteractionMode.roomReveal,
+    InteractionMode.circleReveal,
+  };
+
+  /// Whether being on [tabId] fits [mode] (the Fog tab has three tools).
   bool _tabFits(String tabId, InteractionMode mode) => tabId == 'fog'
-      ? mode == InteractionMode.fogReveal || mode == InteractionMode.roomReveal
+      ? _fogTools.contains(mode)
       : _modeFor(tabId) == mode;
 
   /// Asks the TV for [mode] through the matching callback.
   void _requestMode(InteractionMode mode) {
-    if (mode == InteractionMode.fogReveal ||
-        mode == InteractionMode.roomReveal) {
-      _fogTool = mode;
-    }
+    if (_fogTools.contains(mode)) _fogTool = mode;
     if (state.interactionMode == mode) return;
     _modeRequestedAt = DateTime.now();
     switch (mode) {
@@ -503,6 +515,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
         cb.onSetFogMode();
       case InteractionMode.roomReveal:
         cb.onSetRoomRevealMode();
+      case InteractionMode.circleReveal:
+        cb.onSetCircleRevealMode();
       case InteractionMode.draw:
         cb.onSetDrawMode();
       case InteractionMode.measure:
@@ -1282,8 +1296,9 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Fog Tab ─────────────────────────────────────────────
 
-  /// Builds the Fog tab: the tool (Brush | Room), what it does (Reveal |
-  /// Hide), the brush size (brush only), when players see changes
+  /// Builds the Fog tab: the tool (Brush | Room | Circle), what it does
+  /// (Reveal | Hide), the brush size (brush only) or the circle's radius in
+  /// squares (circle only), when players see changes
   /// (Instantly | Preview first, with apply/discard for staged squares),
   /// the fog layer switch, and reveal all / hide all.
   Widget _buildFogTab() {
@@ -1292,12 +1307,13 @@ class _DmControlPanelState extends State<DmControlPanel> {
     final shadowCellCount =
         state.shadowRevealCells.length + state.shadowHideCells.length;
     final mode = state.interactionMode;
-    final room = mode == InteractionMode.roomReveal;
-    final tool = mode == InteractionMode.fogReveal
-        ? 0
-        : room
-            ? 1
-            : -1;
+    final tool = switch (mode) {
+      InteractionMode.fogReveal => 0,
+      InteractionMode.roomReveal => 1,
+      InteractionMode.circleReveal => 2,
+      _ => -1,
+    };
+    final radius = state.revealRadius;
     final verb = state.revealMode ? 'reveal' : 'hide';
 
     return Column(
@@ -1309,16 +1325,22 @@ class _DmControlPanelState extends State<DmControlPanel> {
           options: const [
             (Icons.brush, 'Brush'),
             (Icons.meeting_room, 'Room'),
+            (Icons.radio_button_unchecked, 'Circle'),
           ],
           selected: tool,
-          onSelect: (i) => _requestMode(
-              i == 0 ? InteractionMode.fogReveal : InteractionMode.roomReveal),
+          onSelect: (i) => _requestMode(const [
+            InteractionMode.fogReveal,
+            InteractionMode.roomReveal,
+            InteractionMode.circleReveal,
+          ][i]),
         ),
         const SizedBox(height: 4),
         Text(
           switch (tool) {
             0 => 'Drag over the map to $verb squares.',
             1 => 'Tap a room to $verb all of it.',
+            2 => 'Tap the map to $verb $radius squares around it — '
+                'walls and closed doors stop it.',
             _ => 'Pick a tool to paint the fog.',
           },
           style: const TextStyle(color: _kTextSecondary, fontSize: 12),
@@ -1334,7 +1356,16 @@ class _DmControlPanelState extends State<DmControlPanel> {
             if ((i == 0) != state.revealMode) cb.onToggleRevealMode();
           },
         ),
-        if (!room) ...[
+        if (tool == 2) ...[
+          const SizedBox(height: 8),
+          const _GoldLabel('Radius'),
+          const SizedBox(height: 4),
+          _RadiusStepper(
+            radius: radius,
+            onChanged: state.setRevealRadius,
+          ),
+        ],
+        if (tool == 0 || tool == -1) ...[
           const SizedBox(height: 8),
           const _GoldLabel('Brush size'),
           const SizedBox(height: 4),
@@ -2605,6 +2636,46 @@ class _Segmented extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// The circle reveal's radius: − [n squares] +, 1–30 squares.
+class _RadiusStepper extends StatelessWidget {
+  /// Current radius in squares.
+  final int radius;
+
+  /// Called with the new radius (the state clamps it).
+  final ValueChanged<int> onChanged;
+
+  const _RadiusStepper({required this.radius, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget step(IconData icon, int delta) => SizedBox(
+          width: 56,
+          child: _Chip(
+            active: false,
+            onTap: () => onChanged(radius + delta),
+            child: Icon(icon, color: _kAccentGold, size: _kIcon),
+          ),
+        );
+    return Row(
+      children: [
+        step(Icons.remove, -1),
+        Expanded(
+          child: Text(
+            radius == 1 ? '1 square' : '$radius squares',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: _kTextPrimary,
+              fontSize: _kText,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        step(Icons.add, 1),
       ],
     );
   }
