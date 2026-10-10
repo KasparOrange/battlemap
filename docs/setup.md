@@ -131,6 +131,11 @@ or from the Mac: `tools/deploy.sh tv` (rolling deploy, below). What it rests on,
 - **one companion**: a browser tab with the old web companion (built before the `replaced`
   message) keeps re-registering and fights the native app for the companion slot — close it or
   point it at `about:blank` before opening Companion Mode in the app.
+- **tablet asleep**: when the tablet dozes, Android cuts the companion's relay socket
+  (logcat: `Software caused connection abort`); on wake it reconnects and the TV resends its game.
+  Behind the PIN lock `latrine android shot` shows only black or the lock screen and adb can't
+  unlock it — someone has to. `tools/tv_ctl.py status` says `"relayState": "paired"` once the
+  companion is back (2026-10-10: the tablet slept right after `deploy.sh tablet`).
 
 ### rolling deploy (mid-game patch, since 2026-10-10)
 
@@ -167,6 +172,8 @@ companion) gets its Chrome tab reopened at `…/?v=<time>#/companion` instead (s
 `application_id` → same tab; the query forces the reload). **web**: rsync like "deploying a web
 build from the Mac".
 The TV resends its game to a companion that takes over the slot (`onPeerReconnected`).
+First real run: `deploy.sh tablet` on 2026-10-10 18:53 (native companion 1.1.6+16 → 1.1.8+18,
+data kept, relaunched into Companion Mode); the `tv` target has not run yet.
 
 Needs: box + tablet paired with this Mac (`latrine android devices`), the bench venv
 (`~/.local/share/battlemap/venv`, created on first run), `~/.config/mwlog/battlemap.env`.

@@ -97,7 +97,9 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 
 **6. improvised maps**
 1. Upload 08a and 08b: grid lines up with the drawn squares (19×14, 16×18)? If the app assumes
-   20×15, note it — image maps need a grid setting.
+   20×15, note it — image maps need a grid setting. The tablet's grid chip (top right) shows the
+   same grid as the TV, also after switching from another map and after a reconnect (before
+   1.1.8 it kept the previous map's grid and stretched the picture).
 2. Upload 09 (6000 px PNG): loads, pans smoothly, grid aligns?
 3. Upload `test_map.pdf`: the tablet rasterizes it, the TV gets an image.
 

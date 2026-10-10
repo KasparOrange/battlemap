@@ -81,12 +81,13 @@ tablet + TV:
 - still open from the review: pinch/two-finger pan and the real Xiaomi remote (not testable on the bench)
 
 ## kept on purpose: direct TV connection (no relay)
-## DM layers (2026-10-10, 1.1.6+16) — needs a device test
+## DM layers (2026-10-10, 1.1.6+16) — partly device-tested
 
 Companion Layers tab: DM-only pictures over the map (archive 26-10-10 "DM-only picture
-layers"). Deployed: web build on the VPS, 1.1.6+16 on the box (18:15). Check on the tablet:
-add 2–3 pictures at once (and a PDF), eye, opacity, up/down, delete + undo, master eye; reload
-the page → layers come back; the TV never shows them.
+layers"). Deployed: web build on the VPS, 1.1.6+16 on the box (18:15). Seen working on the
+tablet (native 1.1.8+18, 18:56): Juri's two layers came from the TV's session, opacity slider
+used. Still to check on the tablet: add 2–3 pictures at once (and a PDF), up/down, delete +
+undo, master eye; reopen the app → layers come back; the TV never shows them.
 
 ## rolling deploy (2026-10-10) — first real run pending
 
@@ -101,13 +102,15 @@ the TV hosts a WebSocket server on the LAN and the phone connects to its IP. Unr
 and behind the current protocol, but it is the starting point for **play without internet**
 (friend's place, hotspot). Roadmap #39. Not to be deleted as "dead code".
 
-## deploy state
+## deploy state (2026-10-10 18:56)
 
-Version bumped to 1.1.5+15 with the overhaul. Web build from the Mac is rsynced to the VPS
-(`setup.md` "deploying a web build from the Mac"); **the APK must be built on the VPS**
-(`git pull --ff-only`, then the full deploy sequence) — until then the TV runs 1.1.4+14, which
-still understands every old message but sends no `canUndo`/`measure`/`vw`/`vh`, so on the
-phone undo stays greyed, no TV frame is drawn, and measure/`vtt.setCamera` are ignored.
+- **box**: 1.1.6+16 (no rolling-deploy restore, no takeover fix yet — `tools/deploy.sh tv` waits
+  for Konrad's go). Open game: **"Juri's dungeon"** (image map 25×24, all revealed, TV grid off,
+  DM layers "Secret rooms" + "Labels"; `ai-art.md` "On the table"); "The Countess's Lair —
+  round 4" stays in the library.
+- **tablet**: native companion 1.1.8+18 (`deploy.sh tablet`), image maps take the TV's grid.
+- **VPS**: relay on current main (`bot` role), threaded dev server, web companion 1.1.6+16.
+- APKs are built on the Mac now (`tools/deploy.sh`, clean worktree of HEAD), not on the VPS.
 
 ## other live work: AI map pipeline (#40)
 
