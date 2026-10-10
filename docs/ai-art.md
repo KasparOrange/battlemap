@@ -2,9 +2,11 @@
 
 Vision for generated art in battlemap (maps first, then characters, items, effects) and the
 design of the first piece: a **fully API-driven map pipeline** on Nano Banana 2.1. Status
-2026-10-10: **pipeline v0 built and working** (`tools/mapgen/`, see "built"); prompt v0
-untuned; no packed map loaded on a TV yet. Prices and model ids are from Google's own
-pricing page and changelog on that date — they churn (see "model churn").
+2026-10-10: **pipeline built and working** (`tools/mapgen/`, see "built"): doors drawn by
+battlemap, ruins as a layout flag, free checks + a Claude judge; prompt not tuned yet; no
+packed map loaded on a TV yet. **What we learned about getting good maps out of the model:
+"learned so far".** Prices and model ids are from Google's own pricing page and changelog on
+that date — they churn (see "model churn").
 
 ## Principles
 
@@ -22,8 +24,8 @@ pricing page and changelog on that date — they churn (see "model churn").
 
 - **Paint the still, render what moves** (Konrad, 2026-10-10 — direction, try it once the
   effects exist). The painting holds only what never changes. Anything that moves, toggles or
-  glows is left out of it and drawn by battlemap on top of the image: doors first (Next, step 1),
-  later fire, torch and brazier flames, light pools, water shimmer, smoke. The layout already
+  glows is left out of it and drawn by battlemap on top of the image: doors first (done,
+  "doors are battlemap's"), later fire, torch and brazier flames, light pools, water shimmer, smoke. The layout already
   knows where they go (lights, water areas), so the prompt asks for unlit braziers, empty
   sconces and evenly lit floors, and the effect layers ("torch/light animations", "water
   animation" in `feature-ideas.md`) add the life — animated and switchable from the phone.
@@ -58,7 +60,7 @@ the Gemini app is also wanted for hand exploration.
 | command | does | cost |
 |---|---|---|
 | `guide layouts/<name>.json` | renders the guide PNG only | free |
-| `paint layouts/<name>.json --size 1K\|2K\|4K --n N [--thinking …] [--refs …] [--tag …] [--pack]` | guide + prompt → model → QA overlay per image → `meta.json`; `--pack` packs the best | per image, see prices |
+| `paint layouts/<name>.json --size 1K\|2K\|4K --n N [--thinking …] [--refs …] [--tag …] [--pack]` | guide + prompt → model → overlay, door preview, free checks per image → `meta.json`; `--pack` packs the best (no high issue, fewest issues, then QA score) | per image, see prices |
 | `pack layouts/<name>.json <image> [--ppg N] [--png]` | writes `<name>.dd2vtt` (WebP image, walls/doors/lights from the layout, `"battlemap": {"draw_doors": true}`) | free |
 | `doors layouts/<name>.json <image> [--open] [--grid]` | the painting with battlemap's doors drawn on (`doors_N[_open][_grid].jpg`) — the TV look without a TV | free |
 | `check out/<name>/<run>` | the free checks again (they also run inside `paint`): issues into `meta.json`, `suspects_N.jpg`, `grid_N.jpg` | free |
@@ -113,25 +115,6 @@ prepaid €20, no auto-refill — a temporary home: Konrad's own account (ko) ha
   "collapsed", "ruined", "breach", "hole" made the model open walls (run 1). `mapgen.py` lints
   the texts for such words and warns (also stored in `meta.json` → `lint`).
 
-**First results (prompt v0, 1K):** both sample maps keep our geometry almost exactly — walls,
-doors, the flooded corner, the corridor all land on the layout (overlay check by eye). The
-model paints doors where the red bars are, uses the `desc` text per room, keeps the grid off.
-Thinking `high` adds ~2.4k thought tokens (billed as text output, a fraction of a cent) and
-~30 s; no visible gain at 1K. 1K gives only 50–64 px per square — finals need 4K.
-
-**Run 2 — doorways (2026-10-10, 4 images at 1K, ~14 cents):** guide without red bars,
-prompt "open doorways, no doors": all four paintings show empty openings, no red, no
-side-on doors. Battlemap's drawn doors sit cleanly in the wall line (board, zone "run 2").
-Still open: ruin text breaks the courtyard walls (step 2 → run 3); one keep draw painted the
-guide's black rock gap and walls as flat black bars.
-
-**Run 3 — ruins in the layout (2026-10-10, keep × 3 at 1K, ~10 cents):** courtyard marked
-`"ruined": true`, no ruin words in any text, prompt rule "every wall stays whole". All three
-keep every courtyard wall (run 1: broken in both draws). New failure in one draw: an invented
-exit through the south wall to the map edge — and that draw had the best QA score. Image 2 is
-packed as the test map (`out/keep/261010-173421-ruined/keep.dd2vtt`), with a grid preview
-(`mapgen.py doors … --grid`). Another draw shows the yellow light dot as is.
-
 **Judge (step 3, 2026-10-10):** two layers, both write issues with x/y in squares.
 - **Free checks** (`check()`, inside every `paint`): a wall edge counts as *open* when both its
   outline step and its colour spread across the line fall below 45 % / 60 % of the image's
@@ -157,58 +140,108 @@ of an east–west wall / east of a north–south wall. Maps without the flag (Du
 the old marker. `mapgen.py doors` draws the same leaf in Python for the board — keep the two
 in step (size, colours) when either changes.
 
-**Known gaps:** the QA score (edge strength on wall lines ÷ inside rooms, 0.9–1.3 so far)
-does not yet separate good from bad — the overlay is the real check; `est_cost` ignores
-thought tokens; style refs (`--refs`) untested; no packed map loaded on the TV yet (drawn
-doors are checked by unit tests and an offscreen render of the real component, not on a
-device).
+**Known gaps:** the QA score (edge strength on wall lines ÷ inside rooms, 0.9–1.3) does not
+rank images — the free checks and the judge do; `--pack` ignores `judge_N.json` (step 4);
+no automatic redraw on a high issue; `est_cost` ignores thought tokens; style refs (`--refs`),
+2K/4K and the batch tier untried; no packed map loaded on the TV yet (drawn doors are checked
+by unit tests and an offscreen render of the real component, not on a device).
+
+## Learned so far — Nano Banana 2.1 for battle maps (runs 1–3, 2026-10-10)
+
+Twelve paintings at 1K over two layouts (crypt 16 × 16, keep 32 × 18), ≈ $0.55 with the first
+tests. The distilled rules; evidence is on the board (`battlemap-mapgen`) and in the run log
+below. Start every prompt change from here. Editing an existing map (Juri's labels-off job)
+has its own lessons: "editing a published map" below.
+
+**What works — keep doing it**
+
+| practice | evidence |
+|---|---|
+| A colour-coded guide as the first image + "the guide is exact, keep every wall" | walls land on our layout in every draw (overlay), 16:9 and 1:1 alike |
+| One text line per area, columns/rows 1-based | described things land where the text says: hearth on the north wall, banners in the corridor, bunks, ossuary shelves, stairs out of the crypt |
+| Props as magenta blocks + a text line | the knight's sarcophagus and the feasting table sit on their blocks |
+| Leave out what battlemap renders (doors now; later light, fire, water) | with a gap in the guide and "no doors" in the prompt: empty doorways in 4/4 draws |
+| Damage as a layout flag (`"ruined": true`) + the blanket rule "every wall stays whole" | courtyard walls kept in 3/3 draws; with ruin words in the text they broke in 4/4 keep draws |
+| Draw 2–3 per layout, pick by checks + judge | draws under one prompt differ a lot (one clean, one breached); the QA score picks wrong |
+| Resample to exact squares on our side | the model's sizes are fixed (16:9 at 1K = 1376 × 768 ≈ 43 px/square); `pack` and `exact()` resample to cols × ppg |
+
+**Failure catalogue**
+
+| failure | seen | cause → what we do | status |
+|---|---|---|---|
+| Door markers leak (red lines, red sills) | run 1, 4 of 5 | marker colours get painted as they are → no door markers at all, doorways are gaps | fixed (run 2) |
+| Doors drawn side-on (face laid flat), each in another style | run 1 | the model can't do a top-down door → battlemap draws doors | fixed (run 2) |
+| Ruin words open walls ("collapsed", "ruined") | runs 1–2, every keep draw | text beats geometry → `"ruined"` flag + wall rule + lint on the texts | fixed (run 3) |
+| Invented exit: a path through a wall to the map edge | run 3, 1 of 3 | not asked for, the wall rule doesn't stop it → check `opening` + judge, redraw | caught, not prevented |
+| Guide colours painted flat: the yellow light dot left as is; black rock gap and near-black walls as flat black bars | run 3 (dot), run 2 (bars), 1 draw each | the legend says what to paint, not "never flat" → tuning: softer guide colours, "render every colour as texture" | caught (dot: check, bars: judge), not prevented |
+| Light source moved: torch ~2.6 squares from its light | run 3, 2 of 3 | the model puts a light on the nearest wall or hearth → judge flags; once battlemap renders lights ("paint the still") the painting holds none | open |
+| Doorway frames wider than the doorway eat the wall stub beside it; pale door-frame strips in outer walls read as exits | run 3 | the model decorates openings → judge flags (medium); prompt tuning | open |
+| The edge-gradient QA score does not rank | runs 1–3 (the top score was the breached draw twice) | use checks + judge; the score stays as a number in `meta.json` | known |
+
+**Measured:** 1K costs $0.034 and takes 16–32 s per image, 43–64 px per square: fine for
+drafts, finals need 4K (≥ ~100 px per square). `thinking` high: +~2.4k thought tokens, ~30 s,
+no visible gain at 1K. Untried: style refs, 2K/4K, batch tier.
+
+**Checks and judge in practice:** the free pixel check is fooled by objects hanging over a wall
+(a banner), the judge rejects those; a torch out of place or a doorway frame that eats a wall
+are judge-only. The judge needs `grid_N.jpg` to read coordinates, runs ~5 min for 3 images, and
+must run with `--permission-mode auto` and Read/Write only: a headless session can't answer a
+permission prompt, and under `acceptEdits` its first shell command hung it for good.
+
+### Run log
+
+**Run 1 — prompt v0 (1K, ~20 cents):** both sample maps keep our geometry almost exactly — walls,
+doors, the flooded corner, the corridor all land on the layout (overlay check by eye). The
+model paints doors where the red bars are, uses the `desc` text per room, keeps the grid off.
+Thinking `high` adds ~2.4k thought tokens (billed as text output, a fraction of a cent) and
+~30 s; no visible gain at 1K. 1K gives only 50–64 px per square — finals need 4K.
+
+**Run 2 — doorways (2026-10-10, 4 images at 1K, ~14 cents):** guide without red bars,
+prompt "open doorways, no doors": all four paintings show empty openings, no red, no
+side-on doors. Battlemap's drawn doors sit cleanly in the wall line (board, zone "run 2").
+Still open: ruin text breaks the courtyard walls (step 2 → run 3); one keep draw painted the
+guide's black rock gap and walls as flat black bars.
+
+**Run 3 — ruins in the layout (2026-10-10, keep × 3 at 1K, ~10 cents):** courtyard marked
+`"ruined": true`, no ruin words in any text, prompt rule "every wall stays whole". All three
+keep every courtyard wall (run 1: broken in both draws). New failure in one draw: an invented
+exit through the south wall to the map edge — and that draw had the best QA score. Image 2 is
+packed as the test map (`out/keep/261010-173421-ruined/keep.dd2vtt`), with a grid preview
+(`mapgen.py doors … --grid`). Another draw shows the yellow light dot as is.
+
 
 ## Next — pick up here (hand-off 2026-10-10)
 
 **Start of a session on this sub-project:** read this file, open the board
 (`horizon open battlemap-mapgen`, walk: `horizon present battlemap-mapgen overview`), check
-the budget (prepaid €20 on Bao's account, ≈ $0.30 used by 2026-10-10 — AI Studio → Ausgaben,
-signed in as nico.zingerle). Every new image goes onto the board (rule above).
+the budget (prepaid €20 on Bao's account, usage below — AI Studio → Ausgaben, signed in as
+nico.zingerle), read "learned so far" before changing a prompt. Every new image goes onto the
+board (rule above).
 
 **Where it stands (2026-10-10, end of the second session):** steps 1–3 are done (runs 2 and 3
-on the board, judge results in run 3's `judge_N.json`); ≈ $0.55 of the €20 used. Test map for
-the table: the run-3 keep (`out/keep/261010-173421-ruined/keep.dd2vtt`, the judge's pick too,
-grid preview `doors_2_grid.jpg`). Next is step 4, the board built from run data.
-
-**Findings from run 1 that set the order** (Konrad, 2026-10-10):
-
-- Doors: the red marker leaks into the art, AND the model draws doors side-on (a door's face
-  laid flat), each in another style. Seen from above a door is a thin plank in the wall line.
-- Ruin words ("collapsed") make the model open walls our `.dd2vtt` still has.
-- The gradient QA score does not rank images; the overlay is the only real check today.
+on the board, judge results in run 3's `judge_N.json`); ≈ $1.10 of the €20 used (map runs
+≈ $0.55, Juri's edit ≈ $0.55). Test map for the table: the run-3 keep
+(`out/keep/261010-173421-ruined/keep.dd2vtt`, the judge's pick too, grid preview
+`doors_2_grid.jpg`). Next is step 4, the board built from run data — keep `juri_zone` in
+`board.py` (Juri's dungeon, hand-built) when the run plates become data-driven.
 
 **Steps, in order** (one at a time, each onto the board before the next):
 
-1. ✅ **Done 2026-10-10 (run 2) — see "Doors are battlemap's" above.** Doors drawn by
-   battlemap, not by the model. Guide: a door edge becomes a gap (floor
-   runs through), no red bar; prompt: "open doorways, no doors". Battlemap draws a top-down
-   door sprite on each portal (position + rotation already in the `.dd2vtt`), closed ↔ open
-   on toggle — this is also the "door animations" idea in `feature-ideas.md`. One sprite per
-   style (Nano Banana once, or drawn in code). Needs a battlemap feature (opt-in, tests), so
-   it follows the project's one-feature-at-a-time rule.
-2. ✅ **Done 2026-10-10 (run 3).** **Ruins in the layout**, not in free text: an area flag (e.g. `"ruined": true`) that the
-   prompt turns into "damage inside the room, every wall stays standing".
-3. ✅ **Done 2026-10-10 — see "Judge (step 3)" above.** **Judge.** Script checks in `mapgen.py` (free): marker pixels left (red, yellow light dots),
-   painted-wall overlap with our wall lines, and **openings we didn't ask for** (run 3: an exit
-   painted through a wall — the check that matters most now). Model judge = a **Claude helper session** on the
-   subscription (`claude-bridge headless new --cwd ~/code/battlemap`, never `claude -p`): reads
-   `guide.png`, `out_N.jpg`, `overlay_N.jpg` and writes `judge_N.json`
-   `{walls_kept, doorways_clean, grid_or_text, style_ok, issues: [{x, y, what, severity}]}`
-   (x/y in grid squares). Gemini Flash as judge only later, for unattended server runs (a
-   "paint" button on the phone).
+1. ✅ **Doors drawn by battlemap** (run 2) — "doors are battlemap's" above; drawn in code,
+   no sprite; also the "door animations" idea in `feature-ideas.md`.
+2. ✅ **Ruins in the layout** (run 3) — `"ruined": true`, see the layout spec.
+3. ✅ **Judge** — free checks + Claude helper session, "judge (step 3)" above. Gemini Flash as
+   judge only later, for unattended server runs (a "paint" button on the phone).
 4. **Board from data:** `board.py` builds plates from each run's `meta.json` + `judge_N.json`
    (issues → pins automatically, verdict/score in the intro, rejected checks as grey notes)
    instead of the hand-written `PLATES`. Also: `--pack` should prefer the judge's verdict
    when `judge_N.json` exists (today it ranks by the free checks).
-5. **On the TV:** packed crypt on the Android bench (`tools/android_bench.sh`, AVD `bm_tv`):
-   do fog, doors and room reveal match the painted walls?
+5. **On the TV:** the run-3 keep (and a crypt) on the Android bench (`tools/android_bench.sh`,
+   AVD `bm_tv`): do fog, doors and room reveal match the painted walls; do the drawn doors read
+   at TV size (the leaf is 0.14 squares thick) and swing on a tap from the phone?
 6. **4K finals + the tuning grid** (below), run by the helper session; this session gets a
-   short summary + the board.
+   short summary + the board. The tuning grid now also targets the open rows of the failure
+   catalogue.
 7. **Later, once battlemap has light / fire / water effects:** extend "paint the still,
    render what moves" — prompt for unlit sources and even lighting, render flames, light and
    water as layers (try list, not scheduled).
@@ -222,7 +255,7 @@ flowchart LR
   B[style bible<br/>text + refs] --> P
   G --> N[Nano Banana 2.1<br/>API, VPS]
   P --> N
-  N --> Q[QA: score + overlay<br/>retry: planned]
+  N --> Q[QA: checks + Claude judge<br/>redraw: planned]
   Q --> R[resample to cols × ppg]
   R --> V[pack .dd2vtt<br/>walls/doors/lights from spec]
   V --> L[map library → TV]
@@ -272,15 +305,17 @@ paint. A later battlemap feature can swap the image mid-session and keep fog and
 **Big maps** — later: generate in tiles with overlap, the neighbor tile as a reference, blend
 seams on our side.
 
-### Prompt baseline v0 (untuned)
+### Prompt baseline (v0 + doorway and wall rules, untuned)
 
 The template is the file `tools/mapgen/prompts/baseline.txt` (not copied here, so it can't
 drift). Placeholders: `{cols}` `{rows}` `{setting}` `{style}` `{areas}` (one line per area
 and prop with its columns/rows). Default style lives in `build_prompt` in `mapgen.py`. Its
-shape: straight-down orthographic view → "repaint the guide, keep every wall" → the legend →
+shape: straight-down orthographic view → "repaint the guide, keep every wall" + "every wall
+stays whole, damage stays inside" → the legend (gaps = empty doorways, no doors anywhere) →
 scale (5 ft squares) → style → even lighting, calm floors → no grid / text / creatures →
-details by area. **The legend text must match `COLORS` in `mapgen.py`** — change both
-together.
+details by area (a `"ruined"` area gets the fixed `RUINED` text). Why each rule is there:
+"learned so far". **The legend text must match `COLORS` in `mapgen.py`** — change both
+together. The judge's prompt is `prompts/judge.txt` (JSON shape in it).
 
 ### Tuning plan (≈ $1 at 1K)
 
@@ -292,6 +327,10 @@ eye on the TV:
 - `thinking_level` minimal / medium / high (2.1 default medium)
 - style refs: none vs 3 images
 - 16:9 vs 1:1 at the same squares-per-side
+- against the open failures ("learned so far"): softer guide colours or "render every colour
+  as texture, never flat" (flat dots and bars); "doorways exactly one square, no frames or
+  arches" (frames eating walls); "no paths, stairs or openings except the doorways" (invented
+  exits); lights as small unlit sconces exactly on the dot (moved torches)
 
 Winner becomes baseline v1 in this file.
 

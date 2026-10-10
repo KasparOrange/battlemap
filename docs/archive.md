@@ -49,6 +49,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- **fog**: TV fog fully opaque (players saw the dungeon through 90 % fog), phone fog 70 % so the DM reads the layout; atmospheric mode's deep fog opaque on the TV (`FogOfWarComponent.forPlayers`)
 	- UX click-through of the companion handed to a helper agent; findings → `action.md`
 
+### 26-10-10 - ai art doc sweep: learned so far
+- Konrad: document how to get good results from Nano Banana and the failures, so the next session starts from them → `ai-art.md` gets "learned so far" (what works with evidence, failure catalogue with cause/mitigation/status, measured cost and timing, checks/judge practicalities), runs 1–3 moved into a run log, Next trimmed to the live steps, open failures added to the tuning plan, status/budget/test-map lines current (≈ $1.10 incl. Juri's edit); README AI section mentions checks + judge
+
 ### 26-10-10 - judge (ai art step 3)
 - Konrad: "continue" → free checks in `mapgen.py` (`check()`: open-looking wall edges relative to the image's median, pure-yellow light dots; `suspects_N.jpg`, `grid_N.jpg`; run inside `paint`, `check <run>` re-runs; `--pack` prefers no high issue) — calibrated on all keep runs by eye
 - Claude judge: `judge <run> [--wait]` starts a `claude-bridge headless` helper with `prompts/judge.txt` → `judge_N.json`; run 3: retry / use 8 / use 5, agrees with the eye, rejected the banner false positive, found torch-vs-light and doorway-frame issues
