@@ -34,8 +34,8 @@ two Python servers run on the VPS (the log server is retired — logs go to MwLo
 ### starting services
 
 ```bash
-# start both (from project root) — NOTE: nothing restarts them after a reboot;
-# they have been down since the 2026-07-07 reboot. TODO: systemd units.
+# start both (from project root) — NOTE: nothing restarts them after a reboot
+# (up again since 2026-10-10, started by hand). TODO: systemd units.
 python3 tools/vtt_relay.py >> /tmp/vtt_relay.log 2>&1 &
 python3 tools/dev_server.py > /dev/null 2>&1 &
 ```
@@ -44,7 +44,13 @@ python3 tools/dev_server.py > /dev/null 2>&1 &
 
 ```bash
 ss -tln | grep -E '4242|9090'
+curl -s -m 5 -o /dev/null -w '%{http_code}\n' localhost:4242/version.json   # 200, not 000
 ```
+
+A listening port isn't enough: until 2026-10-10 the dev server was a single-threaded
+`HTTPServer`, and one stalled client (a browser keep-alive) hung it for everyone — every map
+download sat at 0 %, even `curl localhost:4242` timed out. It is a `ThreadingHTTPServer` since
+`e446b37`; a VPS still on the older file needs a pull + restart.
 
 ## building
 
@@ -109,20 +115,22 @@ from the companion app: tap the update icon in the library header → check for 
 
 or manually: open `http://<VPS_IP>:4242/battlemap.apk` in the TV browser.
 
-or from the Mac over the Wi-Fi (wireless debugging on the box, paired with this Mac once): a
-session's own adb can't reach LAN devices (macOS Local Network privacy), latrine's `android`
-adapter can. The Mac's `~/.android/debug.keystore` is the key the box's app is signed with
-(checked 2026-10-10), so `install -r` keeps the TV's library and sessions:
+or from the Mac: `tools/deploy.sh tv` (rolling deploy, below). What it rests on, learned
+2026-10-10 putting 1.1.5 on the box by hand:
 
-```bash
-. ~/.config/mwlog/battlemap.env
-$F build apk --release --dart-define=MWLOG_AUTH=$MWLOG_USER:$MWLOG_PASS   # default relay = VPS
-latrine android install build/app/outputs/flutter-apk/app-release.apk --device xiaomi
-latrine android app battlemap start --device xiaomi
-```
-
-While another session works in this checkout, build in a throwaway `git worktree` so the two
-builds don't share `build/` and Gradle locks.
+- **reach**: a session's own adb can't reach devices on the Wi-Fi (macOS Local Network privacy:
+  its server sees nothing on mDNS, connects fail); latrine's `android` adapter runs an adb server
+  that can (`latrine android devices`, then `ANDROID_ADB_SERVER_PORT=5059 adb …` for plain adb).
+- **data kept**: the box's app is signed with the Mac's `~/.android/debug.keystore` (same SHA-256
+  as the installed 1.1.1), so `install -r` keeps its library and sessions. A build signed with
+  another key would need an uninstall, which wipes them.
+- **ports move**: wireless debugging gets a new port whenever it restarts. On 2026-10-10 the
+  box's TLS port died and it answered classic `adb tcpip` on `192.168.178.149:5555` instead;
+  `latrine android devices` retries known `:5555` addresses, the tablet needed Wireless
+  debugging switched on again (it stays paired).
+- **one companion**: a browser tab with the old web companion (built before the `replaced`
+  message) keeps re-registering and fights the native app for the companion slot — close it or
+  point it at `about:blank` before opening Companion Mode in the app.
 
 ### rolling deploy (mid-game patch, since 2026-10-10)
 

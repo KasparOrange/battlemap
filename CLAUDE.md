@@ -32,7 +32,9 @@ The **VPS is the primary dev machine** (Flutter + Android SDK, relay, servers; w
 phone via mosh + Claude Code when outside). The **Mac** checkout (`~/code/battlemap`) is for
 home: the **Android bench** (Google TV + tablet emulators, `tools/android_bench.sh`) is the main
 local setup — the final devices are Android TV/Google TV + Android tablet/phone; the Apple TV dev
-target (flutter-tvos) is secondary. Both sync through GitHub
+target (flutter-tvos) is secondary. The real devices on the home Wi-Fi (Xiaomi box, Konrad's
+Tab A11+) are reached only through `latrine android …` — a session's own adb can't see the Wi-Fi;
+`tools/deploy.sh` ships to them. Both sync through GitHub
 `main`: commit + push where you worked, `git pull --ff-only` on the other side first. Details:
 `docs/setup.md` "development environments".
 
