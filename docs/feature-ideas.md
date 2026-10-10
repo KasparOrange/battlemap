@@ -70,6 +70,9 @@ these make the map visually stunning and give the DM atmosphere tools. no game m
 - [ ] **grid configuration after load** — re-adjust grid offset, rotation, scale after loading. drag handles. essential for PDF maps that don't align.
 - [ ] **session thumbnails** — capture game canvas (with its fog) as PNG for the library. *Map thumbnails are done (2026-10-10, `docs/sessions.md` "thumbnails"); the Continue card uses the map's.*
 - [ ] **multiple maps per session** — switch between dungeon floors without losing state per floor.
+- [ ] **several maps per game, the rest** — remove a map from a game, rename shared-library maps, a map list on the TV for the remote (`action.md` "leftovers")
+- [ ] **DM layers with library maps** — a shared-library map carries its DM layers into every new game
+- [ ] **select a token on the map** — tap it on the tablet instead of picking it from the Tokens list
 - [ ] **map annotations (DM only)** — invisible sticky notes on the map. "trap here", "DC 15 lock". only visible on the phone.
 
 ---

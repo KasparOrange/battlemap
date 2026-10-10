@@ -65,7 +65,7 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   decoded at most 4096 px on the long side. Still to check on the real Xiaomi: memory and look of
   the castle at TV scale (36 px per square after the shrink).
 
-## map from a link + Store as (2026-10-10) — not in a build yet
+## map from a link + Store as (2026-10-10, 1.1.19+29 on box + tablet + web) — needs a test at the table
 
 Dev server on the VPS has `/fetch` and `?format=` (Pillow installed; smoke-tested live: Dyson
 tavern fetched, PNG → lossless WebP 426 → 116 KB, a local address refused). The companion half
@@ -152,7 +152,7 @@ Fog tab ▸ Circle (`architecture.md` "Circle reveal"). Check with a Dungeondraf
   resizes the waiting circle on both; a brush stroke, room tap, new circle, ✓ or ✕ ends that
 - Room taps from the tablet now reach the TV (before 1.1.11 they changed only the tablet)
 
-## trim revealed edges (2026-10-10) — not in a build yet, then a test at the table
+## trim revealed edges (2026-10-10, 1.1.19+29 on box + tablet + web) — needs a test at the table
 
 Fog tab ▸ Trim revealed edges (`architecture.md` "Trim revealed edges"), 0–45 % of a square:
 - turn it to ~15 %: every revealed room's rim pulls in on the tablet and the TV, inner corners of
@@ -169,13 +169,11 @@ tablet (native 1.1.8+18, 18:56): Juri's two layers came from the TV's session, o
 used. Still to check on the tablet: add 2–3 pictures at once (and a PDF), up/down, delete +
 undo, master eye; reopen the app → layers come back; the TV never shows them.
 
-## rolling deploy (2026-10-10) — first real run pending
+## rolling deploy (2026-10-10) — in daily use
 
 `tools/deploy.sh [tv] [tablet] [web]` (`setup.md` "rolling deploy"). **Ask Konrad before a run
-that restarts the TV while he plays.** The box's 1.1.6+16 predates the restore code, so the first
-run restores through the relay (session from `diag.status`, route `/restore?session=…`); from
-then on `deploy.prepare` + the snapshot work too. The same deploy ships the takeover fix (a
-companion replacing another got no map — until then: `tools/tv_ctl.py resume MAP SESSION`).
+that restarts the TV while he plays.** Ran many times on 2026-10-10 (1.1.11 → 1.1.19): the TV is
+back in its open game after ~16 s, the tablet relaunches into Companion Mode.
 
 ## kept on purpose: direct TV connection (no relay)
 
@@ -184,12 +182,40 @@ the TV hosts a WebSocket server on the LAN and the phone connects to its IP. Unr
 and behind the current protocol, but it is the starting point for **play without internet**
 (friend's place, hotspot). Roadmap #39. Not to be deleted as "dead code".
 
-## deploy state (2026-10-10 21:15)
+## deploy state (2026-10-10 22:25)
 
-- **box** and **tablet**: 1.1.16+26 (`tools/deploy.sh`, the TV back in its open game after 16 s).
-- **VPS**: checkout on main (3003083), relay with the diagnostics, dev server with the shared map
-  library (`uploads/library/`, empty so far), web companion 1.1.16+26.
+- **box**, **tablet**, **web companion**: 1.1.19+29 (`tools/deploy.sh`, HEAD 2ffd4aa: fog edge trim,
+  map from a link + Store as, circle preview fix, notices, ruler pivot). 1.1.20+30 (TV overscan,
+  calibration pattern switch, back to auto) follows from its own session.
+- **VPS**: dev server with `/fetch` + `?format=` and the shared map library, relay with the
+  diagnostics. The web's `version.json` (in-app APK update check) still says 1.1.5+15 — deploy.sh
+  installs over adb and leaves it alone.
 - APKs are built on the Mac (`tools/deploy.sh`, clean worktree of HEAD), not on the VPS.
+
+## leftovers (session sweep 2026-10-10) — not built yet
+
+Found by reading all of 2026-10-10's sessions; everything else from that day is committed, on
+main and deployed. No side branches remain.
+
+- **Bug — remote OK on the start screen**: the Xiaomi remote's OK (DPAD_CENTER) doesn't open TV
+  Mode from the mode selector, only Enter does — although `lib/main.dart` catches select/enter;
+  cause never found. Breaks the TV-remote fallback rule.
+- **Bug — TV startup race**: the TV can answer a library listing before its storage is open
+  (`LateInitializationError` on the thumbnails box in `lib/storage/map_library.dart`), seen on the
+  bench emulator. Guard the listing until `init()` is done.
+- **Games with several maps**: remove a map from a game; rename shared-library maps; a map list
+  on the TV for the remote.
+- **DM layers travel with library maps**: a shared-library map doesn't carry its DM layers yet —
+  Juri's dungeon needs its two layers added again in every new game.
+- **Tokens**: tap a token on the map to select it (today only from the Tokens list).
+- **Google TV launcher entry** (see "direction: Android").
+- **Box library chore**: the two April Pirate Lair uploads sit at the default 20 × 15 squares —
+  re-grid or re-upload them.
+- **Web `version.json`** stuck at 1.1.5+15 (see "deploy state") — update it in deploy.sh or drop
+  the in-app APK update check.
+- **AI map pipeline** (`ai-art.md` "Next"): step 6 (4K finals + tuning grid), fold the fix pass
+  into `paint` and try it on the crypt, the keep's corridor wall half a square off; the Gemini key
+  on Konrad's ko account still has no billing (runs on Bao's).
 
 ## other live work: AI map pipeline (#40)
 

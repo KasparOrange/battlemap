@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 22:45 - dc488274 - session sweep: leftovers deployed, roadmap filled
+- Konrad: search all of today's sessions (subagents), deploy what is built, merge unmerged branches, put the unbuilt on the roadmap
+	- 39 transcripts read by four helper agents; no unmerged branches (GitHub's `claude/review-claude-md-BADKA` is merged, the VPS's stale `multi-map-sessions` was cherry-picked to main and deleted on GitHub), no extra worktrees or stashes
+	- found a regression: 8ccd514 (relay no-late-replay) was built on an older tree and dropped the tablet's `sendCirclePreview` + its wiring (cf55b40); since 1.1.15+25 the circle preview never reached the TV — restored (6fcc043, hunk-only beside another session's edits)
+	- 1.1.19+29 (2ffd4aa: fog edge trim, map from a link + Store as, circle preview fix; box also gets notices + ruler pivot) — 618 tests green, `tools/deploy.sh` to box, tablet and web, TV back in its game after 16 s
+	- `action.md` "deploy state" + new "leftovers" (two bugs, several-maps gaps, layers with library maps, token tap, Pirate Lair chore, stale `version.json`, AI pipeline); `feature-ideas.md` planned items; CLAUDE.md tracker rows that still said "not in a build yet" corrected
+
 ### 26-10-10 22:40 - TV overscan - Measure the TV: edges the set cuts off, pattern switch, back to auto
 - Konrad: Measure the TV misbehaves — the pivot does not show on the TV (show it, switch it on and off); the TV should hold 35 × 19 squares but says 38 × 21, and no fine-tuning hits it; look for logic errors; a button back to auto (34 × 19)
 	- pivot: the box still ran 1.1.17+27, built before the pivot commit (tablet had 1.1.18) — fixed by deploying
