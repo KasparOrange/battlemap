@@ -2537,7 +2537,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// While open, the TV shows its calibration pattern
   /// ([DmCallbacks.onShowCalibration]): every one-inch square of its window
   /// and a 10-inch bar. The DM measures the bar (cm or inches) and applies —
-  /// the picture width becomes `width × measured / 10` — or sets the
+  /// the picture width becomes `width × measured / bar length` — or sets the
   /// picture's width with a [NumberStepper] (±1/2/5/10 mm or ±0.05–0.5 in,
   /// tap the number to type it). Each change goes to the TV at once and the
   /// dialog stays open, so the DM can measure again; the stepper follows

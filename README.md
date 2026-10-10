@@ -14,7 +14,9 @@ The same APK runs in two modes:
   battlemap fullscreen. It has no touch, no keyboard, no mouse. It connects to a
   VPS WebSocket relay and waits for a companion phone to pair. Every map shows at
   **one square = one inch** (the minis' bases) in a centred window of whole squares —
-  34 × 19 on our TV; bigger maps are moved across it from the tablet.
+  34 × 19 on our TV; bigger maps are moved across it from the tablet. The inch is measured
+  once per TV with a ruler on a bar the TV draws from a fixed corner (the TV's scale); how many
+  squares a map has is set per map (the map's scale).
 - **Companion Mode** -- the DM's Android tablet or phone (same APK; the web
   build in a browser is a fallback) connects to the same relay. All map loading,
   fog reveal, door toggling, measuring, drawing, and camera control happens here —

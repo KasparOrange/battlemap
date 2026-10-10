@@ -80,8 +80,8 @@ enum CalibrationPivot {
 ///
 /// Measured 2026-10-10 on Konrad's TV: 34 × 19 squares of one inch fit, with
 /// a bit of gap both ways — [defaultScreenWidthInches] reproduces that until
-/// the TV is calibrated with the measuring bar (companion ▸ Map ▸ Table
-/// scale).
+/// the TV is calibrated with the measuring bar (companion ▸ Settings ▸ Table
+/// scale ▸ Measure the TV).
 class TableGrid {
   /// Physical picture width assumed before calibration, in inches.
   ///
@@ -96,7 +96,7 @@ class TableGrid {
   static const double maxScreenWidthInches = 90;
 
   /// Length of the calibration pattern's measuring bar in inches (shorter
-  /// on a screen with fewer squares).
+  /// when the screen has less room from the pivot, [barInches]).
   static const int measuringBarInches = 10;
 
   /// Screen size in logical pixels.
