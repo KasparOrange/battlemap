@@ -1594,12 +1594,17 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
 
   // ─── Game UI ────────────────────────────────────────────
 
-  /// Game view: the map fills the space above the DM panel, which sits at
-  /// the bottom edge as a sheet (tab bar always visible, content on demand).
+  /// Game view: the map fills the space beside the DM panel — above it
+  /// where the panel is a bottom sheet (tab bar always visible, content on
+  /// demand), left of it on a landscape tablet, where the panel docks at the
+  /// right edge ([DmControlPanel.sideLayoutFor]).
   Widget _buildGameUI() {
+    final side = DmControlPanel.sideLayoutFor(MediaQuery.sizeOf(context));
     return Scaffold(
       backgroundColor: const Color(0xFF111111),
-      body: Column(
+      body: Flex(
+        direction: side ? Axis.horizontal : Axis.vertical,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(child: _buildMapArea()),
           DmControlPanel(

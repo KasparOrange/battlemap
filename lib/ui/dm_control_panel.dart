@@ -45,6 +45,12 @@ const double _kText = 14;
 /// Icon size inside buttons.
 const double _kIcon = 20;
 
+/// Width of the tab rail in the side layout ([DmControlPanel.sideLayoutFor]).
+const double _kRailWidth = 72;
+
+/// Width of the unfolded tab content next to the rail in the side layout.
+const double _kSideContentWidth = 320;
+
 /// Bundle of callbacks for every action the DM control panel can trigger.
 ///
 /// Each screen that hosts a [DmControlPanel] provides its own
@@ -341,6 +347,15 @@ class DmControlPanel extends StatefulWidget {
 
   @override
   State<DmControlPanel> createState() => _DmControlPanelState();
+
+  /// Whether the panel docks at the right edge instead of the bottom: a
+  /// tablet in landscape (wider than tall, shortest side ≥ 600 dp). There a
+  /// bottom sheet ate 40–65 % of the map's height; the side layout keeps a
+  /// slim tab rail and unfolds the tab content beside it.
+  ///
+  /// Hosts lay the map out with the same test (a row instead of a column).
+  static bool sideLayoutFor(Size size) =>
+      size.width > size.height && size.shortestSide >= 600;
 }
 
 class _DmControlPanelState extends State<DmControlPanel> {
@@ -399,6 +414,9 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   @override
   Widget build(BuildContext context) {
+    if (DmControlPanel.sideLayoutFor(MediaQuery.sizeOf(context))) {
+      return _buildSide();
+    }
     final maxContent = MediaQuery.of(context).size.height * 0.45;
     return Container(
       decoration: const BoxDecoration(
@@ -429,9 +447,84 @@ class _DmControlPanelState extends State<DmControlPanel> {
     );
   }
 
-  /// Builds the header row: "DM" title, undo/redo, session settings gear,
-  /// and a collapse chevron.
-  Widget _buildHeader() {
+  /// Side layout: the tab content (when expanded) unfolds to the left of a
+  /// vertical tab rail; undo/redo sit at the rail's foot so they stay
+  /// reachable while the panel is folded. The content grows on open and
+  /// closes quicker than it opened.
+  Widget _buildSide() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: _kPanelBg,
+        border: Border(left: BorderSide(color: _kBorderGold)),
+      ),
+      child: SafeArea(
+        left: false,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AnimatedSize(
+              duration: const Duration(milliseconds: 220),
+              reverseDuration: const Duration(milliseconds: 150),
+              curve: Curves.easeOutCubic,
+              alignment: Alignment.centerRight,
+              child: _expanded
+                  ? SizedBox(
+                      width: _kSideContentWidth,
+                      child: Column(
+                        children: [
+                          _buildHeader(side: true),
+                          Container(height: 1, color: _kBorderGold),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                              child: _buildTabContent(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : const SizedBox(width: 0),
+            ),
+            if (_expanded) Container(width: 1, color: _kBorderGold),
+            _buildRail(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The side layout's vertical tab rail, undo/redo at its foot.
+  Widget _buildRail() {
+    final tabs = _visibleTabs;
+    if (_activeTab >= tabs.length) _activeTab = 0;
+    return SizedBox(
+      width: _kRailWidth,
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  for (int i = 0; i < tabs.length; i++)
+                    _buildTabButton(i, tabs, rail: true),
+                ],
+              ),
+            ),
+          ),
+          Container(height: 1, color: _kBorderGold),
+          _IconTarget(icon: Icons.undo, enabled: state.canUndo, onTap: cb.onUndo),
+          _IconTarget(icon: Icons.redo, enabled: state.canRedo, onTap: cb.onRedo),
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  /// Builds the header row: tab title, undo/redo, session settings gear,
+  /// and a collapse chevron. In the [side] layout undo/redo live in the
+  /// rail and the chevron points right (the content folds into the rail).
+  Widget _buildHeader({bool side = false}) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 2, 4, 2),
       child: Row(
@@ -449,16 +542,18 @@ class _DmControlPanelState extends State<DmControlPanel> {
               ),
             ),
           ),
-          _IconTarget(
-            icon: Icons.undo,
-            enabled: state.canUndo,
-            onTap: cb.onUndo,
-          ),
-          _IconTarget(
-            icon: Icons.redo,
-            enabled: state.canRedo,
-            onTap: cb.onRedo,
-          ),
+          if (!side) ...[
+            _IconTarget(
+              icon: Icons.undo,
+              enabled: state.canUndo,
+              onTap: cb.onUndo,
+            ),
+            _IconTarget(
+              icon: Icons.redo,
+              enabled: state.canRedo,
+              onTap: cb.onRedo,
+            ),
+          ],
           _IconTarget(
             icon: Icons.settings,
             onTap: () async {
@@ -472,7 +567,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
             },
           ),
           _IconTarget(
-            icon: Icons.expand_more,
+            icon: side ? Icons.chevron_right : Icons.expand_more,
             onTap: () => setState(() => _expanded = false),
           ),
         ],
@@ -488,53 +583,60 @@ class _DmControlPanelState extends State<DmControlPanel> {
     return Row(
       children: [
         for (int i = 0; i < tabs.length; i++)
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                setState(() {
-                  if (_activeTab == i) {
-                    _expanded = !_expanded;
-                  } else {
-                    _activeTab = i;
-                    _expanded = true;
-                  }
-                });
-                // Auto-activate measure mode when opening the Measure tab
-                if (tabs[i].$3 == 'measure' && _expanded) cb.onSetMeasureMode();
-              },
-              child: Container(
-                height: 56,
-                decoration: BoxDecoration(
-                  border: _activeTab == i && _expanded
-                      ? const Border(
-                          top: BorderSide(color: _kAccentGold, width: 2),
-                        )
-                      : null,
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      tabs[i].$1,
-                      color: _activeTab == i ? _kAccentGold : _kAccentGoldDim,
-                      size: 22,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      tabs[i].$2,
-                      style: TextStyle(
-                        color: _activeTab == i ? _kTextPrimary : _kTextSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+          Expanded(child: _buildTabButton(i, tabs)),
+      ],
+    );
+  }
+
+  /// One tab of the bottom bar or (with [rail]) of the side rail: icon over
+  /// label, the active tab marked on the edge facing the content (top in
+  /// the bar, left in the rail). Tapping the active tab folds or unfolds
+  /// the content; another tab switches to it and unfolds.
+  Widget _buildTabButton(int i, List<(IconData, String, String)> tabs,
+      {bool rail = false}) {
+    final marked = _activeTab == i && _expanded;
+    const mark = BorderSide(color: _kAccentGold, width: 2);
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        setState(() {
+          if (_activeTab == i) {
+            _expanded = !_expanded;
+          } else {
+            _activeTab = i;
+            _expanded = true;
+          }
+        });
+        // Auto-activate measure mode when opening the Measure tab
+        if (tabs[i].$3 == 'measure' && _expanded) cb.onSetMeasureMode();
+      },
+      child: Container(
+        height: rail ? 64 : 56,
+        decoration: BoxDecoration(
+          border: marked
+              ? (rail ? const Border(left: mark) : const Border(top: mark))
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              tabs[i].$1,
+              color: _activeTab == i ? _kAccentGold : _kAccentGoldDim,
+              size: 22,
+            ),
+            const SizedBox(height: 2),
+            Text(
+              tabs[i].$2,
+              style: TextStyle(
+                color: _activeTab == i ? _kTextPrimary : _kTextSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-      ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -1037,26 +1139,47 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   // ─── Fog Tab ─────────────────────────────────────────────
 
-  /// Builds the Fog tab: brush mode (Reveal|Hide), brush size, room reveal,
-  /// shadow toggle with commit/discard, fog on/off, reveal all / hide all.
+  /// Builds the Fog tab: the tool (Brush | Room), what it does (Reveal |
+  /// Hide), the brush size (brush only), when players see changes
+  /// (Instantly | Preview first, with apply/discard for staged squares),
+  /// the fog layer switch, and reveal all / hide all.
   Widget _buildFogTab() {
     final hasShadowCells =
         state.shadowRevealCells.isNotEmpty || state.shadowHideCells.isNotEmpty;
     final shadowCellCount =
         state.shadowRevealCells.length + state.shadowHideCells.length;
+    final mode = state.interactionMode;
+    final room = mode == InteractionMode.roomReveal;
+    final tool = mode == InteractionMode.fogReveal
+        ? 0
+        : room
+            ? 1
+            : -1;
+    final verb = state.revealMode ? 'reveal' : 'hide';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _GoldButton(
-          icon: Icons.cloud,
-          label: 'Fog Brush',
-          active: state.interactionMode == InteractionMode.fogReveal,
-          onTap: cb.onSetFogMode,
+        const _GoldLabel('Tool'),
+        const SizedBox(height: 4),
+        _Segmented(
+          options: const [
+            (Icons.brush, 'Brush'),
+            (Icons.meeting_room, 'Room'),
+          ],
+          selected: tool,
+          onSelect: (i) => i == 0 ? cb.onSetFogMode() : cb.onSetRoomRevealMode(),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          switch (tool) {
+            0 => 'Drag over the map to $verb squares.',
+            1 => 'Tap a room to $verb all of it.',
+            _ => 'Pick a tool to paint the fog.',
+          },
+          style: const TextStyle(color: _kTextSecondary, fontSize: 12),
         ),
         const SizedBox(height: 8),
-        const _GoldLabel('Brush paints'),
-        const SizedBox(height: 4),
         _Segmented(
           options: const [
             (Icons.wb_sunny, 'Reveal'),
@@ -1067,58 +1190,60 @@ class _DmControlPanelState extends State<DmControlPanel> {
             if ((i == 0) != state.revealMode) cb.onToggleRevealMode();
           },
         ),
-        const SizedBox(height: 8),
-        const _GoldLabel('Brush size'),
-        const SizedBox(height: 4),
-        Row(
-          children: [
-            for (final entry in {0: '1', 1: '3', 2: '5'}.entries) ...[
-              if (entry.key > 0) const SizedBox(width: 6),
-              Expanded(
-                child: _Chip(
-                  active: state.brushRadius == entry.key,
-                  onTap: () => cb.onSetBrushRadius(entry.key),
-                  child: Text(
-                    entry.value,
-                    style: TextStyle(
-                      color: state.brushRadius == entry.key
-                          ? _kTextPrimary
-                          : _kTextSecondary,
-                      fontSize: _kText,
-                      fontWeight: FontWeight.w600,
+        if (!room) ...[
+          const SizedBox(height: 8),
+          const _GoldLabel('Brush size'),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              for (final entry in {0: '1', 1: '3', 2: '5'}.entries) ...[
+                if (entry.key > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: _Chip(
+                    active: state.brushRadius == entry.key,
+                    onTap: () => cb.onSetBrushRadius(entry.key),
+                    child: Text(
+                      entry.value,
+                      style: TextStyle(
+                        color: state.brushRadius == entry.key
+                            ? _kTextPrimary
+                            : _kTextSecondary,
+                        fontSize: _kText,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ],
-          ],
-        ),
-        const SizedBox(height: 8),
-        // Room reveal mode button
-        _GoldButton(
-          icon: Icons.meeting_room,
-          label: 'Room (tap a room to fill)',
-          active: state.interactionMode == InteractionMode.roomReveal,
-          onTap: cb.onSetRoomRevealMode,
-        ),
+          ),
+        ],
         const SizedBox(height: 12),
         Container(height: 1, color: _kBorderGold),
         const SizedBox(height: 10),
-        // Shadow / Live toggle
-        _GoldToggle(
-          icon: state.shadowMode ? Icons.preview : Icons.flash_on,
-          label: state.shadowMode ? 'Shadow mode (preview first)' : 'Live mode',
-          active: state.shadowMode,
-          onTap: cb.onToggleShadowMode,
+        // When players see fog changes: live, or staged in the shadow preview
+        const _GoldLabel('Players see changes'),
+        const SizedBox(height: 4),
+        _Segmented(
+          options: const [
+            (Icons.flash_on, 'Instantly'),
+            (Icons.preview, 'Preview first'),
+          ],
+          selected: state.shadowMode ? 1 : 0,
+          onSelect: (i) {
+            if ((i == 1) != state.shadowMode) cb.onToggleShadowMode();
+          },
         ),
-        // Shadow commit/clear controls (when cells are staged)
-        if (state.shadowMode && hasShadowCells) ...[
+        // Apply/discard staged squares
+        if (state.shadowMode) ...[
           const SizedBox(height: 6),
           Row(
             children: [
               Expanded(
                 child: Text(
-                  '$shadowCellCount cells staged',
+                  hasShadowCells
+                      ? '$shadowCellCount squares waiting — show them?'
+                      : 'Changes wait here until you tap ✓.',
                   style: const TextStyle(
                     color: _kTextSecondary,
                     fontSize: 13,
@@ -1126,17 +1251,19 @@ class _DmControlPanelState extends State<DmControlPanel> {
                   ),
                 ),
               ),
-              _ActionSquare(
-                icon: Icons.check,
-                color: const Color(0xFF4CAF50),
-                onTap: cb.onCommitShadow,
-              ),
-              const SizedBox(width: 6),
-              _ActionSquare(
-                icon: Icons.close,
-                color: const Color(0xFFE53935),
-                onTap: cb.onClearShadow,
-              ),
+              if (hasShadowCells) ...[
+                _ActionSquare(
+                  icon: Icons.check,
+                  color: const Color(0xFF4CAF50),
+                  onTap: cb.onCommitShadow,
+                ),
+                const SizedBox(width: 6),
+                _ActionSquare(
+                  icon: Icons.close,
+                  color: const Color(0xFFE53935),
+                  onTap: cb.onClearShadow,
+                ),
+              ],
             ],
           ),
         ],
@@ -2107,12 +2234,16 @@ class _Segmented extends StatelessWidget {
                       color: selected == i ? _kAccentGold : _kAccentGoldDim,
                       size: _kIcon),
                   const SizedBox(width: 6),
-                  Text(
-                    options[i].$2,
-                    style: TextStyle(
-                      color: selected == i ? _kTextPrimary : _kTextSecondary,
-                      fontSize: _kText,
-                      fontWeight: FontWeight.w600,
+                  Flexible(
+                    child: Text(
+                      options[i].$2,
+                      style: TextStyle(
+                        color: selected == i ? _kTextPrimary : _kTextSecondary,
+                        fontSize: _kText,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
