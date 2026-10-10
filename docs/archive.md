@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 19:50 - a494e8fa - Juri's cave map + embedded grid detection
+- Konrad: Juri sent another map (Telegram, 1280 × 960, cave with a drawn grid) → on the TV once the table-view session is done, with everything built so far; devise a formula to detect a grid already drawn into a map; mid-way: deploy the table-view build to both devices
+	- formula (edge profile → autocorrelation → fraction rule → both axes agree → phase) prototyped in Python on all test maps, then `lib/model/grid_detect.dart`; the companion's upload runs it before the squares dialog (pre-fill, own-grid box, crop a grid that starts inside the picture) → `architecture.md` "embedded grid detection"
+	- found: the first rule ("first autocorrelation peak") took the double edges of 2 px lines for a 30 px grid; 12 px stone texture in the AI maps passed as a grid; the engine's own downscale (and FilterQuality.medium) erased Dyson's 1 px grey lines → own box average, ≤ 3072 px
+	- 10 unit tests, suite 461 green
+
 ### 26-10-10 19:40 - battlemap-35 - table view: one square = one inch, 34 × 19 window (1.1.9+19)
 - Konrad: improve scaling/measuring/fitting on the TV; measured 34 × 19 one-inch squares with a bit of gap both ways → centre the map, split the leftover — the optimal result for all maps; bigger maps need pan/zoom from the tablet, an overview with the players' square; each game file saves the map's scale and whether we draw a grid
 	- found: calibration lived per session (`tvWidthInches` + `calibratedBaseZoom`, re-entered per game, its dialog offered TV *diagonals* as presets), the 0.5–2× scale slider broke the one-inch rule, no window snapping, no masking, a camera change alone was never broadcast (fresh small map → no frame on the tablet)

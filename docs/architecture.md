@@ -143,6 +143,31 @@ cut square at the screen's edge.
   rows following for square squares, a warning when squares come out > 3 % off square, and how
   the map sits on the table (fits / fits turned / the TV pans).
 
+## embedded grid detection (since 2026-10-10)
+
+Many published maps have their grid drawn into the picture. Before the upload dialog the
+companion looks for it (`detectGridInPicture` in `lib/model/grid_detect.dart`, ≤ 0.2 s): a found
+grid pre-fills columns × rows, ticks "the picture has its own grid lines" (battlemap then draws
+none) and shows a green "Found a drawn grid: 40 × 30 squares of 32 px". A grid that does not
+start at the picture's edge is **cropped to whole squares** (`cropToGrid`, PNG), so battlemap's
+`cols × rows` grid lands exactly on the drawn one. Nothing found → the old defaults, box unticked.
+
+The formula, per axis (x shown; rows are the same), on the picture averaged down to ≤ 3072 px:
+
+| Step | What | Why |
+|---|---|---|
+| 1 profile | `P(x) = Σ_y min(\|L(x+1,y) − L(x,y)\|, 24)` on luminance (transparent = white) | grid lines run the whole height, so their columns add up; the clip keeps walls from drowning faint lines |
+| 2 clean | minus a 15-sample moving average, then a `[1 2 3 2 1]` blur | only sharp peaks stay; thick and thin lines overlap when shifted |
+| 3 period | autocorrelation `A(l) = Σ P(x)P(x+l) / Σ P²`: strongest peak for `l` ∈ [20 px, size/3], then its smallest fraction `l/d` (d = 2…6) still ≥ half as strong; sub-pixel via a parabola and the peak at `k·l` | `A` peaks at the spacing and its multiples; walls or major lines every 2–5 squares must not win; a strong fraction under 20 px = texture (bricks) → no grid |
+| 4 agree | both axes within 3 %, both strengths ≥ 0.25 | random texture practically never agrees on both axes |
+| 5 phase | `arg Σ P(x)·e^{2πi·x/cell}` → where the lines sit | lines more than 15 % of a square from the edge → crop |
+
+Validated: Juri's cave map (40 × 30 of 32 px, strength 0.96), all `.dd2vtt` test-map pictures
+(72 / 150 px, 0.38–0.65), Dyson's 6000 px tavern (240 px dashed grey lines, needed 3072 not 2048),
+Juri's photographed page (52 px, drifting → cropped); no grid reported on the AI pipeline's
+pictures (their 12 px stone texture fooled the first version) or the gridless small home.
+`test/grid_detect_test.dart` covers it with synthetic pictures (the real maps are gitignored).
+
 ## rendering order (flame engine)
 
 | priority | component | description |

@@ -32,12 +32,12 @@ the tablet's Download folder. The grid size is in the file name.
 
 | file | what it is | why it's in the set |
 |---|---|---|
-| `01-eldrica-house-10x8.dd2vtt` | one small house, 2 doors, 4 lights | tiny map: fit-to-screen, zoom limits |
+| `01-eldrica-house-10x8.dd2vtt` | one small house, 2 doors, 4 lights | tiny map: centred on the 1-inch table, zoom limits |
 | `02-small-home-16x18.uvtt` | blueprint-style house, **61 walls, 29 doors/windows** | `.uvtt` extension; door-heavy fog + wall occlusion |
 | `03-przerzut-16x16.dd2vtt` | tavern with a bar, 12 doors, 8 lights | the classic "you meet in a tavern" opener |
 | `04-vampire-lair-19x14.dd2vtt` | dungeon, 5 doors, 12 lights | combat map: tokens, AoE, measure |
 | `05-tower-ground-11x11.dd2vtt` / `06-tower-upper-11x11.dd2vtt` | two floors of one tower | switching maps mid-scene and back |
-| `07-STRESS-castle-114x64-30MB.dd2vtt` | huge castle, 2142 walls, 57 doors, 80 lights, **17100×9600 px** | upload progress, memory, texture size |
+| `07-STRESS-castle-114x64-30MB.dd2vtt` | huge castle, 2142 walls, 57 doors, 80 lights, **17100×9600 px** | upload progress, memory, texture size; far bigger than the 34 × 19 table |
 | `08a-vampire-lair-image-19x14.jpg` | the image of 04, no walls | image upload path (jpg), grid must line up at 19×14 |
 | `08b-small-home-image-16x18.webp` | the image of 02, no walls | image upload path (webp), 16×18 |
 | `09-dyson-twelve-goats-tavern-6000px.png` | Dyson Logos line-art tavern with grid, 6000×6000 | big PNG; grid alignment by eye |
@@ -63,13 +63,18 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
    both sides without a restart.
 3. TV remote fallback: on the TV, arrow keys + Return alone reach every library entry and the back
    button.
+4. Once per TV: Settings ▸ Measure the TV… — the TV shows its one-inch squares and a 10-inch bar;
+   it must measure 25.4 cm (type what you measure, Apply, measure again). A 1-inch mini base then
+   fits one square at every edge of the table.
 
 **1. the tavern (03)**
-1. Start a session on 03. The TV shows the whole map fogged.
+1. Start a session on 03. The TV shows the whole map fogged, centred, one inch per square (it fits
+   the 34 × 19 table); the tablet's dashed frame is the TV's 34 × 19 window.
 2. Place 4 player tokens at the door and 2 NPC tokens at the bar; move one by drag.
 3. Reveal the main room with the brush; the bar area stays hidden until "opened".
 4. Pinch and two-finger pan on the tablet: never paints fog.
-5. "TV follows the tablet" on: the TV moves live with the tablet. "Jump to TV" jumps back.
+5. "TV follows the tablet" on: the TV moves live with the tablet (on the 1-inch table only its
+   centre, in whole squares). "Jump to TV" jumps back.
 
 **2. the house (02)**
 1. Switch the session to 02. Tokens and fog from 03 are *not* carried over.
@@ -97,11 +102,15 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 3. Double-tap "load" on a session: it loads once.
 
 **6. improvised maps**
-1. Upload 08a and 08b: grid lines up with the drawn squares (19×14, 16×18)? If the app assumes
-   20×15, note it — image maps need a grid setting. The tablet's grid chip (top right) shows the
-   same grid as the TV, also after switching from another map and after a reconnect (before
-   1.1.8 it kept the previous map's grid and stretched the picture).
-2. Upload 09 (6000 px PNG): loads, pans smoothly, grid aligns?
+1. Upload 08a and 08b: the squares dialog shows the picture's size, the rows follow the columns
+   (19 → 14, 16 → 18); with "the picture has its own grid lines" ticked the TV draws no grid, and
+   the next game on that map neither. The tablet's chip (top right) shows the same squares as the
+   TV, also after switching from another map and after a reconnect (before 1.1.8 it kept the
+   previous map's grid and stretched the picture).
+2. Upload 09 (6000 px PNG) with its real square count: bigger than 34 × 19, so the TV shows a
+   window — move it with the gold grip above the tablet's frame, the Camera tab's overview and
+   arrows; Whole map ↔ 1-inch table. A wrong count: Settings ▸ Map squares (clears that game's
+   fog).
 3. Upload `test_map.pdf`: the tablet rasterizes it, the TV gets an image.
 
 **7. stress**

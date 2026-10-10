@@ -308,6 +308,23 @@ not the Mac's; the alternative is `10.0.2.2`). Serial numbers follow boot order 
 `adb devices` / `adb -s <serial> emu avd name`. Test map for the tablet's file picker:
 `adb -s <tablet> push test_assets/test_map.dd2vtt /sdcard/Download/`.
 
+Without `flutter run` (no process to keep alive; skips the mode selector, reopens the TV's game):
+
+```bash
+$F build apk --debug --dart-define=RELAY_HOST=localhost
+APK=build/app/outputs/flutter-apk/app-debug.apk
+adb -s emulator-5556 install -r $APK && adb -s emulator-5556 shell "am start -S -n com.example.battlemap/.MainActivity --es route /restore"
+adb -s emulator-5554 install -r $APK && adb -s emulator-5554 shell "am start -S -n com.example.battlemap/.MainActivity --es route /companion"
+```
+
+Before 2026-10-10 a debug build launched with a route showed a red screen (`MaterialApp` had
+`home` *and* `onGenerateInitialRoutes` — an assert release builds skip); fixed in `main.dart`.
+
+**Reading the TV from a script:** a relay client that just joined (`bench_bot.Bot`) receives no
+`vtt.fullState` until something changes on the TV — ask `diag.status` (`Bot.status()`): view,
+session, `tvWidthInches`, `tvCameraMode`, `table` (`34x19`), `tableWindow`. The TV only broadcasts
+on change; since 1.1.9 a camera move alone counts as a change.
+
 Verified 2026-10-10: debug APK on both, TV registers as table, tablet connects as companion,
 both show the (empty) map library and "Companion connected". Limits: an emulator says nothing
 about the Mali-G310 / 2 GB performance — check that on the real box before a release.

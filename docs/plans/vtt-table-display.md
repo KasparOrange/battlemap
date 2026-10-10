@@ -382,6 +382,10 @@ The panel is semi-transparent and dismissible so it doesn't distract players.
 
 ## Phase 7 — Physical Calibration
 
+> **Superseded (2026-10-10):** the calibration is the TV's own (its picture width, kept on the
+> TV), every map is shown at exactly one inch per square in a centred window of whole squares —
+> no zoom clamp. See `docs/architecture.md` "table view".
+
 **Goal:** Match the digital grid to physical 1-inch miniature bases on the TV.
 
 The DM enters the TV's physical screen width in inches (or measures it). The app

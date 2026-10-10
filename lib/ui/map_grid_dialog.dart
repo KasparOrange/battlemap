@@ -26,7 +26,9 @@ typedef MapGridChoice = ({int cols, int rows, bool hasOwnGrid});
 /// [askOwnGrid] adds "the picture has its own grid lines" (battlemap then
 /// draws none, remembered for the map); [warning] is shown above the
 /// buttons once the counts differ from the initial ones (e.g. that
-/// re-gridding clears the fog). Returns `null` on cancel.
+/// re-gridding clears the fog); [detectedNote] says what
+/// [detectGridInPicture] found (the counts then start from it). Returns
+/// `null` on cancel.
 ///
 /// See also:
 /// - [VttState.regridRaster], the in-game re-grid.
@@ -42,6 +44,7 @@ Future<MapGridChoice?> showMapGridDialog(
   int tableCols = 34,
   int tableRows = 19,
   String? warning,
+  String? detectedNote,
   String confirmLabel = 'OK',
 }) {
   return showDialog<MapGridChoice>(
@@ -56,6 +59,7 @@ Future<MapGridChoice?> showMapGridDialog(
       tableCols: tableCols,
       tableRows: tableRows,
       warning: warning,
+      detectedNote: detectedNote,
       confirmLabel: confirmLabel,
     ),
   );
@@ -79,6 +83,7 @@ class _MapGridDialog extends StatefulWidget {
   final int tableCols;
   final int tableRows;
   final String? warning;
+  final String? detectedNote;
   final String confirmLabel;
 
   const _MapGridDialog({
@@ -91,6 +96,7 @@ class _MapGridDialog extends StatefulWidget {
     required this.tableCols,
     required this.tableRows,
     required this.warning,
+    required this.detectedNote,
     required this.confirmLabel,
   });
 
@@ -195,6 +201,20 @@ class _MapGridDialogState extends State<_MapGridDialog> {
                   : 'How many squares does the map have?',
               style: const TextStyle(color: _goldDim, fontSize: 13),
             ),
+            if (widget.detectedNote != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.grid_on, color: Colors.lightGreenAccent, size: 18),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(widget.detectedNote!,
+                        style: const TextStyle(color: Colors.lightGreenAccent, fontSize: 13)),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               children: [

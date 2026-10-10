@@ -28,8 +28,8 @@ client (player tablet, button-only remote) on the JSON relay protocol.
    - AoE: tap places the chosen shape/size; drag aims a cone; the panel's shape/size buttons
      change the template in place
    - ruler: 10 squares long, readable numbers, draggable in any mode, rotate on the Measure tab
-   - scale slider only after calibration; draw width slider; the bottom-sheet panel is usable
-     one-handed and does not hide the map when collapsed
+   - Settings ▸ Measure the TV… (the TV shows its one-inch squares + a 10-inch bar); draw width
+     slider; the bottom-sheet panel is usable one-handed and does not hide the map when collapsed
 2. If bugs surface: fix from code, `flutter analyze` + `flutter test` (361 green at hand-off),
    no screenshot walkthroughs in the main session (memory rule); a subagent may click through.
 3. **Dead code deleted 2026-09-14** (see archive entry): `lib/companion_screen.dart`,

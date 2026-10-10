@@ -350,7 +350,12 @@ async def run(bot: Bot, rep: Report, stress: bool) -> None:
         await bot.send("vtt.brushReveal", indices=main_room)
         rep.check(await bot.until(lambda: len(bot.state["revealedCells"]) >= len(main_room)),
                   "main room revealed", f"{len(bot.state.get('revealedCells', []))} cells")
-        await bot.send("vtt.zoomToFit")
+        # The normal play view: one square = one inch, the 16×16 tavern centred
+        await bot.send("vtt.setTvCameraMode", mode="table")
+        rep.check(await bot.until(lambda: bot.state.get("tvCameraMode") == "table"
+                                  and bot.state.get("tableCols", 0) > 0),
+                  "TV on the 1-inch table",
+                  f"{bot.state.get('tableCols')} × {bot.state.get('tableRows')} squares")
         await asyncio.sleep(1)
         rep.shot("1-tavern")
 
@@ -515,7 +520,7 @@ async def prep(bot: Bot) -> None:
     await bot.until(lambda: bot.state.get("activeMapId") == mid and bot.state.get("hasMap"), 30)
     cols = bot.state["gridCols"]
     await bot.send("vtt.brushReveal", indices=rect(cols, 1, 1, 14, 6))  # common room
-    await bot.send("vtt.zoomToFit")
+    await bot.send("vtt.setTvCameraMode", mode="table")  # play view: 1 inch per square
     await asyncio.sleep(2.5)  # let auto-save write it
     print("tabletop game in progress: the tavern, common room revealed")
 

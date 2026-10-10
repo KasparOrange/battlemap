@@ -14,7 +14,7 @@ two play modes, selected via session settings (presets over individual feature t
 the TV lies flat as the table; players put **real miniatures** on it. all game mechanics (HP,
 initiative, conditions) happen at the real table with dice, paper and pencils. the app's job is to
 make the MAP amazing and give the DM tools for reveal and atmosphere: fog, doors, measure, drawing,
-effects, light. the TV view must stay put under the miniatures (calibrated 1-inch grid).
+effects, light. the TV view must stay put under the miniatures (one square = one inch, `architecture.md` "table view").
 
 ### digital mode (stretch goal, far down the roadmap)
 
@@ -26,7 +26,7 @@ tracking, initiative order, conditions, dice rolling, automated combat. not work
 a dialog that opens when creating a new session and can be reopened during play. tabbed layout:
 
 - **template tab** — pick "Pen & Paper" or "Digital" preset (populates the toggles)
-- **map tab** — grid config, calibration, ruler
+- **map tab** — grid config, ruler (the 1-inch calibration is the TV's own, companion ▸ Settings ▸ Measure the TV)
 - **features tab** — individual feature toggles grouped by category
 - **atmosphere tab** — animations, sound, weather, lighting
 
@@ -45,7 +45,8 @@ these make the map visually stunning and give the DM atmosphere tools. no game m
 - [x] door/portal toggling
 - [x] freehand drawing on the map
 - [x] measure tool (D&D distance)
-- [x] L-ruler with scale calibration slider
+- [x] L-ruler
+- [x] table view: every map at one square = one inch in a centred 34 × 19 window, big maps panned from the tablet (grip, overview, arrows), the TV measured with an on-screen bar (`architecture.md` "table view")
 - [x] PDF and image map support
 - [x] undo/redo (50 actions)
 
