@@ -16,6 +16,7 @@
 # (diag.status) → deploy.prepare (TV saves now, shows "Updating…", the tablet
 # gets a heads-up) → install -r over the Wi-Fi (data kept) → relaunch with the
 # route /restore?session=… → wait until the TV shows that game again.
+# Also switches the box's inattentive sleep off (it ignores the wake lock).
 # tablet: install -r → relaunch with the route /companion (connects without
 # the mode selector; the TV resends its game). web: build → rsync to the VPS;
 # a tablet that uses the browser gets its Chrome tab reopened at …/#/companion.
@@ -38,7 +39,7 @@ for a in "$@"; do
   case "$a" in
     tv|tablet|web) targets+=("$a") ;;
     --here) here=1 ;;
-    -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
     *) echo "unknown argument: $a" >&2; exit 2 ;;
   esac
 done

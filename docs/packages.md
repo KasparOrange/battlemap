@@ -11,7 +11,7 @@
 | `web_socket_channel` | ^3.0.0 | WebSocket client for relay | works on both web (Safari) and native (APK) |
 | `path_provider` | ^2.1.0 | app documents directory | map/session storage on TV. tvOS: `path_provider_tvos` |
 | `package_info_plus` | ^10.0.0 | read current app version | for update version comparison + log device info. tvOS: `package_info_plus_tvos` |
-| `wakelock_plus` | >=1.3.3 <1.8.0 | keep the TV screen awake | pinned <1.8 (its tvOS support breaks `pod install`); tvOS: `wakelock_plus_tvos` |
+| `wakelock_plus` | >=1.3.3 <1.8.0 | keep the TV screen awake (Google TV's 4 h inattentive sleep ignores it — `setup.md` "box asleep mid-game") | pinned <1.8 (its tvOS support breaks `pod install`); tvOS: `wakelock_plus_tvos` |
 | `uuid` | ^4.0.0 | generate unique IDs | map entries, sessions, tokens |
 
 ## adopted: MwLog (VictoriaLogs) for remote logs — 2026-09-05
