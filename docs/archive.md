@@ -11,6 +11,7 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- it was the digital-play editor (name, HP, ten conditions); its button row held a `Spacer` inside `AlertDialog.actions` (not a Flex) — in a release build that breaks the row, Save included
 	- now "Rename token": name field (autofocus, Enter saves), Cancel/Save, 340 px wide; HP and conditions only with `hpBars` / `conditions` on, otherwise the token keeps its values; Delete left the dialog (the row has it)
 	- widget test, suite 533 green
+	- deployed 1.1.13+23 to the tablet only (`tools/deploy.sh tablet`; the change is companion-only, the TV kept running 1.1.12+22)
 
 ### 26-10-10 20:26 - a9469a3d - Deploy 1.1.12+22: doors above the fog on the box
 - Konrad: deploy
