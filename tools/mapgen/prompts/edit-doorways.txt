@@ -1,0 +1,14 @@
+The first image is a top-down battle map for a tabletop role-playing game. The second image is
+its layout guide: dark grey bands = walls, mid grey = floor, black = rock outside; a gap in a
+wall = a doorway.
+
+Edit only the doorways. Keep everything else exactly as it is: same framing, scale and
+position of every wall, room, object and texture, same colours and lighting. Do not redraw,
+restyle, straighten, crop or zoom the map.
+
+1. In every doorway, remove the thin wooden rail, beam, bar, sill or pair of posts lying
+   across the opening, and continue the floor of both rooms straight through it, so the
+   doorway is plainly open with nothing in it.
+2. Where an opening is wider than its gap in the guide, continue the wall beside it until
+   the opening is exactly as wide as the gap; the new piece of wall looks exactly like the
+   wall it continues.

@@ -1,0 +1,117 @@
+# feature ideas
+
+## play modes
+
+two play modes, selected via session settings (presets over individual feature toggles).
+
+> **Focus (decided 2026-10-10, Konrad): tabletop mode only.** All current work — features, UX,
+> tests — targets tabletop mode. No digital tokens, HP bars, conditions or initiative are used.
+> Digital mode is a stretch goal far down the roadmap; its existing code (tokens, Combat tab) stays
+> dormant behind the session settings, is not polished and not extended.
+
+### tabletop mode (default, the focus) — preset "Pen & Paper" in code
+
+the TV lies flat as the table; players put **real miniatures** on it. all game mechanics (HP,
+initiative, conditions) happen at the real table with dice, paper and pencils. the app's job is to
+make the MAP amazing and give the DM tools for reveal and atmosphere: fog, doors, measure, drawing,
+effects, light. the TV view must stay put under the miniatures (one square = one inch, `architecture.md` "table view").
+
+### digital mode (stretch goal, far down the roadmap)
+
+full virtual tabletop. everything from tabletop mode PLUS digital game mechanics — tokens, HP
+tracking, initiative order, conditions, dice rolling, automated combat. not worked on now.
+
+## session settings
+
+a dialog that opens when creating a new session and can be reopened during play. tabbed layout:
+
+- **template tab** — pick "Pen & Paper" or "Digital" preset (populates the toggles)
+- **map tab** — grid config, ruler (the 1-inch calibration is the TV's own, companion ▸ Settings ▸ Measure the TV)
+- **features tab** — individual feature toggles grouped by category
+- **atmosphere tab** — animations, sound, weather, lighting
+
+all settings saved per session and restored on resume.
+
+---
+
+## tabletop mode features (pen & paper)
+
+these make the map visually stunning and give the DM atmosphere tools. no game mechanics.
+
+### done
+- [x] fog of war with brush reveal/hide
+- [x] shadow/dry-edit fog mode (preview before commit)
+- [x] room reveal (flood-fill bounded by walls)
+- [x] door/portal toggling
+- [x] freehand drawing on the map
+- [x] measure tool (D&D distance)
+- [x] L-ruler
+- [x] table view: every map at one square = one inch in a centred 34 × 19 window, big maps panned from the tablet (grip, overview, arrows), the TV measured with an on-screen bar (`architecture.md` "table view")
+- [x] PDF and image map support
+- [x] undo/redo (50 actions)
+
+### next up
+- [ ] **torch/light animations** — flickering glow around light sources. .dd2vtt files include light position, range, intensity, and color. render as animated radial gradient with subtle flicker.
+- [ ] **water animation** — subtle shimmer/flow on water areas. could use a noise shader or animated UV offset.
+- [ ] **weather particles** — rain, snow, embers, floating dust motes. particle system overlay controlled from atmosphere tab. adjustable intensity.
+- [ ] **location-triggered effects** — DM taps a spot on the map → visual effect plays: explosion, magic circle appearing, smoke cloud, fire burst. library of preset effects.
+- [ ] **global effects** — screen shake (earthquake), flash (lightning), fade to black (scene transition), pulse glow. triggered from DM panel.
+- [ ] **ambient soundscapes** — layered audio from TV speakers. base atmosphere (dungeon echo, forest, tavern) + triggered SFX (door slam, sword clash, thunder). controlled from phone.
+- [ ] **day/night cycle** — gradually dim the map, shift lighting color temperature. DM controls time-of-day slider.
+- [ ] **animated fog edges** — fog rolls in/out with particle wisps instead of hard cell edges. soft gradient fog boundary.
+- [ ] **door animations** — doors visually swing open/shut instead of instant toggle. *Done for AI maps (`draw_doors`, 2026-10-10): battlemap draws the leaf and swings it; Dungeondraft maps paint their doors into the image, so they still toggle instantly.*
+- [ ] **narrative text overlay** — DM pushes text that fades in on the TV: "You enter the throne room..." dramatic reveal moments.
+- [ ] **timer/countdown** — visible countdown on the TV for timed puzzles or dramatic tension. DM sets duration from phone.
+- [ ] **miniature spotlight** — dramatic light cone on a specific grid area. useful for "a beam of moonlight falls on the altar."
+
+### planned
+- [ ] **AI-generated maps** — layout we own → Nano Banana paints it → `.dd2vtt` with exact walls/doors; also variants (night, burning) on the same geometry. design: `docs/ai-art.md` (#40)
+- [ ] **grid configuration after load** — re-adjust grid offset, rotation, scale after loading. drag handles. essential for PDF maps that don't align.
+- [ ] **session thumbnails** — capture game canvas (with its fog) as PNG for the library. *Map thumbnails are done (2026-10-10, `docs/sessions.md` "thumbnails"); the Continue card uses the map's.*
+- [ ] **multiple maps per session** — switch between dungeon floors without losing state per floor.
+- [ ] **map annotations (DM only)** — invisible sticky notes on the map. "trap here", "DC 15 lock". only visible on the phone.
+
+---
+
+## digital mode features (stretch goal — not worked on now)
+
+these add game mechanics on top of the pen & paper visuals.
+
+### done
+- [x] token placement (tap to place, drag to move)
+- [x] token names and HP bars
+- [x] condition markers (10 D&D conditions)
+- [x] AoE templates (circle, cone, line, square)
+
+### next up
+- [ ] **initiative tracker** — turn order widget on phone. add combatants, roll initiative, tap to advance. highlight active token on TV with a glow ring.
+- [ ] **token sizes** — large (2x2), huge (3x3), gargantuan (4x4). a dragon should fill 4 squares.
+- [ ] **custom token images** — upload PNG portraits for creature tokens instead of colored circles.
+- [ ] **line-of-sight** — show what a token can see based on wall data. dim areas outside LOS.
+
+### planned
+- [ ] **digital dice** — 3D animated dice roll on the TV. tap to roll from phone.
+- [ ] **automated damage** — select token, enter damage, HP auto-updates, death save prompts.
+- [ ] **condition duration tracking** — conditions auto-expire after N rounds.
+- [ ] **spell slot tracking** — track used/remaining spell slots per caster token.
+- [ ] **character sheets** — basic stat block stored per token (AC, saves, speeds).
+- [ ] **combat log** — scrolling text log of actions on the companion phone.
+
+---
+
+## shared features (both modes)
+
+- [x] VPS WebSocket relay (phone controls TV)
+- [ ] **direct TV connection without relay** — play without internet (friend's place, hotspot): TV hosts the WebSocket server on the LAN, phone connects to its IP. Pre-relay design, legacy `lib/network/vtt_server.dart` (#39)
+- [ ] **companion overhaul** — independent phone camera + TV viewport outline, bottom-sheet DM panel, ruler/measure/AoE fixes; full list `docs/action.md` (#38)
+- [x] **tabletop UX polish** — side panel on landscape tablets, Fog tab Brush | Room, camera tab by screen, ruler centred on the TV, door markers DM-only, undo snackbars, library Continue card + thumbnails (#43, 2026-10-10)
+- [x] map library with persistent storage (Hive)
+- [x] session save/restore (auto-save, resume)
+- [x] in-app updates (Shorebird OTA + APK fallback)
+- [x] structured logging + developer screen
+- [ ] **logs → MwLog** — code done 2026-09-05, ships with the next APK build (`--dart-define=MWLOG_AUTH`)
+- [ ] **rasterize PDFs on the phone** — TV only ever receives images; unblocks the Apple TV dev target
+- [x] **Apple TV as dev target** — done 2026-09-05: simulator for hot reload, `--release` on the living-room TV (`docs/apple-tv-dev.md`)
+- [x] medieval-themed DM control panel
+- [x] TV remote fallback (D-pad navigation)
+- [ ] **session settings dialog** — template picker + feature toggles

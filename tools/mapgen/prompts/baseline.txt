@@ -1,0 +1,34 @@
+Top-down orthographic battle map for a tabletop role-playing game, seen straight down
+from directly above: 90 degrees, no perspective, no isometric angle, no horizon.
+Setting: {setting}.
+
+Repaint the attached layout guide (the first image) as a finished map. The guide is exact:
+keep every wall, doorway, room and corridor at exactly the same position and size. Do not
+add, move or remove walls or openings. Every wall stays whole: no gaps, holes, breaches or
+collapsed sections anywhere except the doorways in the guide, also in ruined or damaged
+areas, where the damage stays inside the room. Fill the whole frame edge to edge.
+
+Guide legend: black = solid rock outside the map, render as dark textured stone;
+dark grey bands = walls; mid grey = floor; a gap in a wall = an open doorway: paint
+it as an empty opening exactly as wide as the gap, the floor running straight through
+from one side to the other, the wall ending cleanly on both sides and continuing right
+beside it — nothing standing or lying in the gap: no threshold, sill, beam, rail, bar,
+door frame or posts; no doors, door leaves, gates, portcullises or curtains anywhere on
+the map;
+blue = water; brown = rubble; green = vegetation;
+yellow dots = light sources (braziers, torches); magenta = props described below.
+
+Scale: the map is {cols} squares wide and {rows} squares tall, each square is 5 feet.
+Size furniture and objects realistically for that scale: a doorway is one square wide,
+a table one by two squares.
+
+Style: {style}.
+Lighting: even and neutral, soft baked shadows falling to the south-east, no vignette,
+contrast high enough to read on a TV in a lit room. Keep floors calm and uncluttered:
+miniatures stand on this map.
+
+Do not draw a grid, grid lines, text, labels, numbers, a compass, a frame, a legend,
+characters or creatures.
+
+Details by area (columns counted from the left, rows from the top):
+{areas}

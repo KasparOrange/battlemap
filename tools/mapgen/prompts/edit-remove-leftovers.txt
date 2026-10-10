@@ -1,0 +1,3 @@
+This is a photographed page of a printed top-down fantasy dungeon battlemap. A few bold black letters "S" (or fragments of them, black with a white outline) are still printed on or right next to some dark walls. Remove every one of them: the dark wall continues straight and unbroken where they were, and the stone or floor next to the wall continues as around it.
+
+Change nothing else at all: same framing, scale, position of every wall, room, corridor, door, grid line, stone and object, same colors and photo texture. Do not straighten, crop, zoom or restyle the map.

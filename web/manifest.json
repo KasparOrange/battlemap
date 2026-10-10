@@ -1,0 +1,11 @@
+{
+  "name": "Battlemap",
+  "short_name": "Battlemap",
+  "start_url": ".",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#1a1a2e",
+  "theme_color": "#1a1a2e",
+  "description": "D&D Digital Battlemap for TV Tables",
+  "prefer_related_applications": false
+}

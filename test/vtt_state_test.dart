@@ -1,0 +1,1969 @@
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:ui';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:battlemap/model/aoe_template.dart';
+import 'package:battlemap/model/draw_stroke.dart';
+import 'package:battlemap/model/map_token.dart';
+import 'package:battlemap/model/table_fit.dart';
+import 'package:battlemap/state/vtt_state.dart';
+
+/// Create minimal valid UVTT JSON bytes for testing.
+/// The image is a tiny 1x1 pixel PNG encoded as base64.
+Uint8List _makeMinimalUvttBytes({
+  int gridCols = 10,
+  int gridRows = 8,
+  int pixelsPerGrid = 140,
+  List<Map<String, dynamic>>? portals,
+}) {
+  // Minimal 1x1 red pixel PNG in base64
+  const tinyPngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+
+  final json = {
+    'format': 0.3,
+    'resolution': {
+      'map_origin': {'x': 0, 'y': 0},
+      'map_size': {'x': gridCols, 'y': gridRows},
+      'pixels_per_grid': pixelsPerGrid,
+    },
+    'line_of_sight': <List>[],
+    'objects_line_of_sight': <List>[],
+    'portals': portals ?? <Map>[],
+    'lights': <Map>[],
+    'environment': {
+      'baked_lighting': false,
+      'ambient_light': 'ffffffff',
+    },
+    'image': tinyPngBase64,
+  };
+
+  return Uint8List.fromList(utf8.encode(jsonEncode(json)));
+}
+
+void main() {
+  group('VttState toJson / applyRemoteState round-trip', () {
+    test('serializes and restores all state fields', () {
+      final state = VttState();
+
+      // Load a map so we have grid dimensions
+      state.loadMap(_makeMinimalUvttBytes(gridCols: 10, gridRows: 8));
+
+      // Modify state
+      state.revealedCells = {0, 5, 10, 42};
+      state.openPortals = {1, 3};
+      state.showGrid = false;
+      state.fogEnabled = false;
+      state.showWalls = true;
+      state.brushRadius = 2;
+      state.revealMode = false;
+      state.tvWidthInches = 43.0;
+      state.tvCameraMode = TvCameraMode.fit;
+      state.tableCol = 7;
+      state.tableRow = 3;
+      state.tableCols = 40;
+      state.tableRows = 22;
+      state.interactionMode = InteractionMode.draw;
+      state.drawColor = const Color(0xFF43A047);
+      state.drawWidth = 5.0;
+      state.tokens.add(MapToken(
+        id: 'tk1',
+        label: '1',
+        color: const Color(0xFFE53935),
+        gridX: 3,
+        gridY: 4,
+        name: 'Goblin',
+        maxHp: 20,
+        currentHp: 15,
+        conditions: {'poisoned', 'stunned'},
+      ));
+      state.strokes.add(DrawStroke(
+        points: [const Offset(1, 2), const Offset(3, 4)],
+        color: const Color(0xFF1E88E5),
+        width: 2.0,
+      ));
+
+      final json = state.toJson();
+
+      // Create a new state and apply the serialized data
+      final restored = VttState();
+      restored.applyRemoteState(json);
+
+      expect(restored.revealedCells, {0, 5, 10, 42});
+      expect(restored.openPortals, {1, 3});
+      expect(restored.showGrid, false);
+      expect(restored.fogEnabled, false);
+      expect(restored.showWalls, true);
+      expect(restored.brushRadius, 2);
+      expect(restored.revealMode, false);
+      expect(restored.tvWidthInches, 43.0);
+      expect(restored.tvCameraMode, TvCameraMode.fit);
+      expect(restored.tableCol, 7);
+      expect(restored.tableRow, 3);
+      expect(restored.tableCols, 40);
+      expect(restored.tableRows, 22);
+      expect(restored.interactionMode, InteractionMode.draw);
+      expect(restored.drawColor, const Color(0xFF43A047));
+      expect(restored.drawWidth, 5.0);
+      expect(restored.tokens.length, 1);
+      expect(restored.tokens.first.id, 'tk1');
+      expect(restored.tokens.first.gridX, 3);
+      expect(restored.tokens.first.name, 'Goblin');
+      expect(restored.tokens.first.maxHp, 20);
+      expect(restored.tokens.first.currentHp, 15);
+      expect(restored.tokens.first.conditions, containsAll(['poisoned', 'stunned']));
+      expect(restored.strokes.length, 1);
+      expect(restored.strokes.first.points.length, 2);
+    });
+
+    test('table view defaults survive round-trip', () {
+      final state = VttState();
+      final json = state.toJson();
+
+      final restored = VttState();
+      restored.applyRemoteState(json);
+
+      expect(restored.tvWidthInches, TableGrid.defaultScreenWidthInches);
+      expect(restored.tvCameraMode, TvCameraMode.table);
+      expect(restored.tableCol, isNull);
+      expect(restored.tableRow, isNull);
+      expect(restored.showCalibration, isFalse);
+    });
+
+    test('a TV before 1.1.9 (per-game calibration, may be null) gives the default table', () {
+      final restored = VttState();
+      restored.applyRemoteState({
+        ...VttState().toJson(),
+        'tvWidthInches': null,
+        'calibratedBaseZoom': null,
+      }..remove('tvCameraMode'));
+      expect(restored.tvWidthInches, TableGrid.defaultScreenWidthInches);
+      expect(restored.tvCameraMode, TvCameraMode.table);
+    });
+
+    test('backwards compatible with old state missing new fields', () {
+      // Simulate an old-format state message without token/stroke/draw fields
+      final oldJson = {
+        'revealedCells': <int>[0, 1],
+        'openPortals': <int>[],
+        'showGrid': true,
+        'fogEnabled': true,
+        'showWalls': false,
+        'brushRadius': 1,
+        'revealMode': true,
+        'tvWidthInches': null,
+        'calibratedBaseZoom': null,
+        // No interactionMode, tokens, strokes, drawColor, drawWidth
+      };
+
+      final restored = VttState();
+      restored.applyRemoteState(oldJson);
+
+      expect(restored.interactionMode, InteractionMode.fogReveal);
+      expect(restored.tokens, isEmpty);
+      expect(restored.strokes, isEmpty);
+      expect(restored.drawColor, const Color(0xFFE53935));
+      expect(restored.drawWidth, 4.0);
+    });
+  });
+
+  group('toggle operations', () {
+    test('toggleGrid flips showGrid', () {
+      final state = VttState();
+      expect(state.showGrid, true);
+
+      state.toggleGrid();
+      expect(state.showGrid, false);
+
+      state.toggleGrid();
+      expect(state.showGrid, true);
+    });
+
+    test('toggleFog flips fogEnabled', () {
+      final state = VttState();
+      expect(state.fogEnabled, true);
+
+      state.toggleFog();
+      expect(state.fogEnabled, false);
+
+      state.toggleFog();
+      expect(state.fogEnabled, true);
+    });
+
+    test('toggleWalls flips showWalls', () {
+      final state = VttState();
+      expect(state.showWalls, false);
+
+      state.toggleWalls();
+      expect(state.showWalls, true);
+
+      state.toggleWalls();
+      expect(state.showWalls, false);
+    });
+
+    test('toggleRevealMode flips revealMode', () {
+      final state = VttState();
+      expect(state.revealMode, true);
+
+      state.toggleRevealMode();
+      expect(state.revealMode, false);
+
+      state.toggleRevealMode();
+      expect(state.revealMode, true);
+    });
+  });
+
+  group('toggleReveal', () {
+    test('adds cell if not revealed, removes if already revealed', () {
+      final state = VttState();
+      state.shadowMode = false;
+
+      state.toggleReveal(5);
+      expect(state.revealedCells, contains(5));
+
+      state.toggleReveal(5);
+      expect(state.revealedCells, isNot(contains(5)));
+    });
+  });
+
+  group('togglePortal', () {
+    test('adds portal if closed, removes if already open', () {
+      final state = VttState();
+
+      state.togglePortal(2);
+      expect(state.openPortals, contains(2));
+
+      state.togglePortal(2);
+      expect(state.openPortals, isNot(contains(2)));
+    });
+  });
+
+  group('revealAll / hideAll', () {
+    test('revealAll reveals all cells', () {
+      final state = VttState();
+      state.shadowMode = false;
+
+      state.revealAll(80); // 10x8 grid = 80 cells
+      expect(state.revealedCells.length, 80);
+      expect(state.revealedCells, contains(0));
+      expect(state.revealedCells, contains(79));
+    });
+
+    test('hideAll clears all revealed cells', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealAll(80);
+      expect(state.revealedCells.length, 80);
+
+      state.hideAll();
+      expect(state.revealedCells, isEmpty);
+    });
+  });
+
+  group('applyBrushReveal', () {
+    test('reveal mode adds cells', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+
+      state.applyBrushReveal([0, 1, 2, 3]);
+      expect(state.revealedCells, containsAll([0, 1, 2, 3]));
+    });
+
+    test('hide mode removes cells', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealedCells = {0, 1, 2, 3, 4, 5};
+      state.revealMode = false;
+
+      state.applyBrushReveal([2, 3, 4]);
+      expect(state.revealedCells, {0, 1, 5});
+    });
+
+    test('reveal mode is idempotent (no duplicate notifications)', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+      state.revealedCells = {0, 1};
+
+      int notifyCount = 0;
+      state.addListener(() => notifyCount++);
+
+      // Applying cells that are already revealed should not notify
+      state.applyBrushReveal([0, 1]);
+      expect(notifyCount, 0);
+
+      // Applying new cells should notify once
+      state.applyBrushReveal([2, 3]);
+      expect(notifyCount, 1);
+    });
+  });
+
+  group('setBrushRadius', () {
+    test('changes brush radius', () {
+      final state = VttState();
+      expect(state.brushRadius, 1);
+
+      state.setBrushRadius(2);
+      expect(state.brushRadius, 2);
+
+      state.setBrushRadius(0);
+      expect(state.brushRadius, 0);
+    });
+  });
+
+  group('loadMap', () {
+    test('loads a valid UVTT map from bytes', () {
+      final state = VttState();
+      final bytes = _makeMinimalUvttBytes(gridCols: 12, gridRows: 10);
+
+      state.loadMap(bytes);
+
+      expect(state.map, isNotNull);
+      expect(state.map!.resolution.mapSize.dx, 12);
+      expect(state.map!.resolution.mapSize.dy, 10);
+      expect(state.rawMapBytes, bytes);
+      expect(state.revealedCells, isEmpty);
+    });
+
+    test('portals default state is loaded from file', () {
+      final portals = [
+        {
+          'position': {'x': 1.0, 'y': 2.0},
+          'bounds': [
+            {'x': 0.5, 'y': 1.5},
+            {'x': 1.5, 'y': 2.5},
+          ],
+          'rotation': 0.0,
+          'closed': false, // open by default
+          'freestanding': false,
+        },
+        {
+          'position': {'x': 3.0, 'y': 4.0},
+          'bounds': [
+            {'x': 2.5, 'y': 3.5},
+            {'x': 3.5, 'y': 4.5},
+          ],
+          'rotation': 0.0,
+          'closed': true, // closed by default
+          'freestanding': false,
+        },
+      ];
+
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes(portals: portals));
+
+      // Portal 0 is not closed, so it should be in openPortals
+      expect(state.openPortals, contains(0));
+      // Portal 1 is closed, so it should NOT be in openPortals
+      expect(state.openPortals, isNot(contains(1)));
+    });
+
+    test('notifies listeners when map is loaded', () {
+      final state = VttState();
+      int notifyCount = 0;
+      state.addListener(() => notifyCount++);
+
+      state.loadMap(_makeMinimalUvttBytes());
+
+      expect(notifyCount, 1);
+    });
+  });
+
+  group('clearMap', () {
+    test('resets all map-related state', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes());
+      state.revealedCells.addAll([0, 1, 2]);
+      state.openPortals.addAll([0]);
+      state.showWalls = true;
+      state.fogEnabled = false;
+
+      state.clearMap();
+
+      expect(state.map, isNull);
+      expect(state.rawMapBytes, isNull);
+      expect(state.revealedCells, isEmpty);
+      expect(state.openPortals, isEmpty);
+      expect(state.fogEnabled, true);
+      expect(state.showWalls, false);
+      expect(state.tableCol, isNull);
+      expect(state.tvWidthInches, TableGrid.defaultScreenWidthInches,
+          reason: 'the calibration belongs to the TV, not the map');
+    });
+  });
+
+  group('toJson structure', () {
+    test('includes all expected keys', () {
+      final state = VttState();
+      final json = state.toJson();
+
+      expect(json.containsKey('hasMap'), true);
+      expect(json.containsKey('gridCols'), true);
+      expect(json.containsKey('gridRows'), true);
+      expect(json.containsKey('portalCount'), true);
+      expect(json.containsKey('revealedCells'), true);
+      expect(json.containsKey('openPortals'), true);
+      expect(json.containsKey('showGrid'), true);
+      expect(json.containsKey('fogEnabled'), true);
+      expect(json.containsKey('showWalls'), true);
+      expect(json.containsKey('brushRadius'), true);
+      expect(json.containsKey('revealMode'), true);
+      expect(json.containsKey('tvWidthInches'), true);
+      expect(json.containsKey('tvCameraMode'), true);
+      expect(json.containsKey('tableCol'), true);
+      expect(json.containsKey('tableCols'), true);
+      expect(json.containsKey('interactionMode'), true);
+      expect(json.containsKey('tokens'), true);
+      expect(json.containsKey('strokes'), true);
+      expect(json.containsKey('drawColor'), true);
+      expect(json.containsKey('drawWidth'), true);
+    });
+
+    test('hasMap is false when no map loaded', () {
+      final state = VttState();
+      expect(state.toJson()['hasMap'], false);
+    });
+
+    test('hasMap is true when map is loaded', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes());
+      expect(state.toJson()['hasMap'], true);
+    });
+  });
+
+  group('token operations', () {
+    test('addToken creates token with cycling colors', () {
+      final state = VttState();
+
+      state.addToken(2, 3);
+      expect(state.tokens.length, 1);
+      expect(state.tokens.first.gridX, 2);
+      expect(state.tokens.first.gridY, 3);
+      expect(state.tokens.first.label, '1');
+      expect(state.tokens.first.color, MapToken.tokenColors[0]);
+
+      state.addToken(5, 6);
+      expect(state.tokens.length, 2);
+      expect(state.tokens.last.color, MapToken.tokenColors[1]);
+    });
+
+    test('addToken calls onTokenAdded callback', () {
+      final state = VttState();
+      MapToken? received;
+      state.onTokenAdded = (t) => received = t;
+
+      state.addToken(1, 1);
+      expect(received, isNotNull);
+      expect(received!.gridX, 1);
+    });
+
+    test('moveToken updates position', () {
+      final state = VttState();
+      state.addToken(0, 0);
+      final id = state.tokens.first.id;
+
+      state.moveToken(id, 5, 7);
+      expect(state.tokens.first.gridX, 5);
+      expect(state.tokens.first.gridY, 7);
+    });
+
+    test('moveToken calls onTokenMoved callback', () {
+      final state = VttState();
+      state.addToken(0, 0);
+      final id = state.tokens.first.id;
+
+      String? movedId;
+      int? movedX, movedY;
+      state.onTokenMoved = (i, x, y) {
+        movedId = i;
+        movedX = x;
+        movedY = y;
+      };
+
+      state.moveToken(id, 3, 4);
+      expect(movedId, id);
+      expect(movedX, 3);
+      expect(movedY, 4);
+    });
+
+    test('removeToken removes by id', () {
+      final state = VttState();
+      // Manually add tokens with known unique IDs to avoid timestamp collision
+      state.tokens.add(MapToken(
+        id: 'token_a',
+        label: '1',
+        color: MapToken.tokenColors[0],
+        gridX: 0,
+        gridY: 0,
+      ));
+      state.tokens.add(MapToken(
+        id: 'token_b',
+        label: '2',
+        color: MapToken.tokenColors[1],
+        gridX: 1,
+        gridY: 1,
+      ));
+
+      state.removeToken('token_a');
+      expect(state.tokens.length, 1);
+      expect(state.tokens.first.id, 'token_b');
+      expect(state.tokens.first.gridX, 1);
+    });
+
+    test('removeToken calls onTokenRemoved callback', () {
+      final state = VttState();
+      state.addToken(0, 0);
+      final id = state.tokens.first.id;
+
+      String? removedId;
+      state.onTokenRemoved = (i) => removedId = i;
+
+      state.removeToken(id);
+      expect(removedId, id);
+    });
+
+    test('clearTokens removes all tokens', () {
+      final state = VttState();
+      state.addToken(0, 0);
+      state.addToken(1, 1);
+      state.addToken(2, 2);
+
+      state.clearTokens();
+      expect(state.tokens, isEmpty);
+    });
+
+    test('addToken notifies listeners', () {
+      final state = VttState();
+      int count = 0;
+      state.addListener(() => count++);
+
+      state.addToken(0, 0);
+      expect(count, 1);
+    });
+  });
+
+  group('drawing operations', () {
+    test('addStroke adds to list', () {
+      final state = VttState();
+      final stroke = DrawStroke(
+        points: [const Offset(0, 0), const Offset(10, 10)],
+        color: const Color(0xFFFF0000),
+        width: 2.0,
+      );
+
+      state.addStroke(stroke);
+      expect(state.strokes.length, 1);
+      expect(state.strokes.first.points.length, 2);
+    });
+
+    test('addStroke calls onStrokeAdded callback', () {
+      final state = VttState();
+      DrawStroke? received;
+      state.onStrokeAdded = (s) => received = s;
+
+      final stroke = DrawStroke(
+        points: [const Offset(0, 0)],
+        color: const Color(0xFFFF0000),
+        width: 1.0,
+      );
+      state.addStroke(stroke);
+      expect(received, isNotNull);
+    });
+
+    test('undoStroke removes last stroke', () {
+      final state = VttState();
+      state.addStroke(DrawStroke(
+        points: [const Offset(0, 0)],
+        color: const Color(0xFFFF0000),
+        width: 1.0,
+      ));
+      state.addStroke(DrawStroke(
+        points: [const Offset(5, 5)],
+        color: const Color(0xFF00FF00),
+        width: 2.0,
+      ));
+
+      state.undoStroke();
+      expect(state.strokes.length, 1);
+      expect(state.strokes.first.color, const Color(0xFFFF0000));
+    });
+
+    test('undoStroke on empty list does nothing', () {
+      final state = VttState();
+      int count = 0;
+      state.addListener(() => count++);
+
+      state.undoStroke();
+      expect(count, 0); // no notification when nothing to undo
+    });
+
+    test('clearDrawings clears all strokes', () {
+      final state = VttState();
+      state.addStroke(DrawStroke(
+        points: [const Offset(0, 0)],
+        color: const Color(0xFFFF0000),
+        width: 1.0,
+      ));
+      state.addStroke(DrawStroke(
+        points: [const Offset(5, 5)],
+        color: const Color(0xFF00FF00),
+        width: 2.0,
+      ));
+
+      state.clearDrawings();
+      expect(state.strokes, isEmpty);
+    });
+
+    test('clearDrawings calls onDrawingsCleared callback', () {
+      final state = VttState();
+      bool called = false;
+      state.onDrawingsCleared = () => called = true;
+
+      state.clearDrawings();
+      expect(called, true);
+    });
+  });
+
+  group('editToken', () {
+    test('editToken changes fields on existing token', () {
+      final state = VttState();
+      state.addToken(2, 3);
+      final id = state.tokens.first.id;
+
+      state.editToken(id,
+          name: 'Goblin',
+          maxHp: 20,
+          currentHp: 15,
+          conditions: {'poisoned', 'prone'});
+
+      final token = state.tokens.first;
+      expect(token.name, 'Goblin');
+      expect(token.maxHp, 20);
+      expect(token.currentHp, 15);
+      expect(token.conditions, {'poisoned', 'prone'});
+    });
+
+    test('editToken fires onTokenEdited callback', () {
+      final state = VttState();
+      state.addToken(0, 0);
+      final id = state.tokens.first.id;
+
+      String? cbId;
+      String? cbName;
+      int? cbMaxHp;
+      int? cbCurrentHp;
+      List<String>? cbConditions;
+      state.onTokenEdited = (i, n, mhp, chp, conds) {
+        cbId = i;
+        cbName = n;
+        cbMaxHp = mhp;
+        cbCurrentHp = chp;
+        cbConditions = conds;
+      };
+
+      state.editToken(id, name: 'Orc', maxHp: 30, currentHp: 25);
+
+      expect(cbId, id);
+      expect(cbName, 'Orc');
+      expect(cbMaxHp, 30);
+      expect(cbCurrentHp, 25);
+      expect(cbConditions, isEmpty);
+    });
+
+    test('editToken partial update leaves other fields unchanged', () {
+      final state = VttState();
+      state.addToken(1, 1);
+      final id = state.tokens.first.id;
+
+      state.editToken(id, name: 'Dragon', maxHp: 100, currentHp: 100);
+      state.editToken(id, currentHp: 80);
+
+      final token = state.tokens.first;
+      expect(token.name, 'Dragon');
+      expect(token.maxHp, 100);
+      expect(token.currentHp, 80);
+    });
+  });
+
+  group('interaction mode and draw settings', () {
+    test('setInteractionMode changes mode', () {
+      final state = VttState();
+      expect(state.interactionMode, InteractionMode.token);
+
+      state.setInteractionMode(InteractionMode.draw);
+      expect(state.interactionMode, InteractionMode.draw);
+
+      state.setInteractionMode(InteractionMode.token);
+      expect(state.interactionMode, InteractionMode.token);
+    });
+
+    test('InteractionMode.measure exists and can be set', () {
+      final state = VttState();
+      state.setInteractionMode(InteractionMode.measure);
+      expect(state.interactionMode, InteractionMode.measure);
+    });
+
+    test('setDrawColor changes color', () {
+      final state = VttState();
+      state.setDrawColor(const Color(0xFF00FF00));
+      expect(state.drawColor, const Color(0xFF00FF00));
+    });
+
+    test('setDrawWidth changes width', () {
+      final state = VttState();
+      state.setDrawWidth(8.0);
+      expect(state.drawWidth, 8.0);
+    });
+
+    test('setLiveStroke sets and calls callback', () {
+      final state = VttState();
+      DrawStroke? received;
+      state.onLiveStrokeChanged = (s) => received = s;
+
+      final stroke = DrawStroke(
+        points: [const Offset(0, 0)],
+        color: const Color(0xFFFF0000),
+        width: 1.0,
+      );
+      state.setLiveStroke(stroke);
+      expect(state.liveStroke, isNotNull);
+      expect(received, isNotNull);
+
+      state.setLiveStroke(null);
+      expect(state.liveStroke, isNull);
+      expect(received, isNull);
+    });
+
+    test('liveStroke is NOT included in toJson', () {
+      final state = VttState();
+      state.setLiveStroke(DrawStroke(
+        points: [const Offset(0, 0)],
+        color: const Color(0xFFFF0000),
+        width: 1.0,
+      ));
+
+      final json = state.toJson();
+      expect(json.containsKey('liveStroke'), false);
+    });
+  });
+
+  // ===== Undo / Redo tests =====
+
+  group('undo/redo: fog action', () {
+    test('undo reverses a fog reveal', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+
+      state.applyBrushReveal([0, 1, 2]);
+      expect(state.revealedCells, containsAll([0, 1, 2]));
+      expect(state.canUndo, true);
+
+      state.undo();
+      expect(state.revealedCells, isEmpty);
+      expect(state.canRedo, true);
+    });
+
+    test('redo re-applies a fog reveal', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+
+      state.applyBrushReveal([5, 6]);
+      state.undo();
+      expect(state.revealedCells, isEmpty);
+
+      state.redo();
+      expect(state.revealedCells, containsAll([5, 6]));
+    });
+
+    test('undo reverses a fog hide', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealedCells = {0, 1, 2, 3};
+      state.revealMode = false;
+
+      state.applyBrushReveal([1, 2]);
+      expect(state.revealedCells, {0, 3});
+
+      state.undo();
+      expect(state.revealedCells, containsAll([0, 1, 2, 3]));
+    });
+
+    test('undo reverses revealAll', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealedCells = {5};
+
+      state.revealAll(10);
+      expect(state.revealedCells.length, 10);
+
+      state.undo();
+      // Should only have the originally revealed cell
+      expect(state.revealedCells, {5});
+    });
+
+    test('undo reverses hideAll', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealedCells = {0, 1, 2};
+
+      state.hideAll();
+      expect(state.revealedCells, isEmpty);
+
+      state.undo();
+      expect(state.revealedCells, containsAll([0, 1, 2]));
+    });
+
+    test('undo reverses toggleReveal (reveal)', () {
+      final state = VttState();
+      state.shadowMode = false;
+
+      state.toggleReveal(7);
+      expect(state.revealedCells, contains(7));
+
+      state.undo();
+      expect(state.revealedCells, isNot(contains(7)));
+    });
+
+    test('undo reverses toggleReveal (hide)', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealedCells = {7};
+
+      state.toggleReveal(7); // hides cell 7
+      expect(state.revealedCells, isNot(contains(7)));
+
+      state.undo();
+      expect(state.revealedCells, contains(7));
+    });
+  });
+
+  group('undo/redo: portal action', () {
+    test('undo reverses portal toggle (open to closed)', () {
+      final state = VttState();
+      state.openPortals = {3};
+
+      state.togglePortal(3); // closes portal 3
+      expect(state.openPortals, isNot(contains(3)));
+
+      state.undo();
+      expect(state.openPortals, contains(3));
+    });
+
+    test('undo reverses portal toggle (closed to open)', () {
+      final state = VttState();
+
+      state.togglePortal(2); // opens portal 2
+      expect(state.openPortals, contains(2));
+
+      state.undo();
+      expect(state.openPortals, isNot(contains(2)));
+    });
+
+    test('redo re-applies portal toggle', () {
+      final state = VttState();
+
+      state.togglePortal(1);
+      state.undo();
+      expect(state.openPortals, isNot(contains(1)));
+
+      state.redo();
+      expect(state.openPortals, contains(1));
+    });
+  });
+
+  group('undo/redo: token add/remove/move', () {
+    test('undo removes an added token', () {
+      final state = VttState();
+
+      state.addToken(2, 3);
+      expect(state.tokens.length, 1);
+
+      state.undo();
+      expect(state.tokens, isEmpty);
+    });
+
+    test('redo re-adds an undone token', () {
+      final state = VttState();
+
+      state.addToken(2, 3);
+      final id = state.tokens.first.id;
+      state.undo();
+
+      state.redo();
+      expect(state.tokens.length, 1);
+      expect(state.tokens.first.id, id);
+    });
+
+    test('undo restores a removed token', () {
+      final state = VttState();
+      state.tokens.add(MapToken(
+        id: 'tk_test',
+        label: '1',
+        color: MapToken.tokenColors[0],
+        gridX: 5,
+        gridY: 6,
+      ));
+
+      state.removeToken('tk_test');
+      expect(state.tokens, isEmpty);
+
+      state.undo();
+      expect(state.tokens.length, 1);
+      expect(state.tokens.first.id, 'tk_test');
+      expect(state.tokens.first.gridX, 5);
+    });
+
+    test('undo reverses a token move', () {
+      final state = VttState();
+      state.addToken(1, 2);
+      final id = state.tokens.first.id;
+
+      state.moveToken(id, 8, 9);
+      expect(state.tokens.first.gridX, 8);
+      expect(state.tokens.first.gridY, 9);
+
+      state.undo();
+      expect(state.tokens.first.gridX, 1);
+      expect(state.tokens.first.gridY, 2);
+    });
+
+    test('redo re-applies a token move', () {
+      final state = VttState();
+      state.addToken(1, 2);
+      final id = state.tokens.first.id;
+
+      state.moveToken(id, 8, 9);
+      state.undo();
+
+      state.redo();
+      expect(state.tokens.first.gridX, 8);
+      expect(state.tokens.first.gridY, 9);
+    });
+  });
+
+  group('undo/redo: stroke add/clear', () {
+    test('undo removes an added stroke', () {
+      final state = VttState();
+      final stroke = DrawStroke(
+        points: [const Offset(0, 0), const Offset(10, 10)],
+        color: const Color(0xFFFF0000),
+        width: 2.0,
+      );
+
+      state.addStroke(stroke);
+      expect(state.strokes.length, 1);
+
+      state.undo();
+      expect(state.strokes, isEmpty);
+    });
+
+    test('redo re-adds an undone stroke', () {
+      final state = VttState();
+      final stroke = DrawStroke(
+        points: [const Offset(0, 0)],
+        color: const Color(0xFFFF0000),
+        width: 1.0,
+      );
+
+      state.addStroke(stroke);
+      state.undo();
+
+      state.redo();
+      expect(state.strokes.length, 1);
+    });
+
+    test('undo restores cleared strokes', () {
+      final state = VttState();
+      final s1 = DrawStroke(
+        points: [const Offset(0, 0)],
+        color: const Color(0xFFFF0000),
+        width: 1.0,
+      );
+      final s2 = DrawStroke(
+        points: [const Offset(5, 5)],
+        color: const Color(0xFF00FF00),
+        width: 2.0,
+      );
+
+      state.addStroke(s1);
+      state.addStroke(s2);
+      state.clearDrawings();
+      expect(state.strokes, isEmpty);
+
+      state.undo();
+      expect(state.strokes.length, 2);
+    });
+
+    test('redo re-clears after undo of clearDrawings', () {
+      final state = VttState();
+      state.addStroke(DrawStroke(
+        points: [const Offset(0, 0)],
+        color: const Color(0xFFFF0000),
+        width: 1.0,
+      ));
+
+      state.clearDrawings();
+      state.undo();
+      expect(state.strokes.length, 1);
+
+      state.redo();
+      expect(state.strokes, isEmpty);
+    });
+  });
+
+  group('undo stack limits', () {
+    test('new action clears redo stack', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+
+      state.applyBrushReveal([0]);
+      state.undo();
+      expect(state.canRedo, true);
+
+      // New action should clear redo
+      state.applyBrushReveal([1]);
+      expect(state.canRedo, false);
+    });
+
+    test('undo stack is capped at 50', () {
+      final state = VttState();
+
+      for (int i = 0; i < 60; i++) {
+        state.togglePortal(i);
+      }
+
+      // Should have at most 50 undo entries
+      int undoCount = 0;
+      while (state.canUndo) {
+        state.undo();
+        undoCount++;
+      }
+      expect(undoCount, 50);
+    });
+
+    test('undo on empty stack does nothing', () {
+      final state = VttState();
+      expect(state.canUndo, false);
+
+      int count = 0;
+      state.addListener(() => count++);
+      state.undo();
+      expect(count, 0);
+    });
+
+    test('redo on empty stack does nothing', () {
+      final state = VttState();
+      expect(state.canRedo, false);
+
+      int count = 0;
+      state.addListener(() => count++);
+      state.redo();
+      expect(count, 0);
+    });
+  });
+
+  group('undo/redo: mixed action types interleaved', () {
+    /// Builds a state ready for mixed token / fog / portal / stroke actions.
+    VttState newState() {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+      // Provide fake portals so togglePortal has something to flip.
+      state.loadMap(_makeMinimalUvttBytes(
+        gridCols: 6,
+        gridRows: 6,
+        portals: [
+          {
+            'position': {'x': 0.5, 'y': 0.5},
+            'bounds': [
+              {'x': 0, 'y': 0},
+              {'x': 1, 'y': 0},
+            ],
+            'rotation': 0,
+            'closed': true,
+            'freestanding': false,
+          },
+        ],
+      ));
+      // loadMap initialises openPortals from the file (closed -> not in set),
+      // so the first togglePortal(0) opens it.
+      state.openPortals.clear();
+      return state;
+    }
+
+    test('undo unwinds a fog -> token -> stroke -> portal sequence', () {
+      final state = newState();
+      // 1. reveal a fog cell
+      state.applyBrushReveal([5]);
+      // 2. add a token
+      state.addToken(2, 2);
+      final tokenId = state.tokens.first.id;
+      // 3. add a stroke
+      final stroke = DrawStroke(
+        points: const [Offset(0, 0), Offset(1, 1)],
+        color: const Color(0xFFFFFFFF),
+        width: 2.0,
+      );
+      state.addStroke(stroke);
+      // 4. open a portal
+      state.togglePortal(0);
+
+      expect(state.revealedCells, contains(5));
+      expect(state.tokens.length, 1);
+      expect(state.strokes.length, 1);
+      expect(state.openPortals.contains(0), isTrue);
+
+      // Undo in reverse order: portal -> stroke -> token -> fog
+      state.undo();
+      expect(state.openPortals.contains(0), isFalse);
+      expect(state.tokens.length, 1);
+      expect(state.strokes.length, 1);
+      expect(state.revealedCells, contains(5));
+
+      state.undo();
+      expect(state.strokes.length, 0);
+      expect(state.tokens.length, 1);
+
+      state.undo();
+      expect(state.tokens.length, 0);
+      // ID is gone too.
+      expect(state.tokens.any((t) => t.id == tokenId), isFalse);
+      expect(state.revealedCells, contains(5));
+
+      state.undo();
+      expect(state.revealedCells.contains(5), isFalse);
+      expect(state.canUndo, isFalse);
+    });
+
+    test('redo replays the same mixed sequence forward', () {
+      final state = newState();
+      state.applyBrushReveal([7]);
+      state.addToken(1, 1);
+      state.togglePortal(0);
+
+      // Unwind everything.
+      state.undo();
+      state.undo();
+      state.undo();
+      expect(state.canUndo, isFalse);
+      expect(state.canRedo, isTrue);
+      expect(state.revealedCells.contains(7), isFalse);
+      expect(state.tokens, isEmpty);
+      expect(state.openPortals.contains(0), isFalse);
+
+      // Redo all three in order.
+      state.redo();
+      expect(state.revealedCells.contains(7), isTrue);
+      state.redo();
+      expect(state.tokens.length, 1);
+      state.redo();
+      expect(state.openPortals.contains(0), isTrue);
+      expect(state.canRedo, isFalse);
+    });
+
+    test('a new action mid-undo discards the redo tail', () {
+      final state = newState();
+      state.applyBrushReveal([1]);
+      state.addToken(0, 0);
+      state.applyBrushReveal([2]);
+      // canRedo is false here.
+      state.undo(); // undoes the [2] reveal
+      state.undo(); // undoes the token
+      expect(state.canRedo, isTrue);
+
+      // Now do something new instead of redoing.
+      state.togglePortal(0);
+      expect(state.canRedo, isFalse,
+          reason: 'new action must clear the redo stack');
+      // Undo should walk back through: portal, then [1] reveal.
+      state.undo();
+      expect(state.openPortals.contains(0), isFalse);
+      state.undo();
+      expect(state.revealedCells.contains(1), isFalse);
+      expect(state.canUndo, isFalse);
+    });
+
+    test('partial redo then new action drops only the unrediscovered tail', () {
+      final state = newState();
+      state.applyBrushReveal([1]);
+      state.applyBrushReveal([2]);
+      state.applyBrushReveal([3]);
+      state.undo();
+      state.undo();
+      // canRedo: 2 entries pending (the [2] and [3] reveals).
+      state.redo(); // re-applies the [2] reveal
+      expect(state.revealedCells.contains(2), isTrue);
+      expect(state.revealedCells.contains(3), isFalse);
+      expect(state.canRedo, isTrue);
+
+      // New action — this should clear the remaining redo (the [3] reveal).
+      state.addToken(4, 4);
+      expect(state.canRedo, isFalse);
+      // Undo walks back: token, [2], [1] — three steps.
+      state.undo();
+      expect(state.tokens, isEmpty);
+      state.undo();
+      expect(state.revealedCells.contains(2), isFalse);
+      state.undo();
+      expect(state.revealedCells.contains(1), isFalse);
+      expect(state.canUndo, isFalse);
+    });
+  });
+
+  group('clearMap resets undo and shadow', () {
+    test('clearMap clears undo stack', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.loadMap(_makeMinimalUvttBytes());
+      state.togglePortal(0);
+      expect(state.canUndo, true);
+
+      state.clearMap();
+      expect(state.canUndo, false);
+      expect(state.canRedo, false);
+    });
+
+    test('clearMap clears shadow cells', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes());
+      state.shadowRevealCells = {1, 2, 3};
+      state.shadowHideCells = {4, 5};
+
+      state.clearMap();
+      expect(state.shadowRevealCells, isEmpty);
+      expect(state.shadowHideCells, isEmpty);
+    });
+  });
+
+  // ===== Shadow mode tests =====
+
+  group('shadow mode: brush operations', () {
+    test('applyBrushReveal in shadow mode adds to shadowRevealCells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = true;
+
+      state.applyBrushReveal([0, 1, 2]);
+      expect(state.shadowRevealCells, containsAll([0, 1, 2]));
+      expect(state.revealedCells, isEmpty); // not committed yet
+    });
+
+    test('applyBrushReveal in shadow hide mode adds to shadowHideCells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = false;
+
+      state.applyBrushReveal([3, 4]);
+      expect(state.shadowHideCells, containsAll([3, 4]));
+      expect(state.shadowRevealCells, isEmpty);
+    });
+
+    test('shadow reveal removes from shadowHideCells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = false;
+      state.applyBrushReveal([5]); // add to hide set
+      expect(state.shadowHideCells, contains(5));
+
+      state.revealMode = true;
+      state.applyBrushReveal([5]); // should move to reveal set
+      expect(state.shadowRevealCells, contains(5));
+      expect(state.shadowHideCells, isNot(contains(5)));
+    });
+
+    test('shadow hide removes from shadowRevealCells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = true;
+      state.applyBrushReveal([10]); // add to reveal set
+
+      state.revealMode = false;
+      state.applyBrushReveal([10]); // should move to hide set
+      expect(state.shadowHideCells, contains(10));
+      expect(state.shadowRevealCells, isNot(contains(10)));
+    });
+  });
+
+  group('shadow mode: toggleReveal', () {
+    test('toggleReveal in shadow mode routes to shadow sets', () {
+      final state = VttState();
+      state.shadowMode = true;
+
+      // Cell not in revealedCells and not in shadow -> goes to shadowReveal
+      state.toggleReveal(3);
+      expect(state.shadowRevealCells, contains(3));
+      expect(state.revealedCells, isNot(contains(3)));
+
+      // Toggle again -> removes from shadowReveal
+      state.toggleReveal(3);
+      expect(state.shadowRevealCells, isNot(contains(3)));
+    });
+
+    test('toggleReveal on revealed cell in shadow mode adds to shadowHide', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealedCells = {7};
+
+      state.toggleReveal(7);
+      expect(state.shadowHideCells, contains(7));
+      expect(state.revealedCells, contains(7)); // not removed yet
+    });
+  });
+
+  group('shadow mode: revealAll / hideAll', () {
+    test('revealAll in shadow mode fills shadowRevealCells', () {
+      final state = VttState();
+      state.shadowMode = true;
+
+      state.revealAll(20);
+      expect(state.shadowRevealCells.length, 20);
+      expect(state.shadowHideCells, isEmpty);
+      expect(state.revealedCells, isEmpty); // not committed
+    });
+
+    test('hideAll in shadow mode fills shadowHideCells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealedCells = {0, 1, 2};
+
+      state.hideAll();
+      expect(state.shadowHideCells, containsAll([0, 1, 2]));
+      expect(state.shadowRevealCells, isEmpty);
+      expect(state.revealedCells, containsAll([0, 1, 2])); // not removed yet
+    });
+  });
+
+  group('shadow mode: commit and clear', () {
+    test('commitShadow merges reveal cells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = true;
+
+      state.applyBrushReveal([0, 1, 2]);
+      state.commitShadow();
+
+      expect(state.revealedCells, containsAll([0, 1, 2]));
+      expect(state.shadowRevealCells, isEmpty);
+      expect(state.shadowHideCells, isEmpty);
+    });
+
+    test('commitShadow merges hide cells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealedCells = {0, 1, 2, 3};
+      state.revealMode = false;
+
+      state.applyBrushReveal([1, 2]);
+      state.commitShadow();
+
+      expect(state.revealedCells, {0, 3});
+      expect(state.shadowHideCells, isEmpty);
+    });
+
+    test('clearShadow discards pending shadow cells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = true;
+
+      state.applyBrushReveal([0, 1, 2]);
+      state.clearShadow();
+
+      expect(state.shadowRevealCells, isEmpty);
+      expect(state.shadowHideCells, isEmpty);
+      expect(state.revealedCells, isEmpty); // nothing committed
+    });
+
+    test('toggleShadowMode clears shadow cells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.shadowRevealCells = {1, 2};
+
+      state.toggleShadowMode();
+      expect(state.shadowMode, false);
+      expect(state.shadowRevealCells, isEmpty);
+      expect(state.shadowHideCells, isEmpty);
+    });
+  });
+
+  // ===== Shadow + Undo tests =====
+
+  group('shadow + undo integration', () {
+    test('commitShadow pushes ShadowCommitAction', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = true;
+
+      state.applyBrushReveal([0, 1, 2]);
+      state.commitShadow();
+
+      expect(state.canUndo, true);
+      expect(state.revealedCells, containsAll([0, 1, 2]));
+    });
+
+    test('undo reverses commitShadow reveal', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = true;
+
+      state.applyBrushReveal([5, 6, 7]);
+      state.commitShadow();
+      expect(state.revealedCells, containsAll([5, 6, 7]));
+
+      state.undo();
+      expect(state.revealedCells, isEmpty);
+    });
+
+    test('undo reverses commitShadow hide', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealedCells = {10, 11, 12};
+      state.revealMode = false;
+
+      state.applyBrushReveal([10, 11]);
+      state.commitShadow();
+      expect(state.revealedCells, {12});
+
+      state.undo();
+      expect(state.revealedCells, containsAll([10, 11, 12]));
+    });
+
+    test('redo re-applies commitShadow', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = true;
+
+      state.applyBrushReveal([20, 21]);
+      state.commitShadow();
+      state.undo();
+      expect(state.revealedCells, isEmpty);
+
+      state.redo();
+      expect(state.revealedCells, containsAll([20, 21]));
+    });
+
+    test('commitShadow with no changes does not push undo', () {
+      final state = VttState();
+      state.shadowMode = true;
+
+      // Commit with empty shadow sets
+      state.commitShadow();
+      expect(state.canUndo, false);
+    });
+
+    test('commitShadow only records actually changed cells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealedCells = {0, 1}; // already revealed
+      state.revealMode = true;
+
+      state.applyBrushReveal([0, 1, 2, 3]); // 0,1 already revealed
+      state.commitShadow();
+
+      // Undo should only remove 2 and 3 (the actually changed ones)
+      state.undo();
+      expect(state.revealedCells, containsAll([0, 1]));
+      expect(state.revealedCells, isNot(contains(2)));
+      expect(state.revealedCells, isNot(contains(3)));
+    });
+  });
+
+  group('shadow state serialization', () {
+    test('toJson includes shadow fields', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.shadowRevealCells = {1, 2};
+      state.shadowHideCells = {3, 4};
+
+      final json = state.toJson();
+      expect(json['shadowMode'], true);
+      expect(json['shadowRevealCells'], containsAll([1, 2]));
+      expect(json['shadowHideCells'], containsAll([3, 4]));
+    });
+
+    test('applyRemoteState restores shadow fields', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.shadowRevealCells = {10, 11};
+      state.shadowHideCells = {20};
+
+      final json = state.toJson();
+
+      final restored = VttState();
+      restored.applyRemoteState(json);
+      expect(restored.shadowMode, true);
+      expect(restored.shadowRevealCells, containsAll([10, 11]));
+      expect(restored.shadowHideCells, contains(20));
+    });
+
+    test('applyRemoteState uses defaults for missing shadow fields', () {
+      // Old format without shadow fields
+      final oldJson = {
+        'revealedCells': <int>[],
+        'openPortals': <int>[],
+        'showGrid': true,
+        'fogEnabled': true,
+        'showWalls': false,
+        'brushRadius': 1,
+        'revealMode': true,
+        'tvWidthInches': null,
+        'calibratedBaseZoom': null,
+      };
+
+      final restored = VttState();
+      restored.applyRemoteState(oldJson);
+      expect(restored.shadowMode, false); // matches the field default (companion overhaul)
+      expect(restored.shadowRevealCells, isEmpty);
+      expect(restored.shadowHideCells, isEmpty);
+    });
+  });
+
+  // ===== Room reveal tests =====
+
+  group('revealRoom', () {
+    test('revealRoom in live mode reveals cells and pushes undo', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+
+      state.revealRoom({0, 1, 2, 5, 6});
+      expect(state.revealedCells, containsAll([0, 1, 2, 5, 6]));
+      expect(state.canUndo, true);
+
+      state.undo();
+      expect(state.revealedCells, isEmpty);
+    });
+
+    test('revealRoom in live mode hide removes cells and pushes undo', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealedCells = {0, 1, 2, 3, 4, 5};
+      state.revealMode = false;
+
+      state.revealRoom({1, 2, 3});
+      expect(state.revealedCells, {0, 4, 5});
+      expect(state.canUndo, true);
+
+      state.undo();
+      expect(state.revealedCells, containsAll([0, 1, 2, 3, 4, 5]));
+    });
+
+    test('revealRoom in shadow mode adds to shadow sets', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = true;
+
+      state.revealRoom({10, 11, 12});
+      expect(state.shadowRevealCells, containsAll([10, 11, 12]));
+      expect(state.revealedCells, isEmpty); // not committed yet
+    });
+
+    test('revealRoom in shadow hide mode adds to shadowHideCells', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = false;
+
+      state.revealRoom({20, 21});
+      expect(state.shadowHideCells, containsAll([20, 21]));
+      expect(state.shadowRevealCells, isEmpty);
+    });
+
+    test('revealRoom in shadow mode clears opposite shadow set', () {
+      final state = VttState();
+      state.shadowMode = true;
+      state.revealMode = false;
+      state.applyBrushReveal([5]); // add to shadowHideCells
+      expect(state.shadowHideCells, contains(5));
+
+      state.revealMode = true;
+      state.revealRoom({5}); // should move to reveal set
+      expect(state.shadowRevealCells, contains(5));
+      expect(state.shadowHideCells, isNot(contains(5)));
+    });
+
+    test('revealRoom in live mode only records changed cells in undo', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+      state.revealedCells = {0, 1}; // already revealed
+
+      state.revealRoom({0, 1, 2, 3}); // 0,1 already revealed
+      expect(state.revealedCells, containsAll([0, 1, 2, 3]));
+
+      state.undo();
+      expect(state.revealedCells, containsAll([0, 1]));
+      expect(state.revealedCells, isNot(contains(2)));
+      expect(state.revealedCells, isNot(contains(3)));
+    });
+
+    test('revealRoom with no actual changes does not push undo', () {
+      final state = VttState();
+      state.shadowMode = false;
+      state.revealMode = true;
+      state.revealedCells = {0, 1, 2};
+
+      state.revealRoom({0, 1, 2}); // all already revealed
+      expect(state.canUndo, false);
+    });
+  });
+
+  // ===== AoE template tests =====
+
+  group('AoE template', () {
+    test('setAoe sets activeAoe', () {
+      final state = VttState();
+      expect(state.activeAoe, isNull);
+
+      final template = AoeTemplate(
+        shape: AoeShape.circle,
+        originX: 5.0,
+        originY: 3.0,
+        radius: 4.0,
+      );
+      state.setAoe(template);
+
+      expect(state.activeAoe, isNotNull);
+      expect(state.activeAoe!.shape, AoeShape.circle);
+      expect(state.activeAoe!.originX, 5.0);
+      expect(state.activeAoe!.radius, 4.0);
+    });
+
+    test('clearAoe sets activeAoe to null', () {
+      final state = VttState();
+      state.setAoe(AoeTemplate(
+        shape: AoeShape.cone,
+        originX: 1.0,
+        originY: 2.0,
+        radius: 3.0,
+        angle: 1.5,
+      ));
+      expect(state.activeAoe, isNotNull);
+
+      state.clearAoe();
+      expect(state.activeAoe, isNull);
+    });
+
+    test('setAoe notifies listeners', () {
+      final state = VttState();
+      int count = 0;
+      state.addListener(() => count++);
+
+      state.setAoe(AoeTemplate(
+        shape: AoeShape.line,
+        originX: 0.0,
+        originY: 0.0,
+        radius: 6.0,
+      ));
+      expect(count, 1);
+    });
+
+    test('clearAoe notifies listeners', () {
+      final state = VttState();
+      state.setAoe(AoeTemplate(
+        shape: AoeShape.square,
+        originX: 0.0,
+        originY: 0.0,
+        radius: 2.0,
+      ));
+
+      int count = 0;
+      state.addListener(() => count++);
+      state.clearAoe();
+      expect(count, 1);
+    });
+
+    test('setAoe replaces previous template', () {
+      final state = VttState();
+
+      state.setAoe(AoeTemplate(
+        shape: AoeShape.circle,
+        originX: 1.0,
+        originY: 1.0,
+        radius: 2.0,
+      ));
+      state.setAoe(AoeTemplate(
+        shape: AoeShape.cone,
+        originX: 5.0,
+        originY: 5.0,
+        radius: 3.0,
+        angle: 1.0,
+      ));
+
+      expect(state.activeAoe!.shape, AoeShape.cone);
+      expect(state.activeAoe!.originX, 5.0);
+    });
+  });
+
+  // ===== editToken with conditions in serialization =====
+
+  group('editToken conditions in toJson', () {
+    test('editToken with conditions persists in toJson round-trip', () {
+      final state = VttState();
+      state.addToken(2, 3);
+      final id = state.tokens.first.id;
+
+      state.editToken(id,
+          name: 'Dragon',
+          maxHp: 200,
+          currentHp: 180,
+          conditions: {'frightened', 'poisoned', 'concentrating'});
+
+      final json = state.toJson();
+      final restored = VttState();
+      restored.applyRemoteState(json);
+
+      expect(restored.tokens.length, 1);
+      final token = restored.tokens.first;
+      expect(token.name, 'Dragon');
+      expect(token.maxHp, 200);
+      expect(token.currentHp, 180);
+      expect(token.conditions, containsAll(['frightened', 'poisoned', 'concentrating']));
+    });
+  });
+
+  // ===== InteractionMode enum completeness =====
+
+  group('InteractionMode enum', () {
+    test('InteractionMode.aoe exists and can be set', () {
+      final state = VttState();
+      state.setInteractionMode(InteractionMode.aoe);
+      expect(state.interactionMode, InteractionMode.aoe);
+    });
+
+    test('InteractionMode.roomReveal exists and can be set', () {
+      final state = VttState();
+      state.setInteractionMode(InteractionMode.roomReveal);
+      expect(state.interactionMode, InteractionMode.roomReveal);
+    });
+
+    test('InteractionMode.aoe serializes correctly', () {
+      final state = VttState();
+      state.setInteractionMode(InteractionMode.aoe);
+
+      final json = state.toJson();
+      expect(json['interactionMode'], 'aoe');
+
+      final restored = VttState();
+      restored.applyRemoteState(json);
+      expect(restored.interactionMode, InteractionMode.aoe);
+    });
+
+    test('InteractionMode.roomReveal serializes correctly', () {
+      final state = VttState();
+      state.setInteractionMode(InteractionMode.roomReveal);
+
+      final json = state.toJson();
+      expect(json['interactionMode'], 'roomReveal');
+
+      final restored = VttState();
+      restored.applyRemoteState(json);
+      expect(restored.interactionMode, InteractionMode.roomReveal);
+    });
+  });
+
+  group('Ruler overlay', () {
+    test('toggleRuler() flips visibility', () {
+      final state = VttState();
+      expect(state.rulerVisible, false);
+      state.toggleRuler();
+      expect(state.rulerVisible, true);
+      state.toggleRuler();
+      expect(state.rulerVisible, false);
+    });
+
+    test('rotateRulerCW() cycles 0 -> 90 -> 180 -> 270 -> 0', () {
+      final state = VttState();
+      expect(state.rulerRotation, 0);
+      state.rotateRulerCW();
+      expect(state.rulerRotation, 90);
+      state.rotateRulerCW();
+      expect(state.rulerRotation, 180);
+      state.rotateRulerCW();
+      expect(state.rulerRotation, 270);
+      state.rotateRulerCW();
+      expect(state.rulerRotation, 0);
+    });
+
+    test('rotateRulerCW() turns around the middle of the L', () {
+      final state = VttState()..placeRuler(12, 8, 0);
+      expect(state.rulerCenter, const Offset(12, 8));
+      for (final deg in [90, 180, 270, 0]) {
+        state.rotateRulerCW();
+        expect(state.rulerRotation, deg);
+        expect(state.rulerCenter.dx, closeTo(12, 1e-9));
+        expect(state.rulerCenter.dy, closeTo(8, 1e-9));
+      }
+    });
+
+    test('placeRuler() centres the L and normalises the rotation', () {
+      final state = VttState()..placeRuler(10, 10, 0);
+      // Unrotated: corner half an arm left of and below the centre
+      expect(state.rulerX, 10 - VttState.rulerArmSquares / 2);
+      expect(state.rulerY, 10 + VttState.rulerArmSquares / 2);
+      state.placeRuler(3, 4, -90);
+      expect(state.rulerRotation, 270);
+      expect(state.rulerCenter.dx, closeTo(3, 1e-9));
+      expect(state.rulerCenter.dy, closeTo(4, 1e-9));
+    });
+
+    test('placeRuler() does not fire onRulerMoved (the TV places it)', () {
+      var moved = false;
+      final state = VttState()..onRulerMoved = (_, _) => moved = true;
+      state.placeRuler(5, 5, 90);
+      expect(moved, isFalse);
+    });
+
+    test('setTvWidthInches() clamps to a plausible screen', () {
+      final state = VttState();
+      state.setTvWidthInches(36.2);
+      expect(state.tvWidthInches, 36.2);
+      state.setTvWidthInches(1);
+      expect(state.tvWidthInches, TableGrid.minScreenWidthInches);
+      state.setTvWidthInches(500);
+      expect(state.tvWidthInches, TableGrid.maxScreenWidthInches);
+    });
+
+    test('setRulerPosition() sets coordinates', () {
+      final state = VttState();
+      state.setRulerPosition(3.5, 7.2);
+      expect(state.rulerX, 3.5);
+      expect(state.rulerY, 7.2);
+    });
+
+    test('toJson / applyRemoteState round-trip includes ruler fields', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes());
+      state.rulerVisible = true;
+      state.rulerX = 2.5;
+      state.rulerY = 4.0;
+      state.rulerRotation = 180;
+
+      final json = state.toJson();
+      expect(json['rulerVisible'], true);
+      expect(json['rulerX'], 2.5);
+      expect(json['rulerY'], 4.0);
+      expect(json['rulerRotation'], 180);
+
+      final restored = VttState();
+      restored.applyRemoteState(json);
+      expect(restored.rulerVisible, true);
+      expect(restored.rulerX, 2.5);
+      expect(restored.rulerY, 4.0);
+      expect(restored.rulerRotation, 180);
+    });
+
+    test('applyRemoteState with missing ruler fields uses defaults', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes());
+      final json = state.toJson();
+      // Simulate an old state message without ruler fields
+      json.remove('rulerVisible');
+      json.remove('rulerX');
+      json.remove('rulerY');
+      json.remove('rulerRotation');
+
+      final restored = VttState();
+      restored.applyRemoteState(json);
+      expect(restored.rulerVisible, false);
+      expect(restored.rulerX, 0);
+      expect(restored.rulerY, 0);
+      expect(restored.rulerRotation, 0);
+    });
+  });
+
+  group('loading a map starts a clean session', () {
+    test('loadMap drops tokens, measure, AoE, ruler and undo of the previous map', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes(gridCols: 10, gridRows: 8));
+      state.addToken(2, 3);
+      state.addToken(4, 4);
+      state.applyBrushReveal([1, 2, 3]);
+      state.measureStart = const Offset(0, 0);
+      state.measureEnd = const Offset(100, 0);
+      state.rulerVisible = true;
+      expect(state.canUndo, isTrue);
+
+      state.loadMap(_makeMinimalUvttBytes(gridCols: 12, gridRows: 9));
+
+      expect(state.tokens, isEmpty);
+      expect(state.strokes, isEmpty);
+      expect(state.revealedCells, isEmpty);
+      expect(state.measureStart, isNull);
+      expect(state.activeAoe, isNull);
+      expect(state.rulerVisible, isFalse);
+      expect(state.canUndo, isFalse);
+    });
+
+    test('loadPdfAsMap drops the previous tokens too', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes());
+      state.addToken(1, 1);
+
+      state.loadPdfAsMap(Uint8List(0),
+          gridCols: 20, gridRows: 15, imageWidth: 2000, imageHeight: 1500);
+
+      expect(state.tokens, isEmpty);
+    });
+  });
+
+  group('applyRemoteGrid (raster map grid from the TV)', () {
+    test('re-grids an image map to the TV\'s grid, keeping the picture', () {
+      final state = VttState();
+      final picture = Uint8List.fromList([1, 2, 3]);
+      // Loaded with the previous map's grid, as the companion used to guess.
+      state.loadPdfAsMap(picture,
+          gridCols: 19, gridRows: 14, imageWidth: 1300, imageHeight: 1248);
+
+      final changed = state.applyRemoteGrid({'gridCols': 25, 'gridRows': 24});
+
+      expect(changed, isTrue);
+      expect(state.map!.resolution.mapSize, const Offset(25, 24));
+      expect(state.map!.resolution.pixelsPerGrid, 52);
+      expect(state.map!.imageBytes, same(picture));
+      expect(state.rasterImageSize, const Size(1300, 1248));
+    });
+
+    test('does nothing when the grid already matches', () {
+      final state = VttState();
+      state.loadPdfAsMap(Uint8List(0),
+          gridCols: 25, gridRows: 24, imageWidth: 1300, imageHeight: 1248);
+      state.revealAll(600);
+
+      expect(state.applyRemoteGrid({'gridCols': 25, 'gridRows': 24}), isFalse);
+      expect(state.revealedCells, hasLength(600));
+    });
+
+    test('never touches a .dd2vtt map, whose grid is in the file', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes(gridCols: 10, gridRows: 8));
+
+      expect(state.rasterImageSize, isNull);
+      expect(state.applyRemoteGrid({'gridCols': 25, 'gridRows': 24}), isFalse);
+      expect(state.map!.resolution.mapSize, const Offset(10, 8));
+    });
+
+    test('ignores a state without a map grid (TV in the library)', () {
+      final state = VttState();
+      state.loadPdfAsMap(Uint8List(0),
+          gridCols: 20, gridRows: 15, imageWidth: 2000, imageHeight: 1500);
+
+      expect(state.applyRemoteGrid({'gridCols': null, 'gridRows': null}), isFalse);
+      expect(state.applyRemoteGrid({}), isFalse);
+      expect(state.map!.resolution.mapSize, const Offset(20, 15));
+    });
+
+    test('clearMap forgets the picture size', () {
+      final state = VttState();
+      state.loadPdfAsMap(Uint8List(0),
+          gridCols: 20, gridRows: 15, imageWidth: 2000, imageHeight: 1500);
+      state.clearMap();
+
+      expect(state.rasterImageSize, isNull);
+      expect(state.applyRemoteGrid({'gridCols': 25, 'gridRows': 24}), isFalse);
+    });
+  });
+}

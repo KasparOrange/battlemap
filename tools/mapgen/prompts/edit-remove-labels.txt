@@ -1,0 +1,7 @@
+This is a photographed page of a printed top-down fantasy dungeon battlemap.
+
+Edit the image as follows. Keep everything else exactly as it is: same framing, scale, position of every wall, room, corridor, door, grid line and object, same photo colors and texture. Do not straighten, crop, zoom, re-draw or restyle the map.
+
+1. Remove all writing and labels: every white circle with a room number, every caption and every arrow. Where they were, continue whatever is underneath: the floor tiles with their thin grid lines, or the stone.
+2. Remove every bold black letter "S" sitting on a wall (secret-door marks). The wall under it continues as a normal, unbroken wall.
+3. Remove every red letter "T" and any red dashed square around one (trap marks). Continue the floor or wall underneath.
