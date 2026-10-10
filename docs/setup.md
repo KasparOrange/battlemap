@@ -29,7 +29,7 @@ two Python servers run on the VPS (the log server is retired — logs go to MwLo
 | service | port | purpose |
 |---------|------|---------|
 | `tools/vtt_relay.py` | 9090 | WebSocket relay between TV and phone |
-| `tools/dev_server.py` | 4242 | HTTP server: web build, APK download, map uploads (7-day cleanup; DM layer pictures in `uploads/dm/` and the **shared map library** in `uploads/library/` + `index.json` are kept — `relay-protocol.md` "shared map library") |
+| `tools/dev_server.py` | 4242 | HTTP server: web build, APK download, map uploads (7-day cleanup; DM layer pictures in `uploads/dm/` and the **shared map library** in `uploads/library/` + `index.json` are kept — `relay-protocol.md` "shared map library"); converts library uploads (`?format=webp`) and fetches links (`/fetch`) with **Pillow** — `sudo apt install python3-pil` (on the VPS since 2026-10-10; without it maps are stored as they came) |
 
 ### starting services
 
@@ -159,9 +159,10 @@ or from the Mac: `tools/deploy.sh tv` (rolling deploy, below). What it rests on,
   `cmd hdmi_control cec_setting set tv_send_standby_on_sleep 0` (the box no longer sends
   the TV to standby when it sleeps). Changing *Energy saver* in the box's settings brings it
   back. Check: `dumpsys power | grep -E 'Attentive timeout|mStayOn='`.
-- **TV set off, box fine** (2026-10-10, 21:40): the table TV is an old Thomson (made by TCL,
-  so its EDID says TCL). Its own EU auto standby turns it off 4 h after the last key on *its*
-  remote, and nothing on the box resets that. It doesn't answer HDMI-CEC (every
+- **TV set off, box fine** (2026-10-10, 21:40): the TV in use that night is an old Thomson, not
+  Konrad's own set (Thomson TVs are made by TCL, so its EDID says TCL). Its own EU auto
+  standby turns it off 4 h after the last key on *its* remote, and nothing on the box resets
+  that. It doesn't answer HDMI-CEC (every
   `<Text View On>` NACKs in `dumpsys hdmi_control`), so the box remote's red button only
   toggles the box, not the TV. Wake it with the buttons on the TV itself; the auto standby has to
   be switched off in the TV's menu, also from those buttons. How to tell which side died:
@@ -229,7 +230,7 @@ window | grep navigationBars` → `visible=false`.
 
 ```bash
 flutter test                    # run all unit tests
-python3 tools/test_dev_server.py   # dev server: shared map library endpoints (temp dir, no network)
+python3 tools/test_dev_server.py   # dev server: shared map library, conversion, link fetch (temp dir, no network)
 flutter analyze                 # check for errors
 ```
 
