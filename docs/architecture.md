@@ -30,14 +30,11 @@ tablet/phone (apk)      VPS (72.62.88.197)          TV (xiaomi box)
 the TV stores everything persistently in its app documents directory (on the Apple TV dev target this is purgeable Caches — `docs/apple-tv-dev.md`):
 
 ```
-<appDocDir>/
-  maps/
-    index.json              # map library index
-    <uuid>.dd2vtt           # raw map files
-    <uuid>_thumb.png        # lazy thumbnails
-  sessions/
-    <uuid>.json             # session state (fog, tokens, drawings, camera)
-    <uuid>_thumb.png        # lazy thumbnails
+Hive boxes (lib/storage/map_library.dart):
+  mapIndex     # map library index (MapLibraryEntry JSON per map id)
+  mapFiles     # raw map files: .dd2vtt, image or PDF bytes
+  sessions     # session state JSON (fog, tokens, drawings, camera, DM layer list)
+  thumbnails   # PNG map thumbnails, key map_<id> (made lazily, docs/sessions.md)
 ```
 
 ## interaction model

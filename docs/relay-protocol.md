@@ -170,7 +170,7 @@ companion downloads from VPS via HTTP.
 ```
 
 `vtt.setCamera` sets the TV camera to an absolute transform (world center, zoom clamped to the
-TV's calibrated minimum, angle in radians). The phone sends it once for "send this view to the
+TV's calibrated minimum, angle in radians). The phone sends it once for "Show my view on the
 TV" and throttled (≥ 80 ms apart) while "TV follows the tablet" is on. **The phone camera is
 independent of the TV camera** — the phone never applies the broadcast camera to its own view,
 it draws it as a dashed frame (see `camera.vw`/`vh` below).

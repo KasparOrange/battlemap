@@ -65,11 +65,14 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   decoded at most 4096 px on the long side. Still to check on the real Xiaomi: memory and look of
   the castle at TV scale (36 px per square after the shrink).
 
-## tabletop UX polish (2026-10-10, 1.1.7+17) — needs a device test
+## tabletop UX polish (2026-10-10, since 1.1.7+17) — needs a device test
 
 The UX review's tabletop items are built (archive 26-10-10 "tabletop UX polish"; tokens/HP items
-dropped as digital mode). Code + tests only — not yet on the bench or a device. Check on the
-tablet + TV:
+dropped as digital mode). The tablet half is on Konrad's tablet with 1.1.8+18 (panel, fog tab,
+camera labels, undo snackbars, Continue card, session names). The TV half — ruler centred in
+the TV's view, no door boxes on the TV, map thumbnails — needs the box on ≥ 1.1.7 (`deploy.sh
+tv`); with the box's 1.1.6+16 the library shows map icons only and the ruler starts at the map's
+corner. Check on the tablet + TV:
 - landscape tablet: panel is a rail on the right, tabs unfold beside it; portrait/phone: bottom sheet
 - Fog tab: Brush | Room, Reveal | Hide, "Players see changes: Instantly | Preview first"
 - Reveal all / Hide all / Clear drawings → snackbar with Undo that really undoes on the TV

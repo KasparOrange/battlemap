@@ -69,6 +69,6 @@ session thumbnails (with the fog) are not built; the library's "Continue" card u
 
 ## storage format
 
-sessions are JSON files at `<appDocDir>/sessions/<uuid>.json`. the session references a map by ID (the map is stored separately in the library).
+sessions are JSON strings in the Hive box `sessions`, keyed by uuid. the session references a map by ID (the map is stored separately in the library, box `mapFiles`).
 
 if a map is deleted, all its sessions are deleted too.

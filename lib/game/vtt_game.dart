@@ -528,7 +528,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
 
   /// Sets the camera transform with [zoom] clamped to [minZoom]..[maxZoom].
   ///
-  /// Used for `vtt.setCamera` on the TV and "match TV" on the phone.
+  /// Used for `vtt.setCamera` on the TV and "Jump to TV" on the phone.
   void applyCamera(double x, double y, double zoom, double angle) {
     syncCamera(x, y, zoom.clamp(minZoom, maxZoom), angle);
   }
@@ -549,7 +549,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   }
 
   /// Stores the TV's camera (phone side) for the viewport outline and
-  /// "match TV". No-op on the display.
+  /// "Jump to TV". No-op on the display.
   void setTvViewport(CameraSnapshot snapshot) {
     _tvCamera = snapshot;
   }

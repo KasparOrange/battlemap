@@ -189,6 +189,14 @@ flutter test                    # run all unit tests
 flutter analyze                 # check for errors
 ```
 
+Widget tests draw every glyph as a box of the Ahem test font (each letter a full square), so text
+is much wider than on a device: an overflow there may be a false alarm, and screenshots are
+unreadable. To *look* at a layout without the bench, load the SDK's real fonts in the test
+(`FontLoader('Roboto')` / `FontLoader('MaterialIcons')` from
+`$F/../bin/cache/artifacts/material_fonts/`, under `tester.runAsync`), wrap the widget in a
+`RepaintBoundary` and save `toImage()` as PNG — the 2026-10-10 side-panel check, cheaper than
+emulator screenshots. Roboto has no `✓`: it renders as a box, so the UI writes such hints in words.
+
 ## logs
 
 Logs go to **MwLog** — VictoriaLogs on this VPS, tenant `battlemap`

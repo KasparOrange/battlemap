@@ -229,16 +229,16 @@ class DmCallbacks {
 
   // ── Camera link (networked mode only) ─────────────────────────────
 
-  /// Turns continuous "TV follows the phone camera" on or off.
+  /// Turns continuous "TV follows the tablet" (the phone camera) on or off.
   final void Function(bool linked)? onSetCameraLink;
 
-  /// Sends the phone's current camera to the TV once.
+  /// Sends the phone's current camera to the TV once ("Show my view on the TV").
   final VoidCallback? onSendView;
 
-  /// Moves the phone camera to the TV's current view.
+  /// Moves the phone camera to the TV's current view ("Jump to TV").
   final VoidCallback? onMatchTv;
 
-  /// Fits the whole map into the phone screen (phone camera only).
+  /// Fits the whole map into the phone screen ("Fit on tablet", phone camera only).
   final VoidCallback? onPhoneZoomToFit;
 
   // ── DM picture layers ─────────────────────────────────────────────

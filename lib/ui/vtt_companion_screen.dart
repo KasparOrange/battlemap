@@ -112,7 +112,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
   bool _isLoading = false;
   Timer? _loadingTimeout;
 
-  // Camera link: TV follows the phone camera (throttled vtt.setCamera)
+  // Camera link: "TV follows the tablet" (throttled vtt.setCamera)
   bool _cameraLinked = false;
   Timer? _cameraSendTimer;
   CameraSnapshot? _pendingCamera;

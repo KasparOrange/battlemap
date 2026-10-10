@@ -83,7 +83,8 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
    panel — the template changes in place on both screens.
 3. Draw an arrow with the pen, change the width with the presets.
 4. Fog stroke → undo → redo; the buttons light up on the tablet.
-5. Ruler: 10 squares, rotate it on the Measure tab, drag it in any mode.
+5. Ruler: 10 squares, appears in the middle of what the TV shows; rotate it on the Measure tab
+   (turns in place, numbers stay upright), drag it in any mode.
 
 **4. up the tower (05 → 06 → 05)**
 1. Session on 05: reveal half, place 2 tokens.

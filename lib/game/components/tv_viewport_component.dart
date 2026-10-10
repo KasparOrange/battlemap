@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 ///
 /// Sent by the TV inside every `vtt.fullState` (`camera` object) and used
 /// on the phone to draw the TV's visible area as a dashed rectangle
-/// ([TvViewportComponent]) and to implement "match TV" / "send view".
+/// ([TvViewportComponent]) and to implement "Jump to TV" / "Show my view on the TV".
 ///
 /// See also:
 /// - [VttGame.getCameraState], which produces the JSON form.

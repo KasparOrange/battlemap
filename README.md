@@ -44,7 +44,9 @@ lightweight Python WebSocket relay running on a VPS.
 | [TvShell] | `lib/ui/tv_shell.dart` | TV entry point -- manages relay connection, map library, sessions, and view navigation. All interaction arrives via relay commands from the phone. |
 | [VttCompanionScreen] | `lib/ui/vtt_companion_screen.dart` | Phone DM controller -- file picker, DM control panel, local VttGame mirror. Sends commands to TV through the relay. |
 | [VttRelayClient] | `lib/network/vtt_relay_client.dart` | WebSocket client (web_socket_channel) -- works on both web and native. Handles registration, pairing, command/state forwarding, and chunked map transfers. |
-| [MapLibrary] | `lib/storage/map_library.dart` | Persistent on-device storage for .dd2vtt map files and saved sessions. Native-only (stubbed on web). |
+| [MapLibrary] | `lib/storage/map_library.dart` | Persistent on-device storage (Hive) for map files, saved sessions and map thumbnails. Native-only (stubbed on web). |
+| [MapThumbnails] | `lib/storage/map_thumbnails.dart` | Small PNG previews of library maps, made lazily on the TV while it shows the library and sent to the companion (`lib.thumbnail`). |
+| [ContinueSessionCard] | `lib/ui/library_cards.dart` | The companion library's top card (resume the last session), map thumbnails and dated default session names. |
 | [DeployRestore] | `lib/update/deploy_restore.dart` | Rolling deploy: launch routes `/restore` (TV reopens its game) and `/companion`, plus the TV's restore snapshot. |
 
 ### Data Model
@@ -53,7 +55,7 @@ lightweight Python WebSocket relay running on a VPS.
 |-------|------|---------|
 | [UvttMap] | `lib/model/uvtt_map.dart` | Parsed Universal VTT map -- resolution, walls, portals, lights, environment, and the embedded map image. |
 | [UvttParser] | `lib/model/uvtt_parser.dart` | Decodes `.dd2vtt` / `.uvtt` JSON files into [UvttMap] instances. |
-| [MapLibraryEntry] | `lib/model/map_library_entry.dart` | Metadata for a map stored in the TV's local library (grid size, file size, thumbnail path). |
+| [MapLibraryEntry] | `lib/model/map_library_entry.dart` | Metadata for a map stored in the TV's local library (grid size, file size, kind). |
 | [Session] | `lib/model/session.dart` | A saved gameplay session -- references a map and captures the full DM state snapshot (fog, portals, tokens, camera, DM layer list). |
 | [DmOverlay] | `lib/model/dm_overlay.dart` | One DM-only picture layer (VPS url, visible, opacity); the TV stores the list, only the companion draws it. |
 | [MapToken] | `lib/model/map_token.dart` | A single token on the grid (position, color, label). JSON-serializable. |

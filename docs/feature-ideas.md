@@ -66,7 +66,7 @@ these make the map visually stunning and give the DM atmosphere tools. no game m
 ### planned
 - [ ] **AI-generated maps** — layout we own → Nano Banana paints it → `.dd2vtt` with exact walls/doors; also variants (night, burning) on the same geometry. design: `docs/ai-art.md` (#40)
 - [ ] **grid configuration after load** — re-adjust grid offset, rotation, scale after loading. drag handles. essential for PDF maps that don't align.
-- [ ] **session thumbnails** — capture game canvas as PNG for library browser.
+- [ ] **session thumbnails** — capture game canvas (with its fog) as PNG for the library. *Map thumbnails are done (2026-10-10, `docs/sessions.md` "thumbnails"); the Continue card uses the map's.*
 - [ ] **multiple maps per session** — switch between dungeon floors without losing state per floor.
 - [ ] **map annotations (DM only)** — invisible sticky notes on the map. "trap here", "DC 15 lock". only visible on the phone.
 
@@ -103,6 +103,7 @@ these add game mechanics on top of the pen & paper visuals.
 - [x] VPS WebSocket relay (phone controls TV)
 - [ ] **direct TV connection without relay** — play without internet (friend's place, hotspot): TV hosts the WebSocket server on the LAN, phone connects to its IP. Pre-relay design, legacy `lib/network/vtt_server.dart` (#39)
 - [ ] **companion overhaul** — independent phone camera + TV viewport outline, bottom-sheet DM panel, ruler/measure/AoE fixes; full list `docs/action.md` (#38)
+- [x] **tabletop UX polish** — side panel on landscape tablets, Fog tab Brush | Room, camera tab by screen, ruler centred on the TV, door markers DM-only, undo snackbars, library Continue card + thumbnails (#43, 2026-10-10)
 - [x] map library with persistent storage (Hive)
 - [x] session save/restore (auto-save, resume)
 - [x] in-app updates (Shorebird OTA + APK fallback)
