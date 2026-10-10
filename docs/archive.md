@@ -6,6 +6,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 22:05 - TV stays awake - TV box no longer sleeps mid-game
+- Konrad: the TV turns itself off while the app is open — didn't we have stay-awake?
+	- we did and it works: the box held `KEEP_SCREEN_ON` for battlemap; the culprit is Google TV's inattentive sleep (`secure attentive_timeout` = 4 h without a remote key, ignores wake locks), then HDMI-CEC turns the TV off
+	- set to `-1` on the box over latrine; `tools/deploy.sh tv` re-applies it each deploy; `setup.md` "box asleep mid-game"
+
 ### 26-10-10 21:27 - 4c6e75db - Notices instead of snackbars
 - Konrad: redesign the tablet's snackbars (plain and with a button) as one reusable component, floating centred near the bottom, with a discreet countdown bar and a close button — and fix that they don't go away on their own
 	- cause of the bug: since the newer Flutter, a `SnackBar` with an action persists until tapped (`persist` defaults to true with an action) — every Undo and the "Reconnect" one (which also had a 1-day duration); and snackbars queued behind each other

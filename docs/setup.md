@@ -148,6 +148,13 @@ or from the Mac: `tools/deploy.sh tv` (rolling deploy, below). What it rests on,
   Behind the PIN lock `latrine android shot` shows only black or the lock screen and adb can't
   unlock it — someone has to. `tools/tv_ctl.py status` says `"relayState": "paired"` once the
   companion is back (2026-10-10: the tablet slept right after `deploy.sh tablet`).
+- **box asleep mid-game**: the TV app holds a wake lock (`WakelockPlus`, window flag
+  `KEEP_SCREEN_ON`), but Google TV's energy saver — *inattentive sleep*, `secure
+  attentive_timeout`, 4 h on the box — ignores wake locks and counts only remote keys, not the
+  tablet. After 4 h the box sleeps and HDMI-CEC switches the TV off. Set to `-1` (never) on the
+  box on 2026-10-10; `deploy.sh tv` sets it again on every deploy. Changing *Energy saver* in the
+  box's settings brings it back. Check: `dumpsys power | grep 'Attentive timeout'`. A TV set's own
+  "auto power off without remote input" (many TVs, often 4 h) is a separate menu on the TV.
 
 ### rolling deploy (mid-game patch, since 2026-10-10)
 

@@ -101,6 +101,10 @@ if has tv; then
   fi
 
   t0=$(date +%s)
+  # The app's wake lock keeps the screen on, but Google TV's energy saver
+  # ("inattentive sleep", 4 h without a remote key) ignores wake locks and
+  # puts the box to sleep — HDMI-CEC then turns the TV off. Off for good.
+  latrine android shell "settings put secure attentive_timeout -1" "$TV_DEVICE" >/dev/null || true
   latrine android install "$APK" "$TV_DEVICE"
   latrine android shell "am start -S -n $PKG/.MainActivity --es route '$route'" "$TV_DEVICE" >/dev/null
   if [ "$view" = game ] && [ -n "$session" ]; then
