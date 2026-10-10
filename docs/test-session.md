@@ -99,6 +99,10 @@ regressing; tokens are not part of tabletop play (`feature-ideas.md` "play modes
 4. Fog stroke → undo → redo; the buttons light up on the tablet.
 5. Ruler: 10 squares, appears in the middle of what the TV shows; rotate it on the Measure tab
    (turns in place, numbers stay upright), drag it in any mode.
+6. Template disc (Measure tab): switch it on → it appears in the middle of what the TV shows,
+   20 ft ring = 4 inches on the table; drag its middle or edge, turn it by the gold knob (cones
+   point at the finger); change something under Shape, close and reopen the tablet app → the
+   look comes back; Reset to defaults → classic disc, Undo reset → yours again.
 
 **4. up the tower (05 → 06 → 05)**
 1. Session on 05: reveal half, place 2 tokens.

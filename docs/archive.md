@@ -49,6 +49,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- `vtt.showCalibration` carries `pivot` (missing = bottom left, older companions work); the bar's length is a pure function of the width (`TableGrid.barInches`) so the tablet divides by the same length the TV draws
 	- 596 tests green (pivot geometry, fixed under a changed calibration, picker sends the pivot); the pattern checked as rendered pictures for three pivots; not in a build yet
 
+### 26-10-10 22:10 - 67d95074 - docs sweep: template disc
+- Konrad: /ty → README (feature line + companion paragraph), sessions.md (per-map fields), test-session.md (step 6), architecture.md (drag in every mode), action.md (table check), setup.md (Hive in widget tests hangs)
+
 ### 26-10-10 21:55 - 67d95074 - Template disc: look kept across restarts, reset, sections
 - Konrad: the shape's settings must be saved and come back after closing the app; a button to reset to the defaults; the settings better organised in sections
 	- saving existed (tablet Hive), but the saved look reached the map only when the disc was switched on — a disc already shown (resumed game, another map) kept the game's look; now the panel lays the saved look on a shown disc that differs (`_syncLook`, after the frame)

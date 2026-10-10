@@ -124,6 +124,13 @@ corner. Check on the tablet + TV:
 - still open from the review: pinch/two-finger pan and the real Xiaomi remote (not testable on the bench)
 
 ## kept on purpose: direct TV connection (no relay)
+## template disc (2026-10-10, 1.1.17+27 on the box, 1.1.18+28 on tablet + web) — needs a test at the table
+
+Measure tab ▸ Template disc (`architecture.md` "Template disc"). Check on the table: size against
+the acrylic disc (20 ft ring = 4 in), dragging middle/edge and the knob with minis standing on
+it, a token under the middle in the Tokens tab still drags the token, labels readable from the
+DM's side, the look coming back after closing the tablet app and in the next game, Reset + Undo.
+
 ## circle reveal (2026-10-10, 1.1.14+24 on box + tablet) — needs a test at the table
 
 Fog tab ▸ Circle (`architecture.md` "Circle reveal"). Check with a Dungeondraft map:

@@ -131,7 +131,8 @@ single-finger gestures route to the active tool:
 two-finger gestures (any pointer count > 1, detected by pointer count — not by pinch scale)
 always control the camera (pinch zoom + pan); the tool only starts on the first single-finger
 move, so a late second finger never paints. Scroll wheel zooms (desktop). The ruler, when
-visible, is draggable in every mode. Zoom is clamped to `[fit × 0.5, 10]`; the TV's one-inch
+visible, is draggable in every mode; so is the template disc (its middle or edge moves it, its
+gold knob turns it). Zoom is clamped to `[fit × 0.5, 10]`; the TV's one-inch
 scale is its table view (below), not a zoom clamp.
 
 **Phone camera vs TV camera (since 2026-09-06):** the phone's view is independent. The TV

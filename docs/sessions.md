@@ -41,7 +41,8 @@ sessions are stored on the TV's local disk and survive app restarts and updates.
 a session can hold more than one map. `mapId` is the map on the table and the fields above are
 its state; `mapIds` lists every map of the game in the order it joined, and `parkedMaps` keeps the
 state of each other map by map id — the per-map fields (`Session.perMapKeys`: fog, doors, grid
-and fog switches, table window, `mapFit`, tokens, drawings, map kind, ruler, DM layers, camera).
+and fog switches, table window, `mapFit`, tokens, drawings, map kind, ruler, template disc, DM
+layers, camera).
 switching (`Session.switchTo`) parks the table's map and brings the target's state back, or a
 fresh start for a map new to the game. name, settings, brush, draw colour and interaction mode
 belong to the game and carry over. sessions saved earlier load with one map.

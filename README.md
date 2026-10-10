@@ -3,7 +3,8 @@
 A Flutter app that turns a TV into a D&D digital battlemap, controlled from a phone.
 
 The TV lies flat on the table and players put their **real miniatures** on it (tabletop mode — the
-focus). The app makes the map come alive: fog of war, doors, measuring, drawing, atmosphere. Dice,
+focus). The app makes the map come alive: fog of war, doors, measuring (a ruler and an AoE
+template disc), drawing, atmosphere. Dice,
 HP and initiative stay on paper; a fully digital mode with tokens is a far-off stretch goal.
 
 ## How It Works
@@ -19,7 +20,9 @@ The same APK runs in two modes:
   squares a map has is set per map (the map's scale).
 - **Companion Mode** -- the DM's Android tablet or phone (same APK; the web
   build in a browser is a fallback) connects to the same relay. All map loading,
-  fog reveal, door toggling, measuring, drawing, and camera control happens here —
+  fog reveal, door toggling, measuring, drawing, and camera control happens here — the
+  Measure tab lays an **AoE template disc** on the map (radius rings, cubes and cones, rebuilt
+  from the acrylic disc and configurable; its look is kept on the tablet) —
   plus **DM layers**: any number of pictures (a DM version of the map, notes, secrets)
   laid over the map on the DM's screen only; the TV never shows them. A picture map's drawn
   grid is found by itself, and a full-screen grid editor fits the squares by hand to a hundredth
