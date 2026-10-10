@@ -22,7 +22,7 @@ client (player tablet, button-only remote) on the JSON relay protocol.
    will fix in the next session** — he did not list them; ask first, then fix from code.
 1. **Device test** (Konrad, phone + TV): walk the six tabs once. Specifically check
    - pinch/two-finger pan on the phone never paints fog; the dashed TV frame is where the TV
-     looks; "TV follows the phone" moves the TV live; "match TV" jumps the phone to it
+     looks; "TV follows the tablet" moves the TV live; "Jump to TV" jumps the tablet to it
    - undo/redo buttons light up after a fog stroke made from the phone
    - measure line and distance appear on the TV while dragging on the phone
    - AoE: tap places the chosen shape/size; drag aims a cone; the panel's shape/size buttons
@@ -65,23 +65,20 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   decoded at most 4096 px on the long side. Still to check on the real Xiaomi: memory and look of
   the castle at TV scale (36 px per square after the shrink).
 
-## UX review 2026-10-10 — open design decisions (Konrad picks)
+## tabletop UX polish (2026-10-10, 1.1.7+17) — needs a device test
 
-A helper played a session on the bench as a first-time DM (14 findings). The 4 broken ones are
-fixed (archive 26-10-10 "UX review fixes"). Open, with the recommendation:
-
-1. ~~What players see: NPC names + HP bars on the TV~~ — dropped: tokens/HP belong to the
-   digital mode, a far-off stretch goal (focus = tabletop mode, `feature-ideas.md` "play modes").
-2. **Door markers on the TV**: loud green/orange boxes over the map's own doors → tablet only.
-3. ~~Tokens: drag/tap/occupied squares~~ — dropped (digital mode).
-4. **Camera wording/framing**: "Fit on tablet" / "Fit on TV"; linked camera frames for the TV's screen.
-5. **Ruler**: appears at the TV view's centre, numbers stay upright.
-6. **Panel layout**: bottom panel eats 40–65 % of the tablet → side panel in landscape; Fog tab
-   "Brush | Room" segmented control, "Live mode" → "Players see changes instantly / Preview first".
-7. Smaller: "Continue last session" card + thumbnails + dated default names in the library; minimum
-   on-screen size for TV token labels; undo snackbar for Reveal all / Hide all / Clear all tokens.
-
-Not testable on the bench: pinch/two-finger pan, the real Xiaomi remote.
+The UX review's tabletop items are built (archive 26-10-10 "tabletop UX polish"; tokens/HP items
+dropped as digital mode). Code + tests only — not yet on the bench or a device. Check on the
+tablet + TV:
+- landscape tablet: panel is a rail on the right, tabs unfold beside it; portrait/phone: bottom sheet
+- Fog tab: Brush | Room, Reveal | Hide, "Players see changes: Instantly | Preview first"
+- Reveal all / Hide all / Clear drawings → snackbar with Undo that really undoes on the TV
+- ruler: appears in the middle of what the TV shows, numbers upright after Rotate and after a TV
+  rotation; rotates in place
+- TV shows no door boxes on Dungeondraft maps (tablet still does); AI-map doors on both
+- library: Continue card on top, map thumbnails appear (castle: may take a few seconds on the box),
+  new sessions named "Session N · <day>"
+- still open from the review: pinch/two-finger pan and the real Xiaomi remote (not testable on the bench)
 
 ## kept on purpose: direct TV connection (no relay)
 ## DM layers (2026-10-10, 1.1.6+16) — needs a device test
