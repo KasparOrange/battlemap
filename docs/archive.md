@@ -1,7 +1,10 @@
 # Battlemap — archive (history, newest on top)
 
 Rule: **one entry per prompt that changed something** — in `docs/`, or in the code it
-governs. Never per session. Heading = `### YY-MM-DD HH:MM - <session id>`; body = nested
+governs. Never per session. Heading = `### 26-10-10 20:20 - 9393ef96 - 1.1.11+21 on box + tablet
+- Konrad: deploy both apps → version bump, `deploy.sh tv tablet` from a clean worktree of dd3063f (circle reveal, picture grid editor, relay diagnostics); TV back in its game after 15 s, tablet companion relaunched
+
+### YY-MM-DD HH:MM - <session id>`; body = nested
 bullets. What was learned goes into the docs it belongs to (`architecture.md`, `setup.md`,
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
