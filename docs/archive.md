@@ -6,6 +6,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:40 - 67d95074 - Template disc on box + tablet (1.1.17+27)
+- Konrad: deploy now → version 1.1.17+27, `deploy.sh` from a clean worktree of 93bda8a: TV back in its game after 15 s, tablet companion relaunched, web on the VPS
+
 ### 26-10-10 21:20 - 67d95074 - Measure tab: AoE template disc
 - Konrad (photo of an acrylic AoE template disc): add a self-built, highly configurable shape that rebuilds it exactly, as a new tool in the DM panel's Measure tab
 	- measured from the photo: the cubes are centred on the middle; both cones share one base line (the 30 ft cone's left edge = the 30 ft cube's), so the 30 ft tip sits 15 ft east and the 15 ft tip on the middle; the marks are 12 at 30° between the 15 and 20 ft rings, the top one hidden by the labels; the edge sits just outside the 30 ft cube's corners (~21.2 ft) — all rebuilt as `TemplateDisc.classic` (`lib/model/template_disc.dart`)
