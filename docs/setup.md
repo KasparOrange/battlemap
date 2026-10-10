@@ -130,9 +130,10 @@ Live development against the real box and tablet with a ~15 s break, modelled on
 "deploy restore" (`~/code/my-tube`, `MyTube/Player/DeployRestore.swift`):
 
 ```bash
-tools/deploy.sh            # tv + web
+tools/deploy.sh            # tv + tablet + web
 tools/deploy.sh tv         # APK onto the box, the running game comes back by itself
-tools/deploy.sh web        # web companion onto the VPS, the tablet's tab reopens connected
+tools/deploy.sh tablet     # same APK onto the tablet, relaunched straight into Companion Mode
+tools/deploy.sh web        # web companion onto the VPS (browser fallback)
 tools/deploy.sh tv --here  # build the working tree instead of a clean worktree of HEAD
 ```
 
@@ -152,9 +153,11 @@ tools/deploy.sh tv --here  # build the working tree instead of a clean worktree 
 Without the relay the route is plain `/restore` and the TV uses its own snapshot
 (`DeployRestore`, Hive box `deployRestore`: view + map + session, written on every view change
 and session save — the install SIGKILLs the app, nothing can be saved on the way out). A normal
-launch never restores. **web**: rsync like "deploying a web build from the Mac", then the
-tablet's Chrome tab is reopened at `…/?v=<time>#/companion` (same `application_id` → same tab;
-the query forces the reload, the `/companion` route connects without the mode selector).
+launch never restores. **tablet**: `install -r` + `am start -S … --es route /companion` — the
+native companion opens connected, without the mode selector. A tablet without the app (browser
+companion) gets its Chrome tab reopened at `…/?v=<time>#/companion` instead (same
+`application_id` → same tab; the query forces the reload). **web**: rsync like "deploying a web
+build from the Mac".
 The TV resends its game to a companion that takes over the slot (`onPeerReconnected`).
 
 Needs: box + tablet paired with this Mac (`latrine android devices`), the bench venv
