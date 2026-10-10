@@ -6,6 +6,10 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 21:55 - 4c6e75db - docs sweep: notices
+- Konrad (/ty): docs sweep after the notices — every "snackbar" in the docs and doc comments now says notice (action, feature ideas, setup, tracker #43, DM panel, state, relay client; the companion's few go with the link-import session's edit); `architecture.md` "notices" gains the `pumpAndSettle` test gotcha
+	- incident: the sweep script did `open(p,'w').write(f(open(p).read()))` — Python opens the output (truncating) before reading the input, so 11 files went empty for a minute; the companion screen, relay client and action.md held other sessions' uncommitted edits, rebuilt from their transcripts (HEAD + the same diffs: `sendCirclePreview`, the `onCirclePreview` hook, the moved "kept on purpose" heading) and confirmed with the session working there. Read fully, then write
+
 ### 26-10-10 21:30 - shared library fill - today's maps in the shared map library
 - Konrad: put all maps used today — the AI-generated ones and the example maps — into the shared library
 	- the library was empty; 15 maps added over `PUT /library` with squares, own-grid flag and a 288 px thumbnail each (a script must send the thumbnail itself): Juri's cave + dungeon, AI keep, AI keep (variant), AI crypt, the ten test maps (Dyson tavern 25 × 25, own grid)
