@@ -1243,7 +1243,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
                 child: Text(
                   hasShadowCells
                       ? '$shadowCellCount squares waiting — show them?'
-                      : 'Changes wait here until you tap ✓.',
+                      : 'Changes wait here until you apply them.',
                   style: const TextStyle(
                     color: _kTextSecondary,
                     fontSize: 13,
@@ -1468,7 +1468,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
   // ─── Camera Tab ──────────────────────────────────────────
 
   /// Builds the Camera tab in two sections named after the screen they
-  /// move: **Tablet** (fit on tablet, go to the TV's view) and **TV** (TV
+  /// move: **Tablet** (fit on tablet, jump to the TV's view) and **TV** (TV
   /// follows the tablet, show my view on the TV, zoom with fit on TV,
   /// rotation). Without a TV link (local mode) only zoom and rotation of
   /// this screen remain.
@@ -1498,7 +1498,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
               Expanded(
                 child: _GoldButton(
                   icon: Icons.center_focus_strong,
-                  label: "Go to TV's view",
+                  label: 'Jump to TV',
                   onTap: cb.onMatchTv ?? () {},
                 ),
               ),

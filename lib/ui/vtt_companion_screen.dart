@@ -196,7 +196,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(staged
-            ? '$done in the preview — tap ✓ to show the players'
+            ? '$done in the preview — apply it to show the players'
             : changed
                 ? done
                 : 'Nothing changed'),
