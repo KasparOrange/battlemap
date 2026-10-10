@@ -1,13 +1,21 @@
 # Battlemap — archive (history, newest on top)
 
 Rule: **one entry per prompt that changed something** — in `docs/`, or in the code it
-governs. Never per session. Heading = `### 26-10-10 20:20 - 9393ef96 - 1.1.11+21 on box + tablet
-- Konrad: deploy both apps → version bump, `deploy.sh tv tablet` from a clean worktree of dd3063f (circle reveal, picture grid editor, relay diagnostics); TV back in its game after 15 s, tablet companion relaunched
-
-### YY-MM-DD HH:MM - <session id>`; body = nested
+governs. Never per session. Heading = `### YY-MM-DD HH:MM - <session id>`; body = nested
 bullets. What was learned goes into the docs it belongs to (`architecture.md`, `setup.md`,
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
+
+### 26-10-10 20:40 - a494e8fa - picture grid + grid editor
+- Konrad: build user-friendly, capable, powerful but precise ways to scale the map by hand afterwards, to correct the grid detection's errors
+	- the grid became a property of the picture (`RasterGrid`: corner, square width/height, counts) mapped onto the map's squares by the renderer → no cropping (the detection's crop is gone), partial edge squares and non-square photo squares possible; library entry, `vtt.imageUploaded`/`vtt.setMapGrid` `grid`, `vtt.fullState` `rasterGrid`
+	- grid editor (`lib/ui/grid_editor.dart`): tools Look / Move / Stretch / 2 corners with a magnifier, size steps to 0.01 px, position to 0.1 px, ½ / ×2, squares across, whole/partial edges, corner jumps to check drift, undo/redo, detect again; from the upload dialog and the Map tab; same counts keep the game's fog → `architecture.md` "picture grid and grid editor"
+	- found: the map decode shrank the picture to the map's proportions (fine while the grid covered the whole picture) → decodes at the picture's own size now; `pixelsPerGrid` stays `round(cellW)` like before
+	- 30 new tests (grid math, state, editor widget incl. portrait/phone layout), suite 498 green; committed from a HEAD-based index because two other sessions had staged/unstaged edits in the same files
+
+### 26-10-10 20:20 - 9393ef96 - 1.1.11+21 on box + tablet
+- Konrad: deploy both apps → version bump, `deploy.sh tv tablet` from a clean worktree of dd3063f (circle reveal, picture grid editor, relay diagnostics, TV without chrome); TV back in its game after 15 s, tablet companion relaunched
+	- fixed: the circle-reveal entry and 5c5b7461's "no chrome" entry had never reached git (lost between staged indexes) — restored here, entries put back in time order
 
 ### 26-10-10 20:10 - 0d5d9ed1 - relay diagnostics: why the TV reacted late
 - Konrad: the TV reacted late to a tablet action — was something stuck in the relay? if the logs can't show it, log both sides so they can
@@ -17,12 +25,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- `docs/setup.md` "relay diagnostics", `docs/relay-protocol.md` heartbeat; 5 new tests; not in a build yet, relay not restarted on the VPS (Konrad is playing)
 	- open: the behaviour fix — drop or confirm commands made while offline instead of replaying them late, and a connect timeout so a hanging attempt doesn't wait out the OS's ~60 s
 
-### 26-10-10 20:40 - a494e8fa - picture grid + grid editor
-- Konrad: build user-friendly, capable, powerful but precise ways to scale the map by hand afterwards, to correct the grid detection's errors
-	- the grid became a property of the picture (`RasterGrid`: corner, square width/height, counts) mapped onto the map's squares by the renderer → no cropping (the detection's crop is gone), partial edge squares and non-square photo squares possible; library entry, `vtt.imageUploaded`/`vtt.setMapGrid` `grid`, `vtt.fullState` `rasterGrid`
-	- grid editor (`lib/ui/grid_editor.dart`): tools Look / Move / Stretch / 2 corners with a magnifier, size steps to 0.01 px, position to 0.1 px, ½ / ×2, squares across, whole/partial edges, corner jumps to check drift, undo/redo, detect again; from the upload dialog and the Map tab; same counts keep the game's fog → `architecture.md` "picture grid and grid editor"
-	- found: the map decode shrank the picture to the map's proportions (fine while the grid covered the whole picture) → decodes at the picture's own size now; `pixelsPerGrid` stays `round(cellW)` like before
-	- 30 new tests (grid math, state, editor widget incl. portrait/phone layout), suite 498 green; committed from a HEAD-based index because two other sessions had staged/unstaged edits in the same files
+### 26-10-10 20:06 - 5c5b7461 - TV: no chrome while all is well
+- Konrad: on the TV, hide the back arrow and "Companion connected" when everything is fine; show only errors, top right, with an informative icon
+	- back arrow invisible (still focusable for the remote), drawn for 5 s after any remote key (`HardwareKeyboard` handler)
+	- top-right badge empty while paired; otherwise "Companion not connected" / "Connecting to relay..." / "No connection to the relay" / "Another TV took over" with icon; TV errors (`_sendError`) show there for 8 s
+	- not in a build yet
 
 ### 26-10-10 20:05 - a9469a3d - AI maps step 5: the fixed keep on the TV emulator
 - Konrad: follow up on the map session's recommendation — put the fixed keep on the TV (step 5)
@@ -30,6 +37,14 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- fog edge on the painted walls, drawn doors read at table size and swing, the crypt's double door opens from the middle; no TV errors, ~420 MB
 	- found: a door swinging into a fogged room is hidden under the fog (fix proposed: leaf above the fog when a neighbouring cell is revealed); the corridor's north wall, half a square high, lies under the fog
 	- `docs/ai-art.md` step 5 ✅ + known gaps; board: `tv_bench_*.jpg` sides on the keep and crypt plates, journey stage "on the TV", next card "doors above the fog"
+
+### 26-10-10 20:03 - 9393ef96 - Fog tab: Circle reveal with a radius in squares
+- Konrad: Fog tab on the tablet — set a radius in squares (e.g. 4), tap the map, reveal a circle there; walls stop it so it doesn't spill into other rooms; works with "Preview first" so the DM can correct before the players see it
+	- `InteractionMode.circleReveal`; Fog tab Tool = Brush | Room | Circle, radius stepper − n + (1–30, default 4, `VttState.revealRadius`, tablet-local)
+	- `WallGrid.floodFillWithin` (flood fill limited to the circle, walls + closed doors block, open doors pass) and `circleCells` (picture maps without walls)
+	- the tap's squares go to the TV as `vtt.roomReveal` → reveal/hide by the TV's setting, staged in shadow mode; no protocol change
+	- fixed on the way: a Room tap on the networked tablet never reached the TV (`DmCallbacks.onRoomReveal` was never called) — now both forward through `VttState.onRoomReveal`
+	- 5 new tests (wall grid circle + panel); deployed in 1.1.11+21, not yet tried at the table
 
 ### 26-10-10 19:54 - 303b3806 - DM panel: tabs are modes, Tokens tab
 - Konrad: no way out of draw mode on the tablet; being on a tab should be its mode, not a button on the tab; a new leftmost tab for the normal mode with token placement, selection and management — tokens are needed at the tabletop after all, to remember where players and monsters stand
