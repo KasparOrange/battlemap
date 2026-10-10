@@ -55,6 +55,10 @@ class TokenComponent extends PositionComponent {
   /// using colors from [MapToken.conditionColors].
   List<String> conditions;
 
+  /// Whether the players don't see this token ([MapToken.hidden]): only
+  /// the DM's tablet draws it, faded.
+  bool hidden = false;
+
   // Cached text painters to avoid per-frame allocation
   TextPainter? _labelPainter;
   String? _cachedLabel;
@@ -97,6 +101,7 @@ class TokenComponent extends PositionComponent {
     maxHp = token.maxHp;
     currentHp = token.currentHp;
     conditions = List.of(token.conditions);
+    hidden = token.hidden;
     if (gridX != token.gridX || gridY != token.gridY) {
       gridX = token.gridX;
       gridY = token.gridY;
@@ -153,6 +158,13 @@ class TokenComponent extends PositionComponent {
   void render(Canvas canvas) {
     final center = Offset(cellSize / 2, cellSize / 2);
     final radius = cellSize * 0.4;
+    // Hidden from the players: faded (only the DM's tablet draws it)
+    if (hidden) {
+      canvas.saveLayer(
+        Rect.fromLTWH(-cellSize, -cellSize, cellSize * 3, cellSize * 3),
+        Paint()..color = const Color(0x73000000),
+      );
+    }
 
     // --- Condition dots above everything ---
     if (conditions.isNotEmpty) {
@@ -199,6 +211,7 @@ class TokenComponent extends PositionComponent {
     if (maxHp > 0) {
       _renderHpBar(canvas, center, radius);
     }
+    if (hidden) canvas.restore();
   }
 
   /// Renders a thin HP bar below the token circle.

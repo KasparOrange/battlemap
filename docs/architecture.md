@@ -86,7 +86,7 @@ for the whole run.
 
 **Tabs are modes (since 2026-10-10):** being on a tab is its interaction mode, there are no
 mode buttons inside the tabs. **Tokens** (leftmost, the normal mode: tap an empty square places a
-token, drag moves it, tap a door opens/closes it; the list names or deletes them), **Fog** (its
+token, drag moves it, tap a door opens/closes it; the list below), **Fog** (its
 tool Brush | Room | Circle, remembered), **Draw**, **Measure**, **Combat** (AoE templates, digital play
 only); Layers, Camera and Settings use the Tokens mode. Switching tabs sends `vtt.setMode`;
 tapping the active tab only folds it, the mode stays. A mode set elsewhere (the TV restoring a
@@ -94,6 +94,15 @@ game, the bench robot) switches the panel to the tab that owns it — not within
 panel's own request, while the TV's echo is on its way. Tokens are always on now: they remember
 where the miniatures and monsters stand (`SessionSettings.tokens` is legacy, no longer shown).
 New games start in the Tokens mode.
+
+**Tokens tab (since 2026-10-10, 1.1.12):** a name field + add button creates a token that is
+not on the map yet (`vtt.createToken`, `MapToken.placed` = false). Each row: coloured dot with
+its number, name (tap → edit dialog), where it is ("On the map" / "Not on the map", "hidden from
+players"), and buttons — **place** (not on the map: arms it, `VttState.placingTokenId`, local to
+the tablet; the next tap on an empty square puts it there via `vtt.moveToken`; leaving the tab
+cancels) or **jump** (on the map: centres the tablet's own view on it, `VttGame.centerOnSquare`,
+the TV stays), **eye** (hide from the players / show, `vtt.setTokenHidden`: the TV leaves it out,
+the tablet draws it faded) and **delete** (one tap, snackbar with Undo).
 
 **Fog tab:** Tool = Brush | Room | Circle (the interaction mode), Reveal | Hide, brush size
 (brush only) or radius in squares (circle only, − n +, 1–30, default 4), "Players see changes: Instantly | Preview first" (shadow mode; staged squares are

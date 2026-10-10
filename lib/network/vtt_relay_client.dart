@@ -944,6 +944,16 @@ class VttRelayClient {
   void sendMoveToken(String id, int gridX, int gridY) =>
       _send({'type': 'vtt.moveToken', 'id': id, 'gridX': gridX, 'gridY': gridY});
 
+  /// Creates a token on the TV that does not stand on the map yet, named
+  /// [name] ([VttState.createToken]); `vtt.moveToken` places it later.
+  void sendCreateToken(String name) =>
+      _send({'type': 'vtt.createToken', 'name': name});
+
+  /// Hides the token [id] from the players (the TV leaves it out) or shows
+  /// it again ([VttState.setTokenHidden]).
+  void sendSetTokenHidden(String id, bool hidden) =>
+      _send({'type': 'vtt.setTokenHidden', 'id': id, 'hidden': hidden});
+
   /// Removes the token identified by [id] from the TV map.
   void sendRemoveToken(String id) =>
       _send({'type': 'vtt.removeToken', 'id': id});

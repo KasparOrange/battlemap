@@ -1459,6 +1459,10 @@ class _TvShellState extends State<TvShell> {
           _state.addToken(msg['gridX'] as int, msg['gridY'] as int);
         case 'vtt.moveToken':
           _state.moveToken(msg['id'] as String, msg['gridX'] as int, msg['gridY'] as int);
+        case 'vtt.createToken':
+          _state.createToken(name: msg['name'] as String? ?? '');
+        case 'vtt.setTokenHidden':
+          _state.setTokenHidden(msg['id'] as String, msg['hidden'] as bool? ?? true);
         case 'vtt.removeToken':
           _state.removeToken(msg['id'] as String);
         case 'vtt.editToken':

@@ -164,11 +164,25 @@ class DmCallbacks {
       int? currentHp,
       Set<String>? conditions}) onEditToken;
 
-  /// Removes a single token by id (token edit dialog "Delete").
+  /// Removes a single token by id (the Tokens tab's delete button and the
+  /// token edit dialog's "Delete").
   ///
-  /// Optional for backwards compatibility; the Delete button is hidden
+  /// Optional for backwards compatibility; the delete buttons are hidden
   /// when `null`.
   final void Function(String id)? onRemoveToken;
+
+  /// Creates a token that does not stand on the map yet, named `name`
+  /// ([VttState.createToken]) — the Tokens tab's "Add". The add row is
+  /// hidden when `null`.
+  final void Function(String name)? onCreateToken;
+
+  /// Hides the token `id` from the players or shows it again
+  /// ([VttState.setTokenHidden]). The eye button is hidden when `null`.
+  final void Function(String id, bool hidden)? onSetTokenHidden;
+
+  /// Centres the DM's own view on a token on the map (the Tokens tab's
+  /// jump button; [VttGame.centerOnSquare]). Hidden when `null`.
+  final void Function(MapToken token)? onFocusToken;
 
   // ── Undo / Redo ───────────────────────────────────────────────────
 
@@ -300,6 +314,9 @@ class DmCallbacks {
     required this.onClearTokens,
     required this.onEditToken,
     this.onRemoveToken,
+    this.onCreateToken,
+    this.onSetTokenHidden,
+    this.onFocusToken,
     required this.onUndo,
     required this.onRedo,
     required this.onToggleShadowMode,
@@ -410,6 +427,9 @@ class _DmControlPanelState extends State<DmControlPanel> {
   /// back (state broadcasts are throttled), an older mode in the state is
   /// not a reason to switch tabs ([_onStateChanged]).
   DateTime _modeRequestedAt = DateTime.fromMillisecondsSinceEpoch(0);
+
+  /// The Tokens tab's "new token" name field.
+  final _newTokenName = TextEditingController();
 
   /// Local preview of the draw width slider while dragging (sent on release).
   double? _widthPreview;
@@ -572,6 +592,7 @@ class _DmControlPanelState extends State<DmControlPanel> {
   @override
   void dispose() {
     state.removeListener(_onStateChanged);
+    _newTokenName.dispose();
     super.dispose();
   }
 
@@ -765,6 +786,9 @@ class _DmControlPanelState extends State<DmControlPanel> {
           setState(() => _expanded = !_expanded);
           return;
         }
+        if (_tab == 'tokens' && state.placingTokenId != null) {
+          state.setPlacingToken(null);
+        }
         setState(() {
           _tab = tabs[i].$3;
           _expanded = true;
@@ -850,19 +874,47 @@ class _DmControlPanelState extends State<DmControlPanel> {
 
   /// Builds the Tokens tab, the normal mode (leftmost): being on it places
   /// and moves tokens on the map — markers that remember where the players'
-  /// miniatures and the monsters stand. Lists the tokens (tap one to name
-  /// or delete it) and clears them all.
+  /// miniatures and the monsters stand. A name field adds a token that is
+  /// not on the map yet; the list shows for each token whether it is on the
+  /// map, places it (next tap on the map) or centres the DM's view on it,
+  /// hides it from the players or shows it, and deletes it. Tapping a row
+  /// opens the edit dialog (name).
   Widget _buildTokensTab() {
     final tokens = state.tokens;
+    final placing = state.tokens
+        .where((t) => t.id == state.placingTokenId && !t.placed)
+        .firstOrNull;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Tap an empty square to place a token, drag a token to move it. '
-          'Tap a door to open or close it.',
-          style: TextStyle(color: _kTextSecondary, fontSize: 12),
+        Text(
+          placing != null
+              ? 'Tap the map where ${_tokenName(placing)} stands.'
+              : 'Tap an empty square to place a new token, drag a token to '
+                  'move it. Tap a door to open or close it.',
+          style: TextStyle(
+            color: placing != null ? _kTextPrimary : _kTextSecondary,
+            fontSize: 12,
+            fontWeight: placing != null ? FontWeight.w600 : FontWeight.normal,
+          ),
         ),
         const SizedBox(height: 8),
+        if (cb.onCreateToken != null) ...[
+          Row(
+            children: [
+              Expanded(
+                child: _goldTextField(
+                  _newTokenName,
+                  'New token',
+                  'e.g. Thorin, Goblin 2',
+                  onSubmitted: (_) => _addToken(),
+                ),
+              ),
+              _IconTarget(icon: Icons.person_add, onTap: _addToken),
+            ],
+          ),
+          const SizedBox(height: 10),
+        ],
         if (tokens.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 12),
@@ -890,6 +942,16 @@ class _DmControlPanelState extends State<DmControlPanel> {
         ],
       ],
     );
+  }
+
+  /// The name a token goes by in the list: its name, else "Token <label>".
+  String _tokenName(MapToken token) =>
+      token.name.isNotEmpty ? token.name : 'Token ${token.label}';
+
+  /// Adds a token off the map with the name field's text and empties it.
+  void _addToken() {
+    cb.onCreateToken?.call(_newTokenName.text.trim());
+    _newTokenName.clear();
   }
 
   // ─── Combat Tab ──────────────────────────────────────────
@@ -966,17 +1028,24 @@ class _DmControlPanelState extends State<DmControlPanel> {
     );
   }
 
-  /// Builds a single token row with colored dot, name, conditions,
-  /// and HP increment/decrement controls.
+  /// Builds a single token row: colored dot with its label, name, where it
+  /// is (on the map / not on the map, hidden from the players), and its
+  /// buttons — place it (not on the map; the next tap on the map puts it
+  /// there) or jump to it (centres the DM's view), hide/show, delete.
+  /// Condition dots and HP controls appear only with combat data.
   Widget _buildTokenRow(MapToken token) {
-    final displayName =
-        token.name.isNotEmpty ? token.name : token.label;
+    final displayName = _tokenName(token);
+    final placing = state.placingTokenId == token.id && !token.placed;
+    final where = [
+      token.placed ? 'On the map' : (placing ? 'Tap the map…' : 'Not on the map'),
+      if (token.hidden) 'hidden from players',
+    ].join(' · ');
     return GestureDetector(
       onTap: () => _showTokenEditDialog(token),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.fromLTRB(10, 2, 0, 2),
         decoration: BoxDecoration(
-          color: _kSurface,
+          color: placing ? _kSurfaceActive : _kSurface,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: _kBorderGold.withValues(alpha: 0.5)),
         ),
@@ -987,24 +1056,49 @@ class _DmControlPanelState extends State<DmControlPanel> {
             Row(
               children: [
                 Container(
-                  width: 14,
-                  height: 14,
+                  width: 22,
+                  height: 22,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: token.color,
+                    color: token.hidden
+                        ? token.color.withValues(alpha: 0.4)
+                        : token.color,
                     shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    token.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    displayName,
-                    style: const TextStyle(
-                      color: _kTextPrimary,
-                      fontSize: _kText,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayName,
+                        style: const TextStyle(
+                          color: _kTextPrimary,
+                          fontSize: _kText,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        where,
+                        style: TextStyle(
+                          color: placing ? _kTextPrimary : _kTextSecondary,
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
                 // Condition dots
@@ -1028,8 +1122,29 @@ class _DmControlPanelState extends State<DmControlPanel> {
                         ),
                     ],
                   ),
-                const SizedBox(width: 6),
-                const Icon(Icons.edit, color: _kAccentGoldDim, size: 16),
+                if (token.placed)
+                  _IconTarget(
+                    icon: Icons.center_focus_strong,
+                    enabled: cb.onFocusToken != null,
+                    onTap: () => cb.onFocusToken?.call(token),
+                  )
+                else
+                  _IconTarget(
+                    icon: Icons.place,
+                    active: placing,
+                    onTap: () =>
+                        state.setPlacingToken(placing ? null : token.id),
+                  ),
+                if (cb.onSetTokenHidden != null)
+                  _IconTarget(
+                    icon: token.hidden ? Icons.visibility_off : Icons.visibility,
+                    onTap: () => cb.onSetTokenHidden!(token.id, !token.hidden),
+                  ),
+                if (cb.onRemoveToken != null)
+                  _IconTarget(
+                    icon: Icons.delete_outline,
+                    onTap: () => cb.onRemoveToken!(token.id),
+                  ),
               ],
             ),
             // HP row (only if maxHp > 0)
@@ -1274,9 +1389,11 @@ class _DmControlPanelState extends State<DmControlPanel> {
     String label,
     String hint, {
     bool isNumeric = false,
+    ValueChanged<String>? onSubmitted,
   }) {
     return TextField(
       controller: controller,
+      onSubmitted: onSubmitted,
       keyboardType:
           isNumeric ? const TextInputType.numberWithOptions() : TextInputType.text,
       style: const TextStyle(color: _kTextPrimary, fontSize: _kText),
@@ -2795,16 +2912,30 @@ class _IconTarget extends StatelessWidget {
   /// Called when tapped (and [enabled]).
   final VoidCallback onTap;
 
-  const _IconTarget({required this.icon, required this.onTap, this.enabled = true});
+  /// Marked as switched on (a gold-tinted square behind the icon).
+  final bool active;
+
+  const _IconTarget({
+    required this.icon,
+    required this.onTap,
+    this.enabled = true,
+    this.active = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: enabled ? onTap : null,
-      child: SizedBox(
+      child: Container(
         width: _kTarget,
         height: _kTarget,
+        decoration: active
+            ? BoxDecoration(
+                color: _kAccentGold.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(6),
+              )
+            : null,
         child: Icon(
           icon,
           color: enabled ? _kAccentGold : _kAccentGoldDim.withValues(alpha: 0.5),

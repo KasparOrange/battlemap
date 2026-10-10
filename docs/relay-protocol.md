@@ -163,10 +163,17 @@ never travels — it is the tablet's own setting.
 
 ```
 {"type": "vtt.addToken", "gridX": 5, "gridY": 3}
+{"type": "vtt.createToken", "name": "Thorin"}                 // since 1.1.12: not on the map yet
 {"type": "vtt.moveToken", "id": "uuid", "gridX": 6, "gridY": 3}
+{"type": "vtt.setTokenHidden", "id": "uuid", "hidden": true}  // since 1.1.12
 {"type": "vtt.removeToken", "id": "uuid"}
 {"type": "vtt.clearTokens"}
 ```
+
+A token in `vtt.fullState` carries `placed` (`false` = created with `vtt.createToken`, not on
+the map; its `gridX`/`gridY` mean nothing) and `hidden` (the TV leaves it out, the tablet draws
+it faded); both absent before 1.1.12 = on the map, visible. `vtt.moveToken` on a token that is
+not on the map places it (undo takes it off again).
 
 ## view commands (companion → table)
 

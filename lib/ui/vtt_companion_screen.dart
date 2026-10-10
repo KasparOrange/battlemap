@@ -436,6 +436,8 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.onPortalTap = (index) => _relay!.sendTogglePortal(index);
     _state.onRoomReveal = (cells) => _relay!.sendRoomReveal(cells);
     _state.onTokenAdded = (token) => _relay!.sendAddToken(token.gridX, token.gridY);
+    _state.onTokenCreated = (token) => _relay!.sendCreateToken(token.name);
+    _state.onTokenHiddenChanged = (id, hidden) => _relay!.sendSetTokenHidden(id, hidden);
     _state.onTokenRemoved = (id) => _relay!.sendRemoveToken(id);
     _state.onTokenMoved = (id, x, y) => _relay!.sendMoveToken(id, x, y);
     _state.onTokenEdited = (id, name, maxHp, currentHp, conditions) =>
@@ -975,8 +977,11 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
                 conditions: conditions?.toList() ?? []),
         onRemoveToken: (id) {
           c.sendRemoveToken(id);
-          _showSnack('Token removed');
+          _confirmBulk('Token deleted', changed: true, onUndo: c.sendUndo);
         },
+        onCreateToken: c.sendCreateToken,
+        onSetTokenHidden: c.sendSetTokenHidden,
+        onFocusToken: (t) => _game.centerOnSquare(t.gridX, t.gridY),
         onSetMeasureMode: () => c.sendSetInteractionMode('measure'),
         // Undo / Redo
         onUndo: c.sendUndo,
@@ -1089,6 +1094,9 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
           _state.editToken(id,
               name: name, maxHp: maxHp, currentHp: currentHp, conditions: conditions),
       onRemoveToken: _state.removeToken,
+      onCreateToken: (name) => _state.createToken(name: name),
+      onSetTokenHidden: _state.setTokenHidden,
+      onFocusToken: (t) => _game.centerOnSquare(t.gridX, t.gridY),
       onSetMeasureMode: () => _state.setInteractionMode(InteractionMode.measure),
       // Undo / Redo
       onUndo: _state.undo,

@@ -71,7 +71,8 @@ class TokenRemoveAction extends UndoAction {
 ///
 /// [id] identifies the token. [fromX]/[fromY] are the original position,
 /// [toX]/[toY] are the new position. Undoing moves the token back to
-/// ([fromX], [fromY]).
+/// ([fromX], [fromY]) — or off the map again when the move placed it
+/// ([fromPlaced] = `false`).
 class TokenMoveAction extends UndoAction {
   /// The [MapToken.id] of the moved token.
   final String id;
@@ -88,8 +89,13 @@ class TokenMoveAction extends UndoAction {
   /// New vertical grid coordinate after the move.
   final int toY;
 
+  /// Whether the token stood on the map before the move; `false` when
+  /// the move placed a token from the Tokens tab's list.
+  final bool fromPlaced;
+
   /// Creates a [TokenMoveAction] recording the move.
-  TokenMoveAction(this.id, this.fromX, this.fromY, this.toX, this.toY);
+  TokenMoveAction(this.id, this.fromX, this.fromY, this.toX, this.toY,
+      {this.fromPlaced = true});
 }
 
 /// Records the addition of a freehand drawing stroke.

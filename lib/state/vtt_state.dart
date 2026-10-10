@@ -223,6 +223,11 @@ class VttState extends ChangeNotifier {
   /// Tokens are ordered by creation time. Each has a unique [MapToken.id].
   List<MapToken> tokens = [];
 
+  /// The token from the Tokens tab's list that the next tap on the map
+  /// places ([VttGame] token mode), or `null`. Local to this device (the
+  /// DM's tablet), never synced or saved.
+  String? placingTokenId;
+
   /// Internal counter for cycling through [MapToken.tokenColors].
   int _nextColorIndex = 0;
 
@@ -441,6 +446,14 @@ class VttState extends ChangeNotifier {
 
   /// Called when a new token is added locally, for relay forwarding.
   void Function(MapToken token)? onTokenAdded;
+
+  /// Called when a token is created off the map locally ([createToken]),
+  /// for relay forwarding.
+  void Function(MapToken token)? onTokenCreated;
+
+  /// Called when a token is hidden from or shown to the players locally
+  /// ([setTokenHidden]), for relay forwarding.
+  void Function(String id, bool hidden)? onTokenHiddenChanged;
 
   /// Called when a token is removed locally, for relay forwarding.
   ///
@@ -668,6 +681,7 @@ class VttState extends ChangeNotifier {
   /// A resumed session restores its own tokens/drawings after the load.
   void _resetSessionState() {
     tokens = [];
+    placingTokenId = null;
     strokes = [];
     liveStroke = null;
     _undoStack.clear();
@@ -752,6 +766,7 @@ class VttState extends ChangeNotifier {
         final token = tokens.firstWhere((t) => t.id == action.id);
         token.gridX = action.fromX;
         token.gridY = action.fromY;
+        token.placed = action.fromPlaced;
       case StrokeAddAction():
         if (strokes.isNotEmpty && identical(strokes.last, action.stroke)) {
           strokes.removeLast();
@@ -789,6 +804,7 @@ class VttState extends ChangeNotifier {
         final token = tokens.firstWhere((t) => t.id == action.id);
         token.gridX = action.toX;
         token.gridY = action.toY;
+        token.placed = true;
       case StrokeAddAction():
         strokes.add(action.stroke);
       case StrokeClearAction():
@@ -1126,38 +1142,85 @@ class VttState extends ChangeNotifier {
   /// (cycling) and a sequential numeric label. Pushes a [TokenAddAction]
   /// onto the undo stack. Fires [onTokenAdded] for relay forwarding.
   void addToken(int gridX, int gridY) {
-    final color =
-        MapToken.tokenColors[_nextColorIndex % MapToken.tokenColors.length];
-    _nextColorIndex++;
-    final token = MapToken(
-      id: 'token_${DateTime.now().millisecondsSinceEpoch}',
-      label: '${tokens.length + 1}',
-      color: color,
-      gridX: gridX,
-      gridY: gridY,
-    );
+    final token = _newToken(gridX: gridX, gridY: gridY, placed: true);
     tokens.add(token);
     _pushUndo(TokenAddAction(token));
     notifyListeners();
     onTokenAdded?.call(token);
   }
 
-  /// Moves an existing token to a new grid position.
+  /// Creates a token that does not stand on the map yet ([MapToken.placed]
+  /// = `false`), named [name] — the Tokens tab's "Add". [moveToken] places
+  /// it later. Pushes a [TokenAddAction]; fires [onTokenCreated].
+  ///
+  /// See also:
+  /// * [addToken], which creates a token on a square.
+  void createToken({String name = ''}) {
+    final token = _newToken(gridX: 0, gridY: 0, placed: false)..name = name;
+    tokens.add(token);
+    _pushUndo(TokenAddAction(token));
+    notifyListeners();
+    onTokenCreated?.call(token);
+  }
+
+  /// A new token with the next color of [MapToken.tokenColors] and the
+  /// next numeric label.
+  MapToken _newToken(
+      {required int gridX, required int gridY, required bool placed}) {
+    final color =
+        MapToken.tokenColors[_nextColorIndex % MapToken.tokenColors.length];
+    _nextColorIndex++;
+    var n = tokens.length + 1;
+    while (tokens.any((t) => t.label == '$n')) {
+      n++;
+    }
+    return MapToken(
+      id: 'token_${DateTime.now().microsecondsSinceEpoch}',
+      label: '$n',
+      color: color,
+      gridX: gridX,
+      gridY: gridY,
+      placed: placed,
+    );
+  }
+
+  /// Moves an existing token to a new grid position — or places it there
+  /// when it was not on the map yet ([MapToken.placed]).
   ///
   /// Saves the old position and pushes a [TokenMoveAction] onto the undo
-  /// stack. Finds the token by [id] and updates its [MapToken.gridX] and
-  /// [MapToken.gridY]. Fires [onTokenMoved] for relay forwarding.
+  /// stack (undo takes a placed token off the map again). Clears
+  /// [placingTokenId] when it was this token. Fires [onTokenMoved] for
+  /// relay forwarding.
   ///
   /// Throws [StateError] if no token with the given [id] exists.
   void moveToken(String id, int newGridX, int newGridY) {
     final token = tokens.firstWhere((t) => t.id == id);
-    final oldX = token.gridX;
-    final oldY = token.gridY;
-    _pushUndo(TokenMoveAction(id, oldX, oldY, newGridX, newGridY));
+    _pushUndo(TokenMoveAction(id, token.gridX, token.gridY, newGridX, newGridY,
+        fromPlaced: token.placed));
     token.gridX = newGridX;
     token.gridY = newGridY;
+    token.placed = true;
+    if (placingTokenId == id) placingTokenId = null;
     notifyListeners();
     onTokenMoved?.call(id, newGridX, newGridY);
+  }
+
+  /// Arms [id] for placing: the next tap on the map in token mode puts it
+  /// there ([VttGame]). `null` cancels. Local to this device.
+  void setPlacingToken(String? id) {
+    placingTokenId = id;
+    notifyListeners();
+  }
+
+  /// Hides the token [id] from the players (the TV leaves it out) or shows
+  /// it again. Fires [onTokenHiddenChanged]. Silently does nothing if no
+  /// token with that [id] exists.
+  void setTokenHidden(String id, bool hidden) {
+    final i = tokens.indexWhere((t) => t.id == id);
+    if (i == -1) return;
+    tokens[i].hidden = hidden;
+    notifyListeners();
+    onTokenHiddenChanged?.call(id, hidden);
   }
 
   /// Removes a token by [id].
@@ -1199,6 +1262,7 @@ class VttState extends ChangeNotifier {
   /// Removes all tokens from the map.
   void clearTokens() {
     tokens.clear();
+    placingTokenId = null;
     notifyListeners();
   }
 
@@ -1634,6 +1698,9 @@ class VttState extends ChangeNotifier {
             ?.map((t) => MapToken.fromJson(t as Map<String, dynamic>))
             .toList() ??
         [];
+    if (!tokens.any((t) => t.id == placingTokenId && !t.placed)) {
+      placingTokenId = null;
+    }
     strokes = (json['strokes'] as List?)
             ?.map((s) => DrawStroke.fromJson(s as Map<String, dynamic>))
             .toList() ??

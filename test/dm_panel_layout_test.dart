@@ -53,6 +53,10 @@ void main() {
         onClearTokens: rec('clearTokens'),
         onEditToken: (id, {name, maxHp, currentHp, conditions}) =>
             calls.add('editToken'),
+        onRemoveToken: (id) => calls.add('remove $id'),
+        onCreateToken: (name) => calls.add('create $name'),
+        onSetTokenHidden: (id, hidden) => calls.add('hidden $id $hidden'),
+        onFocusToken: (t) => calls.add('focus ${t.id}'),
         onUndo: rec('undo'),
         onRedo: rec('redo'),
         onToggleShadowMode: rec('toggleShadow'),
@@ -152,6 +156,46 @@ void main() {
       await tester.tap(find.text('Camera').last);
       await tester.pumpAndSettle();
       expect(calls, ['tokenMode']);
+    });
+
+    testWidgets('Tokens tab: add off the map, place, jump, hide, delete',
+        (tester) async {
+      final state = await pump(tester, const Size(1280, 800));
+      await tester.tap(find.text('Tokens').last);
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Thorin');
+      await tester.tap(find.byIcon(Icons.person_add));
+      expect(calls, ['create Thorin']);
+
+      // The TV's echo: one token off the map, one on it
+      state.createToken(name: 'Thorin');
+      state.addToken(2, 3);
+      await tester.pumpAndSettle();
+      final off = state.tokens[0].id, on = state.tokens[1].id;
+      expect(find.text('Not on the map'), findsOneWidget);
+      expect(find.text('On the map'), findsOneWidget);
+
+      // Place arms the token for the next tap on the map
+      await tester.tap(find.byIcon(Icons.place));
+      await tester.pumpAndSettle();
+      expect(state.placingTokenId, off);
+      expect(find.text('Tap the map where Thorin stands.'), findsOneWidget);
+
+      calls.clear();
+      await tester.tap(find.byIcon(Icons.center_focus_strong));
+      expect(calls, ['focus $on']);
+
+      await tester.tap(find.byIcon(Icons.visibility).last);
+      expect(calls.last, 'hidden $on true');
+
+      await tester.tap(find.byIcon(Icons.delete_outline).first);
+      expect(calls.last, 'remove $off');
+
+      // Leaving the tab cancels placing
+      await tester.tap(find.text('Fog').last);
+      await tester.pumpAndSettle();
+      expect(state.placingTokenId, isNull);
     });
 
     testWidgets('a mode set elsewhere switches to its tab', (tester) async {

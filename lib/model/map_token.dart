@@ -12,6 +12,10 @@ import 'package:flutter/material.dart';
 /// like "poisoned" or "stunned"). These fields default to empty/zero for
 /// backwards compatibility with older session data.
 ///
+/// A token can exist without standing on the map ([placed] = `false`):
+/// the DM creates it in the companion's Tokens tab and places it later.
+/// A [hidden] token stays on the DM's tablet only, the TV leaves it out.
+///
 /// Tokens are JSON-serializable for WebSocket relay sync between the
 /// companion phone and the TV.
 ///
@@ -37,6 +41,15 @@ class MapToken {
 
   /// Vertical grid coordinate (row index, zero-based).
   int gridY;
+
+  /// Whether the token stands on the map. `false` for a token created in
+  /// the Tokens tab and not placed yet — then [gridX]/[gridY] mean
+  /// nothing and no screen draws it. [VttState.moveToken] places it.
+  bool placed;
+
+  /// Whether the players don't see this token: the TV leaves it out, the
+  /// DM's tablet draws it faded. Set by [VttState.setTokenHidden].
+  bool hidden;
 
   /// Display name for this token (e.g. "Goblin Archer").
   ///
@@ -71,6 +84,8 @@ class MapToken {
     required this.color,
     required this.gridX,
     required this.gridY,
+    this.placed = true,
+    this.hidden = false,
     this.name = '',
     this.maxHp = 0,
     this.currentHp = 0,
@@ -118,6 +133,8 @@ class MapToken {
         'color': color.toARGB32().toRadixString(16).padLeft(8, '0'),
         'gridX': gridX,
         'gridY': gridY,
+        'placed': placed,
+        'hidden': hidden,
         'name': name,
         'maxHp': maxHp,
         'currentHp': currentHp,
@@ -127,7 +144,8 @@ class MapToken {
   /// Deserializes a [MapToken] from a JSON map.
   ///
   /// Expects keys `id`, `label`, `color` (hex string), `gridX`, and `gridY`.
-  /// Combat metadata fields (`name`, `maxHp`, `currentHp`, `conditions`) are
+  /// `placed` (default `true`), `hidden` (default `false`) and the combat
+  /// metadata fields (`name`, `maxHp`, `currentHp`, `conditions`) are
   /// optional and fall back to defaults if absent, for backwards compatibility
   /// with older session data.
   factory MapToken.fromJson(Map<String, dynamic> json) => MapToken(
@@ -136,6 +154,8 @@ class MapToken {
         color: Color(int.parse(json['color'] as String, radix: 16)),
         gridX: json['gridX'] as int,
         gridY: json['gridY'] as int,
+        placed: json['placed'] as bool? ?? true,
+        hidden: json['hidden'] as bool? ?? false,
         name: json['name'] as String? ?? '',
         maxHp: json['maxHp'] as int? ?? 0,
         currentHp: json['currentHp'] as int? ?? 0,

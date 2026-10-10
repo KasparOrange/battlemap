@@ -23,12 +23,17 @@ class TokenLayer extends Component {
   /// Size of one grid cell in world pixels (used to position tokens).
   final double cellSize;
 
+  /// Whether this is the players' screen (the TV): it leaves out
+  /// [MapToken.hidden] tokens; the DM's tablet draws them faded.
+  final bool isDisplay;
+
   /// Creates a [TokenLayer] with the given [state] and [cellSize].
   ///
   /// The layer is rendered at priority 4 (above strokes, below walls).
   TokenLayer({
     required this.state,
     required this.cellSize,
+    this.isDisplay = true,
   }) : super(priority: 4);
 
   /// Synchronizes token components to match current [VttState.tokens].
@@ -38,8 +43,13 @@ class TokenLayer extends Component {
   /// Each [TokenComponent] receives the full set of fields from its
   /// corresponding [MapToken]: label, color, position, name, HP, and
   /// conditions.
+  ///
+  /// Only tokens on the map ([MapToken.placed]) get a component; on the
+  /// display ([isDisplay]) hidden ones don't either.
   void sync() {
-    final stateTokens = state.tokens;
+    final stateTokens = state.tokens
+        .where((t) => t.placed && !(isDisplay && t.hidden))
+        .toList();
     final stateIds = stateTokens.map((t) => t.id).toSet();
 
     // Build map of current children by token ID
@@ -72,7 +82,7 @@ class TokenLayer extends Component {
           maxHp: token.maxHp,
           currentHp: token.currentHp,
           conditions: List.of(token.conditions),
-        ));
+        )..hidden = token.hidden);
       }
     }
   }

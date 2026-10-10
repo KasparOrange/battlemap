@@ -6,6 +6,13 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 20:21 - 303b3806 - Tokens tab: off-map tokens, place, jump, hide, delete
+- Konrad: create tokens without putting them on the map; the list shows whether each is on the map, jumps the DM view to it, hides/shows it for the players, deletes it with one tap
+	- `MapToken.placed` / `hidden` (JSON, old data = placed + visible); `VttState.createToken`, `setTokenHidden`, `placingTokenId` (tablet-local) + `setPlacingToken`; `moveToken` places an off-map token, its undo takes it off again (`TokenMoveAction.fromPlaced`); labels stay unique
+	- relay `vtt.createToken`, `vtt.setTokenHidden` (TV handlers in `tv_shell.dart`); `TokenLayer` skips off-map tokens and, on the TV, hidden ones; the tablet draws hidden tokens faded
+	- Tokens tab: name field + add, rows with where-it-is line, place/jump, eye, delete (snackbar with Undo); `VttGame.centerOnSquare` for the jump
+	- 7 new tests (state + panel), suite 516 green — run in a clean worktree, because another session's relay-client edits were mid-way
+
 ### 26-10-10 20:21 - a9469a3d - AI keep on the table (box + tablet)
 - Konrad: put the generated map on the TV, open on both devices
 	- the fixed keep (run 5) uploaded to the VPS and sent as `bot` (`vtt.mapUploaded`, "AI keep"), then `nav.newSession` "AI keep" in table view, fully fogged; the upload's own "Session 1" deleted

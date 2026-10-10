@@ -364,6 +364,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     _tokenLayer = TokenLayer(
       state: state,
       cellSize: map.resolution.pixelsPerGrid.toDouble(),
+      isDisplay: isDisplay,
     );
     world.add(_tokenLayer!);
 
@@ -891,6 +892,17 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   /// The last TV camera received via [setTvViewport], or `null`.
   CameraSnapshot? get tvCamera => _tvCamera;
 
+  /// Centres this camera on the square ([col], [row]) — the Tokens tab's
+  /// "jump to the token" on the DM's tablet; zoom and angle stay. No-op on
+  /// the display or without a map.
+  void centerOnSquare(int col, int row) {
+    final map = state.map;
+    if (isDisplay || map == null) return;
+    final ppg = map.resolution.pixelsPerGrid.toDouble();
+    camera.viewfinder.position = Vector2((col + 0.5) * ppg, (row + 0.5) * ppg);
+    viewRevision.value++;
+  }
+
   /// Moves this camera to the TV's last known transform (phone side).
   ///
   /// Does nothing when no TV camera has been received yet.
@@ -1366,10 +1378,16 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
     final gridY = (worldPos.y / ppg).floor();
 
     // Check if token already exists at this position
-    final existing =
-        state.tokens.where((t) => t.gridX == gridX && t.gridY == gridY);
+    final existing = state.tokens
+        .where((t) => t.placed && t.gridX == gridX && t.gridY == gridY);
     if (existing.isEmpty) {
-      state.addToken(gridX, gridY);
+      // A token picked in the Tokens tab's list goes here; else a new one
+      final placing = state.placingTokenId;
+      if (placing != null && state.tokens.any((t) => t.id == placing)) {
+        state.moveToken(placing, gridX, gridY);
+      } else {
+        state.addToken(gridX, gridY);
+      }
     } else {
       // Long-press to remove is not available via tap; tapping an occupied cell
       // does nothing for now (could cycle selection in the future).
@@ -1383,7 +1401,7 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
 
     // Find token at this grid position
     for (final token in state.tokens) {
-      if (token.gridX == gridX && token.gridY == gridY) {
+      if (token.placed && token.gridX == gridX && token.gridY == gridY) {
         _draggingTokenId = token.id;
         return;
       }
