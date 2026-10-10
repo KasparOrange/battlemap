@@ -99,6 +99,44 @@ Thinking `high` adds ~2.4k thought tokens (billed as text output, a fraction of 
 does not yet separate good from bad — the overlay is the real check; `est_cost` ignores
 thought tokens; style refs (`--refs`) untested; no packed map loaded on the TV yet.
 
+## Next — pick up here (hand-off 2026-10-10)
+
+**Start of a session on this sub-project:** read this file, open the board
+(`horizon open battlemap-mapgen`, walk: `horizon present battlemap-mapgen overview`), check
+the budget (prepaid €20 on Bao's account, ≈ $0.30 used by 2026-10-10 — AI Studio → Ausgaben,
+signed in as nico.zingerle). Every new image goes onto the board (rule above).
+
+**Findings from run 1 that set the order** (Konrad, 2026-10-10):
+
+- Doors: the red marker leaks into the art, AND the model draws doors side-on (a door's face
+  laid flat), each in another style. Seen from above a door is a thin plank in the wall line.
+- Ruin words ("collapsed") make the model open walls our `.dd2vtt` still has.
+- The gradient QA score does not rank images; the overlay is the only real check today.
+
+**Steps, in order** (one at a time, each onto the board before the next):
+
+1. **Doors drawn by battlemap, not by the model.** Guide: a door edge becomes a gap (floor
+   runs through), no red bar; prompt: "open doorways, no doors". Battlemap draws a top-down
+   door sprite on each portal (position + rotation already in the `.dd2vtt`), closed ↔ open
+   on toggle — this is also the "door animations" idea in `feature-ideas.md`. One sprite per
+   style (Nano Banana once, or drawn in code). Needs a battlemap feature (opt-in, tests), so
+   it follows the project's one-feature-at-a-time rule.
+2. **Ruins in the layout**, not in free text: an area flag (e.g. `"ruined": true`) that the
+   prompt turns into "damage inside the room, every wall stays standing".
+3. **Judge.** Script checks in `mapgen.py` (free): red / marker pixels left in door bands,
+   painted-wall overlap with our wall lines. Model judge = a **Claude helper session** on the
+   subscription (`claude-bridge headless new --cwd ~/code/battlemap`, never `claude -p`): reads
+   `guide.png`, `out_N.jpg`, `overlay_N.jpg` and writes `judge_N.json`
+   `{walls_kept, doorways_clean, grid_or_text, style_ok, issues: [{x, y, what, severity}]}`
+   (x/y in grid squares). Gemini Flash as judge only later, for unattended server runs (a
+   "paint" button on the phone).
+4. **Board from data:** `board.py` builds plates from each run's `meta.json` + `judge_N.json`
+   (issues → pins automatically) instead of the hand-written `PLATES`.
+5. **On the TV:** packed crypt on the Android bench (`tools/android_bench.sh`, AVD `bm_tv`):
+   do fog, doors and room reveal match the painted walls?
+6. **4K finals + the tuning grid** (below), run by the helper session; this session gets a
+   short summary + the board.
+
 ## Map pipeline
 
 ```mermaid

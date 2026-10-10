@@ -74,3 +74,9 @@ Version bumped to 1.1.5+15 with the overhaul. Web build from the Mac is rsynced 
 (`git pull --ff-only`, then the full deploy sequence) — until then the TV runs 1.1.4+14, which
 still understands every old message but sends no `canUndo`/`measure`/`vw`/`vh`, so on the
 phone undo stays greyed, no TV frame is drawn, and measure/`vtt.setCamera` are ignored.
+
+## other live work: AI map pipeline (#40)
+
+Separate sub-project, own hand-off: `ai-art.md` § "Next — pick up here" (doors drawn by
+battlemap, ruins in the layout, Claude helper as judge, board from data, TV test, 4K + tuning).
+Test images live on the horizon board `battlemap-mapgen`.

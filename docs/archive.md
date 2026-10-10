@@ -6,6 +6,9 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - ai art hand-off
+- Konrad: doors are drawn side-on (not top-down) and differ per draw; judge with Claude (subscription) rather than Gemini; prepare the hand-off → `ai-art.md` § "Next — pick up here": doors drawn by battlemap as top-down sprites per portal (model paints empty doorways), ruins as a layout flag, script checks + Claude helper session as judge (Gemini only for unattended server runs), board built from run data, TV test, then 4K + tuning; pointer in `action.md`, tracker #40
+
 ### 26-10-10 - ai art test board
 - Konrad: all test images individually on a horizon canvas with notes + arrows to features, why they were chosen, the next images; keep it updated → board `battlemap-mapgen` built by `tools/mapgen/board.py` (pins in grid squares, notes coloured by worked/problem/open, QA overlays, NEXT slots); rule recorded in `ai-art.md`
 	- learned: a horizon `PUT` stores edges as sent — without `id` + `props` the app renders nothing at all (fixed in the builder; lesson added to horizon's board handbook)
