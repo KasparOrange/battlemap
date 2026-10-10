@@ -1824,4 +1824,39 @@ void main() {
       expect(restored.scaleSliderFactor, 1.0);
     });
   });
+
+  group('loading a map starts a clean session', () {
+    test('loadMap drops tokens, measure, AoE, ruler and undo of the previous map', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes(gridCols: 10, gridRows: 8));
+      state.addToken(2, 3);
+      state.addToken(4, 4);
+      state.applyBrushReveal([1, 2, 3]);
+      state.measureStart = const Offset(0, 0);
+      state.measureEnd = const Offset(100, 0);
+      state.rulerVisible = true;
+      expect(state.canUndo, isTrue);
+
+      state.loadMap(_makeMinimalUvttBytes(gridCols: 12, gridRows: 9));
+
+      expect(state.tokens, isEmpty);
+      expect(state.strokes, isEmpty);
+      expect(state.revealedCells, isEmpty);
+      expect(state.measureStart, isNull);
+      expect(state.activeAoe, isNull);
+      expect(state.rulerVisible, isFalse);
+      expect(state.canUndo, isFalse);
+    });
+
+    test('loadPdfAsMap drops the previous tokens too', () {
+      final state = VttState();
+      state.loadMap(_makeMinimalUvttBytes());
+      state.addToken(1, 1);
+
+      state.loadPdfAsMap(Uint8List(0),
+          gridCols: 20, gridRows: 15, imageWidth: 2000, imageHeight: 1500);
+
+      expect(state.tokens, isEmpty);
+    });
+  });
 }

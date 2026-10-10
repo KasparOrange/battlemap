@@ -9,6 +9,11 @@ Registration protocol:
   <- {"type": "registered", "role": "...", "paired": true|false}
   <- {"type": "peer_connected"}  (when the other side connects)
   <- {"type": "peer_disconnected"}  (when the other side disconnects)
+
+A third role, "bot", is for test automation (tools/bench_bot.py): it sits next
+to the companion instead of replacing it. Bot messages go to the table; table
+messages go to the companion AND the bot. Pairing is between table and
+companion only — the bot never triggers peer_connected/peer_disconnected.
 """
 
 import asyncio
@@ -38,8 +43,15 @@ ZOMBIE_TIMEOUT = 45  # close if no message received for this long
 REGISTER_TIMEOUT = 10  # seconds to wait for register message
 RATE_WARN_THRESHOLD = 200  # messages/sec before warning
 
-# Slots: at most one table and one companion at a time
+# Slots: at most one table, one companion and one bot at a time
 slots = {}
+
+# Who receives what a role sends (the bot listens to the table like a companion).
+FORWARD_TO = {
+    "table": ("companion", "bot"),
+    "companion": ("table",),
+    "bot": ("table",),
+}
 
 # Per-connection metadata: ws -> {last_message_time, msg_count, rate_window_start}
 conn_meta = {}
@@ -174,7 +186,7 @@ async def handler(ws, path=None):
             # Registration
             if msg_type == "register":
                 role = msg.get("role")
-                if role not in ("table", "companion"):
+                if role not in FORWARD_TO:
                     await ws.send(json.dumps({"type": "error", "msg": "invalid role"}))
                     continue
 
@@ -198,7 +210,7 @@ async def handler(ws, path=None):
                 if meta:
                     meta["role"] = role
                 registered = True
-                peer_role = "companion" if role == "table" else "table"
+                peer_role = "table" if role == "bot" else "companion" if role == "table" else "table"
                 paired = peer_role in slots
                 await ws.send(json.dumps({
                     "type": "registered",
@@ -208,8 +220,8 @@ async def handler(ws, path=None):
                 log.info("register %s from %s:%s (paired=%s)", role, remote[0], remote[1], paired)
                 relay_log("register", role=role, ip=remote[0], paired=paired)
 
-                # Notify peer
-                if paired:
+                # Notify peer (the bot is invisible to pairing)
+                if paired and role != "bot":
                     await notify_peer(role, {"type": "peer_connected"})
                 continue
 
@@ -222,21 +234,26 @@ async def handler(ws, path=None):
 
             # Forward everything else to the peer
             if role:
-                log.info("forward  %s -> peer  %s (%.1f KB)", role, msg_type, size_kb)
-                peer_role = "companion" if role == "table" else "table"
-                log_entry = {"from": role, "to": peer_role, "type": msg_type or "?", "size": size}
+                if msg_type != "vtt.fullState":  # 20/s while paired — too noisy
+                    log.info("forward  %s -> peer  %s (%.1f KB)", role, msg_type, size_kb)
+                targets = FORWARD_TO[role]
+                log_entry = {"from": role, "to": ",".join(targets), "type": msg_type or "?", "size": size}
                 # Log tv.log message content directly
                 if msg_type == "tv.log":
                     log_entry["tvMsg"] = msg.get("msg", "")
                     log.info("  TV LOG: %s", msg.get("msg", ""))
                 relay_log("forward", **log_entry)
-                peer = slots.get(peer_role)
-                if peer:
+                delivered = False
+                for peer_role in targets:
+                    peer = slots.get(peer_role)
+                    if not peer:
+                        continue
+                    delivered = True
                     try:
                         await peer.send(raw)
                     except Exception as e:
                         log.warning("forward failed %s -> %s: %s", role, peer_role, e)
-                else:
+                if not delivered:
                     log.info("no peer for %s, dropping message", role)
 
     except websockets.ConnectionClosed as e:
@@ -250,7 +267,8 @@ async def handler(ws, path=None):
             del slots[role]
             log.info("disconn  %s from %s:%s", role, remote[0], remote[1])
             relay_log("disconnect", role=role, ip=remote[0])
-            await notify_peer(role, {"type": "peer_disconnected"})
+            if role != "bot":
+                await notify_peer(role, {"type": "peer_disconnected"})
         else:
             log.info("disconn  %s:%s (unregistered)", remote[0], remote[1])
             relay_log("disconnect", ip=remote[0], role=role or "unregistered")

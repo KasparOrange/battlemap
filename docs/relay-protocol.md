@@ -19,6 +19,11 @@ badges flashing. the TV then shows "Another TV took over" + a focused "Take over
 companion a "Reconnect" snackbar / button; both call `connect()` to claim the slot back.
 clients older than that ignore `replaced` and keep the old swap behaviour.
 
+**bot role** (test automation, `tools/bench_bot.py`): `{"type": "register", "role": "bot"}` sits
+next to the companion instead of replacing it. bot → table; table → companion **and** bot. the
+bot never takes part in pairing (no `peer_connected`/`peer_disconnected` for it), so the TV
+still only broadcasts `vtt.fullState` while a real companion is paired.
+
 ## heartbeat
 
 ```
@@ -106,7 +111,7 @@ companion downloads from VPS via HTTP.
 
 ```
 {"type": "vtt.setMode", "mode": "fogReveal"|"draw"|"token"}
-{"type": "vtt.addStroke", "stroke": {"points": [[x,y],...], "color": 0xFFE53935, "width": 3.0}}
+{"type": "vtt.addStroke", "stroke": {"points": [[x,y],...], "color": "ffe53935", "width": 3.0}}   // color = ARGB hex string
 {"type": "vtt.strokeUpdate", "stroke": {...}|null}
 {"type": "vtt.strokeEnd"}
 {"type": "vtt.clearDrawings"}

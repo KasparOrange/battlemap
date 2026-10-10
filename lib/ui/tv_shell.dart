@@ -496,6 +496,7 @@ class _TvShellState extends State<TvShell> {
   Future<void> _startNewSession(String mapId, String name,
       {bool sendMapToCompanion = true, SessionSettings? settings}) async {
     try {
+      await _flushPendingSave();
       _log('Starting new session: mapId=$mapId, name="$name", sendMap=$sendMapToCompanion');
       final entry = _library.getEntry(mapId);
       final bytes = await _library.loadMapBytes(mapId);
@@ -526,6 +527,22 @@ class _TvShellState extends State<TvShell> {
           imageWidth: width.toDouble(),
           imageHeight: height.toDouble(),
         );
+      } else if (entry?.isImage == true) {
+        // Raw raster image (jpg/png/webp upload) — not UVTT JSON, so
+        // loadMap would throw. Same synthetic-map path as _resumeSession.
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        final width = frame.image.width;
+        final height = frame.image.height;
+        frame.image.dispose();
+        if (!mounted) return;
+        _state.loadPdfAsMap(
+          bytes,
+          gridCols: entry!.pdfGridCols ?? 20,
+          gridRows: entry.pdfGridRows ?? 15,
+          imageWidth: width.toDouble(),
+          imageHeight: height.toDouble(),
+        );
       } else {
         _state.loadMap(bytes);
       }
@@ -546,12 +563,16 @@ class _TvShellState extends State<TvShell> {
       }
 
       // Initial save
-      await _saveCurrentSession(isPdfSession: entry?.isPdf == true);
+      await _saveCurrentSession(
+        isPdfSession: entry?.isPdf == true,
+        isImageSession: entry?.isImage == true,
+      );
 
       // Tell companion where to download the map (if they don't already have it)
       if (sendMapToCompanion) {
-        if (entry?.isPdf == true && _state.map?.imageBytes != null) {
-          // PDF: send rendered image via chunks (companion can't render PDFs)
+        final isRaster = entry?.isPdf == true || entry?.isImage == true;
+        if (isRaster && _state.map?.imageBytes != null) {
+          // PDF or image: send the pixels via chunks, like _resumeSession
           _log('Sending rendered PDF image to companion (${(_state.map!.imageBytes.length / 1024).round()} KB)');
           _relay.sendMapChunked(_state.map!.imageBytes);
         } else if (entry?.vpsUrl != null) {
@@ -570,6 +591,7 @@ class _TvShellState extends State<TvShell> {
       _log('Session started: $_activeSessionId');
     } catch (e, stack) {
       _log('ERROR in _startNewSession: $e');
+      _sendError('Could not open the map: $e');
       _log('Stack: ${stack.toString().split('\n').take(5).join(' | ')}');
       RemoteLog.error('session', 'startNewSession failed', {'error': '$e', 'mapId': mapId});
     }
@@ -589,6 +611,7 @@ class _TvShellState extends State<TvShell> {
   /// - [_saveCurrentSession] for the auto-save mechanism.
   Future<void> _resumeSession(String sessionId) async {
     try {
+      await _flushPendingSave();
       _log('Resuming session: $sessionId');
       final session = await _library.loadSession(sessionId);
       if (session == null) {
@@ -752,6 +775,21 @@ class _TvShellState extends State<TvShell> {
     _autoSaveTimer = Timer(const Duration(seconds: 2), () {
       _saveCurrentSession();
     });
+  }
+
+  /// Saves the current session now if a debounced auto-save is pending.
+  ///
+  /// Call before the active session changes ([_startNewSession],
+  /// [_resumeSession], back to the library). The debounce in
+  /// [_markDirtyForAutoSave] would otherwise fire after the switch and save
+  /// the *new* session, so edits made in the last 2 s before switching were
+  /// lost (found by the bench robot on 2026-10-10: reveal a tower floor,
+  /// switch floors right away, come back — fog and tokens gone).
+  Future<void> _flushPendingSave() async {
+    final timer = _autoSaveTimer;
+    if (timer == null || !timer.isActive || _activeSessionId == null) return;
+    timer.cancel();
+    await _saveCurrentSession();
   }
 
   /// Saves the current session state to disk.
@@ -971,6 +1009,7 @@ class _TvShellState extends State<TvShell> {
       switch (type) {
         // Navigation
         case 'nav.goToLibrary':
+          _flushPendingSave();
           _state.removeListener(_onStateChanged);
           _setView(TvView.library);
           _broadcastFullState();
@@ -1351,6 +1390,7 @@ class _TvShellState extends State<TvShell> {
   void _navigateBack() {
     _log('navigateBack from ${_currentView.name}');
     if (_currentView == TvView.game) {
+      _flushPendingSave();
       _state.removeListener(_onStateChanged);
       _setView(TvView.library);
       _broadcastFullState();

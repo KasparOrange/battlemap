@@ -368,8 +368,9 @@ class VttState extends ChangeNotifier {
   /// Loads a `.dd2vtt` map file from raw bytes.
   ///
   /// Parses the JSON, extracts the map image, initializes portal states
-  /// from the file defaults, and clears any previously revealed fog cells.
-  /// Retains [rawMapBytes] for sending to newly connected companions.
+  /// from the file defaults, and clears any previously revealed fog cells
+  /// plus the previous session's tokens, drawings and undo history
+  /// ([_resetSessionState]). Retains [rawMapBytes] for sending to newly connected companions.
   ///
   /// Notifies all listeners after loading.
   void loadMap(Uint8List fileBytes) {
@@ -382,6 +383,7 @@ class VttState extends ChangeNotifier {
       if (!map!.portals[i].closed) openPortals.add(i);
     }
     revealedCells.clear();
+    _resetSessionState();
     debugPrint('Loaded UVTT map: ${map!.resolution.mapSize.dx.toInt()}x'
         '${map!.resolution.mapSize.dy.toInt()} grid, '
         '${map!.resolution.pixelsPerGrid}ppg, '
@@ -434,9 +436,31 @@ class VttState extends ChangeNotifier {
     rawMapBytes = null; // PDF bytes stored separately in library
     openPortals.clear();
     revealedCells.clear();
+    _resetSessionState();
     debugPrint('Loaded PDF as map: ${gridCols}x$gridRows grid, '
         '${pixelsPerGrid.round()}ppg');
     notifyListeners();
+  }
+
+  /// Clears everything that belongs to one session rather than to the map:
+  /// tokens, drawings, undo history, measure line, AoE template, ruler and
+  /// shadow edits.
+  ///
+  /// Called by [loadMap] and [loadPdfAsMap] so a new session starts clean —
+  /// before 2026-10-10 tokens and drawings of the previous map carried over.
+  /// A resumed session restores its own tokens/drawings after the load.
+  void _resetSessionState() {
+    tokens = [];
+    strokes = [];
+    liveStroke = null;
+    _undoStack.clear();
+    _redoStack.clear();
+    measureStart = null;
+    measureEnd = null;
+    activeAoe = null;
+    rulerVisible = false;
+    shadowRevealCells.clear();
+    shadowHideCells.clear();
   }
 
   // ===== Undo / Redo =====

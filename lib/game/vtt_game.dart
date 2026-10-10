@@ -58,6 +58,14 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   final bool isDisplay;
 
   VttMapImageComponent? _mapImage;
+
+  /// The [UvttMap] whose components are (being) built — compared by identity
+  /// so a newly loaded map replaces the old one, not just the first map.
+  UvttMap? _loadedMap;
+
+  /// Bumped per [_loadMap]; a decode that finishes after a newer load started
+  /// discards itself instead of adding stale components.
+  int _loadGeneration = 0;
   VttGridOverlayComponent? _gridOverlay;
   WallComponent? _wallComponent;
   final List<PortalComponent> _portalComponents = [];
@@ -82,6 +90,16 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
 
   /// Upper zoom bound (screen pixels per world pixel).
   static const double maxZoom = 10.0;
+
+  /// Longest side, in pixels, a map picture is decoded to.
+  ///
+  /// Bigger Dungeondraft exports (a 114×64-square castle at 150 px/square is
+  /// 17100×9600) exceed GPU texture limits and would need ~650 MB decoded —
+  /// the TV then showed an empty screen. Larger pictures are decoded straight
+  /// to this size (no full-size intermediate); the map keeps its grid
+  /// coordinates because the picture is always drawn stretched to
+  /// [UvttMap.pixelWidth] × [UvttMap.pixelHeight]. 4096² RGBA ≈ 64 MB.
+  static const int maxMapTextureSide = 4096;
 
   // Camera gesture state
   double _initialZoom = 1.0;
@@ -125,7 +143,10 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   Future<void> onLoad() async {
     await super.onLoad();
     state.addListener(_onStateChanged);
-    if (state.map != null) _loadMap(state.map!);
+    if (state.map != null) {
+      _loadedMap = state.map;
+      _loadMap(state.map!);
+    }
   }
 
   @override
@@ -147,9 +168,15 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   }
 
   void _onStateChanged() {
-    if (state.map != null && _mapImage == null) {
+    // Rebuild whenever the map object changes. Before 2026-10-10 this checked
+    // `_mapImage == null`, so the first map's picture stayed for the whole app
+    // run while fog, doors and grid already belonged to the next map.
+    if (state.map != null && !identical(state.map, _loadedMap)) {
+      _loadedMap = state.map;
       _loadMap(state.map!);
-    } else if (state.map == null && _mapImage != null) {
+    } else if (state.map == null && _loadedMap != null) {
+      _loadedMap = null;
+      _loadGeneration++;
       _clearMap();
     }
     // Sync visibility
@@ -180,12 +207,24 @@ class VttGame extends FlameGame with ScaleDetector, ScrollDetector {
   }
 
   Future<void> _loadMap(UvttMap map) async {
+    final generation = ++_loadGeneration;
     _clearMap();
 
-    // Decode image
-    final codec = await ui.instantiateImageCodec(map.imageBytes);
+    // Decode image, shrunk to maxMapTextureSide if the map is bigger
+    final longest = max(map.pixelWidth, map.pixelHeight);
+    final shrink = longest > maxMapTextureSide ? maxMapTextureSide / longest : 1.0;
+    final codec = await ui.instantiateImageCodec(
+      map.imageBytes,
+      targetWidth: shrink < 1 ? (map.pixelWidth * shrink).round() : null,
+      targetHeight: shrink < 1 ? (map.pixelHeight * shrink).round() : null,
+    );
     final frame = await codec.getNextFrame();
     final image = frame.image;
+    if (generation != _loadGeneration) {
+      // Another map was loaded while this one decoded — drop this one.
+      image.dispose();
+      return;
+    }
 
     final mapPixelW = map.pixelWidth;
     final mapPixelH = map.pixelHeight;

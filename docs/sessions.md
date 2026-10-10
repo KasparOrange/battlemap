@@ -36,7 +36,7 @@ sessions are stored on the TV's local disk and survive app restarts and updates.
 
 ## what triggers auto-save
 
-auto-save fires 2 seconds after the last state change. this batches rapid changes (like painting fog) into a single save. triggers:
+auto-save fires 2 seconds after the last state change. this batches rapid changes (like painting fog) into a single save. a pending save is flushed immediately before the session changes (new session, resume, back to the library) — before 2026-10-10 a switch inside the 2 s window lost the last edits. triggers:
 
 - fog brush stroke completion (not per pixel — debounced)
 - door toggle

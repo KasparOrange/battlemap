@@ -6,6 +6,17 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 - battlemap bench robot
+- Konrad: "make it just work, I don't want to test manually" → `tools/bench_bot.py` (seed the library + play `test-session.md` over the relay, assertions on the TV's broadcasts, adb screenshots with a pixel-coverage check, report in `build/bench-report/`, opened in ledger); relay gets a `bot` role (forwarded table traffic, no pairing)
+- bugs the robot found and that are fixed (all TV side, `flutter test` 375 green, run 51/51):
+	- **map picture never changed after the first map**: `VttGame._onStateChanged` only loaded when `_mapImage == null`; now reloads on a new `UvttMap` identity, stale decodes discard themselves, the old image is disposed (`VttMapImageComponent.onRemove`)
+	- **tokens/drawings/undo/measure/AoE/ruler leaked into the next session**: `VttState._resetSessionState()` in `loadMap`/`loadPdfAsMap` (+2 tests)
+	- **image maps could not be opened from the library**: `_startNewSession` ignored `isImage` and fed JPG bytes to the UVTT parser; now the image path, image sent to the companion via chunks, errors reach the phone (`tv.error`)
+	- **edits in the last 2 s before switching sessions were lost**: `_flushPendingSave()` before new/resume/back
+	- **huge maps (17100×9600) rendered as an empty screen**: decode capped at 4096 px (`VttGame.maxMapTextureSide`)
+- doc fix: `vtt.addStroke` color is an ARGB hex string, not an int
+- a session restart killed the first full run; re-run after rebuild: 51/51
+
 ### 26-10-10 - ai art doc sweep
 - End-of-session sweep: `ai-art.md` made true to v0 code (QA has no retry yet, upload is manual, `--refs` untested, prompt section points at `prompts/baseline.txt` instead of a drifting copy, money in €21.99 style) + setup gotchas (3-D Secure blocked in telescope, no PayPal, wrong Google account, 429 without billing); README gained "AI-generated maps (experimental)"
 

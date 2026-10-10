@@ -1,5 +1,24 @@
 # test session — a realistic game night
 
+**Automated (since 2026-10-10):** nobody has to click through this. With the android bench
+running (TV in TV Mode, tablet connected as companion):
+
+```bash
+P=~/.local/share/battlemap/venv/bin/python
+$P tools/bench_bot.py seed          # upload the test maps into the TV library (once)
+$P tools/bench_bot.py run --stress  # play scenes 0–7, ~2 min, report + screenshots
+```
+
+The robot joins the relay as `bot` (next to the tablet, see `relay-protocol.md`), sends the
+companion's commands, checks the TV's `vtt.fullState`/`lib.listing`/`diag.status`, kills and
+restarts the TV app for scene 5, and checks every screenshot for an actually visible map (pixel
+coverage — catches "state is right, screen is empty/stale"). Report: `build/bench-report/<time>/
+report.md`, opened in ledger. What still needs eyes: grid alignment on image maps, how things
+*look*. What it does not test: the companion's touch UI (gestures, panel) — that stays manual
+on a real phone.
+
+The scenes below are the script it follows.
+
 One evening of play, compressed into ~30 minutes, on the Android bench (`setup.md` "android bench")
 or the real devices. Each scene names what it exercises. Write down what breaks, with the scene
 number; fixing happens afterwards, from code (`action.md`).

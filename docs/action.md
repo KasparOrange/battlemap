@@ -52,13 +52,17 @@ the web build stays as a fallback). Local testing on the Mac's Android bench (`s
   and no `uses-feature` `android.software.leanback` / `touchscreen required=false` — so the app is
   missing from the Google TV home row (launchable only via Settings ▸ Apps or adb). Fix before
   calling it a Google TV app.
+- **Bench robot (2026-10-10)**: `tools/bench_bot.py run --stress` plays the whole game night,
+  51/51 green after 5 fixes (`archive.md` 26-10-10 "bench robot"). Run it after every TV-side change.
+- **Needs deploying**: the fixes below and the bench-robot fixes only exist in the debug build on
+  the emulators.
 - **Relay takeover fix (2026-10-10) needs deploying**: restart the VPS relay with the new
   `tools/vtt_relay.py`, ship the APK (`archive.md` 26-10-10 "relay takeover loop").
 - Device test (next 1) can now run on the bench first: TV emulator + tablet emulator, following
   `test-session.md` (scripted game night with 10 real maps, incl. a 30 MB stress map).
-- **Predicted: big maps break the TV** — nothing in `lib/` downscales images; a 17100×9600
-  Dungeondraft export exceeds the Mali texture limit and 2 GB RAM. Confirm with scene 7, then
-  downscale on load (decode with a target size).
+- **Big maps**: confirmed on the bench (castle showed an empty screen), fixed — map pictures are
+  decoded at most 4096 px on the long side. Still to check on the real Xiaomi: memory and look of
+  the castle at TV scale (36 px per square after the shrink).
 
 ## kept on purpose: direct TV connection (no relay)
 
