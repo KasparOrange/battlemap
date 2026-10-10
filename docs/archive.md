@@ -1,7 +1,10 @@
 # Battlemap — archive (history, newest on top)
 
 Rule: **one entry per prompt that changed something** — in `docs/`, or in the code it
-governs. Never per session. Heading = `### 26-10-10 21:58 - fog edge trim - Fog tab: trim revealed edges
+governs. Never per session. Heading = `### 26-10-10 22:05 - fog edge trim - docs sweep
+- Konrad (/ty): docs sweep after "trim revealed edges" — test steps in `action.md` + `test-session.md` (house map), feature list, number stepper note (side rail fits only ±1/±2), and a CLAUDE.md rule against the read-after-truncate script after it struck twice today
+
+### 26-10-10 21:58 - fog edge trim - Fog tab: trim revealed edges
 - Konrad: a Fog tab setting for how much of the rim of a connected revealed area is shown — to show a little less around the edges — with the − / + stepper of the measuring dialog
 	- `SessionSettings.fogEdgeInset` (0–45 % of a square, default 0, per game, sent with `vtt.updateSessionSettings`); Fog tab "Trim revealed edges" with `NumberStepper`, applied locally at once so quick taps add up
 	- `fogRevealRects`: revealed squares shrink on the sides that border fog, inner corners get a notch (an even erosion), the map border stays; standard/soft/cloud draw all revealed squares as one path (no seams), atmospheric ignores it; `architecture.md` "Trim revealed edges", tracker #57
