@@ -198,6 +198,27 @@ void main() {
       expect(state.placingTokenId, isNull);
     });
 
+    testWidgets('tapping a token opens a rename dialog that saves the name',
+        (tester) async {
+      final state = await pump(tester, const Size(1280, 800));
+      await tester.tap(find.text('Tokens').last);
+      state.createToken(name: 'Goblin');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Goblin'));
+      await tester.pumpAndSettle();
+      expect(find.text('Rename token'), findsOneWidget);
+      expect(find.text('Max HP'), findsNothing); // digital play only
+      expect(find.text('Conditions'), findsNothing);
+      expect(tester.takeException(), isNull);
+
+      await tester.enterText(find.byType(TextField).last, 'Goblin boss');
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(calls, ['editToken']);
+      expect(find.text('Rename token'), findsNothing);
+    });
+
     testWidgets('a mode set elsewhere switches to its tab', (tester) async {
       final state = await pump(tester, const Size(1280, 800));
       await tester.tap(find.text('Tokens').last); // unfold, no request

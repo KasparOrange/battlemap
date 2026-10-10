@@ -1195,12 +1195,13 @@ class _DmControlPanelState extends State<DmControlPanel> {
     );
   }
 
-  /// Shows a medieval-styled dialog for editing a token's combat metadata.
-  ///
-  /// Fields: name, maxHp, currentHp, condition toggles, and a delete button
-  /// (shown when [DmCallbacks.onRemoveToken] is provided).
-  /// On save, calls [DmCallbacks.onEditToken] with all changed values.
+  /// Shows the token dialog: rename the token (the tabletop case). Hit
+  /// points and conditions appear only when the session has them switched
+  /// on ([SessionSettings.hpBars], [SessionSettings.conditions] — digital
+  /// play); otherwise the token keeps its values. Enter or "Save" calls
+  /// [DmCallbacks.onEditToken]; deleting lives in the token's row.
   void _showTokenEditDialog(MapToken token) {
+    final s = state.sessionSettings;
     final nameCtrl = TextEditingController(text: token.name);
     final maxHpCtrl =
         TextEditingController(text: token.maxHp > 0 ? '${token.maxHp}' : '');
@@ -1209,6 +1210,23 @@ class _DmControlPanelState extends State<DmControlPanel> {
     final selectedConditions = Set<String>.from(token.conditions);
 
     ModalRoute<dynamic>? route;
+    void save(BuildContext ctx) {
+      var maxHp = token.maxHp, currentHp = token.currentHp;
+      if (s.hpBars) {
+        maxHp = int.tryParse(maxHpCtrl.text) ?? 0;
+        currentHp = (int.tryParse(currentHpCtrl.text) ?? 0)
+            .clamp(0, maxHp > 0 ? maxHp : 9999);
+      }
+      cb.onEditToken(
+        token.id,
+        name: nameCtrl.text.trim(),
+        maxHp: maxHp,
+        currentHp: currentHp,
+        conditions: Set<String>.from(selectedConditions),
+      );
+      Navigator.pop(ctx);
+    }
+
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -1223,17 +1241,26 @@ class _DmControlPanelState extends State<DmControlPanel> {
             title: Row(
               children: [
                 Container(
-                  width: 16,
-                  height: 16,
+                  width: 22,
+                  height: 22,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: token.color,
                     shape: BoxShape.circle,
                   ),
+                  child: Text(
+                    token.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 8),
-                Text(
-                  'Edit ${token.label}',
-                  style: const TextStyle(
+                const SizedBox(width: 10),
+                const Text(
+                  'Rename token',
+                  style: TextStyle(
                     color: _kTextPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1241,101 +1268,71 @@ class _DmControlPanelState extends State<DmControlPanel> {
                 ),
               ],
             ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Name field
-                  _goldTextField(nameCtrl, 'Name', 'e.g. Goblin Archer'),
-                  const SizedBox(height: 12),
-                  // HP fields
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _goldTextField(
-                          maxHpCtrl,
-                          'Max HP',
-                          '0',
-                          isNumeric: true,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _goldTextField(
-                          currentHpCtrl,
-                          'Current HP',
-                          '0',
-                          isNumeric: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  // Conditions
-                  const _GoldLabel('Conditions'),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final entry
-                          in MapToken.conditionColors.entries)
-                        GestureDetector(
-                          onTap: () {
-                            setDialogState(() {
-                              if (selectedConditions.contains(entry.key)) {
-                                selectedConditions.remove(entry.key);
-                              } else {
-                                selectedConditions.add(entry.key);
-                              }
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: selectedConditions.contains(entry.key)
-                                  ? Color(entry.value).withValues(alpha: 0.3)
-                                  : _kSurface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: selectedConditions.contains(entry.key)
-                                    ? Color(entry.value)
-                                    : _kBorderGold,
-                              ),
-                            ),
-                            child: Text(
-                              entry.key,
-                              style: TextStyle(
-                                color: selectedConditions.contains(entry.key)
-                                    ? Color(entry.value)
-                                    : _kTextSecondary,
-                                fontSize: 13,
-                              ),
+            content: SizedBox(
+              width: 340,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _goldTextField(
+                      nameCtrl,
+                      'Name',
+                      'e.g. Thorin, Goblin 2',
+                      autofocus: true,
+                      onSubmitted: (_) => save(ctx),
+                    ),
+                    if (s.hpBars) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _goldTextField(
+                              maxHpCtrl,
+                              'Max HP',
+                              '0',
+                              isNumeric: true,
                             ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _goldTextField(
+                              currentHpCtrl,
+                              'Current HP',
+                              '0',
+                              isNumeric: true,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
-                  ),
-                ],
+                    if (s.conditions) ...[
+                      const SizedBox(height: 16),
+                      const _GoldLabel('Conditions'),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          for (final entry in MapToken.conditionColors.entries)
+                            _conditionChip(
+                              entry.key,
+                              Color(entry.value),
+                              selectedConditions.contains(entry.key),
+                              () => setDialogState(() {
+                                if (!selectedConditions.remove(entry.key)) {
+                                  selectedConditions.add(entry.key);
+                                }
+                              }),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
             actions: [
-              // Delete
-              if (cb.onRemoveToken != null)
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    cb.onRemoveToken!(token.id);
-                  },
-                  child: const Text(
-                    'Delete',
-                    style: TextStyle(color: Colors.redAccent, fontSize: _kText),
-                  ),
-                ),
-              const Spacer(),
-              // Cancel
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: const Text(
@@ -1343,21 +1340,8 @@ class _DmControlPanelState extends State<DmControlPanel> {
                   style: TextStyle(color: _kTextSecondary, fontSize: _kText),
                 ),
               ),
-              // Save
               GestureDetector(
-                onTap: () {
-                  final maxHp = int.tryParse(maxHpCtrl.text) ?? 0;
-                  final currentHp =
-                      (int.tryParse(currentHpCtrl.text) ?? 0).clamp(0, maxHp > 0 ? maxHp : 9999);
-                  cb.onEditToken(
-                    token.id,
-                    name: nameCtrl.text.trim(),
-                    maxHp: maxHp,
-                    currentHp: currentHp,
-                    conditions: Set<String>.from(selectedConditions),
-                  );
-                  Navigator.pop(ctx);
-                },
+                onTap: () => save(ctx),
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
@@ -1383,16 +1367,42 @@ class _DmControlPanelState extends State<DmControlPanel> {
         () => _disposeAfterExit(route, [nameCtrl, maxHpCtrl, currentHpCtrl]));
   }
 
+  /// One condition toggle of the token dialog (digital play): [name] in
+  /// its [color] when [on]; [onTap] flips it.
+  Widget _conditionChip(
+      String name, Color color, bool on, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: on ? color.withValues(alpha: 0.3) : _kSurface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: on ? color : _kBorderGold),
+        ),
+        child: Text(
+          name,
+          style: TextStyle(
+            color: on ? color : _kTextSecondary,
+            fontSize: 13,
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Helper to build a gold-themed [TextField] for the edit dialog.
   Widget _goldTextField(
     TextEditingController controller,
     String label,
     String hint, {
     bool isNumeric = false,
+    bool autofocus = false,
     ValueChanged<String>? onSubmitted,
   }) {
     return TextField(
       controller: controller,
+      autofocus: autofocus,
       onSubmitted: onSubmitted,
       keyboardType:
           isNumeric ? const TextInputType.numberWithOptions() : TextInputType.text,

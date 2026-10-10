@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-10 20:37 - 303b3806 - token dialog: rename instead of the combat editor
+- Konrad: tapping a token's name opens a big "Edit" window that doesn't seem to work — what is it for?
+	- it was the digital-play editor (name, HP, ten conditions); its button row held a `Spacer` inside `AlertDialog.actions` (not a Flex) — in a release build that breaks the row, Save included
+	- now "Rename token": name field (autofocus, Enter saves), Cancel/Save, 340 px wide; HP and conditions only with `hpBars` / `conditions` on, otherwise the token keeps its values; Delete left the dialog (the row has it)
+	- widget test, suite 533 green
+
 ### 26-10-10 20:26 - a9469a3d - Deploy 1.1.12+22: doors above the fog on the box
 - Konrad: deploy
 	- `tools/deploy.sh tv tablet` from a clean worktree of HEAD `0d25df0` (doors above the fog + the other sessions' committed tokens tab, circle reveal, grid editor): box and tablet 1.1.11+21 → 1.1.12+22, TV back in the "AI keep" game after 15 s, tablet relaunched into Companion Mode

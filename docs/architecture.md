@@ -97,7 +97,7 @@ New games start in the Tokens mode.
 
 **Tokens tab (since 2026-10-10, 1.1.12):** a name field + add button creates a token that is
 not on the map yet (`vtt.createToken`, `MapToken.placed` = false). Each row: coloured dot with
-its number, name (tap → edit dialog), where it is ("On the map" / "Not on the map", "hidden from
+its number, name (tap → rename dialog), where it is ("On the map" / "Not on the map", "hidden from
 players"), and buttons — **place** (not on the map: arms it, `VttState.placingTokenId`, local to
 the tablet; the next tap on an empty square puts it there via `vtt.moveToken`; leaving the tab
 cancels) or **jump** (on the map: centres the tablet's own view on it, `VttGame.centerOnSquare`,
