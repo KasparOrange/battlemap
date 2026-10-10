@@ -273,6 +273,11 @@ logq lines --tenant battlemap --where 'tag:relay' --since 1h --level info,warn,e
 The relay ships with `~/.config/mwlog/battlemap.env` on the VPS (no file → local only); its
 per-message forwards stay in `/tmp/battlemap.log` there (millisecond stamps).
 
+Restarting the relay: copy `tools/vtt_relay.py` over, `kill <pid>` in its own ssh call, start it with
+`setsid nohup python3 tools/vtt_relay.py >> /tmp/vtt_relay.out 2>&1 < /dev/null &`. The old process
+stops listening at once but can hang on "server closing" with the clients still attached — `kill -9`
+it after a few seconds; the clients reconnect within 1–3 s.
+
 ## relay config
 
 the VPS IP is the default in `lib/network/relay_config.dart` and can be overridden per build:

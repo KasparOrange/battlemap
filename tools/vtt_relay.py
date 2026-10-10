@@ -70,6 +70,9 @@ conn_meta = {}
 
 # Messages arriving this soon after a register were sent before the client
 # could know it was registered: they waited in its socket while offline.
+# Only for clients that don't stamp `sent` (before 1.1.11): stamped ones
+# drop commands while connecting (since 1.1.15), and their legitimate first
+# requests (thumbnails after the listing) would look like a burst.
 BURST_WINDOW = 0.5  # seconds
 BURST_WARN = 3  # messages
 
@@ -253,6 +256,7 @@ async def handler(ws, path=None):
     registered_at = None
     burst = Counter()  # types forwarded within BURST_WINDOW of the register
     burst_logged = False
+    register_sent = None  # the client's `sent` stamp on its register
     forwarded = 0
     close_code = close_reason = None
 
@@ -323,6 +327,8 @@ async def handler(ws, path=None):
                 log.info("register %s from %s:%s (paired=%s)", role, remote[0], remote[1], paired)
                 relay_log("register", role=role, ip=remote[0], paired=paired)
                 registered_at = time.monotonic()
+                register_sent = msg.get("sent")
+                burst_logged = isinstance(register_sent, int)  # new client: no check
                 mwlog("info", "Registered", role=role, ip=remote[0], paired=paired,
                       registerMs=round((registered_at - opened) * 1000))
                 peer_dropped = dropped_no_peer.pop(peer_role, 0)
