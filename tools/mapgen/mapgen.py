@@ -25,12 +25,12 @@ round of an earlier run with the same tag, else a new one), --judge (judge and w
 --pack (pack the best: by the judge with --judge, else by the free checks).
 paint, judge --wait and pack rebuild the horizon board (tools/mapgen/board.py) when it runs.
 
-API key: $GEMINI_API_KEY, else 1Password item $MAPGEN_OP_ITEM (vault dev).
-Model: $MAPGEN_MODEL (default gemini-nano-banana-2.1). Output: tools/mapgen/out/ (gitignored).
+Model calls go through the image generation engine (~/code/image-generation-engine, or
+$IGE_HOME; `ige.paint`, provider nano-banana). API key: $GEMINI_API_KEY, else 1Password item
+$MAPGEN_OP_ITEM (vault dev). Model: $MAPGEN_MODEL (default gemini-nano-banana-2.1). Output: tools/mapgen/out/ (gitignored).
 """
 
 import argparse
-import base64
 import io
 import json
 import math
@@ -39,8 +39,6 @@ import re
 import subprocess
 import sys
 import time
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 import numpy as np
@@ -49,8 +47,14 @@ from PIL import Image, ImageDraw, ImageFilter
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "out"
 MODEL = os.environ.get("MAPGEN_MODEL", "gemini-nano-banana-2.1")
-OP_ITEM = os.environ.get("MAPGEN_OP_ITEM", "Gemini API - battlemap (Bao billing)")
-API = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+os.environ.setdefault("IGE_OP_ITEM", os.environ.get("MAPGEN_OP_ITEM", "Gemini API - battlemap (Bao billing)"))
+os.environ.setdefault("IGE_APP", "mapgen")
+sys.path.insert(0, os.environ.get("IGE_HOME", str(Path.home() / "code/image-generation-engine")))
+try:
+    import ige
+except ImportError:
+    sys.exit("mapgen needs the image generation engine: clone it to ~/code/image-generation-engine "
+             "or set IGE_HOME")
 
 # USD per output image, standard tier (Google pricing page, 2026-10-10).
 PRICE = {"1K": 0.0336, "2K": 0.0504, "4K": 0.113}
@@ -254,50 +258,14 @@ def pick_aspect(spec):
 # ---------------------------------------------------------------- API
 
 
-def api_key():
-    key = os.environ.get("GEMINI_API_KEY")
-    if key:
-        return key
-    return subprocess.run(["op", "item", "get", OP_ITEM, "--vault", "dev", "--fields",
-                           "label=credential", "--reveal"], capture_output=True, text=True,
-                          check=True).stdout.strip()
-
-
-def png_part(img_or_path):
-    if isinstance(img_or_path, Image.Image):
-        buf = io.BytesIO()
-        img_or_path.save(buf, "PNG")
-        data, mime = buf.getvalue(), "image/png"
-    else:
-        p = Path(img_or_path)
-        data = p.read_bytes()
-        mime = "image/png" if p.suffix.lower() == ".png" else "image/jpeg"
-    return {"inlineData": {"mimeType": mime, "data": base64.b64encode(data).decode()}}
-
-
-def generate(key, prompt, images, aspect, size, thinking):
-    """One generateContent call; returns (image bytes, mime, usage metadata)."""
-    body = {
-        "contents": [{"parts": [{"text": prompt}] + [png_part(i) for i in images]}],
-        "generationConfig": {
-            "responseModalities": ["IMAGE"],
-            "imageConfig": {"aspectRatio": aspect, "imageSize": size},
-        },
-    }
-    if thinking:
-        body["generationConfig"]["thinkingConfig"] = {"thinkingLevel": thinking}
-    req = urllib.request.Request(API.format(model=MODEL), data=json.dumps(body).encode(),
-                                 headers={"x-goog-api-key": key, "Content-Type": "application/json"})
+def generate(prompt, images, aspect, size, thinking):
+    """One picture through the engine; returns (image bytes, mime, usage metadata)."""
     try:
-        with urllib.request.urlopen(req, timeout=300) as r:
-            resp = json.load(r)
-    except urllib.error.HTTPError as e:
-        sys.exit(f"API error {e.code}: {e.read().decode()[:600]}")
-    for part in resp["candidates"][0]["content"]["parts"]:
-        if "inlineData" in part:
-            return (base64.b64decode(part["inlineData"]["data"]), part["inlineData"]["mimeType"],
-                    resp.get("usageMetadata", {}))
-    sys.exit(f"no image in response: {json.dumps(resp)[:600]}")
+        res = ige.paint(prompt, images, size, aspect, "nano-banana", MODEL,
+                        {"thinking": thinking} if thinking else {}, label="mapgen")
+    except ige.ProviderError as e:
+        sys.exit(str(e))
+    return res.picture.data, res.picture.mime, res.usage
 
 
 # ---------------------------------------------------------------- QA
@@ -731,10 +699,10 @@ def fix(spec, src_run, file, n, tag="fix-doorways", why=""):
     (run / "prompt.txt").write_text(prompt)
     doorway_sheet(spec, src).save(run / "doorways_before.jpg", quality=88)
     size = json.loads((src_run / "meta.json").read_text()).get("size", "1K")
-    key, a0, results = api_key(), np.asarray(src, dtype=np.float32), []
+    a0, results = np.asarray(src, dtype=np.float32), []
     for i in range(1, n + 1):
         t0 = time.time()
-        data, mime, usage = generate(key, prompt, [src, guide], pick_aspect(spec), size, None)
+        data, mime, usage = generate(prompt, [src, guide], pick_aspect(spec), size, None)
         (run / f"edit_{i}.png").write_bytes(data)
         edit = Image.open(io.BytesIO(data)).convert("RGB").resize(src.size, Image.LANCZOS)
         dx, dy = offset(a0, np.asarray(edit, dtype=np.float32))
@@ -928,11 +896,10 @@ def main():
         prompt = build_prompt(spec, Path(a.prompt).read_text())
         (run / "prompt.txt").write_text(prompt)
         aspect = pick_aspect(spec)
-        key = api_key()
         results = []
         for i in range(1, a.n + 1):
             t0 = time.time()
-            data, mime, usage = generate(key, prompt, [guide] + a.refs, aspect, a.size, a.thinking)
+            data, mime, usage = generate(prompt, [guide] + a.refs, aspect, a.size, a.thinking)
             ext = "png" if "png" in mime else "jpg"
             path = run / f"out_{i}.{ext}"
             path.write_bytes(data)
