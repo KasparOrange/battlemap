@@ -3,8 +3,9 @@ rem battlemap remote access - remove (undo battlemap-remote-setup.cmd)
 rem
 rem Double-click it. It asks for admin rights, then:
 rem   1. stops sharing the TV box and the tablet and signs this PC out of Konrad's network,
-rem   2. puts the PC's old sleep settings back,
-rem   3. optionally uninstalls Tailscale.
+rem   2. takes back Konrad's admin login (SSH) if it was allowed,
+rem   3. puts the PC's old sleep settings back,
+rem   4. optionally uninstalls Tailscale.
 setlocal
 set "BM_SELF=%~f0"
 fltmc >nul 2>&1 || (
@@ -33,6 +34,19 @@ if (Test-Path $ts) {
 } else {
   Say 'Tailscale is not installed.'
 }
+
+$keys = Join-Path $env:ProgramData 'ssh\administrators_authorized_keys'
+if (Test-Path $keys) {
+  $rest = @(Get-Content $keys | Where-Object { $_ -notmatch 'konrad-battlemap-remote$' })
+  if ($rest.Count) { Set-Content -Path $keys -Value $rest -Encoding ascii } else { Remove-Item $keys -Force }
+}
+Remove-NetFirewallRule -Name 'battlemap-remote-ssh' -ErrorAction SilentlyContinue
+if (Test-Path (Join-Path $State 'ssh-installed.txt')) {
+  Stop-Service sshd -ErrorAction SilentlyContinue
+  $cap = Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH.Server*' | Select-Object -First 1
+  if ($cap) { Remove-WindowsCapability -Online -Name $cap.Name | Out-Null }
+}
+Say 'Konrad''s admin login removed.' 'Green'
 
 $backup = Join-Path $State 'sleep-backup.txt'
 if (Test-Path $backup) {
