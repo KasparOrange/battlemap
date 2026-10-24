@@ -238,7 +238,7 @@ file fully before opening it for writing — `open(p,'w').write(f(open(p).read()
 Whether the tablet's bars are hidden: `ANDROID_ADB_SERVER_PORT=5059 adb -s <tablet> shell dumpsys
 window | grep navigationBars` → `visible=false`.
 
-### remote site: the table at Juri's from afar (prepared 2026-10-10, not set up yet)
+### remote site: the table at Juri's from afar (set up 2026-10-22)
 
 The box (`192.168.178.149`) and the tablet (`192.168.178.199`) stand at Juri's. Off his Wi-Fi the
 Mac reaches them through **Tailscale on Juri's Windows PC as a subnet router** — routes for the
