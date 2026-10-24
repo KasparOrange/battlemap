@@ -20,8 +20,8 @@ import '../model/session.dart';
 import '../model/shared_map.dart';
 import '../model/table_fit.dart';
 import '../model/template_disc.dart';
-import '../network/http_download_stub.dart'
-    if (dart.library.io) '../network/http_download.dart';
+import '../network/http_upload_stub.dart'
+    if (dart.library.html) '../network/http_upload.dart';
 import '../network/relay_config.dart';
 import '../network/remote_log_stub.dart'
     if (dart.library.io) '../network/remote_log.dart';
@@ -345,7 +345,7 @@ class _TvShellState extends State<TvShell> {
       _log('Downloading map from VPS: $url');
       _safeSetTransferProgress(0.0);
 
-      final bytes = await httpDownload(url, onProgress: (p) {
+      final bytes = await httpDownloadWeb(url, onProgress: (p) {
         _safeSetTransferProgress(p);
       });
       _safeSetTransferProgress(null);
@@ -406,7 +406,7 @@ class _TvShellState extends State<TvShell> {
       _log('Downloading PDF from VPS: $url');
       _safeSetTransferProgress(0.0);
 
-      final pdfBytes = await httpDownload(url, onProgress: (p) {
+      final pdfBytes = await httpDownloadWeb(url, onProgress: (p) {
         _safeSetTransferProgress(p);
       });
       _safeSetTransferProgress(null);
@@ -494,7 +494,7 @@ class _TvShellState extends State<TvShell> {
       _log('Downloading image from VPS: $url');
       _safeSetTransferProgress(0.0);
 
-      final imageBytes = await httpDownload(url, onProgress: (p) {
+      final imageBytes = await httpDownloadWeb(url, onProgress: (p) {
         _safeSetTransferProgress(p);
       });
       _safeSetTransferProgress(null);
@@ -943,7 +943,7 @@ class _TvShellState extends State<TvShell> {
       final url = '${RelayConfig.httpBase}${shared.url}';
       _log('Shared map "${shared.name}": downloading $url');
       _safeSetTransferProgress(0.0);
-      final bytes = await httpDownload(url, onProgress: _safeSetTransferProgress);
+      final bytes = await httpDownloadWeb(url, onProgress: _safeSetTransferProgress);
       _safeSetTransferProgress(null);
       if (bytes == null) {
         _sendError('Could not download "${shared.name}" from the shared library');

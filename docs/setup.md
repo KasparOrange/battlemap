@@ -395,6 +395,10 @@ xcrun simctl io <sim id> screenshot tv.png            # TV screenshot
 # 5. phone: any browser at http://localhost:4242 → Companion Mode → Connect
 ```
 
+Without a simulator the TV runs in a browser tab too (since 2026-10-24): open
+`http://localhost:4242/#/restore` (TV Mode, its library in the tab's IndexedDB) next to
+`#/companion`; `bench_bot.Bot` drives it like the emulator (its screenshots/adb parts excepted).
+
 Caveats: the relay has **one table slot** — a second TV takes it over and the first one stops
 with "Another TV took over" (`relay-protocol.md`); stop the simulator app before testing with the
 real Apple TV on the VPS relay. Browser automation cannot see Flutter's canvas; drive it by

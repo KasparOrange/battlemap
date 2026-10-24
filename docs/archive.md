@@ -6,6 +6,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-24 18:45 - abbf827c - TV Mode in a browser tab
+- Konrad: start battlemap in the browser, load a random map, set up an example game
+	- `tv_shell.dart` downloads through `httpDownloadWeb` (web: XHR, native: unchanged `httpDownload`) — the web TV's download was a stub returning null, so it could never load a map
+	- `setup.md` "local bench": the whole table in two browser tabs (`#/restore` = TV, `#/companion`)
+
 ### 26-10-10 22:45 - remote site - Juri's PC as the door to the table
 - Konrad: reach box + tablet from afar once he leaves Juri's — prepare it, message Juri with scripts and a canvas walk
 	- `tools/remote-site/`: setup + remove scripts for Windows (Tailscale subnet router, two `/32` routes), board builder + walk; `setup.md` "remote site"
