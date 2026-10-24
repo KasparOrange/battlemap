@@ -1,16 +1,23 @@
-<!doctype html><meta charset="utf-8"><title>Rive</title><link rel="stylesheet" href="fx.css">
-<canvas id="c" class="stage" style="background:#1b1b20"></canvas>
+<!doctype html><meta charset="utf-8"><title>Rive — creatures on the map</title><link rel="stylesheet" href="fx.css">
+<div class="stage" style="background:url(media/keep.jpg) center/cover"></div>
+<canvas id="knight" style="position:absolute;left:24%;top:22%;width:26%;height:46%"></canvas>
+<canvas id="zombie" style="position:absolute;left:60%;top:46%;width:22%;height:40%"></canvas>
 <div class="bar" id="bar"></div><div class="fps" id="fps"></div>
-<div class="cap"><b>Rive</b> (once called Flare) — vector animation with <b>state machines</b>: a door that knows open/closed/locked, a creature with idle/attack/hurt, driven by inputs from the app. Own editor, small binary files, a WebAssembly runtime that draws on the GPU. Also runs in Flutter. Sample: Rive's official "vehicles" file.</div>
+<div class="cap"><b>Rive</b> (once called Flare) — vector characters with <b>states</b>, on a transparent background right on the map. The tablet presses the buttons: idle, walk, attack, death. Own editor, small files (the knight is 66 KB), a WebAssembly runtime; also runs in Flutter. Samples: the death knight and zombie from Rive's own runtime tests.</div>
 <script src="vendor/rive.js"></script>
 <script type="module">
-import { fpsMeter, toggles } from "./fx.js"; fpsMeter(document.getElementById("fps"));
+import { fpsMeter, score } from "./fx.js"; score({gpu:'B',mem:'A',cpu:'B'}, "two characters; each one adds a little processor work");
+fpsMeter(document.getElementById("fps"));
 rive.RuntimeLoader.setWasmUrl("vendor/rive.wasm");
-const c = document.getElementById("c");
-const r = new rive.Rive({ src: "media/vehicles.riv", canvas: c, autoplay: true,
-  onLoad: () => { r.resizeDrawingSurfaceToCanvas();
-    const names = r.animationNames; const state = Object.fromEntries(names.map((n, i) => [n, i === 0]));
-    toggles(document.getElementById("bar"), names, state, () => { r.stop(); const on = names.filter((n) => state[n]); if (on.length) r.play(on); });
-    r.play(names[0]); } });
-addEventListener("resize", () => r.resizeDrawingSurfaceToCanvas());
+const knight = new rive.Rive({ src: "media/rive-death_knight.riv", canvas: document.getElementById("knight"), autoplay: true, animations: ["Idle"],
+  onLoad: () => knight.resizeDrawingSurfaceToCanvas() });
+const zombie = new rive.Rive({ src: "media/rive-zombie_skins.riv", canvas: document.getElementById("zombie"), autoplay: true, stateMachines: ["Motion"],
+  onLoad: () => zombie.resizeDrawingSurfaceToCanvas() });
+const bar = document.getElementById("bar");
+for (const name of ["Idle", "Walk", "Attack", "Death", "Alive"]) {
+  const b = document.createElement("button"); b.textContent = `Knight · ${name}`; if (name === "Idle") b.className = "on";
+  b.onclick = () => { knight.stop(); knight.play([name]); [...bar.children].forEach((x) => x.classList.toggle("on", x === b)); };
+  bar.append(b);
+}
+addEventListener("resize", () => { knight.resizeDrawingSurfaceToCanvas(); zombie.resizeDrawingSurfaceToCanvas(); });
 </script>

@@ -1,11 +1,15 @@
-<!doctype html><meta charset="utf-8"><title>Lottie</title><link rel="stylesheet" href="fx.css">
-<div id="a" class="stage" style="background:#1b1b20"></div>
+<!doctype html><meta charset="utf-8"><title>Lottie — magic circle</title><link rel="stylesheet" href="fx.css">
+<div class="stage" style="background:url(media/keep.jpg) center/cover"></div>
+<div id="a" style="position:absolute;left:30%;top:18%;width:40%;aspect-ratio:1;max-height:70%;mix-blend-mode:screen;filter:drop-shadow(0 0 6px #5ef)"></div>
 <div class="bar" id="bar"></div><div class="fps" id="fps"></div>
-<div class="cap"><b>Lottie</b> — vector animation made in After Effects, exported as JSON (Bodymovin), played by lottie-web. Huge free library (LottieFiles), crisp at any size, tiny files. The player rebuilds paths every frame on the CPU, so a few on screen at once — UI flourishes, a banner, a dice result — not the whole map. Sample: lottie-web's own demo file.</div>
+<div class="cap"><b>Lottie</b> — a vector animation as JSON, here a hand-made magic circle (8 KB): rings, a star and runes turning, a pulsing core, transparent over the map. Normally made in After Effects or picked from the free LottieFiles library. The player rebuilds every path each frame on the processor: great for a spell circle, a banner, a dice result — a few at once, not the whole map.</div>
 <script src="vendor/lottie.min.js"></script>
 <script type="module">
-import { fpsMeter, toggles } from "./fx.js"; fpsMeter(document.getElementById("fps"));
-let anim = lottie.loadAnimation({ container: document.getElementById("a"), renderer: "svg", loop: true, autoplay: true, path: "media/lottie-gatin.json" });
+import { fpsMeter, toggles, score } from "./fx.js"; score({gpu:'A',mem:'A',cpu:'C'}, "one circle; paths rebuilt each frame — a few at once");
+fpsMeter(document.getElementById("fps"));
+const el = document.getElementById("a");
+const load = (renderer) => lottie.loadAnimation({ container: el, renderer, loop: true, autoplay: true, path: "media/lottie-magic-circle.json" });
+let anim = load("svg");
 const state = { Canvas: false };
-toggles(document.getElementById("bar"), ["Canvas"], state, () => { anim.destroy(); anim = lottie.loadAnimation({ container: document.getElementById("a"), renderer: state.Canvas ? "canvas" : "svg", loop: true, autoplay: true, path: "media/lottie-gatin.json" }); });
+toggles(document.getElementById("bar"), ["Canvas"], state, () => { anim.destroy(); anim = load(state.Canvas ? "canvas" : "svg"); });
 </script>

@@ -1,7 +1,30 @@
 <!doctype html><meta charset="utf-8"><title>Video — water</title><link rel="stylesheet" href="fx.css">
+<style>
+  .pool{position:absolute;left:62%;top:52%;width:34%;height:36%;object-fit:cover;-webkit-mask:radial-gradient(closest-side,#000 80%,transparent);mask:radial-gradient(closest-side,#000 80%,transparent);mix-blend-mode:hard-light;opacity:0;transition:none}
+  .pool.on{opacity:.9}
+</style>
 <div class="stage" style="background:url(media/keep.jpg) center/cover"></div>
-<video autoplay loop muted playsinline style="position:absolute;left:62%;top:52%;width:34%;height:36%;object-fit:cover;border-radius:50%;-webkit-mask:radial-gradient(closest-side,#000 80%,transparent);mask:radial-gradient(closest-side,#000 80%,transparent);mix-blend-mode:hard-light;opacity:.9">
-  <source src="media/water.webm" type='video/webm; codecs="vp9"'><source src="media/water.mp4" type="video/mp4"></video>
+<video class="pool on" muted playsinline preload="auto"><source src="media/water.webm" type='video/webm; codecs="vp9"'><source src="media/water.mp4" type="video/mp4"></video>
+<video class="pool" muted playsinline preload="auto"><source src="media/water.webm" type='video/webm; codecs="vp9"'><source src="media/water.mp4" type="video/mp4"></video>
 <div class="fps" id="fps"></div>
-<div class="cap"><b>Video loop</b> — water as a 3-second seamless clip (here generated; could be real footage), masked into a pool. Photo-real looks for free, tiny files (≈ 400 KB), decoded by the box's hardware video decoder — but most TV boxes have one or two decoders, so one or two clips at a time, not ten.</div>
-<script type="module">import { fpsMeter } from "./fx.js"; fpsMeter(document.getElementById("fps"));</script>
+<div class="cap"><b>Video loop</b> — water as a 3-second seamless clip (here generated; could be real footage), masked into a pool. Two players take turns, because a browser's own loop pauses for a moment at every restart. Photo-real looks for free, tiny files (≈ 400 KB), decoded by the box's hardware video decoder — most TV boxes have one or two, so one or two clips at a time.</div>
+<script type="module">
+import { fpsMeter, score } from "./fx.js"; score({gpu:'A',mem:'B',cpu:'A'}, "hardware decoder: 1–2 clips at a time (this demo uses two players for one clip)");
+fpsMeter(document.getElementById("fps"));
+// ping-pong: the idle player waits at 0; shortly before the active one ends, the idle one starts and takes over
+const [a, b] = document.querySelectorAll("video");
+let cur = a, next = b;
+a.play();
+const LEAD = 0.15; // the clip carries 3 extra frames (0.15 s) that repeat its start, so the hand-over lands on the same picture
+(function watch() {
+  if (cur.duration && cur.currentTime >= cur.duration - LEAD && next.paused) {
+    next.currentTime = 0;
+    next.play().then(() => {
+      next.classList.add("on"); cur.classList.remove("on");
+      const done = cur; setTimeout(() => { done.pause(); done.currentTime = 0; }, 200);
+      [cur, next] = [next, cur];
+    });
+  }
+  requestAnimationFrame(watch);
+})();
+</script>

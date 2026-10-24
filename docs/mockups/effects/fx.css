@@ -7,3 +7,8 @@ canvas.stage{width:100%;height:100%;display:block}
 .bar{position:absolute;left:10px;top:8px;display:flex;gap:6px;flex-wrap:wrap}
 .bar button{background:#2a2a30;color:#ddd;border:1px solid #444;border-radius:6px;padding:3px 9px;font:12px system-ui;cursor:pointer}
 .bar button.on{background:#3d5afe;border-color:#3d5afe;color:#fff}
+.score{position:absolute;right:10px;top:40px;background:#000c;border-radius:8px;padding:6px 8px;font:11px system-ui;color:#ccc;display:grid;grid-template-columns:auto auto;gap:3px 8px;align-items:center}
+.score .row{display:flex;gap:2px}
+.score .l{width:15px;height:15px;border-radius:3px;display:grid;place-items:center;font-weight:700;color:#fff;opacity:.28;font-size:10px}
+.score .l.on{opacity:1;transform:scale(1.35);box-shadow:0 0 0 2px #000}
+.score .note{grid-column:1/-1;color:#aaa;font-size:10px;max-width:180px}

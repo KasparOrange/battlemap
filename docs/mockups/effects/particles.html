@@ -8,7 +8,7 @@
 <div class="fps" id="fps"></div>
 <div class="cap"><b>GPU particles</b> — every particle's path is a formula of time, computed in the vertex shader: the CPU only sends a seed per particle once. Embers rise and glow (additive), rain falls in streaks. Count buttons show the budget: thousands are cheap when they are small; big soft ones cost fill rate.</div>
 <script type="module">
-import { fpsMeter } from "./fx.js";
+import { fpsMeter, score } from "./fx.js"; score({gpu:'B',mem:'A',cpu:'A'}, "at 3,000 small embers; 30,000 or big soft ones: Graphics D");
 fpsMeter(document.getElementById("fps"));
 const c = document.getElementById("c");
 const gl = c.getContext("webgl", { premultipliedAlpha: false, alpha: true });

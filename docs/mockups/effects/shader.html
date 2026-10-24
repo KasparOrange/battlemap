@@ -7,7 +7,7 @@
 <div class="fps" id="fps"></div>
 <div class="cap"><b>Shader</b> — one fragment program over the map picture: water in the yard, two flickering torches, fog drifting in from the right. No extra pictures in memory; cost = math per pixel, so it scales with screen size, not with how much water there is.</div>
 <script type="module">
-import { fpsMeter, toggles } from "./fx.js";
+import { fpsMeter, toggles, score } from "./fx.js"; score({gpu:'D',mem:'A',cpu:'A'}, "as shown: full-screen fog + water. Pool alone: Graphics B");
 const c = document.getElementById("c");
 const gl = c.getContext("webgl");
 const state = { Water: true, Torches: true, Fog: true };

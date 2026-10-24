@@ -3,7 +3,7 @@
 <div class="bar" id="bar"></div><div class="fps" id="fps"></div>
 <div class="cap"><b>Sprite sheet</b> — the same fire as 24 frames on one picture (top right). The player picks a frame by time, with any speed and easing: "Burst" scales a spell flash in with ease-out-back and fades it. Full colour, soft alpha, one texture on the GPU, drawn in one call for hundreds of copies. Cost: memory = sheet size (this one 1024 × 576 ≈ 2.4 MB).</div>
 <script type="module">
-import { fpsMeter, toggles } from "./fx.js";
+import { fpsMeter, toggles, score } from "./fx.js"; score({gpu:'B',mem:'C',cpu:'A'}, "memory grows with frames × size; copies are nearly free");
 const c = document.getElementById("c"), g = c.getContext("2d");
 const state = { Braziers: true, Burst: true, Sheet: true };
 toggles(document.getElementById("bar"), Object.keys(state), state); fpsMeter(document.getElementById("fps"));
