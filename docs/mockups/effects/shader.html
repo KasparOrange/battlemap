@@ -1,0 +1,76 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Shader effects — water, torch light, fog</title>
+<link rel="stylesheet" href="fx.css">
+<canvas id="c" class="stage"></canvas>
+<div class="bar" id="bar"></div>
+<div class="fps" id="fps"></div>
+<div class="cap"><b>Shader</b> — one fragment program over the map picture: water in the yard, two flickering torches, fog drifting in from the right. No extra pictures in memory; cost = math per pixel, so it scales with screen size, not with how much water there is.</div>
+<script type="module">
+import { fpsMeter, toggles } from "./fx.js";
+const c = document.getElementById("c");
+const gl = c.getContext("webgl");
+const state = { Water: true, Torches: true, Fog: true };
+toggles(document.getElementById("bar"), Object.keys(state), state);
+fpsMeter(document.getElementById("fps"));
+
+const vs = `attribute vec2 p; varying vec2 uv; void main(){ uv = p*0.5+0.5; uv.y = 1.0-uv.y; gl_Position = vec4(p,0,1); }`;
+const fs = `precision mediump float;
+varying vec2 uv; uniform sampler2D map; uniform float t; uniform vec2 res; uniform vec3 on;
+float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+  return mix(mix(h(i),h(i+vec2(1,0)),f.x), mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x), f.y); }
+float fbm(vec2 p){ float a=0.5, s=0.0; for(int i=0;i<5;i++){ s+=a*n(p); p*=2.03; a*=0.5; } return s; }
+void main(){
+  vec2 q = uv;
+  // water: an ellipse in the lower-right yard
+  vec2 wc = vec2(0.80, 0.70); vec2 d = (uv - wc) * vec2(1.0, 1.6);
+  float pool = (1.0 - smoothstep(0.15, 0.17, length(d))) * on.x;
+  q += pool * 0.006 * vec2(sin(uv.y*60.0 + t*2.0), cos(uv.x*50.0 + t*1.7));
+  vec3 col = texture2D(map, q).rgb;
+  if (pool > 0.0) {
+    float k = abs(sin((fbm(uv*14.0 + vec2(t*0.25, -t*0.18)) + fbm(uv*9.0 - t*0.12)) * 9.0));
+    float caustic = pow(1.0 - k, 8.0);
+    col = mix(col, vec3(0.08, 0.28, 0.38) + col*0.35 + caustic*vec3(0.55,0.8,0.85), pool*0.85);
+  }
+  // torches: warm additive glows that flicker
+  if (on.y > 0.5) {
+    vec2 a = vec2(0.115, 0.13), b = vec2(0.36, 0.14);
+    float fa = 0.85 + 0.15*n(vec2(t*9.0, 1.0)), fb = 0.85 + 0.15*n(vec2(t*8.0, 7.0));
+    float ga = fa * exp(-pow(length((uv-a)*vec2(res.x/res.y,1.0))*6.0, 2.0));
+    float gb = fb * exp(-pow(length((uv-b)*vec2(res.x/res.y,1.0))*6.0, 2.0));
+    col += (ga + gb) * vec3(1.0, 0.55, 0.18) * 0.75;
+    col *= 0.78 + 0.22*(ga+gb);
+  }
+  // fog: rolling noise from the right, soft edge
+  if (on.z > 0.5) {
+    float edge = smoothstep(0.55, 0.75, uv.x + (fbm(vec2(uv.y*4.0, t*0.15))-0.5)*0.25);
+    float dens = fbm(uv*5.0 + vec2(t*0.05, 0.0)) * 0.6 + 0.4;
+    col = mix(col, vec3(0.62, 0.64, 0.68)*dens, edge*0.92);
+  }
+  gl_FragColor = vec4(col, 1.0);
+}`;
+function sh(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
+gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,1,-1,-1,1,1,1]), gl.STATIC_DRAW);
+const loc = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+const U = (n) => gl.getUniformLocation(pr, n);
+const img = new Image(); img.src = "media/keep.jpg";
+img.onload = () => {
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const t0 = performance.now();
+  (function frame(now) {
+    const w = c.clientWidth, h = c.clientHeight;
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; gl.viewport(0, 0, w, h); }
+    gl.uniform1f(U("t"), (now - t0) / 1000); gl.uniform2f(U("res"), w, h);
+    gl.uniform3f(U("on"), +state.Water, +state.Torches, +state.Fog);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(frame);
+  })(t0);
+};
+</script>

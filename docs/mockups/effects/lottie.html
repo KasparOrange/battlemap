@@ -1,0 +1,11 @@
+<!doctype html><meta charset="utf-8"><title>Lottie</title><link rel="stylesheet" href="fx.css">
+<div id="a" class="stage" style="background:#1b1b20"></div>
+<div class="bar" id="bar"></div><div class="fps" id="fps"></div>
+<div class="cap"><b>Lottie</b> — vector animation made in After Effects, exported as JSON (Bodymovin), played by lottie-web. Huge free library (LottieFiles), crisp at any size, tiny files. The player rebuilds paths every frame on the CPU, so a few on screen at once — UI flourishes, a banner, a dice result — not the whole map. Sample: lottie-web's own demo file.</div>
+<script src="vendor/lottie.min.js"></script>
+<script type="module">
+import { fpsMeter, toggles } from "./fx.js"; fpsMeter(document.getElementById("fps"));
+let anim = lottie.loadAnimation({ container: document.getElementById("a"), renderer: "svg", loop: true, autoplay: true, path: "media/lottie-gatin.json" });
+const state = { Canvas: false };
+toggles(document.getElementById("bar"), ["Canvas"], state, () => { anim.destroy(); anim = lottie.loadAnimation({ container: document.getElementById("a"), renderer: state.Canvas ? "canvas" : "svg", loop: true, autoplay: true, path: "media/lottie-gatin.json" }); });
+</script>

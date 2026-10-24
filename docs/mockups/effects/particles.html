@@ -1,0 +1,59 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Particles — embers, rain</title>
+<link rel="stylesheet" href="fx.css">
+<div class="stage" style="background:url(media/keep.jpg) center/cover"></div>
+<canvas id="c" class="stage"></canvas>
+<div class="bar" id="bar"></div>
+<div class="fps" id="fps"></div>
+<div class="cap"><b>GPU particles</b> — every particle's path is a formula of time, computed in the vertex shader: the CPU only sends a seed per particle once. Embers rise and glow (additive), rain falls in streaks. Count buttons show the budget: thousands are cheap when they are small; big soft ones cost fill rate.</div>
+<script type="module">
+import { fpsMeter } from "./fx.js";
+fpsMeter(document.getElementById("fps"));
+const c = document.getElementById("c");
+const gl = c.getContext("webgl", { premultipliedAlpha: false, alpha: true });
+const vs = `attribute vec4 s; uniform float t; uniform float mode; uniform vec2 res; varying float a; varying float vm;
+void main(){
+  vm = mode;
+  float life = 3.0 + s.w * 3.0;
+  float k = fract((t + s.z * 10.0) / life);
+  vec2 p;
+  if (mode < 0.5) { // embers: rise from the two braziers, sway, fade
+    vec2 src = s.x < 0.5 ? vec2(0.115, 0.2) : vec2(0.36, 0.21);
+    p = src + vec2(sin(k * 9.0 + s.y * 20.0) * 0.02 + (s.y - 0.5) * 0.05, -k * 0.35);
+    a = (1.0 - k) * (0.6 + 0.4 * sin(t * 20.0 + s.y * 50.0));
+    gl_PointSize = 2.0 + 3.0 * (1.0 - k);
+  } else { // rain: straight down, wraps
+    p = vec2(s.x + k * 0.05, fract(s.y + k * 1.6));
+    a = 0.35;
+    gl_PointSize = 2.0;
+  }
+  gl_Position = vec4(p.x * 2.0 - 1.0, 1.0 - p.y * 2.0, 0.0, 1.0);
+}`;
+const fs = `precision mediump float; varying float a; varying float vm;
+void main(){ vec2 d = gl_PointCoord - 0.5;
+  float m = vm < 0.5 ? 1.0 - smoothstep(0.0, 0.5, length(d)) : step(abs(d.x), 0.12);
+  vec3 col = vm < 0.5 ? vec3(1.0, 0.55, 0.15) : vec3(0.7, 0.8, 1.0);
+  gl_FragColor = vec4(col * m * a, m * a); }`;
+const sh = (ty, src) => { const o = gl.createShader(ty); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr)); gl.useProgram(pr);
+const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+const loc = gl.getAttribLocation(pr, "s"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 4, gl.FLOAT, false, 0, 0);
+const U = (n) => gl.getUniformLocation(pr, n);
+gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+let count = 0, mode = 0;
+function seed(n) { count = n; const a = new Float32Array(n * 4); for (let i = 0; i < a.length; i++) a[i] = Math.random(); gl.bufferData(gl.ARRAY_BUFFER, a, gl.STATIC_DRAW); }
+const bar = document.getElementById("bar");
+const btn = (label, fn) => { const b = document.createElement("button"); b.textContent = label; b.onclick = () => { fn(); [...bar.children].forEach((x) => x.classList.toggle("on", x === b || x.dataset.keep === "1" && x.classList.contains("on"))); }; bar.append(b); return b; };
+for (const n of [300, 3000, 30000]) btn(`${n.toLocaleString()}`, () => seed(n));
+const mb = document.createElement("button"); mb.textContent = "Rain"; mb.onclick = () => { mode = 1 - mode; mb.className = mode ? "on" : ""; }; bar.append(mb);
+seed(3000); bar.children[1].className = "on";
+(function frame(now) {
+  const w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== w || c.height !== h) { c.width = w; c.height = h; gl.viewport(0, 0, w, h); }
+  gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.uniform1f(U("t"), now / 1000); gl.uniform1f(U("mode"), mode); gl.uniform2f(U("res"), w, h);
+  gl.drawArrays(gl.POINTS, 0, count);
+  requestAnimationFrame(frame);
+})(0);
+</script>

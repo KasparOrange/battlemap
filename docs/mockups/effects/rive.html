@@ -1,0 +1,16 @@
+<!doctype html><meta charset="utf-8"><title>Rive</title><link rel="stylesheet" href="fx.css">
+<canvas id="c" class="stage" style="background:#1b1b20"></canvas>
+<div class="bar" id="bar"></div><div class="fps" id="fps"></div>
+<div class="cap"><b>Rive</b> (once called Flare) — vector animation with <b>state machines</b>: a door that knows open/closed/locked, a creature with idle/attack/hurt, driven by inputs from the app. Own editor, small binary files, a WebAssembly runtime that draws on the GPU. Also runs in Flutter. Sample: Rive's official "vehicles" file.</div>
+<script src="vendor/rive.js"></script>
+<script type="module">
+import { fpsMeter, toggles } from "./fx.js"; fpsMeter(document.getElementById("fps"));
+rive.RuntimeLoader.setWasmUrl("vendor/rive.wasm");
+const c = document.getElementById("c");
+const r = new rive.Rive({ src: "media/vehicles.riv", canvas: c, autoplay: true,
+  onLoad: () => { r.resizeDrawingSurfaceToCanvas();
+    const names = r.animationNames; const state = Object.fromEntries(names.map((n, i) => [n, i === 0]));
+    toggles(document.getElementById("bar"), names, state, () => { r.stop(); const on = names.filter((n) => state[n]); if (on.length) r.play(on); });
+    r.play(names[0]); } });
+addEventListener("resize", () => r.resizeDrawingSurfaceToCanvas());
+</script>
