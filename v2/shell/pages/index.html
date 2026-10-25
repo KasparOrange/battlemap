@@ -1,0 +1,227 @@
+<!doctype html>
+<!--
+  battlemap shell — the shell's own page (https://appassets.androidplatform.net/shell/index.html).
+  Shown when the APK carries no web app, or with `adb shell am start … --es page keys`.
+  - Key log: every keydown/keyup the page receives (D-pad, OK, media keys) + shell events.
+  - Checks: WebGL2, IndexedDB, OPFS, a worker loaded from the origin, fetch/WebSocket to
+    http/ws URLs given as ?http=…&ws=… (mixed content from the https origin).
+  - Buttons for the bridge: probe, reload, immersive, keep awake, "page handles Back".
+  Results are also on window.shellPage for scripts (tools/webview.ts eval).
+  Vanilla JS, no build step. Arrow keys move focus between the buttons (TV remote).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>battlemap shell</title>
+<style>
+  :root { color-scheme: dark; --bg: #0f1115; --panel: #181b22; --line: #2a2f3a; --text: #e9dfc7;
+          --dim: #9a937f; --gold: #e3b341; --ok: #7bc47f; --bad: #e0675a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 system-ui, sans-serif; }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 18px 22px; height: 100vh; }
+  header { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0; font-weight: 600; }
+  .note { color: var(--gold); }
+  .buttons { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+           padding: 9px 14px; font: inherit; cursor: pointer; }
+  button:focus { outline: 3px solid var(--gold); outline-offset: 2px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px;
+            min-height: 0; overflow: auto; overscroll-behavior: contain; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--dim); margin: 0 0 6px; }
+  table { border-collapse: collapse; width: 100%; font: 13px/1.35 ui-monospace, monospace; }
+  td, th { text-align: left; padding: 1px 8px 1px 0; white-space: nowrap; }
+  th { color: var(--dim); font-weight: normal; }
+  pre { margin: 0; font: 12px/1.35 ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>battlemap shell</h1>
+    <span id="version"></span>
+    <span id="reason" class="note"></span>
+  </header>
+  <div class="buttons">
+    <button id="probe">WebGL probe</button>
+    <button id="reload">Reload</button>
+    <button id="immersive">Immersive</button>
+    <button id="awake">Keep awake</button>
+    <button id="back">Page handles Back: off</button>
+    <button id="checks">Run checks</button>
+  </div>
+  <section id="keys-box"><h2>Keys and shell events</h2>
+    <table><thead><tr><th>time</th><th>event</th><th>key</th><th>code</th><th>keyCode</th></tr></thead>
+    <tbody id="keys"></tbody></table></section>
+  <section><h2>Checks</h2><table><tbody id="checklist"></tbody></table>
+    <h2 style="margin-top:10px">Shell info</h2><pre id="info">no bridge (not inside the shell)</pre></section>
+  <section style="grid-column: 1 / -1"><h2>Shell log</h2><pre id="log"></pre></section>
+</main>
+<script>
+'use strict';
+/** Results for scripts (tools/webview.ts): keys seen, checks, back events. */
+const shellPage = window.shellPage = { keys: [], events: [], checks: {}, handleBack: false };
+const shell = window.BattlemapShell;
+const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+
+if (params.get('reason') === 'no-app') {
+  $('reason').textContent = 'No web app in this APK — build v2/app, rebuild the shell, or set a dev URL.';
+}
+
+/** Adds one row to the key/event table (newest on top, 18 kept). */
+function row(kind, key = '', code = '', keyCode = '') {
+  const tr = document.createElement('tr');
+  const t = new Date().toISOString().slice(11, 23);
+  for (const v of [t, kind, key, code, keyCode]) {
+    const td = document.createElement('td'); td.textContent = v; tr.appendChild(td);
+  }
+  const body = $('keys');
+  body.insertBefore(tr, body.firstChild);
+  while (body.children.length > 18) body.lastChild.remove();
+}
+
+// ---- keys --------------------------------------------------------------------------------
+const focusables = () => [...document.querySelectorAll('button')];
+for (const type of ['keydown', 'keyup']) {
+  window.addEventListener(type, (e) => {
+    shellPage.keys.push({ type, key: e.key, code: e.code, keyCode: e.keyCode, repeat: e.repeat });
+    if (shellPage.keys.length > 200) shellPage.keys.shift();
+    row(type + (e.repeat ? ' (repeat)' : ''), e.key, e.code, e.keyCode);
+    if (type !== 'keydown') return;
+    // D-pad focus movement between the buttons (TV remote fallback).
+    const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+    if (step) {
+      const list = focusables();
+      const i = list.indexOf(document.activeElement);
+      list[(i + step + list.length) % list.length].focus();
+      e.preventDefault();
+    }
+  }, true);
+}
+
+// ---- shell events --------------------------------------------------------------------------
+window.addEventListener('battlemapshell', (e) => {
+  const d = e.detail || {};
+  if (d.type === 'log') { addLog(d.line); return; }
+  if (d.type === 'back' && shellPage.handleBack) e.preventDefault();
+  shellPage.events.push(d);
+  row('shell:' + d.type, d.type === 'back' ? (shellPage.handleBack ? 'handled by page' : 'left to the shell') : JSON.stringify(d));
+});
+
+function addLog(line) {
+  const el = $('log');
+  el.textContent = `${new Date(line.t).toISOString().slice(11, 23)} ${line.level.padEnd(5)} ${line.msg}\n` + el.textContent;
+}
+
+// ---- buttons -------------------------------------------------------------------------------
+let immersive = true, awake = false;
+function refreshInfo() {
+  if (!shell) return;
+  const info = JSON.parse(shell.info());
+  shellPage.info = info;
+  immersive = info.immersive; awake = info.keepAwake;
+  $('info').textContent = JSON.stringify(info, null, 2);
+  $('version').textContent = `shell ${info.shellVersion} · ${info.startMode} mode · ${info.device.model}`;
+  $('immersive').textContent = `Immersive: ${immersive ? 'on' : 'off'}`;
+  $('awake').textContent = `Keep awake: ${awake ? 'on' : 'off'}`;
+}
+$('probe').onclick = () => { location.href = 'probe.html'; };
+$('reload').onclick = () => (shell ? shell.reload() : location.reload());
+$('immersive').onclick = () => { shell?.setImmersive(!immersive); setTimeout(refreshInfo, 50); };
+$('awake').onclick = () => { shell?.setKeepAwake(!awake); setTimeout(refreshInfo, 50); };
+$('back').onclick = () => {
+  shellPage.handleBack = !shellPage.handleBack;
+  $('back').textContent = `Page handles Back: ${shellPage.handleBack ? 'on' : 'off'}`;
+};
+$('checks').onclick = () => runChecks();
+
+// ---- checks --------------------------------------------------------------------------------
+function setCheck(name, ok, detail) {
+  shellPage.checks[name] = { ok, detail };
+  let tr = document.querySelector(`tr[data-check="${name}"]`);
+  if (!tr) {
+    tr = document.createElement('tr'); tr.dataset.check = name;
+    tr.innerHTML = '<td></td><td></td><td></td>';
+    $('checklist').appendChild(tr);
+  }
+  tr.children[0].textContent = name;
+  tr.children[1].textContent = ok === null ? '…' : ok ? 'ok' : 'FAIL';
+  tr.children[1].className = ok === null ? '' : ok ? 'ok' : 'bad';
+  tr.children[2].textContent = detail || '';
+}
+
+async function check(name, fn) {
+  setCheck(name, null, 'running');
+  try { setCheck(name, true, String(await fn())); }
+  catch (err) { setCheck(name, false, String(err && err.message || err)); }
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([promise, new Promise((_, no) => setTimeout(() => no(new Error(`timeout ${ms} ms`)), ms))]);
+}
+
+async function runChecks() {
+  await check('origin', async () => `${location.origin} secure=${window.isSecureContext}`);
+  await check('webgl2', async () => {
+    const gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) throw new Error('no WebGL2');
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    return dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : 'yes';
+  });
+  await check('indexeddb', () => withTimeout(new Promise((yes, no) => {
+    const open = indexedDB.open('shell-check', 1);
+    open.onupgradeneeded = () => open.result.createObjectStore('kv');
+    open.onerror = () => no(open.error);
+    open.onsuccess = () => {
+      const db = open.result, stamp = Date.now();
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(stamp, 'stamp');
+      tx.oncomplete = () => {
+        const get = db.transaction('kv').objectStore('kv').get('stamp');
+        get.onsuccess = () => (get.result === stamp ? yes('write + read') : no(new Error('read back differs')));
+        get.onerror = () => no(get.error);
+      };
+      tx.onerror = () => no(tx.error);
+    };
+  }), 5000));
+  await check('opfs', async () => {
+    const dir = await navigator.storage.getDirectory();
+    const file = await dir.getFileHandle('shell-check.txt', { create: true });
+    const w = await file.createWritable(); await w.write('ok ' + Date.now()); await w.close();
+    const text = await (await file.getFile()).text();
+    const est = await navigator.storage.estimate();
+    return `${text.slice(0, 2)}; quota ${Math.round(est.quota / 1e6)} MB`;
+  });
+  await check('worker', () => withTimeout(new Promise((yes, no) => {
+    const w = new Worker('check-worker.js');
+    w.onmessage = (e) => { w.terminate(); e.data.ok ? yes(e.data.detail) : no(new Error(e.data.detail)); };
+    w.onerror = (e) => no(new Error(e.message || 'worker error'));
+  }), 5000));
+  const http = params.get('http');
+  if (http) await check('fetch http', async () => {
+    const r = await withTimeout(fetch(http), 5000);
+    return `HTTP ${r.status}, ${(await r.text()).length} bytes`;
+  });
+  const ws = params.get('ws');
+  if (ws) await check('websocket ws', () => withTimeout(new Promise((yes, no) => {
+    const sock = new WebSocket(ws);
+    sock.onopen = () => sock.send('ping');
+    sock.onmessage = (e) => { sock.close(); yes(`echo: ${e.data}`); };
+    sock.onerror = () => no(new Error('websocket error'));
+  }), 5000));
+  shellPage.checksDone = true;
+}
+
+// ---- start ---------------------------------------------------------------------------------
+if (shell) {
+  for (const line of JSON.parse(shell.takeLogs())) addLog(line);
+  refreshInfo();
+}
+document.getElementById('probe').focus();
+runChecks();
+</script>
+</body>
+</html>

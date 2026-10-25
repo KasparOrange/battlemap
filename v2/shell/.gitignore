@@ -1,0 +1,11 @@
+# build outputs
+build/
+app/build/
+.gradle/
+.kotlin/
+local.properties
+*.apk
+*.idsig
+# IDE
+.idea/
+*.iml

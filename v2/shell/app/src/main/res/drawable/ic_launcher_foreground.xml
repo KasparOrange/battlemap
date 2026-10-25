@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A 3 × 3 map grid with a gold token in the middle square; drawn inside the
+     adaptive icon's 66 dp safe zone. Same motif as the TV banner. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:strokeColor="#E9DFC7"
+        android:strokeWidth="2.5"
+        android:pathData="M33,33 H75 V75 H33 Z M47,33 V75 M61,33 V75 M33,47 H75 M33,61 H75" />
+    <path
+        android:fillColor="#E3B341"
+        android:pathData="M54,48.5 A5.5,5.5 0 1,1 53.99,48.5 Z" />
+</vector>

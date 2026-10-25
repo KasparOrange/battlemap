@@ -1,0 +1,693 @@
+<!doctype html>
+<!--
+  battlemap WebGL probe — can this device's WebView draw the table at a steady frame rate?
+
+  Self-contained (vanilla JS + raw WebGL2, no build step). Draws, every frame, at 1920 × 1080:
+  - a 4096 × 4096 map texture (generated here, uploaded in strips, mipmapped), panned and
+    zoomed like a DM moving the camera (overview ↔ one-inch squares);
+  - walls and 30 doors (instanced quads; doors change state every second);
+  - a fog mask at grid resolution (4 cells per square, 256 × 256 R8) painted with circles
+    every frame and uploaded with texSubImage2D (dirty rects only);
+  - a full-screen fog pass with soft edges (9-tap blur) and two scrolling noise layers;
+  - 60 animated token sprites (one instanced draw).
+  Measures for `seconds` after a 2 s warm-up: average fps, 1 % low (fps of the slowest 1 % of
+  frames), frame times, JS time per frame, GPU time when EXT_disjoint_timer_query_webgl2 exists.
+  PASS = average ≥ 50 fps and 1 % low ≥ 30 fps.
+
+  Query parameters: seconds=20, w=1920, h=1080, sprites=60, load=1 (fog passes per frame —
+  2 or 3 shows headroom). OK/Enter restarts the measurement. Results: on screen, in
+  window.probeResult, and as one console line `PROBE_RESULT {…}` (the shell forwards console
+  lines to logcat, tag `battlemap`). See v2/docs/shell.md "WebGL probe".
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>battlemap WebGL probe</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+  #hud { position: fixed; left: 12px; top: 10px; max-width: 46vw; padding: 8px 12px; border-radius: 8px;
+         background: rgba(10, 12, 16, .82); color: #e9dfc7; font: 13px/1.35 ui-monospace, monospace;
+         white-space: pre-wrap; pointer-events: none; }
+  #verdict { font: 600 18px/1.3 system-ui, sans-serif; margin-bottom: 4px; }
+  .pass { color: #7bc47f; } .fail { color: #e0675a; } .run { color: #e3b341; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud"><div id="verdict" class="run">starting…</div><div id="text"></div></div>
+<script>
+'use strict';
+
+// ---- parameters ----------------------------------------------------------------------------
+const q = new URLSearchParams(location.search);
+const P = {
+  seconds: +(q.get('seconds') || 20),
+  w: +(q.get('w') || 1920),
+  h: +(q.get('h') || 1080),
+  sprites: +(q.get('sprites') || 60),
+  load: Math.max(1, +(q.get('load') || 1)),
+};
+const MAP = 4096;          // map texture size (px)
+const SQ = 64;             // map pixels per square
+const N = MAP / SQ;        // squares per side (64)
+const FOG = N * 4;         // fog mask cells per side (4 per square → 256)
+const WARMUP_S = 2;
+
+const hudVerdict = document.getElementById('verdict');
+const hudText = document.getElementById('text');
+const canvas = document.getElementById('c');
+canvas.width = P.w;
+canvas.height = P.h;
+
+/** Everything a script may want (tools/webview.ts reads window.probeResult). */
+window.probeResult = null;
+
+const gl = canvas.getContext('webgl2', {
+  antialias: false, alpha: false, depth: false, stencil: false,
+  powerPreference: 'high-performance', preserveDrawingBuffer: false,
+});
+if (!gl) {
+  hudVerdict.textContent = 'FAIL — no WebGL2';
+  hudVerdict.className = 'fail';
+  window.probeResult = { pass: false, webgl2: false, ua: navigator.userAgent };
+  console.log('PROBE_RESULT ' + JSON.stringify(window.probeResult));
+  throw new Error('no WebGL2');
+}
+
+// ---- device facts --------------------------------------------------------------------------
+const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+const facts = {
+  webgl2: true,
+  vendor: dbg ? gl.getParameter(dbg.UNMASKED_VENDOR_WEBGL) : gl.getParameter(gl.VENDOR),
+  renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER),
+  maxTextureSize: gl.getParameter(gl.MAX_TEXTURE_SIZE),
+  dpr: window.devicePixelRatio,
+  canvas: `${gl.drawingBufferWidth}x${gl.drawingBufferHeight}`,
+  viewport: `${innerWidth}x${innerHeight}`,
+  screen: `${screen.width}x${screen.height}`,
+  cores: navigator.hardwareConcurrency || 0,
+  memoryGb: navigator.deviceMemory || 0,
+  ua: navigator.userAgent,
+};
+if (window.BattlemapShell) {
+  try {
+    const info = JSON.parse(window.BattlemapShell.info());
+    facts.device = `${info.device.manufacturer} ${info.device.model}`;
+    facts.webView = info.device.webViewVersion;
+    facts.display = `${info.display.modeWidthPx}x${info.display.modeHeightPx}@${Math.round(info.display.refreshRate)}`;
+  } catch (e) { /* not fatal */ }
+}
+const timerExt = gl.getExtension('EXT_disjoint_timer_query_webgl2');
+
+// ---- GL helpers ----------------------------------------------------------------------------
+function shader(type, src) {
+  const s = gl.createShader(type);
+  gl.shaderSource(s, src);
+  gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s));
+  return s;
+}
+function program(vs, fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, shader(gl.VERTEX_SHADER, vs));
+  gl.attachShader(p, shader(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {};
+  const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) {
+    const name = gl.getActiveUniform(p, i).name;
+    u[name] = gl.getUniformLocation(p, name);
+  }
+  return { p, u };
+}
+function buffer(data, usage = gl.STATIC_DRAW) {
+  const b = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, b);
+  gl.bufferData(gl.ARRAY_BUFFER, data, usage);
+  return b;
+}
+/** Binds float attributes of an interleaved buffer: [[location, size, offsetFloats], …]. */
+function attribs(buf, strideFloats, list, divisor) {
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  for (const [loc, size, off] of list) {
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc, size, gl.FLOAT, false, strideFloats * 4, off * 4);
+    gl.vertexAttribDivisor(loc, divisor);
+  }
+}
+
+// Camera transform shared by all map-space passes: uCam = (centre x, centre y, scale, map size).
+const CAMERA_GLSL = `
+uniform vec4 uCam;
+uniform vec2 uView;
+vec4 toClip(vec2 mapPx) {
+  vec2 s = (mapPx - uCam.xy) * uCam.z + uView * 0.5;
+  vec2 c = s / uView * 2.0 - 1.0;
+  return vec4(c.x, -c.y, 0.0, 1.0);
+}`;
+
+const mapProg = program(`#version 300 es
+layout(location=0) in vec2 aPos;
+out vec2 vUv;
+${CAMERA_GLSL}
+void main() { vUv = aPos; gl_Position = toClip(aPos * uCam.w); }`, `#version 300 es
+precision mediump float;
+in vec2 vUv;
+uniform sampler2D uMap;
+out vec4 o;
+void main() { o = texture(uMap, vUv); }`);
+
+const wallProg = program(`#version 300 es
+layout(location=0) in vec2 aCorner;
+layout(location=1) in vec4 iSeg;
+layout(location=2) in float iWidth;
+layout(location=3) in vec4 iColor;
+out vec4 vColor;
+${CAMERA_GLSL}
+void main() {
+  vec2 d = iSeg.zw - iSeg.xy;
+  float len = max(length(d), 0.001);
+  vec2 n = vec2(-d.y, d.x) / len;
+  vec2 p = iSeg.xy + d * aCorner.x + n * aCorner.y * iWidth;
+  vColor = iColor;
+  gl_Position = toClip(p);
+}`, `#version 300 es
+precision mediump float;
+in vec4 vColor;
+out vec4 o;
+void main() { o = vColor; }`);
+
+const spriteProg = program(`#version 300 es
+layout(location=0) in vec2 aCorner;
+layout(location=1) in vec4 iPosSizeRot;
+layout(location=2) in vec4 iTint;
+layout(location=3) in float iCell;
+out vec2 vUv;
+out vec4 vTint;
+${CAMERA_GLSL}
+void main() {
+  float c = cos(iPosSizeRot.w), s = sin(iPosSizeRot.w);
+  vec2 local = mat2(c, s, -s, c) * (aCorner * iPosSizeRot.z);
+  vec2 origin = vec2(mod(iCell, 2.0), floor(iCell / 2.0)) * 0.5;
+  vUv = origin + (aCorner + 0.5) * 0.5;
+  vTint = iTint;
+  gl_Position = toClip(iPosSizeRot.xy + local);
+}`, `#version 300 es
+precision mediump float;
+in vec2 vUv;
+in vec4 vTint;
+uniform sampler2D uAtlas;
+out vec4 o;
+void main() { o = texture(uAtlas, vUv) * vTint; }`);
+
+const fogProg = program(`#version 300 es
+void main() {
+  vec2 p = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2));
+  gl_Position = vec4(p * 2.0 - 1.0, 0.0, 1.0);
+}`, `#version 300 es
+precision highp float;
+uniform vec4 uCam;
+uniform vec2 uView;
+uniform float uTime;
+uniform sampler2D uFog;
+uniform sampler2D uNoise;
+out vec4 o;
+void main() {
+  vec2 screen = vec2(gl_FragCoord.x, uView.y - gl_FragCoord.y);
+  vec2 uv = ((screen - uView * 0.5) / uCam.z + uCam.xy) / uCam.w;
+  vec2 texel = vec2(1.0 / ${FOG}.0);
+  float f = 0.0;
+  for (int y = -1; y <= 1; y++)
+    for (int x = -1; x <= 1; x++)
+      f += texture(uFog, uv + vec2(float(x), float(y)) * texel * 0.75).r;
+  f = smoothstep(0.15, 0.85, f / 9.0);
+  if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) f = 1.0;
+  float n1 = texture(uNoise, uv * 3.0 + vec2(uTime * 0.010, uTime * 0.007)).r;
+  float n2 = texture(uNoise, uv * 7.0 - vec2(uTime * 0.013, -uTime * 0.004)).r;
+  vec3 color = vec3(0.07, 0.08, 0.12) * (0.75 + 0.5 * (n1 * 0.6 + n2 * 0.4));
+  float a = f * 0.96;
+  o = vec4(color * a, a);
+}`);
+
+// ---- deterministic randomness --------------------------------------------------------------
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = mulberry32(42);
+
+// ---- the dungeon layout (squares) ----------------------------------------------------------
+const rooms = [];
+const grid = new Uint8Array(N * N); // 0 rock, 1 floor
+for (let tries = 0; rooms.length < 16 && tries < 400; tries++) {
+  const w = 5 + Math.floor(rand() * 10), h = 5 + Math.floor(rand() * 9);
+  const x = 1 + Math.floor(rand() * (N - w - 2)), y = 1 + Math.floor(rand() * (N - h - 2));
+  if (rooms.some((r) => x < r.x + r.w + 2 && x + w + 2 > r.x && y < r.y + r.h + 2 && y + h + 2 > r.y)) continue;
+  rooms.push({ x, y, w, h });
+}
+for (const r of rooms) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) grid[y * N + x] = 1;
+const doors = [];
+for (let i = 1; i < rooms.length; i++) { // L-shaped corridors, 2 wide, between consecutive rooms
+  const a = rooms[i - 1], b = rooms[i];
+  const ax = a.x + (a.w >> 1), ay = a.y + (a.h >> 1), bx = b.x + (b.w >> 1), by = b.y + (b.h >> 1);
+  for (let x = Math.min(ax, bx); x <= Math.max(ax, bx); x++) { grid[ay * N + x] = 1; grid[(ay + 1) * N + x] = 1; }
+  for (let y = Math.min(ay, by); y <= Math.max(ay, by); y++) { grid[y * N + bx] = 1; grid[y * N + bx + 1] = 1; }
+  doors.push([ax, ay], [bx, by]);
+}
+// Rock-neighbour mask per square (bit 0 left, 1 right, 2 up, 3 down) → wall edges.
+const edges = new Uint8Array(N * N);
+for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  if (!grid[y * N + x]) continue;
+  const rock = (xx, yy) => xx < 0 || yy < 0 || xx >= N || yy >= N || !grid[yy * N + xx];
+  edges[y * N + x] = (rock(x - 1, y) ? 1 : 0) | (rock(x + 1, y) ? 2 : 0) | (rock(x, y - 1) ? 4 : 0) | (rock(x, y + 1) ? 8 : 0);
+}
+
+// ---- map texture: generated on the CPU in strips, uploaded with texSubImage2D ---------------
+function smoothNoise(size, cell, seed) {
+  const r = mulberry32(seed), gs = size / cell + 1, g = new Float32Array(gs * gs);
+  for (let i = 0; i < g.length; i++) g[i] = r();
+  const out = new Uint8Array(size * size);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const gx = x / cell, gy = y / cell, x0 = gx | 0, y0 = gy | 0, fx = gx - x0, fy = gy - y0;
+    const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+    const v00 = g[y0 * gs + x0], v10 = g[y0 * gs + x0 + 1], v01 = g[(y0 + 1) * gs + x0], v11 = g[(y0 + 1) * gs + x0 + 1];
+    const v = (v00 * (1 - sx) + v10 * sx) * (1 - sy) + (v01 * (1 - sx) + v11 * sx) * sy;
+    out[y * size + x] = v * 255;
+  }
+  return out;
+}
+
+const mapTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, mapTex);
+gl.texStorage2D(gl.TEXTURE_2D, Math.log2(MAP) + 1, gl.RGBA8, MAP, MAP);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+async function generateMap() {
+  const t0 = performance.now();
+  const tile = smoothNoise(256, 16, 7);                 // stone texture, repeats every 256 px
+  const fine = smoothNoise(256, 4, 9);                  // grain
+  const base = new Uint32Array(N * N * 3);              // per square r, g, b
+  for (let i = 0; i < N * N; i++) {
+    const v = rand();
+    if (grid[i]) { base[i * 3] = 150 + v * 40; base[i * 3 + 1] = 138 + v * 34; base[i * 3 + 2] = 112 + v * 30; }
+    else { base[i * 3] = 52 + v * 14; base[i * 3 + 1] = 46 + v * 12; base[i * 3 + 2] = 44 + v * 10; }
+  }
+  const ROWS = 256;
+  const strip = new Uint8Array(MAP * ROWS * 4);
+  const out = new Uint32Array(strip.buffer);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+  for (let s = 0; s < MAP / ROWS; s++) {
+    for (let ry = 0; ry < ROWS; ry++) {
+      const y = s * ROWS + ry, sy = y >> 6, ly = y & 63, trow = (y & 255) << 8;
+      for (let x = 0; x < MAP; x++) {
+        const sq = sy * N + (x >> 6), lx = x & 63;
+        let n = (tile[trow | (x & 255)] >> 1) + (fine[trow | (x & 255)] >> 2) + 64;   // 64..255
+        if (grid[sq]) {
+          if (lx === 0 || ly === 0) n = n >> 1;                                         // grid line
+          const e = edges[sq];
+          if ((e & 1 && lx < 7) || (e & 2 && lx > 56) || (e & 4 && ly < 7) || (e & 8 && ly > 56)) n = n * 0.3;
+        }
+        const r = (base[sq * 3] * n) >> 8, g = (base[sq * 3 + 1] * n) >> 8, b = (base[sq * 3 + 2] * n) >> 8;
+        out[ry * MAP + x] = 0xff000000 | (b << 16) | (g << 8) | r;
+      }
+    }
+    gl.bindTexture(gl.TEXTURE_2D, mapTex);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, s * ROWS, MAP, ROWS, gl.RGBA, gl.UNSIGNED_BYTE, strip);
+    hudVerdict.textContent = `generating the 4096² map… ${s + 1}/${MAP / ROWS}`;
+    await new Promise((r) => setTimeout(r, 0));
+  }
+  const genMs = performance.now() - t0;
+  const t1 = performance.now();
+  gl.bindTexture(gl.TEXTURE_2D, mapTex);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4)); // wait for the GPU
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);                                 // fog rows are bytes
+  return { mapGenMs: Math.round(genMs), mipmapMs: Math.round(performance.now() - t1) };
+}
+
+// ---- fog mask (R8, 4 cells per square) -----------------------------------------------------
+const fogData = new Uint8Array(FOG * FOG).fill(255);
+const fogTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, fogTex);
+gl.texStorage2D(gl.TEXTURE_2D, 1, gl.R8, FOG, FOG);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+for (const r of rooms.slice(0, 4)) paintCircle((r.x + r.w / 2) * 4, (r.y + r.h / 2) * 4, Math.min(r.w, r.h) * 2, 0);
+gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, FOG, FOG, gl.RED, gl.UNSIGNED_BYTE, fogData);
+
+/** Paints a filled circle (value 0 = revealed, 255 = fogged) and uploads its bounding box. */
+function paintCircle(cx, cy, radius, value) {
+  const x0 = Math.max(0, Math.floor(cx - radius)), x1 = Math.min(FOG - 1, Math.ceil(cx + radius));
+  const y0 = Math.max(0, Math.floor(cy - radius)), y1 = Math.min(FOG - 1, Math.ceil(cy + radius));
+  const r2 = radius * radius;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const dx = x - cx, dy = y - cy;
+    if (dx * dx + dy * dy <= r2) fogData[y * FOG + x] = value;
+  }
+  return [x0, y0, x1 - x0 + 1, y1 - y0 + 1];
+}
+function uploadRect(rect) {
+  gl.pixelStorei(gl.UNPACK_ROW_LENGTH, FOG);
+  gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, rect[0]);
+  gl.pixelStorei(gl.UNPACK_SKIP_ROWS, rect[1]);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, rect[0], rect[1], rect[2], rect[3], gl.RED, gl.UNSIGNED_BYTE, fogData);
+  gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+  gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
+  gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
+}
+
+// ---- noise texture for the fog's drift -----------------------------------------------------
+const noiseTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+gl.texStorage2D(gl.TEXTURE_2D, 9, gl.R8, 256, 256);
+gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, 256, 256, gl.RED, gl.UNSIGNED_BYTE, smoothNoise(256, 32, 3));
+gl.generateMipmap(gl.TEXTURE_2D);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+// ---- token atlas (2 × 2 cells, drawn on a 2D canvas) ---------------------------------------
+const atlasCanvas = document.createElement('canvas');
+atlasCanvas.width = atlasCanvas.height = 512;
+{
+  const c = atlasCanvas.getContext('2d');
+  const looks = [['#8b2f2f', 'G'], ['#2f5f8b', 'W'], ['#3f7a3a', 'R'], ['#6b4a8f', 'O']];
+  looks.forEach(([color, letter], i) => {
+    const ox = (i % 2) * 256 + 128, oy = Math.floor(i / 2) * 256 + 128;
+    c.beginPath(); c.arc(ox, oy, 118, 0, Math.PI * 2); c.fillStyle = '#e3b341'; c.fill();
+    c.beginPath(); c.arc(ox, oy, 104, 0, Math.PI * 2); c.fillStyle = color; c.fill();
+    c.fillStyle = '#f4ecd8'; c.font = 'bold 120px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(letter, ox, oy + 6);
+  });
+}
+const atlasTex = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
+gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+gl.generateMipmap(gl.TEXTURE_2D);
+gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+
+// ---- geometry ------------------------------------------------------------------------------
+const quad01 = buffer(new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]));
+const quadSeg = buffer(new Float32Array([0, -0.5, 1, -0.5, 0, 0.5, 1, 0.5]));
+const quadMid = buffer(new Float32Array([-0.5, -0.5, 0.5, -0.5, -0.5, 0.5, 0.5, 0.5]));
+
+const mapVao = gl.createVertexArray();
+gl.bindVertexArray(mapVao);
+attribs(quad01, 2, [[0, 2, 0]], 0);
+
+// Walls: every room/corridor edge square side → one segment; doors after them.
+const segs = [];
+for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+  const e = edges[y * N + x], X = x * SQ, Y = y * SQ;
+  if (e & 1) segs.push([X, Y, X, Y + SQ]);
+  if (e & 2) segs.push([X + SQ, Y, X + SQ, Y + SQ]);
+  if (e & 4) segs.push([X, Y, X + SQ, Y]);
+  if (e & 8) segs.push([X, Y + SQ, X + SQ, Y + SQ]);
+}
+const WALL_STRIDE = 9;
+const wallCount = segs.length + doors.length;
+const wallData = new Float32Array(wallCount * WALL_STRIDE);
+segs.forEach((s, i) => wallData.set([s[0], s[1], s[2], s[3], 10, 0.10, 0.09, 0.08, 1], i * WALL_STRIDE));
+doors.forEach((d, i) => {
+  const X = d[0] * SQ, Y = d[1] * SQ;
+  wallData.set([X + 8, Y + SQ / 2, X + SQ * 2 - 8, Y + SQ / 2, 14, 0.55, 0.36, 0.16, 1], (segs.length + i) * WALL_STRIDE);
+});
+const wallBuf = buffer(wallData, gl.DYNAMIC_DRAW);
+const wallVao = gl.createVertexArray();
+gl.bindVertexArray(wallVao);
+attribs(quadSeg, 2, [[0, 2, 0]], 0);
+attribs(wallBuf, WALL_STRIDE, [[1, 4, 0], [2, 1, 4], [3, 4, 5]], 1);
+const doorBase = segs.length * WALL_STRIDE;              // doors: same buffer, after the walls
+const doorVao = gl.createVertexArray();
+gl.bindVertexArray(doorVao);
+attribs(quadSeg, 2, [[0, 2, 0]], 0);
+attribs(wallBuf, WALL_STRIDE, [[1, 4, doorBase], [2, 1, doorBase + 4], [3, 4, doorBase + 5]], 1);
+
+// Sprites: x, y, size, rotation, tint rgba, atlas cell.
+const SPR_STRIDE = 9;
+const spriteData = new Float32Array(P.sprites * SPR_STRIDE);
+const spriteHome = [];
+for (let i = 0; i < P.sprites; i++) {
+  const r = rooms[i % rooms.length];
+  spriteHome.push({
+    x: (r.x + 1 + rand() * (r.w - 2)) * SQ, y: (r.y + 1 + rand() * (r.h - 2)) * SQ,
+    radius: SQ * (0.5 + rand() * 1.5), speed: 0.3 + rand() * 0.9, phase: rand() * 6.28,
+    size: i % 10 === 0 ? SQ * 2 : SQ * 0.9,
+  });
+  spriteData.set([0, 0, 0, 0, 1, 1, 1, 1, i % 4], i * SPR_STRIDE);
+}
+const spriteBuf = buffer(spriteData, gl.DYNAMIC_DRAW);
+const spriteVao = gl.createVertexArray();
+gl.bindVertexArray(spriteVao);
+attribs(quadMid, 2, [[0, 2, 0]], 0);
+attribs(spriteBuf, SPR_STRIDE, [[1, 4, 0], [2, 4, 4], [3, 1, 8]], 1);
+
+const emptyVao = gl.createVertexArray();
+gl.bindVertexArray(null);
+
+// ---- per-frame state (no allocations inside the frame loop) --------------------------------
+const cam = new Float32Array(4);
+const MAX_FRAMES = Math.ceil(P.seconds * 150) + 600;
+const frameMs = new Float64Array(MAX_FRAMES);
+const cpuMs = new Float64Array(MAX_FRAMES);
+const gpuMs = new Float64Array(MAX_FRAMES);
+let frames = 0, gpuCount = 0, last = 0, phase = 'warmup', phaseStart = 0, hudAt = 0;
+let lastDoorFlip = 0, prepared = null;
+const queries = timerExt ? [gl.createQuery(), gl.createQuery(), gl.createQuery(), gl.createQuery()] : [];
+const queryBusy = new Uint8Array(queries.length);
+let queryNext = 0;
+
+function updateCamera(t) {
+  const zoom = 0.5 + 0.5 * Math.sin(t * 0.21);
+  const minScale = Math.max(P.w, P.h) / MAP * 0.9;      // about the whole map
+  const inch = P.w / 34 / SQ;                            // 34 squares across: the table view
+  cam[0] = MAP / 2 + Math.cos(t * 0.13) * MAP * 0.28;
+  cam[1] = MAP / 2 + Math.sin(t * 0.17) * MAP * 0.28;
+  cam[2] = minScale + (inch * 1.3 - minScale) * zoom;
+  cam[3] = MAP;
+}
+
+function updateFog(t) {
+  gl.bindTexture(gl.TEXTURE_2D, fogTex);
+  uploadRect(paintCircle(FOG / 2 + Math.sin(t * 0.37) * FOG * 0.42, FOG / 2 + Math.sin(t * 0.29 + 1) * FOG * 0.42, 14, 0));
+  uploadRect(paintCircle(FOG / 2 + Math.cos(t * 0.23) * FOG * 0.40, FOG / 2 + Math.sin(t * 0.31) * FOG * 0.40, 10, 255));
+}
+
+function updateSprites(t) {
+  for (let i = 0; i < P.sprites; i++) {
+    const h = spriteHome[i], o = i * SPR_STRIDE, a = t * h.speed + h.phase;
+    spriteData[o] = h.x + Math.cos(a) * h.radius;
+    spriteData[o + 1] = h.y + Math.sin(a * 1.3) * h.radius;
+    spriteData[o + 2] = h.size;
+    spriteData[o + 3] = Math.sin(a * 0.5) * 0.4;
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, spriteBuf);
+  gl.bufferSubData(gl.ARRAY_BUFFER, 0, spriteData);
+}
+
+function updateDoors(t) {
+  if (t - lastDoorFlip < 1) return;
+  lastDoorFlip = t;
+  for (let i = 0; i < doors.length; i++) {
+    const o = (segs.length + i) * WALL_STRIDE, open = ((i + Math.floor(t)) % 3) === 0;
+    wallData[o + 5] = open ? 0.25 : 0.55; wallData[o + 6] = open ? 0.55 : 0.36; wallData[o + 7] = open ? 0.25 : 0.16;
+  }
+  gl.bindBuffer(gl.ARRAY_BUFFER, wallBuf);
+  gl.bufferSubData(gl.ARRAY_BUFFER, segs.length * WALL_STRIDE * 4, wallData, segs.length * WALL_STRIDE);
+}
+
+function draw(t) {
+  gl.viewport(0, 0, P.w, P.h);
+  gl.clearColor(0, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  gl.disable(gl.BLEND);
+  gl.useProgram(mapProg.p);
+  gl.uniform4fv(mapProg.u.uCam, cam);
+  gl.uniform2f(mapProg.u.uView, P.w, P.h);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, mapTex);
+  gl.uniform1i(mapProg.u.uMap, 0);
+  gl.bindVertexArray(mapVao);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);           // everything premultiplied
+  gl.useProgram(wallProg.p);
+  gl.uniform4fv(wallProg.u.uCam, cam);
+  gl.uniform2f(wallProg.u.uView, P.w, P.h);
+  gl.bindVertexArray(wallVao);
+  gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, segs.length);
+
+  gl.useProgram(spriteProg.p);
+  gl.uniform4fv(spriteProg.u.uCam, cam);
+  gl.uniform2f(spriteProg.u.uView, P.w, P.h);
+  gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+  gl.uniform1i(spriteProg.u.uAtlas, 0);
+  gl.bindVertexArray(spriteVao);
+  gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, P.sprites);
+
+  gl.useProgram(fogProg.p);
+  gl.uniform4fv(fogProg.u.uCam, cam);
+  gl.uniform2f(fogProg.u.uView, P.w, P.h);
+  gl.uniform1f(fogProg.u.uTime, t);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, fogTex);
+  gl.uniform1i(fogProg.u.uFog, 0);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, noiseTex);
+  gl.uniform1i(fogProg.u.uNoise, 1);
+  gl.bindVertexArray(emptyVao);
+  for (let i = 0; i < P.load; i++) gl.drawArrays(gl.TRIANGLES, 0, 3);
+  gl.activeTexture(gl.TEXTURE0);
+
+  // Doors above the fog (as on the old TV).
+  gl.useProgram(wallProg.p);
+  gl.bindVertexArray(doorVao);
+  gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, doors.length);
+  gl.bindVertexArray(null);
+}
+
+/** GPU time via EXT_disjoint_timer_query_webgl2 (every 10th frame), when the extension exists. */
+function gpuQueryBegin() {
+  if (!timerExt || frames % 10 !== 0 || queryBusy[queryNext]) return -1;
+  const i = queryNext;
+  gl.beginQuery(timerExt.TIME_ELAPSED_EXT, queries[i]);
+  return i;
+}
+function gpuQueryEnd(i) {
+  if (i < 0) return;
+  gl.endQuery(timerExt.TIME_ELAPSED_EXT);
+  queryBusy[i] = 1;
+  queryNext = (queryNext + 1) % queries.length;
+}
+function gpuQueryCollect() {
+  if (!timerExt) return;
+  const disjoint = gl.getParameter(timerExt.GPU_DISJOINT_EXT);
+  for (let i = 0; i < queries.length; i++) {
+    if (!queryBusy[i] || !gl.getQueryParameter(queries[i], gl.QUERY_RESULT_AVAILABLE)) continue;
+    const ns = gl.getQueryParameter(queries[i], gl.QUERY_RESULT);
+    queryBusy[i] = 0;
+    if (!disjoint && phase === 'measure' && gpuCount < MAX_FRAMES) gpuMs[gpuCount++] = ns / 1e6;
+  }
+}
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const t0 = performance.now();
+  const t = now / 1000;
+  if (phase === 'warmup' && now - phaseStart >= WARMUP_S * 1000) {
+    phase = 'measure'; phaseStart = now; frames = 0; gpuCount = 0;
+  } else if (phase === 'measure') {
+    if (last && frames < MAX_FRAMES) frameMs[frames] = now - last;
+    if (now - phaseStart >= P.seconds * 1000) finish(now);
+  }
+  last = now;
+  gpuQueryCollect();
+  const qi = gpuQueryBegin();
+  updateCamera(t);
+  updateFog(t);
+  updateSprites(t);
+  updateDoors(t);
+  draw(t);
+  gpuQueryEnd(qi);
+  if (phase === 'measure' && frames < MAX_FRAMES) cpuMs[frames++] = performance.now() - t0;
+  if (now - hudAt > 250) { hudAt = now; showHud(now); }
+}
+
+function stats(arr, count) {
+  const a = Array.from(arr.subarray(0, count)).sort((x, y) => x - y);
+  const sum = a.reduce((s, v) => s + v, 0);
+  const pct = (p) => a[Math.min(a.length - 1, Math.floor(a.length * p))];
+  const worst = a.slice(Math.floor(a.length * 0.99));
+  return {
+    avg: sum / a.length, p50: pct(0.5), p99: pct(0.99), max: a[a.length - 1],
+    worst1avg: worst.reduce((s, v) => s + v, 0) / Math.max(1, worst.length),
+  };
+}
+const r1 = (v) => Math.round(v * 10) / 10;
+
+function finish(now) {
+  const n = frames - 1;                       // the first measured delta slot stays empty
+  const f = stats(frameMs.subarray(1), n);
+  const c = stats(cpuMs, frames);
+  const g = gpuCount ? stats(gpuMs, gpuCount) : null;
+  const elapsed = (now - phaseStart) / 1000;
+  const avgFps = n / elapsed;
+  const low1Fps = 1000 / f.worst1avg;
+  let over25 = 0, over33 = 0;
+  for (let i = 1; i <= n; i++) { if (frameMs[i] > 25) over25++; if (frameMs[i] > 33.4) over33++; }
+  window.probeResult = {
+    pass: avgFps >= 50 && low1Fps >= 30,
+    avgFps: r1(avgFps), low1Fps: r1(low1Fps),
+    frameMs: { avg: r1(f.avg), p50: r1(f.p50), p99: r1(f.p99), max: r1(f.max) },
+    cpuMs: { avg: r1(c.avg), p99: r1(c.p99) },
+    gpuMs: g ? { avg: r1(g.avg), p99: r1(g.p99), samples: gpuCount } : null,
+    framesOver25ms: over25, framesOver33ms: over33, frames: n, seconds: r1(elapsed),
+    ...prepared, ...facts, params: P,
+  };
+  console.log('PROBE_RESULT ' + JSON.stringify(window.probeResult));
+  phase = 'done';
+}
+
+function showHud(now) {
+  const r = window.probeResult;
+  if (phase === 'done' && r) {
+    hudVerdict.textContent = `${r.pass ? 'PASS' : 'FAIL'} — ${r.avgFps} fps avg, 1 % low ${r.low1Fps}`;
+    hudVerdict.className = r.pass ? 'pass' : 'fail';
+  } else {
+    const left = phase === 'warmup' ? WARMUP_S - (now - phaseStart) / 1000 : P.seconds - (now - phaseStart) / 1000;
+    hudVerdict.textContent = `${phase === 'warmup' ? 'warming up' : 'measuring'} — ${Math.max(0, left).toFixed(0)} s`;
+    hudVerdict.className = 'run';
+  }
+  const lines = [
+    `${facts.renderer}`,
+    `${facts.vendor} · WebGL2 yes · max texture ${facts.maxTextureSize} · dpr ${facts.dpr}`,
+    `render ${facts.canvas} · viewport ${facts.viewport} css px · screen ${facts.screen}` + (facts.display ? ` · display ${facts.display}` : ''),
+    facts.device ? `${facts.device} · WebView ${facts.webView}` : `${facts.cores} cores`,
+    `map 4096² gen ${prepared.mapGenMs} ms · mipmaps ${prepared.mipmapMs} ms · ${segs.length} walls · ${doors.length} doors · ${P.sprites} sprites · fog ${FOG}² × ${P.load} pass`,
+  ];
+  if (r) {
+    lines.push(
+      '',
+      `frame ms  avg ${r.frameMs.avg}  p50 ${r.frameMs.p50}  p99 ${r.frameMs.p99}  max ${r.frameMs.max}`,
+      `JS ms/frame  avg ${r.cpuMs.avg}  p99 ${r.cpuMs.p99}` + (r.gpuMs ? `   GPU ms avg ${r.gpuMs.avg} p99 ${r.gpuMs.p99}` : '   GPU timer n/a'),
+      `${r.frames} frames in ${r.seconds} s · >25 ms: ${r.framesOver25ms} · >33 ms: ${r.framesOver33ms}`,
+      'OK / Enter: measure again',
+    );
+  }
+  hudText.textContent = lines.join('\n');
+}
+
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || phase !== 'done') return;
+  phase = 'warmup'; phaseStart = performance.now(); window.probeResult = null;
+});
+
+generateMap().then((p) => {
+  prepared = p;
+  phaseStart = performance.now();
+  requestAnimationFrame(frame);
+}).catch((err) => {
+  hudVerdict.textContent = 'FAIL — ' + err.message;
+  hudVerdict.className = 'fail';
+  console.log('PROBE_RESULT ' + JSON.stringify({ pass: false, error: err.message, ...facts }));
+});
+</script>
+</body>
+</html>
