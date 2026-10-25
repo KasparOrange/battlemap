@@ -11,7 +11,7 @@
   No props: it reads the page's configuration (lib/config.ts, mode companion).
 -->
 <script lang="ts">
-  import { onMount, type Component } from 'svelte';
+  import { onMount, untrack, type Component } from 'svelte';
   import { appConfig, rememberTable, type AppConfig } from '../config.ts';
   import { log } from '../log.ts';
   import { CompanionSession } from '../state/sessions.svelte.ts';
@@ -61,7 +61,8 @@
     switch (msg.type) {
       case 'tv.status': {
         const text = typeof msg.busy === 'string' ? msg.busy : null;
-        if (!!text !== !!busy) log.info('companion', text ? 'TV busy' : 'TV ready', { text });
+        // untracked: this effect writes `busy`, so reading it tracked looped (effect_update_depth_exceeded)
+        if (!!text !== !!untrack(() => busy)) log.info('companion', text ? 'TV busy' : 'TV ready', { text });
         busy = text ? { text, progress: typeof msg.progress === 'number' ? msg.progress : null } : null;
         return;
       }

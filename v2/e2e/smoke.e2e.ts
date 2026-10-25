@@ -14,7 +14,7 @@ test('TV and companion connect, exchange commands, and log', async ({ browser })
   await expect(tv.getByTestId('tv-status')).toContainText('open');
 
   const logPosted = companion.waitForResponse((r) => r.url().endsWith('/log') && r.request().method() === 'POST', { timeout: 15_000 });
-  await companion.goto(`/app/?mode=companion&table=${table}`);
+  await companion.goto(`/app/?mode=companion&table=${table}&debug=1`);
   await expect(companion.getByTestId('companion-status')).toContainText('TV online · ready');
   await expect(tv.getByTestId('tv-status')).toContainText('companions 1');
   // The kit's Button debounces from performance.now() = 0, so a press in the first 350 ms after

@@ -62,7 +62,8 @@ async function runProbe(): Promise<unknown> {
   for (let i = 0; i < 60; i++) {
     await Bun.sleep(2000);
     const line = adb('logcat', '-d', '-s', 'battlemap').split('\n').find((l) => l.includes('PROBE_RESULT'));
-    if (line) return JSON.parse(line.slice(line.indexOf('PROBE_RESULT') + 'PROBE_RESULT'.length).trim());
+    // the WebView appends the console line's source (` (probe.html:123)`): cut after the JSON
+    if (line) return JSON.parse(line.slice(line.indexOf('PROBE_RESULT') + 'PROBE_RESULT'.length, line.lastIndexOf('}') + 1).trim());
   }
   throw new Error('no PROBE_RESULT in logcat within 120 s');
 }

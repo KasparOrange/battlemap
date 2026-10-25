@@ -134,7 +134,11 @@ export class ProtoClient {
       } });
     });
     ws.addEventListener('message', (e) => this.receive(String(e.data)));
+    // heartbeat like the app's: the relay closes a socket silent for 45 s as a zombie
+    const heartbeat = setInterval(() => ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify({ type: 'ping', t: Date.now() })), 15_000);
+    (heartbeat as { unref?: () => void }).unref?.();
     ws.addEventListener('close', () => {
+      clearInterval(heartbeat);
       if (this.ws !== ws) return;
       this.opts.log?.('socket closed', { client: this.client });
       this.failInFlight('connection lost');

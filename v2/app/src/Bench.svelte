@@ -311,7 +311,7 @@
         }
       }
       gpu.stop();
-      w.__bench = { done: true, results, gpu: gpuName, profile };
+      w.__bench = { done: true, results: $state.snapshot(results), gpu: gpuName, profile }; // plain objects: DevTools returnByValue turns proxies into {}
       status = `done — ${results.length} scenes`;
       log.info('bench', 'Bench done', { profile, gpu: gpuName, scenes: results.length });
     })().catch((e: unknown) => {
