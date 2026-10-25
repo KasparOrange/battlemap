@@ -30,6 +30,8 @@ holds only what is open.
 - import: upload only after the squares dialog is confirmed (W3-B2 request; W3-C done).
 - Effects browser: small looping previews instead of stills.
 - Bench run on the emulator and, when reachable, the box.
+- **Spoiler:** game thumbnails on the TV home and library show the whole unfogged map to the players — fog-honest thumbnails (roadmap S24) or none on the TV.
+- Reveal animations (roadmap S4) — not started (W4-T stopped near its budget).
 - renderer: the first fit on a phone uses a too-small host size (the companion refits after the first draw as a workaround).
 - companion table picker: list `discoverLanTables()` when `canDiscoverLan()`, else a code field (`decodeLanCode` → `joinTable`); run `checkServerChoice()` once after the companion boots (W3-E's LAN API in `config.ts`).
 - e2e: the full run against the Rust server: 23 of 25 failures pass with emulators off and one worker; two app-timing failures left.
