@@ -325,6 +325,8 @@ export const FxPlace = v.object({
   type: v.literal('fx.place'),
   /** The effect. */
   effect: PlacedEffect,
+  /** Groups commands into one undo step (optional). */
+  gesture: v.optional(Id),
 });
 
 /** Removes a lasting effect. */
@@ -332,6 +334,8 @@ export const FxRemove = v.object({
   type: v.literal('fx.remove'),
   /** The effect. */
   id: Id,
+  /** Groups commands into one undo step — a "clear all" sends its removes under one (optional). */
+  gesture: v.optional(Id),
 });
 
 /** Plays a one-shot effect on every screen. */

@@ -238,6 +238,18 @@ describe('effects and game', () => {
     expect(s.live.shots).toHaveLength(MAX_SHOTS);
   });
 
+  test('effects undo: place and remove each one step, a clear under one gesture is one step', () => {
+    const fx = (id: string) => ({ id, effect: 'light.torch', anchor, params: {}, on: true });
+    let s = run(withGame(), { type: 'fx.place', effect: fx('a') }, { type: 'fx.place', effect: fx('b') });
+    expect(active(run(s, { type: 'history.undo' })).effects.map((e) => e.id)).toEqual(['a']);
+    s = run(s, { type: 'fx.remove', id: 'a', gesture: 'clear1' }, { type: 'fx.remove', id: 'b', gesture: 'clear1' });
+    expect(active(s).effects).toEqual([]);
+    s = run(s, { type: 'history.undo' });
+    expect(active(s).effects.map((e) => e.id)).toEqual(['a', 'b']);
+    s = run(s, { type: 'history.redo' });
+    expect(active(s).effects).toEqual([]);
+  });
+
   test('rename and settings', () => {
     const s = run(withGame(), { type: 'game.rename', name: 'Night 2' }, { type: 'game.settings', settings: { fogEdgeInset: 15 } });
     expect(s.game!.name).toBe('Night 2');

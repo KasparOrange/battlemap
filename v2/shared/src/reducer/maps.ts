@@ -145,7 +145,7 @@ export function fxPlace(root: RootState, cmd: CommandOf<'fx.place'>): ApplyResul
     const exists = map.effects.some((e) => e.id === cmd.effect.id);
     if (!exists && map.effects.length >= 64) return 'This map has 64 effects already.';
     const effects = exists ? map.effects.map((e) => (e.id === cmd.effect.id ? cmd.effect : e)) : [...map.effects, cmd.effect];
-    return { map: { ...map, effects } };
+    return { map: { ...map, effects }, undo: { kind: 'effects', mapId: map.info.id, gesture: cmd.gesture ?? null, effects: map.effects } };
   });
 }
 
@@ -157,7 +157,13 @@ export function fxPlace(root: RootState, cmd: CommandOf<'fx.place'>): ApplyResul
  * @returns the result
  */
 export function fxRemove(root: RootState, cmd: CommandOf<'fx.remove'>): ApplyResult {
-  return onActiveMap(root, (map) => (map.effects.some((e) => e.id === cmd.id) ? { map: { ...map, effects: map.effects.filter((e) => e.id !== cmd.id) } } : { map }));
+  return onActiveMap(root, (map): MapChange => {
+    if (!map.effects.some((e) => e.id === cmd.id)) return { map };
+    return {
+      map: { ...map, effects: map.effects.filter((e) => e.id !== cmd.id) },
+      undo: { kind: 'effects', mapId: map.info.id, gesture: cmd.gesture ?? null, effects: map.effects },
+    };
+  });
 }
 
 /**

@@ -44,6 +44,8 @@ function swap(game: Game, entry: UndoEntry): { map: MapPlay; inverse: UndoEntry 
       const strokes = [...map.strokes.filter((s) => !remove.has(s.id)), ...entry.restore];
       return { map: { ...map, strokes }, inverse: { ...entry, remove: entry.restore.map((s) => s.id), restore: removed } };
     }
+    case 'effects':
+      return { map: { ...map, effects: entry.effects }, inverse: { ...entry, effects: map.effects } };
   }
 }
 
