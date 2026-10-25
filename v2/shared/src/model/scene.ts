@@ -6,6 +6,7 @@
  */
 import type { Game, MapPlay, Scene } from './game.ts';
 import type { PlacedEffect } from './effect.ts';
+import { captureSceneSound } from './sound.ts';
 
 /**
  * Whether a lasting effect belongs in a scene: everything but token-bound effects (an aura
@@ -20,7 +21,8 @@ export function sceneKeeps(e: PlacedEffect): boolean {
 
 /**
  * A scene of what is on the table now: the map on the table, its TV framing, its lasting
- * effects (not the token-bound ones), the map lights switch and the fog look.
+ * effects (not the token-bound ones), the map lights switch, the fog look and — while the TV
+ * plays some — the ambient beds.
  *
  * @param game - the open game
  * @param id - the scene's id (a new one, or the id of the scene to update)
@@ -39,7 +41,19 @@ export function captureScene(game: Game, id: string, name: string): Scene | null
     effects: map.effects.filter(sceneKeeps),
     mapLights: s.mapLights,
     fog: { style: s.fogStyle, edgeInset: s.fogEdgeInset, fade: s.fogFade },
+    ...soundOf(game),
   };
+}
+
+/**
+ * The `sound` field of a scene captured now: the playing beds, or nothing (`captureSceneSound`).
+ *
+ * @param game - the open game
+ * @returns `{sound}` or an empty object
+ */
+function soundOf(game: Game): Pick<Scene, 'sound'> {
+  const sound = captureSceneSound(game.sound);
+  return sound ? { sound } : {};
 }
 
 /**
@@ -67,7 +81,9 @@ export function sceneEffects(map: MapPlay, scene: Scene): PlacedEffect[] {
 export function sceneShown(game: Game, scene: Scene): boolean {
   if (game.activeMapId !== scene.mapId) return false;
   const now = captureScene(game, scene.id, scene.name);
-  return !!now && sameValue(now, scene);
+  if (!now) return false;
+  if (!scene.sound) delete now.sound; // a scene without sound leaves the sound alone
+  return sameValue(now, scene);
 }
 
 /** Deep equality of plain JSON values (key order does not matter). */

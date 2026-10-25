@@ -9,6 +9,7 @@ import { Id, Mask } from './basics.ts';
 import { OneShot, PlacedEffect } from './effect.ts';
 import { Game } from './game.ts';
 import { MeasureLine, Stroke, Token } from './pieces.ts';
+import { SoundShot } from './sound.ts';
 import { defaultTable, TableState } from './table.ts';
 
 /** Shown on the screens but never saved. */
@@ -19,6 +20,8 @@ export const LiveState = v.object({
   stroke: v.nullable(Stroke),
   /** The most recent one-shot effects (`MAX_SHOTS`), oldest first. */
   shots: v.array(OneShot),
+  /** The most recent one-shot sounds (`MAX_SOUND_SHOTS`), oldest first (missing = none). */
+  sounds: v.optional(v.array(SoundShot), () => []),
 });
 /** The unsaved live state; see the schema of the same name. */
 export type LiveState = v.InferOutput<typeof LiveState>;
@@ -92,5 +95,5 @@ export function initialRoot(): RootState {
  * @returns a new live state
  */
 export function emptyLive(): LiveState {
-  return { measure: null, stroke: null, shots: [] };
+  return { measure: null, stroke: null, shots: [], sounds: [] };
 }

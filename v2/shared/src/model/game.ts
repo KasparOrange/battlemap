@@ -7,7 +7,9 @@ import { Count, Id, IsoTime, Mask, Name, Num, Positive } from './basics.ts';
 import { classicDisc, TemplateDisc } from './disc.ts';
 import { PlacedEffect } from './effect.ts';
 import { MapInfo } from './map.ts';
+import { DmNote, Handout, HandoutShown, MAX_HANDOUTS, MAX_NOTES, Spotlight, Timer } from './moments.ts';
 import { DmLayer, Ruler, Stroke, Token } from './pieces.ts';
+import { defaultSoundscape, SceneSound, Soundscape } from './sound.ts';
 import { emptyMask } from '../geometry/mask.ts';
 
 /** The fog of one map. */
@@ -81,6 +83,10 @@ export const MapPlay = v.object({
   view: MapView,
   /** Whether battlemap's grid lines are shown (starts as `info.drawGrid`). */
   showGrid: v.boolean(),
+  /** The DM's notes pinned to this map — tablet only, never drawn on the TV (maps stored before them read as none). */
+  notes: v.optional(v.pipe(v.array(DmNote), v.maxLength(MAX_NOTES)), () => []),
+  /** The spotlight on this map, or null (maps stored before it read as none). */
+  spotlight: v.optional(v.nullable(Spotlight), null),
 });
 /** One map's play state; see the schema of the same name. */
 export type MapPlay = v.InferOutput<typeof MapPlay>;
@@ -157,6 +163,8 @@ export const Scene = v.object({
     /** Fade squares in when revealed. */
     fade: v.boolean(),
   }),
+  /** The ambient beds it starts (saved while sound played); none = applying leaves the sound alone. */
+  sound: v.optional(SceneSound),
 });
 /** A scene preset; see the schema of the same name. */
 export type Scene = v.InferOutput<typeof Scene>;
@@ -185,6 +193,12 @@ export const Game = v.object({
   settings: GameSettings,
   /** Whether fog changes wait in a preview until the DM applies them. */
   previewFirst: v.boolean(),
+  /** The countdown on the TV, or null (games stored before it read as none). */
+  timer: v.optional(v.nullable(Timer), null),
+  /** Handouts kept for this game, in the DM's order (games stored before them read as none). */
+  handouts: v.optional(v.pipe(v.array(Handout), v.maxLength(MAX_HANDOUTS)), () => []),
+  /** The handout the TV shows now, or null. */
+  handoutShown: v.optional(v.nullable(HandoutShown), null),
   /** The game's maps in the order they joined (never empty). */
   mapOrder: v.pipe(v.array(Id), v.minLength(1)),
   /** The map on the table (one of `mapOrder`). */
@@ -195,6 +209,8 @@ export const Game = v.object({
   curtain: v.optional(Curtain, defaultCurtain),
   /** Scene presets in the DM's order (games stored before they existed read as none). */
   scenes: v.optional(v.pipe(v.array(Scene), v.maxLength(MAX_SCENES)), () => []),
+  /** The soundscape the TV plays (games stored before it existed read as silent). */
+  sound: v.optional(Soundscape, defaultSoundscape),
 });
 /** A game; see the schema of the same name. */
 export type Game = v.InferOutput<typeof Game>;
@@ -229,6 +245,8 @@ export function newMapPlay(info: MapInfo): MapPlay {
     effects: [],
     view: { mode: 'table', col: null, row: null, quarterTurns: 0, free: null },
     showGrid: info.drawGrid,
+    notes: [],
+    spotlight: null,
   };
 }
 
@@ -259,10 +277,14 @@ export function newGame(input: NewGameInput): Game {
     createdAt: input.createdAt,
     settings: { ...defaultSettings(), ...input.settings },
     previewFirst: false,
+    timer: null,
+    handouts: [],
+    handoutShown: null,
     mapOrder: [input.map.id],
     activeMapId: input.map.id,
     maps: { [input.map.id]: newMapPlay(input.map) },
     curtain: defaultCurtain(),
     scenes: [],
+    sound: defaultSoundscape(),
   };
 }

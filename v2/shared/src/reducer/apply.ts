@@ -14,6 +14,7 @@ import { historyRedo, historyUndo } from './history.ts';
 import { fxPlace, fxRemove, fxTrigger, gameRename, gameSettings, mapAdd, mapRegrid, mapRemove, mapRename, mapSwitch } from './maps.ts';
 import type { ApplyResult } from './result.ts';
 import { curtainSet, sceneApply, sceneOrder, sceneRemove, sceneRename, sceneSave } from './scenes.ts';
+import { soundPlay, soundSet } from './sound.ts';
 import { tokenAdd, tokenClear, tokenMove, tokenRemove, tokenUpdate } from './tokens.ts';
 import { tableCalibrate, tableOverscan, tablePattern, tableReset, tableViewport, viewFree, viewGrid, viewMode, viewPan, viewRotate, viewWindow } from './view.ts';
 
@@ -73,6 +74,8 @@ export function apply(state: RootState, cmd: Command): ApplyResult {
     case 'scene.rename': return sceneRename(state, cmd);
     case 'scene.order': return sceneOrder(state, cmd);
     case 'scene.apply': return sceneApply(state, cmd);
+    case 'sound.set': return soundSet(state, cmd);
+    case 'sound.play': return soundPlay(state, cmd);
     case 'history.undo': return historyUndo(state);
     case 'history.redo': return historyRedo(state);
     default: return assertNever(cmd);

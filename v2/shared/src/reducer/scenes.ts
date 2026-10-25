@@ -104,7 +104,8 @@ export function sceneOrder(root: RootState, cmd: CommandOf<'scene.order'>): Appl
 
 /**
  * `scene.apply`: the scene's map on the table, framed as saved, with the scene's effects (the
- * map's token-bound ones stay), map lights and fog look. Fog, doors, tokens, drawings untouched.
+ * map's token-bound ones stay), map lights and fog look; a scene with sound starts its beds. Fog,
+ * doors, tokens, drawings untouched.
  *
  * @param root - the state
  * @param cmd - the command
@@ -128,6 +129,7 @@ export function sceneApply(root: RootState, cmd: CommandOf<'scene.apply'>): Appl
       ...game,
       activeMapId: scene.mapId,
       settings,
+      ...(scene.sound ? { sound: { ...game.sound, on: true, beds: scene.sound.beds } } : {}),
       maps: { ...game.maps, [scene.mapId]: { ...map, view: scene.view, effects: sceneEffects(map, scene) } },
     };
   });

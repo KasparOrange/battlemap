@@ -136,8 +136,10 @@ picture `grid`, `drawGrid`, `doorCount`, `drawDoors`, `libraryId`), `fog` (`on`,
 `staged`, `live`), `doorsOpen`, `tokens`, `strokes`, `layers`, `ruler`, `disc`, `effects`, `view`
 (`mode`, `col`, `row`, `quarterTurns`, `free`) and `showGrid`. The game also holds its `curtain` (`down`, `plate`, `text`) and its `scenes` (scene presets:
 `id`, `name`, `mapId`, `view`, `effects` without token-bound ones, `mapLights`, `fog {style, edgeInset,
-fade}`) — both optional on the wire, read as up / none for games stored before them
-([`features.md`](features.md)).
+fade}`, and `sound {beds}` when it was saved while beds played) — both optional on the wire, read
+as up / none for games stored before them ([`features.md`](features.md)). Its `sound` is the
+soundscape (`on`, `master`, `shots`, `beds` ≤ 3 of `{sound, volume}`, `fxSounds`; optional, read
+as silent); one-shot sounds are live (`live.sounds`, optional, read as none) — features.md "Sound".
 
 ## Commands
 
@@ -189,7 +191,9 @@ they say otherwise; without a game they are refused ("No game is open."), except
 | `scene.save` | `scene` (`Scene`, made with `captureScene`), `index?` — adds, or replaces by id ("update from now"); ≤ 24 per game | — | new |
 | `scene.remove` / `scene.rename` | `id` / `id`, `name` | — | new |
 | `scene.order` | `ids` (every scene once, else refused) | — | new |
-| `scene.apply` | `id` — the scene's map on the table, its view, its effects (token-bound ones stay), map lights, fog look | — | new |
+| `scene.apply` | `id` — the scene's map on the table, its view, its effects (token-bound ones stay), map lights, fog look; a scene with `sound` starts its beds (master and one-shot volumes stay) | — | new |
+| `sound.set` | any of `on` (play / stop all with a fade; the beds stay), `master`, `shots` (one-shot layer), `beds` (`SoundBed[]` `{sound, volume}`, the whole list, ≤ 3, each sound once), `fxSounds` — the rest kept | — | new (v1's `SessionSettings.ambientSound` was never built) |
+| `sound.play` | `shot` (`SoundShot` `{id, sound, volume?, at}`, live — the last 8 kept; the TV plays each id once, not while the sound is off) | — | new |
 | `history.undo` / `history.redo` | — | — | `vtt.undo` / `vtt.redo` |
 
 ## Old messages that are gone, and why

@@ -12,6 +12,7 @@ import { GameSettings, MAX_CURTAIN_TEXT, Scene, TvMode } from '../model/game.ts'
 import { MapInfo, RasterGrid } from '../model/map.ts';
 import { DmLayer, MeasureLine, Ruler, Stroke, Token } from '../model/pieces.ts';
 import { CalibrationPivot } from '../model/table.ts';
+import { SoundBeds, SoundShot, Volume } from '../model/sound.ts';
 
 /** Reveal (the players see it) or hide (fog back on). */
 export const FogValue = v.picklist(['reveal', 'hide']);
@@ -435,6 +436,34 @@ export const SceneApply = v.object({
   id: Id,
 });
 
+// ── sound ───────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Changes the game's soundscape (`Game.sound`): any of play/stop, the master and one-shot
+ * volumes, the ambient beds (the whole list), the effects-sound switch — those given, the rest
+ * kept. The TV crossfades from the old mix to the new one. No undo step.
+ */
+export const SoundSet = v.object({
+  type: v.literal('sound.set'),
+  /** Play (true) or stop everything with a fade (false; the beds stay listed). */
+  on: v.optional(v.boolean()),
+  /** The master volume. */
+  master: v.optional(Volume),
+  /** The one-shot layer's volume. */
+  shots: v.optional(Volume),
+  /** The ambient beds, the whole list (≤ 3, each sound once). */
+  beds: v.optional(SoundBeds),
+  /** Effects one-shots play their matching sound. */
+  fxSounds: v.optional(v.boolean()),
+});
+
+/** Plays a one-shot sound on the TV (live, not saved; ignored there while the sound is off). */
+export const SoundPlay = v.object({
+  type: v.literal('sound.play'),
+  /** The shot. */
+  shot: SoundShot,
+});
+
 // ── history ─────────────────────────────────────────────────────────────────────────────────
 
 /** Takes the last step back. */
@@ -456,6 +485,7 @@ export const Command = v.variant('type', [
   FxPlace, FxRemove, FxTrigger,
   GameRename, GameSettingsSet,
   CurtainSet, SceneSave, SceneRemove, SceneRename, SceneOrder, SceneApply,
+  SoundSet, SoundPlay,
   HistoryUndo, HistoryRedo,
 ]);
 /** Any command; see the schema of the same name. */
