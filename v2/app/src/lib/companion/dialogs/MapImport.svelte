@@ -50,9 +50,24 @@
   function finish(map: MapInfo | null): void {
     if (finished) return;
     finished = true;
+    if (!map && prepared) noteLeftovers(prepared);
     releasePrepared(prepared);
     if (map) ondone(map);
     else oncancel();
+  }
+
+  /**
+   * A cancelled import leaves the files "prepare" already uploaded on the server (rv#22, kept
+   * knowingly: the store is content-addressed, so picking the same file again reuses them and
+   * costs no second upload). Logged, so a leftover can be traced.
+   */
+  function noteLeftovers(p: PreparedMap): void {
+    const handle = p.handle as { map?: MapInfo } | undefined;
+    const m = handle?.map;
+    log.info('companion', 'Import cancelled — its uploaded files stay on the server', {
+      file: p.fileName, picture: m?.picture.hash ?? null, tableCopy: m?.tableCopy?.hash ?? null,
+      geometry: m?.geometry?.hash ?? null, thumb: p.thumb?.hash ?? null,
+    });
   }
 
   onMount(() => {

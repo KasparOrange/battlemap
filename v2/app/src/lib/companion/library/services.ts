@@ -30,7 +30,12 @@ export interface GridFinding {
   offsetY: number;
 }
 
-/** A picked file read and examined, not yet uploaded. */
+/**
+ * A picked file read and examined, before the DM settled the squares. The app's import already
+ * uploads picture, geometry, table copy and thumbnail while preparing (so "Upload and play" is
+ * quick); a cancelled import leaves them on the server, where the next pick of the same file
+ * reuses them (content-addressed). Accepted knowingly (rv#22); `MapImport` logs the leftovers.
+ */
 export interface PreparedMap {
   /** The picked file's name ("cave_40x30.webp"). */
   fileName: string;
