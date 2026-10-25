@@ -11,7 +11,8 @@
   - title: string · meta: string
   - image: string — picture URL (else the `media` snippet, else a quiet placeholder)
   - aspect: string — CSS aspect ratio of the picture (default '16 / 9')
-  - media: Snippet · badges: Snippet · actions: Snippet (a row's tools under the meta line)
+  - media: Snippet · badges: Snippet · actions: Snippet (the card's tools — a "⋯" menu — floating at the
+    picture's top-right corner, so they cost no row of their own)
   - selected · prominent · disabled · onclick: (e) => void
 -->
 <script lang="ts">
@@ -90,6 +91,7 @@
 
 <style>
     .bm-card {
+        position: relative;
         min-width: 0;
         --glow-c: transparent;
         --glow-at: 0% 100%;
@@ -214,9 +216,15 @@
         flex: none;
     }
 
+    /* over the picture's top-right corner, on a dim pill so it reads on any thumbnail */
     .actions {
+        position: absolute;
+        top: var(--g);
+        right: var(--g);
         display: flex;
         gap: calc(var(--g) / 2);
-        padding: 0 var(--g) var(--g);
+        border-radius: var(--r-ctl);
+        background: color-mix(in srgb, var(--m0) 78%, transparent);
+        box-shadow: 0 0 0 1px var(--hair);
     }
 </style>
