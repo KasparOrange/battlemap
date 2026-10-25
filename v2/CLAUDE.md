@@ -64,6 +64,15 @@ folder needs goes into your report, not into their files.
   (for git: the same as `GIT_SSH_COMMAND`).
 - Commit message: what changed and why, one subject line, prefixed `v2:`.
 
+## Orchestration (Konrad, 2026-10-25)
+
+- The orchestrating session runs at **xhigh** effort, worker helpers at **high** (`effort` on
+  the Agent call).
+- Keep a helper under about 500k tokens of context: start a fresh one with a tight brief rather
+  than continuing a long one. A judgment call, not dogma.
+- When the orchestrator itself passes about 500k, it writes an extensive handover
+  (`docs/handover.md`: state, running work, decisions, next waves) and a new session continues.
+
 ## Helpers
 
 - Scratch dirs: `mktemp -d -t claude-v2-<your topic>`; remove them by exact path.
