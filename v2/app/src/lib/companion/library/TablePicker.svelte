@@ -17,6 +17,7 @@
   import Badge from '../../ui/Badge.svelte';
   import Spinner from '../../ui/Spinner.svelte';
   import { notify } from '../../ui/notice.svelte.ts';
+  import { tableCode } from '../frame/table-code.ts';
   import { services, type TableRow } from './services.ts';
 
   interface Props {
@@ -37,10 +38,6 @@
     [...(tables ?? [])].sort((a, b) => Number(b.room === lastTable) - Number(a.room === lastTable) || a.tvName.localeCompare(b.tvName)),
   );
 
-  /** A short code for a room id, as the TV shows it ("7F3K"). */
-  function code(room: string): string {
-    return room.replace(/[^0-9a-z]/gi, '').slice(-4).toUpperCase();
-  }
 
   /**
    * Loads the tables.
@@ -81,7 +78,7 @@
     <div class="head">
       <div>
         <h2>Pick your table</h2>
-        <p class="sub">The TV shows its name and code on its start screen.</p>
+        <p class="sub">Pick the code your TV shows at the bottom of its start screen.</p>
       </div>
       <Button label="Refresh" icon="sync" variant="flat" loading={loading && tables !== null} onclick={() => void load()} />
     </div>
@@ -112,7 +109,7 @@
             >
               {#snippet trailing()}
                 {#if t.room === lastTable}<Badge text="Last used" tone="accent" />{/if}
-                <span class="code" title={t.room}>{code(t.room)}</span>
+                <span class="code" title={t.room}>{tableCode(t.room)}</span>
               {/snippet}
             </ListRow>
           </li>
@@ -194,9 +191,13 @@
     gap: 2px;
   }
 
+  /* the code is what the DM matches with the TV's screen: a mono chip, easy to read */
   .code {
-    font: var(--fs-small) / 1 var(--font-value);
-    letter-spacing: 0.08em;
-    color: var(--t2);
+    padding: calc(var(--g) / 2) var(--g);
+    border: 1px solid var(--hair-strong);
+    border-radius: var(--r-sm);
+    font: 600 var(--fs-value) / 1 var(--font-value);
+    letter-spacing: 0.12em;
+    color: var(--accent-text);
   }
 </style>
