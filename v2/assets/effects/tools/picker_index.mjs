@@ -148,7 +148,7 @@ for (const e of index.effects) {
     shape: fit?.shape ?? null,
     feet: fit?.feet ?? null,
     width: fit?.width ?? null,
-    weather: WEATHER[e.id] ?? null,
+    weather: WEATHER[e.id] ? { ...WEATHER[e.id], base: m.shader?.uniforms?.[WEATHER[e.id].param] ?? 1 } : null,
     gpuBytes: e.gpuBytes ?? 0,
     commercial: Boolean(e.commercial),
   });
