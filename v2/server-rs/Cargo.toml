@@ -16,7 +16,6 @@ hex = "0.4"
 http-body-util = "0.1"
 imagesize = "0.14"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "tiff", "bmp"] }
-jsonschema = { version = "0.33", default-features = false }
 mime_guess = "2"
 mwlog = { path = "../../../mwlog-rs" }
 percent-encoding = "2"

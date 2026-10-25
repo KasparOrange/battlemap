@@ -4,13 +4,13 @@
  * ```sh
  * bun run.ts --target bun  --port 6301          # the Bun server (../server, via bun-launch.ts)
  * bun run.ts --target rust --port 6302          # the Rust server (../server-rs/target/release/battlemap-server)
- * bun run.ts --target rust --bin <path> [files…] [--keep]
+ * bun run.ts --target rust --bin <path> [--tight-port N] [--mock-port N] [files…] [--keep]
  * ```
  *
  * It makes a temp folder (a tiny built app, a fresh data folder seeded with cleanup fixtures, a
  * second data folder), starts two servers — **main** on `--port` with test-sized settings and
- * **tight** on `--port + 100` with tiny relay limits — and the suite (`tests/*.contract.ts`)
- * with `SERVER_URL`, `SERVER_TIGHT_URL`, `DATA_DIR`, `APP_DIR`, `MOCK_PORT` (`--port + 200`).
+ * **tight** on `--tight-port` (default `--port + 100`) with tiny relay limits — and the suite (`tests/*.contract.ts`)
+ * with `SERVER_URL`, `SERVER_TIGHT_URL`, `DATA_DIR`, `APP_DIR`, `MOCK_PORT` (`--mock-port`, default `--port + 200`).
  * Afterwards it checks the graceful stop (SIGTERM: exit 0 within 5 s, open sockets closed),
  * stops both servers by PID and removes the folder (`--keep` leaves it, with the servers' logs).
  *
@@ -33,6 +33,8 @@ const flag = (name: string) => {
 const target = flag('--target') ?? 'bun';
 const port = Number(flag('--port') ?? (target === 'bun' ? 6301 : 6302));
 const bin = resolve(flag('--bin') ?? join(import.meta.dir, '..', 'server-rs', 'target', 'release', 'battlemap-server'));
+const tightPort = Number(flag('--tight-port') ?? port + 100);
+const mockPort = Number(flag('--mock-port') ?? port + 200);
 const keep = args.includes('--keep');
 const only = args.filter((a) => a !== '--keep');
 if (target !== 'bun' && target !== 'rust') throw new Error('--target bun | rust');
@@ -86,7 +88,7 @@ const mainEnv = {
 const t = TIGHT_LIMITS;
 const tightEnv = {
   ...common,
-  PORT: String(port + 100),
+  PORT: String(tightPort),
   DATA_DIR: tightData,
   HELLO_TIMEOUT_MS: String(t.helloTimeoutMs),
   BUILD_POLL_MS: '0',
@@ -149,7 +151,7 @@ async function gracefulStop(url: string, proc: Subprocess): Promise<string | nul
 }
 
 const mainUrl = `http://127.0.0.1:${port}`;
-const tightUrl = `http://127.0.0.1:${port + 100}`;
+const tightUrl = `http://127.0.0.1:${tightPort}`;
 let status = 1;
 let main: Subprocess | null = null;
 let tight: Subprocess | null = null;
@@ -167,7 +169,7 @@ try {
   const test = spawn({
     cmd: ['bun', 'test', '--timeout', '20000', ...files],
     cwd: import.meta.dir,
-    env: { ...process.env, SERVER_URL: mainUrl, SERVER_TIGHT_URL: tightUrl, DATA_DIR: mainData, APP_DIR: appDir, MOCK_PORT: String(port + 200), CONTRACT_FIXES: target === 'rust' ? '1' : '0' },
+    env: { ...process.env, SERVER_URL: mainUrl, SERVER_TIGHT_URL: tightUrl, DATA_DIR: mainData, APP_DIR: appDir, MOCK_PORT: String(mockPort), CONTRACT_FIXES: target === 'rust' ? '1' : '0' },
     stdout: 'inherit',
     stderr: 'inherit',
   });

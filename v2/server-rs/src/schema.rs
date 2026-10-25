@@ -4,6 +4,14 @@
 //! routing envelope, a library map, a game backup — goes through it, so the Rust server refuses
 //! exactly what the shared schemas refuse.
 //!
+//! The checker is a small interpreter for the keywords the generator emits (`type`, `const`,
+//! `enum`, `properties`, `required`, `additionalProperties`, `propertyNames`, `items`,
+//! `minItems`/`maxItems`, `minLength`/`maxLength`, `pattern`, `minimum`/`maximum`/
+//! `exclusiveMinimum`, `anyOf`, `oneOf`, `$ref` into `$defs`); a keyword it doesn't know makes
+//! [`warm_up`] fail at start, so a new valibot feature can't slip by unchecked. (The
+//! `jsonschema` crate did the same job but kept ~100 MB of meta-schema machinery resident —
+//! too much for the 2 GB TV box.) Lengths count UTF-16 units, like valibot.
+//!
 //! Differences to valibot that can't matter on the wire: `finite` isn't in the schema (JSON has
 //! no NaN or Infinity), and valibot drops unknown object keys while the server keeps them (a
 //! newer app's fields survive a round trip through the server).
@@ -11,8 +19,8 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use jsonschema::Validator;
-use serde_json::{Value, json};
+use regex::Regex;
+use serde_json::Value;
 
 /// The schema document as generated.
 pub const SCHEMA_JSON: &str = include_str!("../../shared/src/generated/schema.json");
@@ -20,6 +28,83 @@ pub const SCHEMA_JSON: &str = include_str!("../../shared/src/generated/schema.js
 /// The parsed schema document (with `$defs`).
 static DOC: LazyLock<Value> =
     LazyLock::new(|| serde_json::from_str(SCHEMA_JSON).unwrap_or_else(|e| panic!("schema.json is not JSON: {e}")));
+
+/// Every `pattern` in the document, compiled once.
+static PATTERNS: LazyLock<HashMap<String, Regex>> = LazyLock::new(|| {
+    let mut out = HashMap::new();
+    collect_patterns(&DOC, &mut out);
+    out
+});
+
+fn collect_patterns(v: &Value, out: &mut HashMap<String, Regex>) {
+    match v {
+        Value::Object(map) => {
+            for (k, child) in map {
+                if k == "pattern"
+                    && let Some(p) = child.as_str()
+                {
+                    let re = Regex::new(p).unwrap_or_else(|e| panic!("schema.json: pattern {p} does not compile: {e}"));
+                    out.insert(p.to_string(), re);
+                } else {
+                    collect_patterns(child, out);
+                }
+            }
+        }
+        Value::Array(items) => items.iter().for_each(|c| collect_patterns(c, out)),
+        _ => {}
+    }
+}
+
+/// The keywords the checker understands (anything else in a schema is a start-up error).
+const KNOWN: [&str; 22] = [
+    "type",
+    "const",
+    "enum",
+    "properties",
+    "required",
+    "additionalProperties",
+    "propertyNames",
+    "items",
+    "minItems",
+    "maxItems",
+    "minLength",
+    "maxLength",
+    "pattern",
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "anyOf",
+    "oneOf",
+    "allOf",
+    "$ref",
+    "description",
+];
+
+/// Refuses a schema with a keyword the checker doesn't know.
+fn check_keywords(schema: &Value, at: &str) -> Result<(), String> {
+    let Some(map) = schema.as_object() else { return Ok(()) };
+    for (k, v) in map {
+        if !KNOWN.contains(&k.as_str()) {
+            return Err(format!("schema.json {at}: keyword {k} is not supported by server-rs/src/schema.rs"));
+        }
+        match k.as_str() {
+            "properties" => {
+                for (name, p) in v.as_object().into_iter().flatten() {
+                    check_keywords(p, &format!("{at}/{name}"))?;
+                }
+            }
+            "items" | "additionalProperties" | "propertyNames" => check_keywords(v, at)?,
+            "anyOf" | "oneOf" | "allOf" => {
+                for s in v.as_array().into_iter().flatten() {
+                    check_keywords(s, at)?;
+                }
+            }
+            _ => {}
+        }
+    }
+    Ok(())
+}
 
 /// The shared definitions the server checks with.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -70,45 +155,190 @@ const ALL: [Def; 8] = [
     Def::ServerMessage,
 ];
 
-/// The compiled validators, made once on first use (call [`warm_up`] at start).
-static VALIDATORS: LazyLock<HashMap<Def, Validator>> = LazyLock::new(|| {
-    ALL.iter()
-        .map(|&def| {
-            let name = def.name();
-            let schema = json!({ "$defs": DOC["$defs"].clone(), "$ref": format!("#/$defs/{name}") });
-            let compiled = jsonschema::draft202012::new(&schema).unwrap_or_else(|e| panic!("schema.json: {name} does not compile: {e}"));
-            (def, compiled)
-        })
-        .collect()
-});
-
-/// Compiles every validator now, so the first request doesn't pay for it (and a broken
-/// schema stops the server at start, not mid-game).
+/// Parses the document, compiles its patterns and checks that every definition uses only
+/// keywords the checker knows — at start, so a schema the checker can't follow stops the server
+/// before the first game, not in the middle of one.
+///
+/// # Panics
+/// When `schema.json` is broken or uses an unsupported keyword (a build that can't be right).
 pub fn warm_up() {
-    LazyLock::force(&VALIDATORS);
+    LazyLock::force(&PATTERNS);
+    for (name, def) in DOC["$defs"].as_object().into_iter().flatten() {
+        if let Err(e) = check_keywords(def, name) {
+            panic!("{e}");
+        }
+    }
+    for def in ALL {
+        assert!(DOC["$defs"].get(def.name()).is_some(), "schema.json has no {}", def.name());
+    }
 }
 
 /// Checks a value against a shared definition.
 ///
 /// # Errors
-/// The first problem found, as `<path>: <what>` (e.g. `/map/grid/cols: 0 is less than 1`).
+/// The first problem found, as `<path>: <what>` (e.g. `/grid/cols: 0 is less than 1`).
 pub fn check(def: Def, value: &Value) -> Result<(), String> {
-    let Some(validator) = VALIDATORS.get(&def) else {
-        return Err(format!("no schema for {}", def.name()));
-    };
-    match validator.iter_errors(value).next() {
-        None => Ok(()),
-        Some(e) => {
-            let path = e.instance_path.to_string();
-            let msg = e.to_string();
-            let msg = if msg.len() > 160 {
-                format!("{}…", &msg[..msg.floor_char_boundary(160)])
-            } else {
-                msg
-            };
-            Err(if path.is_empty() { msg } else { format!("{path}: {msg}") })
+    let schema = DOC["$defs"]
+        .get(def.name())
+        .ok_or_else(|| format!("no schema for {}", def.name()))?;
+    validate(schema, value, "")
+}
+
+/// The JSON type name of a value as JSON Schema says it.
+fn type_name(v: &Value) -> &'static str {
+    match v {
+        Value::Null => "null",
+        Value::Bool(_) => "boolean",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Array(_) => "array",
+        Value::Object(_) => "object",
+    }
+}
+
+fn has_type(v: &Value, t: &str) -> bool {
+    match t {
+        "integer" => v.as_f64().is_some_and(|n| n.fract() == 0.0),
+        "number" => v.is_number(),
+        other => type_name(v) == other,
+    }
+}
+
+/// A short text of a value for refusals.
+fn short(v: &Value) -> String {
+    let s = v.to_string();
+    if s.len() > 40 {
+        format!("{}…", &s[..s.floor_char_boundary(40)])
+    } else {
+        s
+    }
+}
+
+/// One schema against one value; `at` is the JSON pointer so far.
+fn validate(schema: &Value, v: &Value, at: &str) -> Result<(), String> {
+    let Some(s) = schema.as_object() else { return Ok(()) };
+    let fail = |what: String| Err(format!("{}: {what}", if at.is_empty() { "/" } else { at }));
+    if let Some(r) = s.get("$ref").and_then(Value::as_str) {
+        let name = r.strip_prefix("#/$defs/").ok_or_else(|| format!("unsupported $ref {r}"))?;
+        let target = DOC["$defs"].get(name).ok_or_else(|| format!("unknown $ref {r}"))?;
+        validate(target, v, at)?;
+    }
+    if let Some(t) = s.get("type") {
+        let ok = match t {
+            Value::String(t) => has_type(v, t),
+            Value::Array(ts) => ts.iter().filter_map(Value::as_str).any(|t| has_type(v, t)),
+            _ => true,
+        };
+        if !ok {
+            return fail(format!("{} is not of type {t}", short(v)));
         }
     }
+    if let Some(c) = s.get("const")
+        && c != v
+    {
+        return fail(format!("{} is not {c}", short(v)));
+    }
+    if let Some(e) = s.get("enum").and_then(Value::as_array)
+        && !e.contains(v)
+    {
+        return fail(format!("{} is not one of {}", short(v), Value::Array(e.clone())));
+    }
+    if let Some(text) = v.as_str() {
+        let len = text.encode_utf16().count() as u64;
+        if s.get("minLength").and_then(Value::as_u64).is_some_and(|min| len < min) {
+            return fail(format!("{} is shorter than {}", short(v), s["minLength"]));
+        }
+        if s.get("maxLength").and_then(Value::as_u64).is_some_and(|max| len > max) {
+            return fail(format!("{} is longer than {}", short(v), s["maxLength"]));
+        }
+        if let Some(p) = s.get("pattern").and_then(Value::as_str)
+            && !PATTERNS.get(p).is_some_and(|re| re.is_match(text))
+        {
+            return fail(format!("{} does not match {p}", short(v)));
+        }
+    }
+    if let Some(n) = v.as_f64() {
+        let num = |k: &str| s.get(k).and_then(Value::as_f64);
+        if num("minimum").is_some_and(|m| n < m) {
+            return fail(format!("{n} is less than {}", s["minimum"]));
+        }
+        if num("maximum").is_some_and(|m| n > m) {
+            return fail(format!("{n} is more than {}", s["maximum"]));
+        }
+        if num("exclusiveMinimum").is_some_and(|m| n <= m) {
+            return fail(format!("{n} is not more than {}", s["exclusiveMinimum"]));
+        }
+        if num("exclusiveMaximum").is_some_and(|m| n >= m) {
+            return fail(format!("{n} is not less than {}", s["exclusiveMaximum"]));
+        }
+    }
+    if let Some(items) = v.as_array() {
+        let n = items.len() as u64;
+        if s.get("minItems").and_then(Value::as_u64).is_some_and(|min| n < min) {
+            return fail(format!("{n} items, at least {} expected", s["minItems"]));
+        }
+        if s.get("maxItems").and_then(Value::as_u64).is_some_and(|max| n > max) {
+            return fail(format!("{n} items, at most {} allowed", s["maxItems"]));
+        }
+        if let Some(item) = s.get("items") {
+            for (i, x) in items.iter().enumerate() {
+                validate(item, x, &format!("{at}/{i}"))?;
+            }
+        }
+    }
+    if let Some(obj) = v.as_object() {
+        for req in s
+            .get("required")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+        {
+            if !obj.contains_key(req) {
+                return fail(format!("{req} is missing"));
+            }
+        }
+        let props = s.get("properties").and_then(Value::as_object);
+        for (k, x) in obj {
+            let here = format!("{at}/{k}");
+            if let Some(p) = props.and_then(|p| p.get(k)) {
+                validate(p, x, &here)?;
+            } else if let Some(extra) = s.get("additionalProperties") {
+                if extra == &Value::Bool(false) {
+                    return fail(format!("{k} is not allowed"));
+                }
+                validate(extra, x, &here)?;
+            }
+            if let Some(names) = s.get("propertyNames") {
+                validate(names, &Value::String(k.clone()), &here)?;
+            }
+        }
+    }
+    if let Some(all) = s.get("allOf").and_then(Value::as_array) {
+        for sub in all {
+            validate(sub, v, at)?;
+        }
+    }
+    if let Some(any) = s.get("anyOf").and_then(Value::as_array) {
+        let mut first = None;
+        if !any.iter().any(|sub| match validate(sub, v, at) {
+            Ok(()) => true,
+            Err(e) => {
+                first.get_or_insert(e);
+                false
+            }
+        }) {
+            return Err(first.unwrap_or_else(|| format!("{at}: matches none of the choices")));
+        }
+    }
+    if let Some(one) = s.get("oneOf").and_then(Value::as_array) {
+        let passing = one.iter().filter(|sub| validate(sub, v, at).is_ok()).count();
+        if passing != 1 {
+            let kind = v.get("type").map(short).unwrap_or_else(|| short(v));
+            return fail(format!("{kind} matches {passing} of the choices, not exactly one"));
+        }
+    }
+    Ok(())
 }
 
 /// `PROTOCOL_VERSION` from the shared protocol.
@@ -133,6 +363,44 @@ pub fn is_server_type(t: &str) -> bool {
 mod tests {
     use super::*;
     use crate::wire::*;
+    use serde_json::json;
+
+    #[test]
+    fn the_whole_document_is_understood() {
+        warm_up();
+    }
+
+    #[test]
+    fn keyword_semantics() {
+        let hello = json!({"type": "hello", "protocol": 1, "role": "tv", "room": "r", "client": "c", "name": "n", "build": "b"});
+        check(Def::ClientControl, &hello).unwrap();
+        check(Def::ClientControl, &json!({"type": "ping", "t": 1.5})).unwrap();
+        // integer: 1.0 counts, 1.5 doesn't; enum; lengths in UTF-16 units like valibot.
+        assert!(
+            check(
+                Def::ClientControl,
+                &json!({"type": "hello", "protocol": 1.5, "role": "tv", "room": "r", "client": "c", "name": "n", "build": "b"})
+            )
+            .is_err()
+        );
+        assert!(
+            check(
+                Def::ClientControl,
+                &json!({"type": "hello", "protocol": 1, "role": "admin", "room": "r", "client": "c", "name": "n", "build": "b"})
+            )
+            .is_err()
+        );
+        let long_room = "🎲".repeat(33); // 66 UTF-16 units > 64
+        assert!(
+            check(
+                Def::ClientControl,
+                &json!({"type": "hello", "protocol": 1, "role": "tv", "room": long_room, "client": "c", "name": "n", "build": "b"})
+            )
+            .is_err()
+        );
+        // a variant (oneOf/anyOf by `type`): an unknown type matches none.
+        assert!(check(Def::ClientControl, &json!({"type": "sync.cmd"})).is_err());
+    }
 
     fn peer() -> Peer {
         Peer {
