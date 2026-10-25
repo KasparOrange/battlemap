@@ -16,10 +16,18 @@ holds only what is open.
 
 1. **Wave 3 — finish and fix** (about five helpers at a time, fresh, from `qa.md` + `review.md`):
    renderer finish + bench on the emulators; companion 4a/4b gaps; effects in the companion
-   (cast an effect at a spot or area, weather, map loops); bug fixes by area; a second review.
+   (cast an effect at a spot or area, weather, map loops); bug fixes by area; a second review;
+   **the server in Rust** (roadmap N13: one binary for the VPS and the TV box's shell, the Bun
+   server's tests as the contract, wire types generated from one source).
 2. **Wave 4 — polish:** a UI pass against `design.md` with screenshots on tablet, phone and TV.
 3. **Wave 5 — roadmap** (`roadmap.md` tiers): curtain + scene presets, lighting from walls,
    ambient sound, LAN play through the shell, v1 games import.
+
+## Plan B for the TV renderer
+
+If the real box fails the WebView gate, the TV side moves to a native renderer: Rust + wgpu
+(OpenGL ES / Vulkan on the box), the same crate compiled to WebAssembly on WebGL2 for the
+companion's DM view, so the drawing code still exists once. Not started; only if the box forces it.
 
 ## Waiting on the real devices
 
