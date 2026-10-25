@@ -16,6 +16,7 @@
 //! | `FETCH_TIMEOUT_MS` | 30000 | link fetch: time allowed per socket operation |
 //! | `CLEANUP_EVERY_MS` | 6 h | how often the temp cleanup runs (0 = only at start) |
 //! | `MAX_PIXELS` | 150 000 000 | largest picture decoded (review #5) |
+//! | `LOSSLESS_MAX_PIXELS` | 50 000 000 | largest picture tried as lossless WebP (~40 B per pixel while encoding) |
 //! | `IMAGE_SLOTS` | 2 | pictures decoded / encoded at once |
 //! | `FETCH_SLOTS` | 4 | link fetches at once (more are refused, 429) |
 //! | `RELAY_*` | see [`RelayLimits`] | the relay's limits |
@@ -107,6 +108,8 @@ pub struct Config {
     pub slow: Duration,
     /// Largest picture that is decoded, in pixels.
     pub max_pixels: u64,
+    /// Largest picture tried as lossless WebP, in pixels (`LOSSLESS_MAX_PIXELS`).
+    pub lossless_max_pixels: u64,
     /// Pictures decoded or encoded at once.
     pub image_slots: usize,
     /// Link fetches at once.
@@ -190,6 +193,7 @@ impl Config {
             cleanup_every: ms("CLEANUP_EVERY_MS", 6 * 3_600_000)?,
             slow: Duration::from_secs(1),
             max_pixels: num("MAX_PIXELS", 150_000_000)?,
+            lossless_max_pixels: num("LOSSLESS_MAX_PIXELS", crate::files::convert::WEBP_LOSSLESS_MAX_PIXELS)?,
             image_slots: num("IMAGE_SLOTS", 2)?.max(1) as usize,
             fetch_slots: num("FETCH_SLOTS", 4)?.max(1) as usize,
             server_build: get("BATTLEMAP_SERVER_BUILD").unwrap_or_else(|| "dev".into()),

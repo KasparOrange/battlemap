@@ -116,7 +116,7 @@ pub async fn start(config: Config, shipper: mwlog::Shipper) -> Result<Running> {
     }
     let state: Shared = Arc::new(AppState {
         files: FileStore::new(&config.data_dir),
-        images: ImageWork::new(config.image_slots, config.max_pixels),
+        images: ImageWork::new(config.image_slots, config.max_pixels, config.lossless_max_pixels),
         library: library::Library::new(&config.data_dir),
         backups: backups::Backups::new(&config.data_dir, config.game_versions),
         relay: relay.clone(),

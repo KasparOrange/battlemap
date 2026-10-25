@@ -187,7 +187,7 @@ async fn fetch_into(link: &str, fetcher: &Fetcher, uploads_dir: &Path, images: &
                     let png = images
                         .run(move || -> Result<Vec<u8>, PictureError> {
                             let img = convert::decode(&data, max)?;
-                            convert::convert(&img, StoreFormat::Png, None)?
+                            convert::convert(&img, StoreFormat::Png, None, 0)?
                                 .bytes
                                 .ok_or(PictureError::Encode("no bytes".into()))
                         })

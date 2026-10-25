@@ -84,7 +84,8 @@ impl PictureExt {
 
 /// WebP's largest side.
 pub const WEBP_MAX_SIDE: u32 = 16_383;
-/// Above this many pixels only lossy WebP is tried (lossless takes too long).
+/// Above this many pixels only lossy WebP is tried (lossless takes long and needs ~40 bytes per
+/// pixel: 12 MP ≈ 460 MB). The default of `LOSSLESS_MAX_PIXELS`; the TV box sets it lower.
 pub const WEBP_LOSSLESS_MAX_PIXELS: u64 = 50_000_000;
 /// The thumbnails' long side.
 pub const THUMB_SIDE: u32 = 288;
@@ -229,20 +230,16 @@ fn webp_lossy(img: &DynamicImage, quality: f32) -> Result<Vec<u8>, PictureError>
 /// WebP, lossless (`None`) or lossy.
 fn webp_encode(img: &DynamicImage, quality: Option<f32>) -> Result<Vec<u8>, PictureError> {
     let (w, h) = (img.width(), img.height());
-    let out = if img.color().has_alpha() {
-        let rgba = img.to_rgba8();
-        let enc = webp::Encoder::from_rgba(rgba.as_raw(), w, h);
-        match quality {
-            Some(q) => enc.encode_simple(false, q),
-            None => enc.encode_simple(true, 75.0),
-        }
-    } else {
-        let rgb = img.to_rgb8();
-        let enc = webp::Encoder::from_rgb(rgb.as_raw(), w, h);
-        match quality {
-            Some(q) => enc.encode_simple(false, q),
-            None => enc.encode_simple(true, 75.0),
-        }
+    let encode = |enc: webp::Encoder| match quality {
+        Some(q) => enc.encode_simple(false, q),
+        None => enc.encode_simple(true, 75.0),
+    };
+    // Borrow the pixels when they are already 8-bit RGB(A); copy only other layouts.
+    let out = match img {
+        DynamicImage::ImageRgb8(rgb) => encode(webp::Encoder::from_rgb(rgb.as_raw(), w, h)),
+        DynamicImage::ImageRgba8(rgba) => encode(webp::Encoder::from_rgba(rgba.as_raw(), w, h)),
+        other if other.color().has_alpha() => encode(webp::Encoder::from_rgba(other.to_rgba8().as_raw(), w, h)),
+        other => encode(webp::Encoder::from_rgb(other.to_rgb8().as_raw(), w, h)),
     };
     out.map(|m| m.to_vec()).map_err(|e| PictureError::Encode(format!("webp: {e:?}")))
 }
@@ -271,12 +268,17 @@ fn jpeg(img: &DynamicImage) -> Result<Vec<u8>, PictureError> {
 fn png(img: &DynamicImage) -> Result<Vec<u8>, PictureError> {
     let mut out = Vec::new();
     let enc = PngEncoder::new_with_quality(&mut out, CompressionType::Best, FilterType::Adaptive);
+    let converted;
     let img = match img {
-        DynamicImage::ImageLuma8(_) | DynamicImage::ImageLumaA8(_) | DynamicImage::ImageRgb8(_) | DynamicImage::ImageRgba8(_) => {
-            img.clone()
+        DynamicImage::ImageLuma8(_) | DynamicImage::ImageLumaA8(_) | DynamicImage::ImageRgb8(_) | DynamicImage::ImageRgba8(_) => img,
+        other if other.color().has_alpha() => {
+            converted = DynamicImage::ImageRgba8(other.to_rgba8());
+            &converted
         }
-        other if other.color().has_alpha() => DynamicImage::ImageRgba8(other.to_rgba8()),
-        other => DynamicImage::ImageRgb8(other.to_rgb8()),
+        other => {
+            converted = DynamicImage::ImageRgb8(other.to_rgb8());
+            &converted
+        }
     };
     enc.write_image(img.as_bytes(), img.width(), img.height(), img.color().into())
         .map_err(|e| PictureError::Encode(format!("png: {e}")))?;
@@ -286,12 +288,18 @@ fn png(img: &DynamicImage) -> Result<Vec<u8>, PictureError> {
 /// Re-encodes a decoded (upright) picture.
 ///
 /// - `format` is what was asked (not `Asis`);
+/// - `lossless_max_pixels`: above this, lossless WebP isn't tried;
 /// - `original` is the upload's bytes and kind when it was a PNG/JPEG/WebP (they may stay as
 ///   they are), else `None` (GIF, TIFF, … are always converted).
 ///
 /// # Errors
 /// [`PictureError::Encode`] when an encoder fails.
-pub fn convert(img: &DynamicImage, format: StoreFormat, original: Option<(usize, PictureExt)>) -> Result<Converted, PictureError> {
+pub fn convert(
+    img: &DynamicImage,
+    format: StoreFormat,
+    original: Option<(usize, PictureExt)>,
+    lossless_max_pixels: u64,
+) -> Result<Converted, PictureError> {
     let mut target = format;
     let mut note = None;
     if target == StoreFormat::Webp && img.width().max(img.height()) > WEBP_MAX_SIDE {
@@ -316,7 +324,7 @@ pub fn convert(img: &DynamicImage, format: StoreFormat, original: Option<(usize,
         StoreFormat::Webp => {}
     }
     let mut best = webp_lossy(img, 90.0)?;
-    if u64::from(img.width()) * u64::from(img.height()) <= WEBP_LOSSLESS_MAX_PIXELS {
+    if u64::from(img.width()) * u64::from(img.height()) <= lossless_max_pixels {
         let lossless = webp_encode(img, None)?;
         if lossless.len() as f64 <= best.len() as f64 * 1.5 {
             best = lossless;
@@ -375,16 +383,22 @@ mod tests {
 
     #[test]
     fn webp_rules() {
-        let line_art = convert(&flat(400, 300), StoreFormat::Webp, None).unwrap();
+        let line_art = convert(&flat(400, 300), StoreFormat::Webp, None, WEBP_LOSSLESS_MAX_PIXELS).unwrap();
         assert_eq!((line_art.ext, line_art.note.as_deref()), (PictureExt::Webp, Some("lossless")));
-        let painted = convert(&noise(300, 200), StoreFormat::Webp, None).unwrap();
+        let painted = convert(&noise(300, 200), StoreFormat::Webp, None, WEBP_LOSSLESS_MAX_PIXELS).unwrap();
         assert_eq!((painted.ext, painted.note.as_deref()), (PictureExt::Webp, None));
-        let wide = convert(&flat(16_400, 8), StoreFormat::Webp, None).unwrap();
+        let wide = convert(&flat(16_400, 8), StoreFormat::Webp, None, WEBP_LOSSLESS_MAX_PIXELS).unwrap();
         assert_eq!(
             (wide.ext, wide.note.as_deref()),
             (PictureExt::Jpg, Some("over 16383 px, stored as JPEG"))
         );
-        let kept = convert(&noise(200, 200), StoreFormat::Webp, Some((10, PictureExt::Webp))).unwrap();
+        let kept = convert(
+            &noise(200, 200),
+            StoreFormat::Webp,
+            Some((10, PictureExt::Webp)),
+            WEBP_LOSSLESS_MAX_PIXELS,
+        )
+        .unwrap();
         assert!(kept.bytes.is_none());
         assert_eq!(kept.note.as_deref(), Some("already smaller as it was"));
     }

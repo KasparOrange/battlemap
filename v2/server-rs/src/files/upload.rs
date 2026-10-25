@@ -38,14 +38,18 @@ pub struct ImageWork {
     slots: Arc<Semaphore>,
     /// Largest picture decoded, in pixels.
     pub max_pixels: u64,
+    /// Largest picture tried as lossless WebP, in pixels.
+    pub lossless_max_pixels: u64,
 }
 
 impl ImageWork {
-    /// `slots` pictures at once, at most `max_pixels` each.
-    pub fn new(slots: usize, max_pixels: u64) -> Self {
+    /// `slots` pictures at once, at most `max_pixels` each, lossless WebP tried up to
+    /// `lossless_max_pixels`.
+    pub fn new(slots: usize, max_pixels: u64, lossless_max_pixels: u64) -> Self {
         Self {
             slots: Arc::new(Semaphore::new(slots.max(1))),
             max_pixels,
+            lossless_max_pixels,
         }
     }
 
@@ -164,6 +168,7 @@ async fn store_inner(
         return Err(UploadError::Bad(format!("that is a {}, not a picture", k.label())));
     }
     let max_pixels = images.max_pixels;
+    let lossless_max = images.lossless_max_pixels;
     let file = std::fs::File::open(tmp).map_err(|e| anyhow::anyhow!("open upload: {e}"))?;
     let info = match convert::picture_info(BufReader::new(file), max_pixels) {
         Ok(info) => info,
@@ -204,7 +209,7 @@ async fn store_inner(
                     let work = images
                         .run(move || -> Result<(Arc<DynamicImage>, convert::Converted, Vec<u8>), PictureError> {
                             let img = Arc::new(convert::decode(&data, max_pixels)?);
-                            let c = convert::convert(&img, target, original)?;
+                            let c = convert::convert(&img, target, original, lossless_max)?;
                             Ok((img, c, data))
                         })
                         .await?;
