@@ -2,9 +2,18 @@
   "name": "battlemap-v2",
   "private": true,
   "type": "module",
-  "workspaces": ["shared"],
+  "workspaces": ["shared", "app", "server"],
   "scripts": {
+    "dev": "bun run --parallel dev:server dev:app",
+    "dev:server": "bun run --cwd server dev",
+    "dev:app": "bun run --cwd app dev",
+    "build": "bun run --cwd app build && bun run --cwd server build",
+    "start": "bun run --cwd server start",
     "test": "bun test",
-    "check": "bun run --filter '*' check"
+    "check": "bun run --cwd shared check && bun run --cwd server check && bun run --cwd app check",
+    "e2e": "playwright test -c e2e/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
   }
 }

@@ -26,12 +26,24 @@ Five rules carry the design:
 | Browsers — Safari on iPhone, desktop Chrome/Firefox | the same bundle, companion (or TV mode in a tab for development) | Safari's WebGL2 and IndexedDB quirks; may run on plain http in LAN play |
 | Server — Bun on the VPS (dev: on the Mac) | relay, files, shared map library, game backups, `/log` | holds the only secrets (MwLog credentials); behind Caddy's HTTPS in production |
 
-The shell (`shell/`, its own helper) loads the bundle from its own secure origin
-(`https://appassets.androidplatform.net/app/`, built in or downloaded) and starts it with query
-parameters: `index.html?mode=tv|companion&server=https://…&device=<stable id>`. The app reads
-those first, then its own remembered settings, and works in a plain browser tab without any of
-them (same-origin server, mode picker). It must also work in an insecure context (LAN play over
-http): clipboard paste, service worker and persistent storage are then simply off.
+**The Android shell** (`shell/`, [`shell.md`](shell.md), typed bridge `shell/bridge.d.ts`) serves
+the bundle from its own secure origin, `https://appassets.androidplatform.net/app/` (built in, or a
+downloaded bundle) — so the app is **built for the base `/app/`**, and the server serves it under
+`/app/` too. The contract, wrapped by `app/src/lib/shell.ts` (a no-op in a plain browser):
+
+- **Start parameters:** `index.html?mode=tv|companion&device=<stable id>[&server=…]`. Without
+  them (a browser tab) `lib/config.ts` falls back to the bridge's `info()`, then to what the
+  device remembered, then to the start picker and the page's own origin as the server.
+- **`ready()`** once the app has mounted — a downloaded bundle that loads three times without it
+  is dropped for the built-in one.
+- **Shell logs:** `takeLogs()` and the live `log` events go into the app's logger (area
+  `shell`), so the shell's own lines reach MwLog the same way.
+- **Events:** `back` (call `preventDefault()` when the app handled it), `memory` (Android wants
+  memory back: the renderer drops textures it can rebuild), `bundle` / `apk` progress.
+- **Developer settings** from the app: `setServerUrl`, `setStartMode`, `setDevUrl`.
+
+The app must also work in an insecure context (LAN play over http): clipboard paste, service
+worker and persistent storage are then simply off.
 
 ## System overview
 
@@ -68,20 +80,21 @@ messages do not change (see "networking").
 v2/
   shared/   protocol + game model + reducer + pure geometry   (no DOM, no Node — imported by app and server)
   app/      the one web app: TV mode and companion mode
-    src/lib/log.ts        the logger (MwLog via the server, offline outbox)
-    src/lib/config.ts     server URL, mode, device and table ids
-    src/lib/notices.svelte.ts  the current notice (the kit draws it)
+    src/lib/log.ts        the logger (mwlog-ts browser forwarder → the server's /log)
+    src/lib/log-outbox.ts undelivered log batches kept in localStorage, sent later
+    src/lib/config.ts     server URL, mode, device and table ids (URL → shell → remembered)
+    src/lib/shell.ts      the Android shell's bridge, typed, a no-op in browsers
     src/lib/net/          connection: WebSocket, reconnect, heartbeat, offline policy
-    src/lib/state/        sync host (TV), sync client (companion), Svelte runes wrappers
+    src/lib/state/        host.ts (TV), client.ts (companion), sessions.svelte.ts (runes)
     src/lib/render/       PixiJS: bootstrap, render-on-demand, the table scene, view profiles
     src/lib/tv/           TV mode screens (start, waiting, library, game, calibration pattern)
     src/lib/companion/    companion screens, panels, tools, gesture input
     src/lib/storage/      IndexedDB: games, table settings, file cache
     src/lib/import/       .dd2vtt, PDF (pdf.js), pictures, grid detection, WebP, table copies
     src/lib/effects/      effects runtime: registry, anchors, layer slots
-    src/lib/ui/           the fluent component kit (tokens, components; no game logic)
+    src/lib/ui/           the fluent component kit (tokens, components, the notice store; no game logic)
   server/   relay rooms, static app, files, library, backups, link fetch, /log
-  shell/    Android WebView shell (TV + tablet)
+  shell/    Android WebView shell (TV + tablet), its bridge types in shell/bridge.d.ts
   assets/   effects library and other shipped art, with manifest + licences
   e2e/      Playwright flows across a TV page and a companion page
 ```
@@ -425,8 +438,8 @@ scenario), so a run on the box is readable from MwLog afterwards.
 
 - **The bundle is the update.** `bun run build` writes `app/dist/` with a `build.json`
   (`{build: <git hash + time>}`); the server serves it at `/app/` and tells every client its
-  build in `welcome`. The shell downloads a newer bundle (or, in development, loads the server's
-  URL directly). A companion with an older build offers "Reload"; the TV saves and reloads by
+  build in `welcome`. The shell downloads a newer bundle (`updateBundle(url, version)`, active on
+  the next `reload()`; or, in development, loads a dev URL directly). A companion with an older build offers "Reload"; the TV saves and reloads by
   itself when it is in the library or on `tv.reload` from the tablet, and reopens its game — a
   break of a second or two, not the old 15 s APK install. No Shorebird, no APK per change; the
   shell changes rarely.
@@ -434,6 +447,7 @@ scenario), so a run on the box is readable from MwLog afterwards.
   needs no checkout of it), copied with `app/dist` to the VPS, run as a systemd unit behind
   Caddy (HTTPS, `/ws` upgraded). Its own ports; the old relay (9090) and dev server (4242) keep
   running for the Flutter app until v2 replaces it.
-- **Dev:** `bun run dev` starts the server and Vite together; Vite proxies `/ws`, `/log`,
+- **Dev:** `bun run dev` starts the server (5929) and Vite (5884) together; the app is at
+  `http://localhost:5884/app/?mode=tv` and `…?mode=companion`, and Vite proxies `/ws`, `/log`,
   `/api`, `/files` and `/health` to the server, so the browser sees one origin. Registered in
   the launcher as `battlemap-v2`.

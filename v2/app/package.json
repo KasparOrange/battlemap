@@ -1,0 +1,27 @@
+{
+  "name": "@battlemap/app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "battlemap v2: the one web app — TV mode and companion mode in the same bundle.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit -p tsconfig.test.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@battlemap/shared": "workspace:*",
+    "mwlog": "file:../../../mwlog-ts",
+    "pixi.js": "^8.22.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@types/bun": "^1.4.4",
+    "svelte": "^5.57.2",
+    "svelte-check": "^4.7.7",
+    "typescript": "^6.0.3",
+    "vite": "^8.3.5"
+  }
+}
