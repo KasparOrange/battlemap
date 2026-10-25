@@ -5,7 +5,7 @@
  * @see ../../../../docs/architecture.md "work packages" (seams), "effects runtime"
  */
 import type { Container } from 'pixi.js';
-import type { Camera, FileRef, MapGeometry, OneShot, PlacedEffect, Point } from '@battlemap/shared';
+import type { Camera, FileRef, Light, MapGeometry, OneShot, PlacedEffect, Point } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
 import type { Insets, Size } from './camera.ts';
 import type { Hit } from './hit.ts';
@@ -58,6 +58,8 @@ export interface EffectsRuntime {
   update(effects: readonly PlacedEffect[], shots: readonly OneShot[], now: number): void;
   /** What the running effects cost (for the bench). */
   cost?(): { drawCalls?: number; textureBytes: number; instances?: number };
+  /** The map's own light pools (RD-120): the geometry's lights while the game's switch is on, else null. */
+  setMapLights?(lights: readonly Light[] | null): void;
   /** Stops everything, frees textures. */
   destroy(): void;
 }

@@ -70,8 +70,25 @@ function showcaseGeometry(): string {
   return JSON.stringify({
     walls: [[{ x: 6, y: 4 }, { x: 11, y: 4 }], [{ x: 12, y: 4 }, { x: 18, y: 4 }, { x: 18, y: 7 }], [{ x: 18, y: 8 }, { x: 18, y: 12 }, { x: 6, y: 12 }, { x: 6, y: 4 }]],
     doors: [door(11, 4, 12, 4), door(18, 7, 18, 8), door(9, 12, 10, 12), door(6, 8, 6, 9)],
-    lights: [],
+    lights: [
+      { x: 7, y: 5, range: 4, intensity: 1, color: '#ffb050' },
+      { x: 17, y: 11, range: 3, intensity: 0.8, color: '#ff9040' },
+      { x: 12, y: 2.5, range: 2.5, intensity: 0.7, color: '#60a0ff' },
+    ],
   });
+}
+
+/** The lights scene's file: 80 torches (the castle's count) spread over 64 × 64 squares. */
+export const LIGHTS_GEOMETRY: FileRef = { hash: 'abcdef0000000002', ext: 'json', bytes: 1 };
+
+function lightsGeometry(): string {
+  const lights = [];
+  for (let i = 0; i < 80; i++) {
+    const x = 2 + ((i * 37) % 60) + 0.5;
+    const y = 2 + ((i * 53) % 60) + 0.5;
+    lights.push({ x, y, range: 3 + (i % 4), intensity: 0.6 + (i % 5) * 0.1, color: i % 7 === 0 ? '#70a0ff' : '#ffa848' });
+  }
+  return JSON.stringify({ walls: [], doors: [], lights });
 }
 
 const made = new Map<string, Promise<Blob>>();
@@ -85,6 +102,7 @@ const made = new Map<string, Promise<Blob>>();
 export function benchFiles(): FileLoader {
   return (ref) => {
     if (ref.hash === SHOWCASE_GEOMETRY.hash) return Promise.resolve(new Blob([showcaseGeometry()], { type: 'application/json' }));
+    if (ref.hash === LIGHTS_GEOMETRY.hash) return Promise.resolve(new Blob([lightsGeometry()], { type: 'application/json' }));
     let p = made.get(ref.hash);
     if (!p) {
       const w = parseInt(ref.hash.slice(0, 8), 16);
@@ -236,7 +254,7 @@ export const showcase: BenchScene = {
     return {
       ...s,
       table: { ...s.table, pattern: { on: pattern, pivot: 'bottomLeft' } },
-      game: { ...s.game!, settings: { ...s.game!.settings, fogStyle: style, fogEdgeInset: Number(params?.get('inset') ?? 20) } },
+      game: { ...s.game!, settings: { ...s.game!.settings, fogStyle: style, fogEdgeInset: Number(params?.get('inset') ?? 20), ...(params?.get('lights') === '1' ? { mapLights: true } : {}) } },
       live: { ...s.live, measure: { a: { x: 14, y: 6 }, b: { x: 17, y: 10 } } },
     };
   },
@@ -286,6 +304,16 @@ export const benchScenes: readonly BenchScene[] = [
       for (let i = 0; i < k; i++) pts.push(10 + i * 0.08, 10 + Math.sin(i / 6) * 2);
       return { ...s, live: { ...s.live, stroke: { id: 'live', points: pts, color: '#fdd835', width: 0.12 } } };
     },
+  },
+  {
+    id: 'lights',
+    name: 'Map lights: 80 flickering torch pools from the map file, big map panned at one inch',
+    effects: true,
+    setup: (_p, vp) => {
+      const s = gameOn({ ...benchMap('big', 64, 64, 128), geometry: LIGHTS_GEOMETRY }, vp, (m) => ({ ...m, fog: { ...m.fog, on: false } }));
+      return { ...s, game: { ...s.game!, settings: { ...s.game!.settings, mapLights: true } as NonNullable<typeof s.game>["settings"] } };
+    },
+    step: (s, f) => withMap(s, (m) => panView(m, f.t, (s.table.viewport?.width ?? 1920) / 34.5)),
   },
   {
     id: 'everything',

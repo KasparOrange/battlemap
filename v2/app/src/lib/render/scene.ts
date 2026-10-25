@@ -257,6 +257,7 @@ export class TableScene {
           this.opts.log.error('render', 'Effects update failed', { error: String(e) });
         }
       }
+      if (newMap || game?.settings !== prevGame?.settings) this.syncMapLights();
     }
     if (changed) this.r.scheduler.invalidate();
   }
@@ -293,7 +294,19 @@ export class TableScene {
   }
 
   /** The geometry arrived: things drawn from it (map lights) follow. */
-  private onGeometry(): void {}
+  private onGeometry(): void {
+    this.syncMapLights();
+  }
+
+  /** Hands the map's lights to the effects while the game's switch is on (RD-120). */
+  private syncMapLights(): void {
+    const on = !!this.game && !!this.map && mapLightsOn(this.game.settings);
+    try {
+      this.effects?.setMapLights?.(on ? (this.geometry?.lights ?? null) : null);
+    } catch (e) {
+      this.opts.log.error('render', 'Map lights failed', { error: String(e) });
+    }
+  }
 
   /** The TV's view from the state (the host size stands in for a viewport not yet reported). */
   private tvViewOf(table: TableState, map: MapPlay): TvView | null {
@@ -589,4 +602,15 @@ export function playersRect(tv: TvView): Rect {
   const a = screenToSquares(tv.camera, view, { x: v.x, y: v.y });
   const b = screenToSquares(tv.camera, view, { x: v.x + v.width, y: v.y + v.height });
   return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(b.x - a.x), height: Math.abs(b.y - a.y) };
+}
+
+/**
+ * Whether the game shows the map's own lights (`GameSettings.mapLights`, default off — RD-120).
+ * Read defensively until the shared schema carries the field.
+ *
+ * @param settings - the game's settings
+ * @returns true when on
+ */
+export function mapLightsOn(settings: Game['settings']): boolean {
+  return (settings as Game['settings'] & { mapLights?: unknown }).mapLights === true;
 }

@@ -21,7 +21,7 @@
  * @see ../../../../docs/architecture.md "effects runtime"
  */
 import { Container, Matrix, Point, type Renderer, type Texture } from 'pixi.js';
-import type { EffectAnchor, OneShot, PlacedEffect } from '@battlemap/shared';
+import type { EffectAnchor, Light, OneShot, PlacedEffect } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
 import { degradeFor, estimateCost, floorLevel, FrameGovernor, MAX_DEGRADE, sumCosts, TABLE_SQUARES, type CostEstimate, type EffectsQuality } from './budget.ts';
 import { planPlaced, runningRecord, ShotTracker, type RunningPlaced } from './diff.ts';
@@ -30,6 +30,8 @@ import { createInstance } from './instances/create.ts';
 import { builtinSeconds, createBuiltin, isBuiltin } from './instances/screen.ts';
 import { ShaderInstance } from './instances/shader.ts';
 import { isOneShot, playSeconds } from './manifest.ts';
+import { MapLights } from './map-lights.ts';
+import type { RenderScheduler } from '../render/scheduler.ts';
 import { hashSeed } from './particle-sim.ts';
 import { pixiTextureIO } from './pixi-assets.ts';
 import { EffectRegistry, type EffectBundle } from './registry.ts';
@@ -125,6 +127,14 @@ export interface EffectsRuntime {
   /** Frees cached textures no running effect uses (a map left the table). */
   dropUnused(): void;
   /**
+   * The light pools of the map's own lights (RD-120): the geometry file's lights while the
+   * game's `mapLights` switch is on, null for none. Shown only while effects are on and the
+   * quality isn't `off`.
+   *
+   * @param lights - the lights, or null
+   */
+  setMapLights(lights: readonly Light[] | null): void;
+  /**
    * The running effects' cost in the renderer's terms (its bench reads it).
    *
    * @returns draw calls, texture bytes held, instances
@@ -199,6 +209,12 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
   const lights = new Float32Array(32);
   let lightCount = 0;
   let effectsOn = true;
+  let mapLightsList: readonly Light[] | null = null;
+  const mapLights = 'onFrame' in opts.scheduler ? new MapLights(slots.ground, ups, opts.scheduler as RenderScheduler, log) : null;
+  /** Puts the map's light pools in line with the list, the effects switch and the quality. */
+  function refreshMapLights(): void {
+    if (mapLights?.set(effectsOn ? mapLightsList : null, quality)) opts.scheduler.invalidate();
+  }
   let lastEnabled = true;
   let lastEffects: readonly PlacedEffect[] = [];
   let lastShots: readonly OneShot[] = [];
@@ -527,6 +543,7 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
     const on = enabled && quality !== 'off';
     if (on !== effectsOn) log.info('effects', on ? 'Effects on' : 'Effects off', { quality, enabled });
     effectsOn = on;
+    refreshMapLights();
     if (!on) {
       for (const r of [...running.values()]) stop(r);
       // Shots made while off never play later.
@@ -610,15 +627,22 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
     cost() {
       let instances = 0;
       for (const r of running.values()) if (r.inst) instances++;
-      return { drawCalls: sumCosts([...running.values()].map((r) => r.cost)).drawCalls, textureBytes: registry.bytes, instances };
+      const lightCalls = mapLights && mapLights.count > 0 ? 1 : 0;
+      return { drawCalls: sumCosts([...running.values()].map((r) => r.cost)).drawCalls + lightCalls, textureBytes: registry.bytes + (mapLights?.bytes ?? 0), instances: instances + (mapLights?.count ?? 0) };
     },
     dropUnused() {
       registry.dropUnused();
+    },
+    setMapLights(lights) {
+      if (destroyed || lights === mapLightsList) return;
+      mapLightsList = lights;
+      refreshMapLights();
     },
     destroy() {
       if (destroyed) return;
       for (const r of [...running.values()]) stop(r);
       destroyed = true;
+      mapLights?.destroy();
       if (release) {
         release();
         release = null;
