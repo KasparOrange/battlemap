@@ -148,6 +148,7 @@ export class FogLayer {
   private readonly uniforms: { uSize: Float32Array; uLook: Float32Array; uMode: Float32Array };
   private style: GameSettings['fogStyle'] = 'standard';
   private fadeOn = true;
+  private inset = 0;
   private readonly stopTicker: () => void;
 
   /**
@@ -202,13 +203,15 @@ export class FogLayer {
    */
   set(fog: FogState | null, cols: number, rows: number, settings: GameSettings, fresh: boolean): boolean {
     let changed = false;
-    if (this.style !== settings.fogStyle || this.uniforms.uLook[0] !== settings.fogEdgeInset / 100 || this.fadeOn !== settings.fogFade) {
+    // rv#15: compare the clamped inset as a plain number (a Float32Array slot never equals 0.15)
+    const inset = Math.min(45, Math.max(0, settings.fogEdgeInset));
+    if (this.style !== settings.fogStyle || this.inset !== inset || this.fadeOn !== settings.fogFade) {
       this.style = settings.fogStyle;
       this.fadeOn = settings.fogFade;
-      this.uniforms.uLook[0] = Math.min(45, Math.max(0, settings.fogEdgeInset)) / 100;
+      this.inset = inset;
+      this.uniforms.uLook[0] = inset / 100;
       this.uniforms.uLook[1] = BLUR_PX[settings.fogStyle];
       this.uniforms.uMode[0] = STYLE_INDEX[settings.fogStyle];
-      this.updateDrift();
       changed = true;
     }
     const visible = !!fog && fog.on;
@@ -216,6 +219,7 @@ export class FogLayer {
       this.mesh.visible = visible;
       changed = true;
     }
+    this.updateDrift();
     if (!fog) {
       this.fog = null;
       return changed;
@@ -251,9 +255,12 @@ export class FogLayer {
     }
   }
 
-  /** Cloud fog drifts slowly: a 20 fps lease while the style is cloud and the layer shows. */
+  /**
+   * Cloud fog drifts slowly: a 20 fps lease while the style is cloud **and the layer shows**
+   * (rv#4: fog off or no map → no lease, idle stays at 0 frames).
+   */
   private updateDrift(): void {
-    const want = this.style === 'cloud';
+    const want = this.style === 'cloud' && this.mesh.visible;
     if (want && !this.releaseDrift) this.releaseDrift = this.scheduler.hold('fog-cloud', 20);
     if (!want && this.releaseDrift) {
       this.releaseDrift();

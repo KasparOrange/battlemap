@@ -89,6 +89,8 @@ export class MapLayer {
    * @param info - the map, or null
    */
   set(info: MapInfo | null): void {
+    // rv#3: a lowered density belongs to the map that was on when memory ran low
+    if (info && this.current && info.id !== this.current.id) this.densityFactor = 1;
     const key = info ? keyOf(info, this.opts.preferTableCopy) + '@' + this.densityFactor : '';
     if (key === this.key) return;
     this.key = key;
@@ -127,6 +129,20 @@ export class MapLayer {
     if (info) this.set(info);
   }
 
+  /** Whether the map is held at less than its full density (after a memory drop). */
+  get lowered(): boolean {
+    return this.densityFactor < 1;
+  }
+
+  /** The memory pressure is gone: the map reloads at its full density (no-op when it has it). */
+  restoreDensity(): void {
+    if (this.densityFactor >= 1) return;
+    this.densityFactor = 1;
+    const info = this.current;
+    this.key = '';
+    if (info) this.set(info);
+  }
+
   private async load(info: MapInfo, seq: number): Promise<void> {
     const t0 = performance.now();
     const { log, budget } = this.opts;
@@ -134,6 +150,8 @@ export class MapLayer {
     this.opts.onEvent({ type: 'map-loading', mapId: info.id, name: info.name });
     log.info('render', 'Map loading', { mapId: info.id, file: `${ref.hash}.${ref.ext}`, bytes: ref.bytes, tableCopy: ref !== info.picture });
     const made: ImageBitmap[] = [];
+    const built: Tile[] = [];
+    let handedOver = false;
     try {
       const blob = await this.opts.files(ref);
       if (seq !== this.loadSeq) return;
@@ -165,7 +183,6 @@ export class MapLayer {
       if (seq !== this.loadSeq) return;
       const tDecode = performance.now();
       const tilePlans = planTiles(plan.dw, plan.dh, budget.maxTile);
-      const built: Tile[] = [];
       const sx = plan.w / plan.dw; // squares per decoded px
       const sy = plan.h / plan.dh;
       for (const tp of tilePlans) {
@@ -180,29 +197,29 @@ export class MapLayer {
           label: `map-tile ${info.id}`,
         });
         const texture = new Texture({ source, frame: new Rectangle(tp.fx, tp.fy, tp.fw, tp.fh) });
+        const sprite = new Sprite({ texture, label: 'map-tile' });
+        built.push({ sprite, texture, x0: 0, y0: 0, x1: 0, y1: 0 });
         this.opts.upload(texture);
         await nextFrame();
-        if (seq !== this.loadSeq) {
-          texture.destroy(true);
-          return;
-        }
-        const sprite = new Sprite({ texture, label: 'map-tile' });
+        if (seq !== this.loadSeq) return;
         const x0 = plan.x + tp.x * sx;
         const y0 = plan.y + tp.y * sy;
         sprite.position.set(x0 * SQUARE, y0 * SQUARE);
         sprite.width = tp.fw * sx * SQUARE;
         sprite.height = tp.fh * sy * SQUARE;
-        built.push({ sprite, texture, x0, y0, x1: x0 + tp.fw * sx, y1: y0 + tp.fh * sy });
+        const tile = built[built.length - 1]!;
+        tile.x0 = x0;
+        tile.y0 = y0;
+        tile.x1 = x0 + tp.fw * sx;
+        tile.y1 = y0 + tp.fh * sy;
       }
       // Swap: the new tiles in, the old ones out.
       this.destroyTiles();
       for (const t of built) this.container.addChild(t.sprite);
       this.tiles = built;
+      handedOver = true;
       this.plan = plan;
       this.bytesHeld = plan.bytes * (this.opts.mipmaps ? 4 / 3 : 1);
-      // The bitmaps are on the GPU now; free their memory (a lost context reloads the map).
-      for (const b of made) b.close();
-      made.length = 0;
       this.opts.invalidate();
       const ms = Math.round(performance.now() - t0);
       log.info('render', 'Map shown', {
@@ -221,18 +238,32 @@ export class MapLayer {
       });
       this.opts.onEvent({ type: 'map-shown', mapId: info.id, ms, pxPerSquare: plan.pxPerSquare, tiles: built.length, bytes: this.bytesHeld });
     } catch (e) {
-      for (const b of made) b.close();
       if (seq !== this.loadSeq) return;
       log.error('render', 'Map failed', { mapId: info.id, error: String(e) });
       this.opts.onEvent({ type: 'map-failed', mapId: info.id, error: String(e) });
+    } finally {
+      // rv#2: a superseded or failed load frees what it made. The bitmaps go either way — once
+      // uploaded they live on the GPU (a lost context reloads the map).
+      for (const b of made) b.close();
+      if (!handedOver && built.length > 0) {
+        log.info('render', 'Map load superseded — freeing its tiles', { mapId: info.id, tiles: built.length });
+        retire(built);
+      }
     }
   }
 
-  private destroyTiles(): void {
-    for (const t of this.tiles) {
-      t.sprite.destroy();
-      t.texture.destroy(true);
-    }
+  /**
+   * Takes the tiles off the screen and frees them once a frame without them was drawn (qa#21:
+   * destroying a texture source still bound in the batcher's bind group warns and may draw
+   * garbage for a frame).
+   *
+   * @param now - free at once (the whole view is going away)
+   */
+  private destroyTiles(now = false): void {
+    for (const t of this.tiles) t.sprite.removeFromParent();
+    if (now) freeTiles(this.tiles);
+    else retire(this.tiles);
+    if (this.tiles.length) this.opts.invalidate();
     this.tiles = [];
     this.bytesHeld = 0;
   }
@@ -246,7 +277,9 @@ export class MapLayer {
 
   /** Frees everything. */
   destroy(): void {
-    this.clear();
+    this.loadSeq++;
+    this.destroyTiles(true);
+    this.back.clear();
     this.container.destroy({ children: true });
   }
 }
@@ -256,6 +289,23 @@ function keyOf(info: MapInfo, preferTableCopy: boolean): string {
   const ref = preferTableCopy && info.tableCopy ? info.tableCopy : info.picture;
   const g = info.grid;
   return `${info.id}|${ref.hash}|${g.x},${g.y},${g.cellW},${g.cellH},${g.cols},${g.rows},${g.pictureW},${g.pictureH}`;
+}
+
+/** Destroys tiles' sprites and textures (GPU memory back). */
+function freeTiles(tiles: readonly Tile[]): void {
+  for (const t of tiles) {
+    if (t.sprite.destroyed) continue;
+    t.sprite.destroy();
+    t.texture.destroy(true);
+  }
+}
+
+/** Frees tiles after two animation frames — the next render has dropped them from its batches. */
+function retire(tiles: readonly Tile[]): void {
+  if (tiles.length === 0) return;
+  const list = tiles.slice();
+  for (const t of list) t.sprite.removeFromParent();
+  requestAnimationFrame(() => requestAnimationFrame(() => freeTiles(list)));
 }
 
 /** Resolves on the next animation frame (uploads one tile per frame). */

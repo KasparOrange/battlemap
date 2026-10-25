@@ -533,6 +533,11 @@ export class TableScene {
     return before - this.textureBytes().total;
   }
 
+  /** The memory pressure is gone: the map reloads at its full density. */
+  restoreDensity(): void {
+    this.mapLayer.restoreDensity();
+  }
+
   /**
    * After a lost WebGL context came back: the map's bitmaps were closed after upload, so the
    * map and the DM layers load again (same density); buffers and canvases re-upload by themselves.

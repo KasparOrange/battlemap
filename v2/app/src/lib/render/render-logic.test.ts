@@ -463,3 +463,10 @@ describe('tools and doors geometry', () => {
     expect(doorSides({ a: { x: 0, y: 2 }, b: { x: 0, y: 3 } }, 10, 10)).toContain(-1);
   });
 });
+
+describe('memory pressure (rv#3)', () => {
+  test('only running-low, critical and the background levels free textures', async () => {
+    const { isMemoryPressure } = await import('./memory.ts');
+    expect([5, 10, 15, 20, 40, 60, 80].map(isMemoryPressure)).toEqual([false, true, true, false, false, true, true]);
+  });
+});

@@ -27,6 +27,7 @@
 import type { Camera, FileRef, Point, RootState } from '@battlemap/shared';
 import type { Insets } from './camera.ts';
 import { onShellEvent } from '../shell.ts';
+import { isMemoryPressure, RESTORE_AFTER_MS } from './memory.ts';
 import type { Hit } from './hit.ts';
 import { createRenderer, type TableRenderer } from './pixi.ts';
 import { TableScene } from './scene.ts';
@@ -76,10 +77,15 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
   const pendingListeners = new Set<(c: Camera, why: CameraChange) => void>();
   let destroyed = false;
   let gpu: string | null = null;
+  let restoreTimer: ReturnType<typeof setTimeout> | null = null;
   const stopShell = opts.listenToShell === false ? () => {} : onShellEvent((e) => {
     if (e.type !== 'memory') return;
     const level = Number((e as { level?: unknown }).level ?? 0);
-    if (level >= 10) view.dropTextures(level);
+    if (!isMemoryPressure(level)) {
+      log.debug('render', 'Memory note ignored', { level });
+      return;
+    }
+    view.dropTextures(level);
   });
 
   const ready = createRenderer(host, {
@@ -162,6 +168,14 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
       const freedMb = Math.round(freed / 2 ** 20);
       log.warn('render', 'Textures dropped', { level, freedMb });
       opts.onEvent?.({ type: 'textures-dropped', level, freedMb });
+      // rv#3: sharpness comes back once the pressure has been gone a while
+      if (restoreTimer) clearTimeout(restoreTimer);
+      restoreTimer = setTimeout(() => {
+        restoreTimer = null;
+        if (!scene) return;
+        log.info('render', 'Memory calm again — the map gets its full density back', { afterMs: RESTORE_AFTER_MS });
+        scene.restoreDensity();
+      }, RESTORE_AFTER_MS);
     },
     stats(): RenderStats {
       const t = scene?.textureBytes() ?? { map: 0, fog: 0, tokens: 0, layers: 0, effects: 0, total: 0 };
@@ -177,6 +191,7 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
     destroy() {
       destroyed = true;
       stopShell();
+      if (restoreTimer) clearTimeout(restoreTimer);
       scene?.destroy();
       renderer?.destroy();
       scene = null;
