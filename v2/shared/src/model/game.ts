@@ -9,6 +9,7 @@ import { PlacedEffect } from './effect.ts';
 import { MapInfo } from './map.ts';
 import { DmNote, Handout, HandoutShown, MAX_HANDOUTS, MAX_NOTES, Spotlight, Timer } from './moments.ts';
 import { DmLayer, Ruler, Stroke, Token } from './pieces.ts';
+import { MAX_AREAS, MAX_SECRETS, RevealArea, Secret } from './secrets.ts';
 import { defaultSoundscape, SceneSound, Soundscape } from './sound.ts';
 import { emptyMask } from '../geometry/mask.ts';
 
@@ -87,6 +88,10 @@ export const MapPlay = v.object({
   notes: v.optional(v.pipe(v.array(DmNote), v.maxLength(MAX_NOTES)), () => []),
   /** The spotlight on this map, or null (maps stored before it read as none). */
   spotlight: v.optional(v.nullable(Spotlight), null),
+  /** Prepared reveal areas (roadmap S7; maps stored before them have none — read with `areasOf`). */
+  areas: v.optional(v.pipe(v.array(RevealArea), v.maxLength(MAX_AREAS))),
+  /** Secret doors, hidden marks and traps (roadmap S9; read with `secretsOf`). */
+  secrets: v.optional(v.pipe(v.array(Secret), v.maxLength(MAX_SECRETS))),
 });
 /** One map's play state; see the schema of the same name. */
 export type MapPlay = v.InferOutput<typeof MapPlay>;
@@ -247,6 +252,8 @@ export function newMapPlay(info: MapInfo): MapPlay {
     showGrid: info.drawGrid,
     notes: [],
     spotlight: null,
+    areas: [],
+    secrets: [],
   };
 }
 

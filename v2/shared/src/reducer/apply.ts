@@ -15,6 +15,7 @@ import { fxPlace, fxRemove, fxTrigger, gameRename, gameSettings, mapAdd, mapRegr
 import type { ApplyResult } from './result.ts';
 import { curtainSet, sceneApply, sceneOrder, sceneRemove, sceneRename, sceneSave } from './scenes.ts';
 import { soundPlay, soundSet } from './sound.ts';
+import { areaRemove, areaReveal, areaSave, secretFound, secretRemove, secretSave } from './secrets.ts';
 import { tokenAdd, tokenClear, tokenMove, tokenRemove, tokenUpdate } from './tokens.ts';
 import { tableCalibrate, tableOverscan, tablePattern, tableReset, tableViewport, viewFree, viewGrid, viewMode, viewPan, viewRotate, viewWindow } from './view.ts';
 
@@ -76,6 +77,12 @@ export function apply(state: RootState, cmd: Command): ApplyResult {
     case 'scene.apply': return sceneApply(state, cmd);
     case 'sound.set': return soundSet(state, cmd);
     case 'sound.play': return soundPlay(state, cmd);
+    case 'area.save': return areaSave(state, cmd);
+    case 'area.remove': return areaRemove(state, cmd);
+    case 'area.reveal': return areaReveal(state, cmd);
+    case 'secret.save': return secretSave(state, cmd);
+    case 'secret.remove': return secretRemove(state, cmd);
+    case 'secret.found': return secretFound(state, cmd);
     case 'history.undo': return historyUndo(state);
     case 'history.redo': return historyRedo(state);
     default: return assertNever(cmd);

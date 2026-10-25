@@ -350,6 +350,135 @@
         "previewFirst": {
           "type": "boolean"
         },
+        "timer": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "durationMs": {
+                  "type": "integer",
+                  "minimum": 1000,
+                  "maximum": 5999000
+                },
+                "remainingMs": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5999000
+                },
+                "startedAt": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "endEffect": {
+                  "enum": [
+                    "none",
+                    "glow",
+                    "flash"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "durationMs",
+                "remainingMs",
+                "startedAt",
+                "endEffect"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "handouts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "kind": {
+                "enum": [
+                  "picture",
+                  "letter"
+                ],
+                "type": "string"
+              },
+              "file": {
+                "anyOf": [
+                  {
+                    "$ref": "#/$defs/FileRef"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 2000
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "kind",
+              "file",
+              "text"
+            ]
+          },
+          "maxItems": 32,
+          "default": []
+        },
+        "handoutShown": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/Id"
+                },
+                "place": {
+                  "enum": [
+                    "edge",
+                    "full"
+                  ],
+                  "type": "string"
+                },
+                "side": {
+                  "enum": [
+                    "bottom",
+                    "top",
+                    "left",
+                    "right"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "place",
+                "side"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "mapOrder": {
           "type": "array",
           "items": {
@@ -981,6 +1110,197 @@
               },
               "showGrid": {
                 "type": "boolean"
+              },
+              "notes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/Id"
+                    },
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "x",
+                    "y",
+                    "text"
+                  ]
+                },
+                "maxItems": 200,
+                "default": []
+              },
+              "spotlight": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "target": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "square"
+                              },
+                              "col": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "row": {
+                                "type": "integer",
+                                "minimum": 0
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "col",
+                              "row"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "const": "token"
+                              },
+                              "tokenId": {
+                                "$ref": "#/$defs/Id"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "tokenId"
+                            ]
+                          }
+                        ]
+                      },
+                      "dim": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 0.6
+                      }
+                    },
+                    "required": [
+                      "target",
+                      "dim"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "areas": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/Id"
+                    },
+                    "name": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "cells": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "cells"
+                  ]
+                },
+                "maxItems": 64
+              },
+              "secrets": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/Id"
+                    },
+                    "kind": {
+                      "enum": [
+                        "door",
+                        "mark",
+                        "trap"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "note": {
+                      "type": "string",
+                      "maxLength": 500
+                    },
+                    "col": {
+                      "type": "integer"
+                    },
+                    "row": {
+                      "type": "integer"
+                    },
+                    "door": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "vertical": {
+                      "type": "boolean"
+                    },
+                    "effect": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "found": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "name",
+                    "note",
+                    "col",
+                    "row",
+                    "door",
+                    "vertical",
+                    "effect",
+                    "found"
+                  ]
+                },
+                "maxItems": 128
               }
             },
             "required": [

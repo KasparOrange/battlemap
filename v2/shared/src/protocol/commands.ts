@@ -13,6 +13,7 @@ import { MapInfo, RasterGrid } from '../model/map.ts';
 import { DmLayer, MeasureLine, Ruler, Stroke, Token } from '../model/pieces.ts';
 import { CalibrationPivot } from '../model/table.ts';
 import { SoundBeds, SoundShot, Volume } from '../model/sound.ts';
+import { RevealArea, Secret } from '../model/secrets.ts';
 
 /** Reveal (the players see it) or hide (fog back on). */
 export const FogValue = v.picklist(['reveal', 'hide']);
@@ -464,6 +465,76 @@ export const SoundPlay = v.object({
   shot: SoundShot,
 });
 
+// ── reveal areas and secrets (roadmap S7, S9) ───────────────────────────────────────────────
+
+/**
+ * Saves a reveal area of the map on the table: a new one joins the list (at `index`, else at the
+ * end), one with a known id is replaced (renamed, squares edited). No undo step: the companion's
+ * notice undoes a delete or an edit by saving the old area back.
+ */
+export const AreaSave = v.object({
+  type: v.literal('area.save'),
+  /** The area (its `cells` sized to the map). */
+  area: RevealArea,
+  /** Where in the list it goes (clamped). */
+  index: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+});
+
+/** Deletes a reveal area (the fog stays as it is). */
+export const AreaRemove = v.object({
+  type: v.literal('area.remove'),
+  /** The area. */
+  id: Id,
+});
+
+/**
+ * Reveals or hides every square of a reveal area — `fog.apply` with the area's squares (staged
+ * with the preview on; one undo step).
+ */
+export const AreaReveal = v.object({
+  type: v.literal('area.reveal'),
+  /** The area. */
+  id: Id,
+  /** Reveal or hide it. */
+  value: FogValue,
+  /** The tap this belongs to (one undo step). */
+  gesture: Id,
+});
+
+/**
+ * Saves a secret of the map on the table (a secret door, a hidden mark, a trap): added (at
+ * `index`, else at the end) or replaced by id. No undo step (the notice saves the old one back).
+ */
+export const SecretSave = v.object({
+  type: v.literal('secret.save'),
+  /** The secret. */
+  secret: Secret,
+  /** Where in the list it goes (clamped). */
+  index: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+});
+
+/** Deletes a secret. */
+export const SecretRemove = v.object({
+  type: v.literal('secret.remove'),
+  /** The secret. */
+  id: Id,
+});
+
+/**
+ * Marks a secret found (a trap: sprung) — the players' view shows it from now on — or not found
+ * again (Undo). `shot` plays with it on every screen (the secret's effect at its square, made by
+ * the companion like `fx.trigger`'s); explicit value, so a replay does no harm.
+ */
+export const SecretFound = v.object({
+  type: v.literal('secret.found'),
+  /** The secret. */
+  id: Id,
+  /** Found / sprung (true) or hidden again (false). */
+  found: v.boolean(),
+  /** The one-shot effect that plays with it (only when found). */
+  shot: v.optional(OneShot),
+});
+
 // ── history ─────────────────────────────────────────────────────────────────────────────────
 
 /** Takes the last step back. */
@@ -486,6 +557,7 @@ export const Command = v.variant('type', [
   GameRename, GameSettingsSet,
   CurtainSet, SceneSave, SceneRemove, SceneRename, SceneOrder, SceneApply,
   SoundSet, SoundPlay,
+  AreaSave, AreaRemove, AreaReveal, SecretSave, SecretRemove, SecretFound,
   HistoryUndo, HistoryRedo,
 ]);
 /** Any command; see the schema of the same name. */
@@ -513,6 +585,7 @@ export const MAP_SCOPED_COMMANDS: ReadonlySet<CommandType> = new Set<CommandType
   'view.mode', 'view.window', 'view.pan', 'view.rotate', 'view.free', 'view.grid',
   'map.regrid',
   'fx.place', 'fx.remove',
+  'area.save', 'area.remove', 'area.reveal', 'secret.save', 'secret.remove', 'secret.found',
 ]);
 
 /**
