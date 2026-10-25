@@ -325,6 +325,21 @@ describe('boot', () => {
     expect(second.games.dirty).toBe(false);
   });
 
+  test('a viewport reported before boot keeps the stored calibration (qa#3, rv#24)', async () => {
+    const ports = memoryPorts();
+    ports.setting.set(KEY_TABLE, { widthInches: 26, overscanPercent: 3 });
+    const r = rig(ports);
+    r.host.applyLocal({ type: 'table.viewport', width: 1920, height: 1080 });
+    await settle();
+    expect(ports.setting.get(KEY_TABLE)).toEqual({ widthInches: 26, overscanPercent: 3 });
+    await r.games.boot();
+    await settle();
+    expect(r.host.state.table.widthInches).toBe(26);
+    expect(r.host.state.table.overscanPercent).toBe(3);
+    expect(r.host.state.table.viewport.width).toBe(1920);
+    expect(ports.setting.get(KEY_TABLE)).toEqual({ widthInches: 26, overscanPercent: 3 });
+  });
+
   test('a box reset (empty device) gets the last game from the server', async () => {
     const ports = memoryPorts();
     ports.server.set('g1', newGame(gameInput()));

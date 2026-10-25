@@ -163,7 +163,8 @@ export class TvGames {
 
   /** The game object last saved or loaded — `state.game !== savedGame` means unsaved changes. */
   private savedGame: Game | null = null;
-  private savedTable = { widthInches: NaN, overscanPercent: NaN };
+  /** The calibration last read or stored; `null` until `boot()` has read it (qa#3). */
+  private savedTable: { widthInches: number; overscanPercent: number } | null = null;
   private saveTimer: unknown = null;
   private saving: Promise<void> = Promise.resolve();
   private work: Promise<void> = Promise.resolve();
@@ -204,12 +205,12 @@ export class TvGames {
    */
   async boot(): Promise<void> {
     const t0 = this.now();
-    let table = this.host.state.table;
+    const start = this.host.state.table;
+    let calibration = { widthInches: start.widthInches, overscanPercent: start.overscanPercent };
     try {
       const saved = await this.ports.settings.get<{ widthInches?: unknown; overscanPercent?: unknown }>(KEY_TABLE);
       if (saved && typeof saved.widthInches === 'number' && typeof saved.overscanPercent === 'number') {
-        table = {
-          ...table,
+        calibration = {
           widthInches: Math.min(90, Math.max(10, saved.widthInches)),
           overscanPercent: Math.min(12, Math.max(0, saved.overscanPercent)),
         };
@@ -217,7 +218,6 @@ export class TvGames {
     } catch (e) {
       this.log.error('tv', 'Calibration could not be read', { error: errorText(e) });
     }
-    this.savedTable = { widthInches: table.widthInches, overscanPercent: table.overscanPercent };
 
     let game: Game | null = null;
     let lastId: string | null = null;
@@ -230,6 +230,9 @@ export class TvGames {
     }
     this.setStatus(null, null);
     this.savedGame = game;
+    // The viewport may have changed while we waited (rv#24): take the current one.
+    const table = { ...this.host.state.table, ...calibration };
+    this.savedTable = calibration;
     this.host.replace({ ...this.host.state, table, game, live: emptyLive(), history: { undo: [], redo: [] } }, game ? 'reopened at start' : 'start');
     this.log.info('tv', 'Booted', {
       ms: this.now() - t0, gameId: game?.id ?? null, lastId, widthInches: table.widthInches, overscanPercent: table.overscanPercent,
@@ -252,7 +255,8 @@ export class TvGames {
    */
   changed(state: RootState): void {
     const t = state.table;
-    if (t.widthInches !== this.savedTable.widthInches || t.overscanPercent !== this.savedTable.overscanPercent) {
+    // Before boot() read the stored calibration, the state holds the default: never store that.
+    if (this.savedTable && (t.widthInches !== this.savedTable.widthInches || t.overscanPercent !== this.savedTable.overscanPercent)) {
       this.savedTable = { widthInches: t.widthInches, overscanPercent: t.overscanPercent };
       this.ports.settings.put(KEY_TABLE, { ...this.savedTable })
         .then(() => this.log.info('tv', 'Calibration saved', { ...this.savedTable }))
