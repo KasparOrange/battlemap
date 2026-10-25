@@ -1,106 +1,195 @@
 <!--
-  CompanionApp — companion mode (skeleton): picks a table (the server's list of tables with a
-  TV online, remembered for next time), joins its room, and offers a few test actions that go
-  through the whole path — calibrate, reset, start a test game, reveal all. The companion UI
-  package replaces it with the real screens (tabs, map, tools).
+  CompanionApp — companion mode's top-level routing (parity CS-02): no table yet → the table
+  picker; a table joined but no state yet → "Connecting…"; the TV shows its library → the
+  library screen; a game is open on the TV → the game screen. The view follows the TV's state.
+  It also turns the TV's messages for the DM into feedback: `tv.status` (a busy card with
+  progress, the same the TV shows), `tv.notice` and `deploy.ready` (notices).
+
+  The picker and the library are package 4b's (`library/TablePicker.svelte` with
+  `{ lastTable, onpick }`, `library/LibraryScreen.svelte` with `{ config, session }`); they are
+  found with `import.meta.glob`, and a plain stand-in shows until they exist.
   No props: it reads the page's configuration (lib/config.ts, mode companion).
 -->
 <script lang="ts">
-  import { onMount } from 'svelte';
-  import { newId, wholeGrid, type MapInfo } from '@battlemap/shared';
+  import { onMount, type Component } from 'svelte';
   import { appConfig, rememberTable, type AppConfig } from '../config.ts';
   import { log } from '../log.ts';
   import { CompanionSession } from '../state/sessions.svelte.ts';
   import Button from '../ui/Button.svelte';
+  import ProgressBar from '../ui/ProgressBar.svelte';
   import Spinner from '../ui/Spinner.svelte';
   import { notify } from '../ui/notice.svelte.ts';
+  import GameScreen from './game/GameScreen.svelte';
 
   const config: AppConfig = appConfig();
 
-  /** A table the server knows (`GET /api/tables`). */
-  interface TableRow { room: string; tvName: string; companions: number }
+  type Loose = Component<Record<string, unknown>>;
+  const screens = import.meta.glob<{ default: Loose }>(['./library/TablePicker.svelte', './library/LibraryScreen.svelte'], { eager: true });
+  const TablePicker = screens['./library/TablePicker.svelte']?.default ?? null;
+  const LibraryScreen = screens['./library/LibraryScreen.svelte']?.default ?? null;
 
   const tableId = config.tableId;
+  const debug = new URL(location.href).searchParams.get('debug') === '1';
   const session = tableId ? new CompanionSession(config, tableId) : null;
-  let tables = $state<TableRow[] | null>(null);
-  let loadingTables = $state(false);
+
+  /** What the TV is busy with (`tv.status`), or null. */
+  let busy = $state<{ text: string; progress: number | null } | null>(null);
 
   const view = $derived(session?.view ?? null);
-
-  /** Loads the list of tables with a TV online. */
-  async function loadTables(): Promise<void> {
-    loadingTables = true;
-    const t0 = performance.now();
-    try {
-      const r = await fetch(`${config.serverUrl}/api/tables`);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      tables = ((await r.json()) as { tables: TableRow[] }).tables;
-      log.info('companion', 'Tables listed', { count: tables.length, ms: Math.round(performance.now() - t0) });
-    } catch (e) {
-      log.warn('companion', 'Tables not listed', { error: String(e) });
-      notify("Couldn't reach the server for the list of tables.", { kind: 'error' });
-    } finally {
-      loadingTables = false;
-    }
-  }
+  const route = $derived(!session ? 'picker' : !view ? 'connecting' : view.game ? 'game' : 'library');
 
   /** Joins a table: remembered, then the page reloads with `?table=`. */
   function join(room: string): void {
+    log.info('companion', 'Table picked', { room });
     rememberTable(room);
     const url = new URL(location.href);
     url.searchParams.set('table', room);
     location.href = url.toString();
   }
 
-  /** A made-up picture map for trying the path end to end. */
-  function testMap(): MapInfo {
-    return {
-      id: newId(), name: 'Test map', kind: 'picture', picture: { hash: '0000000000000000', ext: 'png', bytes: 0 },
-      tableCopy: null, geometry: null, grid: wholeGrid(30, 20, 3000, 2000), drawGrid: true, doorCount: 0, drawDoors: false, libraryId: null,
-    };
+  /** Leaves the table (back to the picker). */
+  function leaveTable(): void {
+    rememberTable(null);
+    const url = new URL(location.href);
+    url.searchParams.delete('table');
+    location.href = url.toString();
   }
 
-  function startTestGame(): void {
-    session?.request({ type: 'game.new', game: { id: newId(), name: 'Test game', createdAt: new Date().toISOString(), map: testMap() } });
-  }
+  $effect(() => {
+    const msg = session?.lastMessage;
+    if (!msg) return;
+    switch (msg.type) {
+      case 'tv.status': {
+        const text = typeof msg.busy === 'string' ? msg.busy : null;
+        busy = text ? { text, progress: typeof msg.progress === 'number' ? msg.progress : null } : null;
+        return;
+      }
+      case 'tv.notice': {
+        const level = msg.level === 'error' ? 'error' : msg.level === 'warn' ? 'warning' : 'info';
+        notify(`TV: ${String(msg.text ?? '')}`, { kind: level });
+        busy = null;
+        return;
+      }
+      case 'deploy.ready':
+        notify('The TV is updating — back in a few seconds.');
+        return;
+    }
+  });
+
+  $effect(() => {
+    log.info('companion', 'Route', { route });
+  });
 
   onMount(() => {
-    if (session) session.start();
-    else void loadTables();
+    session?.start();
     return () => session?.stop();
   });
 </script>
 
-<main class="companion">
-  {#if !session}
-    <h2>Pick a table</h2>
-    {#if loadingTables}
-      <Spinner />
-    {:else if tables && tables.length === 0}
-      <p>No TV is online. Start TV mode on the box, then refresh.</p>
-    {/if}
-    {#each tables ?? [] as t (t.room)}
-      <Button label={t.tvName} hint={t.room} icon="tv" onclick={() => join(t.room)} />
-    {/each}
-    <Button label="Refresh" icon="sync" variant="flat" loading={loadingTables} onclick={() => void loadTables()} />
+{#if route === 'picker'}
+  {#if TablePicker}
+    <TablePicker lastTable={null} onpick={join} />
   {:else}
-    <p data-testid="companion-status">
-      {session.connection} · TV {session.tvOnline ? 'online' : 'away'} · {session.ready ? 'ready' : 'not ready'} · rev {session.rev}
-      · width {view?.table.widthInches ?? '?'} in · game {view?.game?.name ?? 'none'}
-    </p>
-    <div class="actions">
-      <Button label="Calibrate 40 in" icon="measure" onclick={() => session.dispatch({ type: 'table.calibrate', widthInches: 40 })} />
-      <Button label="Back to auto" icon="undo" onclick={() => session.dispatch({ type: 'table.reset' })} />
-      <Button label="Start a test game" icon="play" onclick={startTestGame} />
-      {#if view?.game}
-        <Button label="Reveal all" icon="reveal" onclick={() => session.dispatch({ type: 'fog.all', value: 'reveal' })} />
-      {/if}
-    </div>
+    <main class="center">
+      <p>Pick a table — the table picker is on its way.</p>
+    </main>
   {/if}
-</main>
+{:else if route === 'connecting' && session}
+  <main class="center">
+    <Spinner />
+    <p>
+      {session.connection !== 'open' ? 'Connecting to the table…' : !session.tvOnline ? `Waiting for the TV · ${tableId}` : 'Loading the table…'}
+    </p>
+    <Button label="Another table" icon="tv" variant="flat" onclick={leaveTable} />
+  </main>
+{:else if route === 'library' && session}
+  {#if LibraryScreen}
+    <LibraryScreen {config} {session} />
+  {:else}
+    <main class="center">
+      <p>The TV shows its library. Start or continue a game from the library — it is on its way.</p>
+      <Button label="Another table" icon="tv" variant="flat" onclick={leaveTable} />
+    </main>
+  {/if}
+{:else if route === 'game' && session}
+  <div class="full">
+    <GameScreen {config} {session} />
+  </div>
+{/if}
+
+{#if debug && session}
+  <p class="debug" data-testid="companion-status">
+    {session.connection} · TV {session.tvOnline ? 'online' : 'away'} · {session.ready ? 'ready' : 'not ready'} · rev {session.rev}
+    · width {view?.table.widthInches ?? '?'} in · game {view?.game?.name ?? 'none'}
+  </p>
+{/if}
+
+{#if busy}
+  <div class="busy" role="status" aria-live="polite">
+    <div class="card">
+      {#if busy.progress === null}<Spinner />{/if}
+      <p>{busy.text}</p>
+      {#if busy.progress !== null}<ProgressBar value={busy.progress} label={busy.text} />{/if}
+    </div>
+  </div>
+{/if}
 
 <style>
-  .companion { padding: 24px; display: grid; gap: 16px; align-content: start; max-width: 720px; }
-  .actions { display: flex; flex-wrap: wrap; gap: 12px; }
-  p { margin: 0; }
+  .full {
+    position: fixed;
+    inset: 0;
+  }
+
+  .center {
+    min-height: 100dvh;
+    display: grid;
+    place-content: center;
+    justify-items: center;
+    gap: var(--g2);
+    padding: var(--g2);
+    background: var(--bg);
+    color: var(--t2);
+    text-align: center;
+  }
+
+  .center p {
+    margin: 0;
+    max-width: 28rem;
+  }
+
+  .debug {
+    position: fixed;
+    left: 12px;
+    bottom: 2px;
+    z-index: var(--z-tooltip);
+    margin: 0;
+    font: 11px ui-monospace, monospace;
+    color: #8a8;
+    pointer-events: none;
+  }
+
+  .busy {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-dialog);
+    display: grid;
+    place-items: center;
+    background: var(--scrim);
+  }
+
+  .card {
+    display: grid;
+    justify-items: center;
+    gap: var(--g);
+    min-width: 16rem;
+    padding: var(--g2);
+    border-radius: var(--r);
+    background: var(--m3);
+    box-shadow: var(--elev-open);
+    color: var(--t);
+  }
+
+  .card p {
+    margin: 0;
+  }
 </style>
