@@ -326,6 +326,18 @@
             },
             "effects": {
               "type": "boolean"
+            },
+            "mapLights": {
+              "type": "boolean",
+              "default": false
+            },
+            "drawTools": {
+              "type": "boolean",
+              "default": true
+            },
+            "measureTools": {
+              "type": "boolean",
+              "default": true
             }
           },
           "required": [

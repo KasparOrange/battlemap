@@ -204,6 +204,9 @@ export function gameSettings(root: RootState, cmd: CommandOf<'game.settings'>): 
     if (cmd.settings.fogEdgeInset !== undefined) settings.fogEdgeInset = cmd.settings.fogEdgeInset;
     if (cmd.settings.fogFade !== undefined) settings.fogFade = cmd.settings.fogFade;
     if (cmd.settings.effects !== undefined) settings.effects = cmd.settings.effects;
+    if (cmd.settings.mapLights !== undefined) settings.mapLights = cmd.settings.mapLights;
+    if (cmd.settings.drawTools !== undefined) settings.drawTools = cmd.settings.drawTools;
+    if (cmd.settings.measureTools !== undefined) settings.measureTools = cmd.settings.measureTools;
     return { ...game, settings };
   });
 }

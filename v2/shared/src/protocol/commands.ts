@@ -357,8 +357,16 @@ export const GameRename = v.object({
 /** Changes some of the open game's settings. */
 export const GameSettingsSet = v.object({
   type: v.literal('game.settings'),
-  /** The settings to change. */
-  settings: v.partial(GameSettings),
+  /** The settings to change (only those given; nothing defaults here). */
+  settings: v.object({
+    fogStyle: v.optional(GameSettings.entries.fogStyle),
+    fogEdgeInset: v.optional(GameSettings.entries.fogEdgeInset),
+    fogFade: v.optional(v.boolean()),
+    effects: v.optional(v.boolean()),
+    mapLights: v.optional(v.boolean()),
+    drawTools: v.optional(v.boolean()),
+    measureTools: v.optional(v.boolean()),
+  }),
 });
 
 // ── history ─────────────────────────────────────────────────────────────────────────────────

@@ -4,8 +4,8 @@
  */
 import { describe, expect, test } from 'bun:test';
 import {
-  apply, applyAll, check, classicDisc, emptyMask, initialRoot, maskCells, MAX_SHOTS, MAX_UNDO, RootState, wholeGrid,
-  type Command, type Token,
+  apply, applyAll, check, Command, Game, classicDisc, emptyMask, initialRoot, maskCells, MAX_SHOTS, MAX_UNDO, RootState, wholeGrid,
+  type Token,
 } from '../src/index.ts';
 import { active, pictureMap, refused, run, uvttMap, withGame } from './fixtures.ts';
 
@@ -254,6 +254,18 @@ describe('effects and game', () => {
     const s = run(withGame(), { type: 'game.rename', name: 'Night 2' }, { type: 'game.settings', settings: { fogEdgeInset: 15 } });
     expect(s.game!.name).toBe('Night 2');
     expect(s.game!.settings).toMatchObject({ fogEdgeInset: 15, fogStyle: 'standard' });
+  });
+
+  test('mapLights, drawTools, measureTools: defaults, set alone, old games read with defaults', () => {
+    const s0 = withGame();
+    expect(s0.game!.settings).toMatchObject({ mapLights: false, drawTools: true, measureTools: true });
+    const s1 = run(s0, { type: 'game.settings', settings: { mapLights: true } }, { type: 'game.settings', settings: { drawTools: false } });
+    expect(s1.game!.settings).toMatchObject({ mapLights: true, drawTools: false, measureTools: true });
+    const parsed = check(Command, { type: 'game.settings', settings: { fogFade: false } });
+    expect(parsed.ok && parsed.value.type === 'game.settings' ? Object.keys(parsed.value.settings) : null).toEqual(['fogFade']);
+    const { mapLights: _a, drawTools: _b, measureTools: _c, ...oldSettings } = s0.game!.settings;
+    const old = check(Game, { ...s0.game!, settings: oldSettings });
+    expect(old.ok && old.value.settings).toMatchObject({ mapLights: false, drawTools: true, measureTools: true });
   });
 });
 

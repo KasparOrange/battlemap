@@ -95,6 +95,15 @@ export const GameSettings = v.object({
   fogFade: v.boolean(),
   /** Whether effects play at all. */
   effects: v.boolean(),
+  /**
+   * Torch glow from the `.dd2vtt` file's lights (the renderer reads it). Off by default; games
+   * stored before the field existed read as off.
+   */
+  mapLights: v.optional(v.boolean(), false),
+  /** Whether the companion shows the Draw tab (a session-settings preset hides it). Default on. */
+  drawTools: v.optional(v.boolean(), true),
+  /** Whether the companion shows the Measure tab (ruler, line, template disc). Default on. */
+  measureTools: v.optional(v.boolean(), true),
 });
 /** A game's settings; see the schema of the same name. */
 export type GameSettings = v.InferOutput<typeof GameSettings>;
@@ -127,7 +136,7 @@ export type Game = v.InferOutput<typeof Game>;
  * @returns a new settings object
  */
 export function defaultSettings(): GameSettings {
-  return { fogStyle: 'standard', fogEdgeInset: 0, fogFade: true, effects: true };
+  return { fogStyle: 'standard', fogEdgeInset: 0, fogFade: true, effects: true, mapLights: false, drawTools: true, measureTools: true };
 }
 
 /**
