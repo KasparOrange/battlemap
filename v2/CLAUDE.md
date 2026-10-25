@@ -51,6 +51,8 @@ folder needs goes into your report, not into their files.
   with logic has tests. Don't mark something done that you didn't run.
 - Parallel helpers each run their own ports: `BATTLEMAP_APP_PORT` / `BATTLEMAP_SERVER_PORT`
   for `bun run e2e`, `PORT` + a temp `DATA_DIR` for the server. Never the defaults 5884/5929.
+- Stop only processes you started, by PID — never `pkill`/`killall`/`kill $(pgrep …)` by name:
+  other helpers run the same commands at the same time.
 
 ## Secrets (never commit)
 
