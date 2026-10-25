@@ -17,6 +17,9 @@ test('TV and companion connect, exchange commands, and log', async ({ browser })
   await companion.goto(`/app/?mode=companion&table=${table}`);
   await expect(companion.getByTestId('companion-status')).toContainText('TV online · ready');
   await expect(tv.getByTestId('tv-status')).toContainText('companions 1');
+  // The kit's Button debounces from performance.now() = 0, so a press in the first 350 ms after
+  // the page loaded is ignored (reported to the kit's owner); remove this wait once fixed.
+  await companion.waitForTimeout(400);
 
   await companion.getByRole('button', { name: 'Calibrate 40 in' }).click();
   await expect(tv.getByTestId('tv-status')).toContainText('width 40 in');
