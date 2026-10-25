@@ -98,8 +98,8 @@ export interface TableRow {
 
 /** Every IO this package does. */
 export interface CompanionServices {
-  /** Tables with a TV online. */
-  listTables(): Promise<TableRow[]>;
+  /** Tables with a TV online on a server (default this page's server). */
+  listTables(serverUrl?: string): Promise<TableRow[]>;
   /** Reads and examines a picked file (`.dd2vtt`, PDF, picture). Throws a readable `Error`. */
   prepareMap(file: File, onProgress: ProgressFn): Promise<PreparedMap>;
   /** Uploads a prepared map with the DM's choices (the first upload of its files); returns the map ready for a game and its thumbnail. */

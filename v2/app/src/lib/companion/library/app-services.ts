@@ -48,8 +48,8 @@ function findingOf(r: ImportResult): GridFinding {
  */
 export function appServices(): CompanionServices {
   return {
-    async listTables(): Promise<TableRow[]> {
-      const r = await fetch(`${api.serverUrl}/api/tables`);
+    async listTables(serverUrl = api.serverUrl): Promise<TableRow[]> {
+      const r = await fetch(`${serverUrl}/api/tables`, { signal: AbortSignal.timeout(5_000), cache: 'no-store' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return ((await r.json()) as { tables: TableRow[] }).tables;
     },

@@ -179,3 +179,23 @@ test('a DM layer is in the game but the TV never loads its picture', async ({ br
   expect(hash).not.toBe('');
   expect(tvFiles.filter((u) => u.includes(hash))).toEqual([]);
 });
+
+test('a cancelled import leaves nothing on the server; the upload starts at the squares dialog', async ({ browser }) => {
+  test.setTimeout(120_000);
+  const { table } = await openTv(browser, `Cancel TV ${Date.now() % 1000}`);
+  const page = await openCompanion(browser, table);
+  const uploads: string[] = [];
+  page.on('request', (r) => {
+    if (r.method() === 'POST' && new URL(r.url()).pathname.endsWith('/files')) uploads.push(r.url());
+  });
+  const file = { name: 'cave_level_20x15.png', mimeType: 'image/png', buffer: await gridPicture(page, 640, 480) };
+  await page.getByTestId('upload-input').setInputFiles(file);
+  await expect(page.getByRole('button', { name: 'Upload and play' })).toBeEnabled({ timeout: 45_000 });
+  // "Store as" is offered: the picture isn't on the server yet
+  await expect(page.getByRole('radiogroup', { name: 'Store as' })).toBeVisible();
+  expect(uploads, 'reading the map uploads nothing').toEqual([]);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: 'Upload and play' })).toBeHidden();
+  await page.waitForTimeout(500);
+  expect(uploads, 'a cancelled import uploads nothing').toEqual([]);
+});

@@ -13,7 +13,7 @@
 -->
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { appConfig, rememberTable, type AppConfig } from '../config.ts';
+  import { appConfig, checkServerChoice, joinTable, rememberTable, type AppConfig } from '../config.ts';
   import { log } from '../log.ts';
   import { CompanionSession } from '../state/sessions.svelte.ts';
   import Button from '../ui/Button.svelte';
@@ -21,7 +21,6 @@
   import ProgressBar from '../ui/ProgressBar.svelte';
   import Spinner from '../ui/Spinner.svelte';
   import { notify } from '../ui/notice.svelte.ts';
-  import { installLogBuffer } from './developer/log-buffer.ts';
   import { lastUsedTable, rememberUsedTable } from './frame/last-table.ts';
   import { peerMessage } from './frame/peer-message.ts';
   import GameScreen from './game/GameScreen.svelte';
@@ -30,7 +29,6 @@
   import { setServices } from './library/services.ts';
   import TablePicker from './library/TablePicker.svelte';
 
-  installLogBuffer();
   setServices(appServices());
 
   const config: AppConfig = appConfig();
@@ -48,22 +46,28 @@
   const route = $derived(!session ? 'picker' : !view ? 'connecting' : view.game ? 'game' : 'library');
   const refused = $derived(session?.connection === 'refused');
 
-  /** Joins a table: remembered, then the page reloads with `?table=`. */
-  function join(room: string): void {
-    log.info('companion', 'Table picked', { room });
-    rememberTable(room);
-    rememberUsedTable(room);
-    const url = new URL(location.href);
-    url.searchParams.set('table', room);
-    location.href = url.toString();
+  /** The start check of a remembered LAN table server (`checkServerChoice`), once per load. */
+  let serverCheck = $state<'checking' | 'ok' | 'fallback' | 'unreachable'>(config.lan ? 'checking' : 'ok');
+
+  /**
+   * Joins a table: remembered (per table, which server it lives on), then the page loads the
+   * companion for it — on a TV's own table server for a table nearby.
+   */
+  function join(room: string | null, serverUrl: string): void {
+    log.info('companion', 'Join table', { room, server: serverUrl, lan: serverUrl !== config.serverUrl });
+    if (room) rememberUsedTable(room);
+    joinTable(serverUrl, room);
   }
 
   /** Leaves the table (back to the picker, which still marks it "Last used"). */
   function leaveTable(): void {
-    log.info('companion', 'Leave the table', { room: tableId });
+    log.info('companion', 'Leave the table', { room: tableId, server: config.serverUrl });
     rememberTable(null);
     const url = new URL(location.href);
     url.searchParams.delete('table');
+    // a table nearby was on the TV's own server: the picker lists from the usual server again
+    if (config.lan && config.homeServerUrl) url.searchParams.set('server', config.homeServerUrl);
+    url.searchParams.delete('lan');
     location.href = url.toString();
   }
 
@@ -111,6 +115,14 @@
 
   onMount(() => {
     session?.start();
+    // a remembered table on a TV's own server that doesn't answer: the internet server instead
+    void checkServerChoice(config).then(
+      (r) => {
+        serverCheck = r;
+        if (r !== 'ok') log.warn('companion', 'Table server check', { result: r, server: config.serverUrl, home: config.homeServerUrl });
+      },
+      (e: unknown) => log.warn('companion', 'Table server check failed', { error: String(e) }),
+    );
     return () => session?.stop();
   });
 </script>
@@ -131,7 +143,17 @@
   <main class="center">
     <Spinner />
     <p>
-      {session.connection !== 'open' ? 'Connecting to the table…' : !session.tvOnline ? 'Waiting for the TV — switch it on and start battlemap in TV mode.' : 'Loading the table…'}
+      {#if serverCheck === 'unreachable'}
+        The TV that hosts this table doesn't answer on this Wi-Fi. Is it on, and is this tablet on the same Wi-Fi?
+      {:else if serverCheck === 'fallback'}
+        The TV's own server doesn't answer — switching to the online server…
+      {:else if session.connection !== 'open'}
+        Connecting to the table {config.lan ? 'on the TV' : 'online'}…
+      {:else if !session.tvOnline}
+        Waiting for the TV — switch it on and start battlemap in TV mode.
+      {:else}
+        Loading the table…
+      {/if}
     </p>
     <Button label="Another table" icon="tv" variant="flat" onclick={leaveTable} />
   </main>

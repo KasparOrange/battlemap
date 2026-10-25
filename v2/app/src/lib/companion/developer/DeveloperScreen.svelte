@@ -1,7 +1,8 @@
 <!--
   DeveloperScreen — logs and diagnostics on the tablet (parity ST-01 Developer, LG-06): the
   versions of app, shell, server and TV; the connection (state, TV, revision, epoch, pending
-  commands, the log outbox); the page's last 500 log lines (`log-buffer.ts`) with a level
+  commands, the log outbox); the page's last 500 log lines (the logger's `logRing`, read through
+  `log-buffer.ts`; they arrive in the logger's batches, ≤ 3 s) with a level
   filter, copy and clear; and "Send diagnostics", which writes one snapshot line of all of it to
   the logs (MwLog tenant `battlemap`, area `diag`) and ships the outbox at once.
   Opened from the library's menu, the table picker and the Game tab.
@@ -58,10 +59,17 @@
   $effect(() => {
     if (!open) return;
     lines = bufferedLines();
+    let queued = false;
+    // a batch of lines arrives at once: read the ring once per batch
     return onBufferChange(() => {
-      const atEnd = !box || box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
-      lines = bufferedLines();
-      if (atEnd) queueMicrotask(() => box && (box.scrollTop = box.scrollHeight));
+      if (queued) return;
+      queued = true;
+      queueMicrotask(() => {
+        queued = false;
+        const atEnd = !box || box.scrollTop + box.clientHeight >= box.scrollHeight - 8;
+        lines = bufferedLines();
+        if (atEnd) queueMicrotask(() => box && (box.scrollTop = box.scrollHeight));
+      });
     });
   });
 
@@ -135,6 +143,7 @@
 
   function clear(): void {
     clearBuffer();
+    lines = [];
     notify('Log view cleared — the lines stay in MwLog.');
   }
 

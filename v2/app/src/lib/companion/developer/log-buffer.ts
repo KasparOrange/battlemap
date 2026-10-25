@@ -1,14 +1,16 @@
 /**
- * The last log lines of this page, for the Developer screen (parity LG-06: a 500-line buffer).
- * The app's logger (`lib/log.ts`) ships lines to MwLog and keeps none, so this taps it: it wraps
- * the logger's level methods once, records each line here and hands it on unchanged. Lines the
- * forwarder makes internally (its global error catchers) don't pass the methods and are only in
- * MwLog. If `lib/log.ts` grows its own buffer, this module should read that instead.
+ * The developer screen's view of this page's last log lines (parity LG-06: 500 lines). The lines
+ * themselves live in the logger's own ring (`logRing` in `lib/log.ts`), which gets every line the
+ * logger ships — the same lines MwLog gets, including the global error catchers' and the summary
+ * lines — in the logger's batches (≤ 3 s). This module only turns them into what the screen
+ * shows (a running number, a time, the line's own fields without the page context every line
+ * carries) and filters them.
  */
 import type { Level } from 'mwlog/browser';
-import { log } from '../../log.ts';
+import { logRing } from '../../log.ts';
+import type { LogEntry, LogRing } from '../../log-ring.ts';
 
-/** One recorded line. */
+/** One line as the screen shows it. */
 export interface BufferedLine {
   /** Running number (keys the list). */
   n: number;
@@ -20,86 +22,81 @@ export interface BufferedLine {
   area: string;
   /** The message. */
   msg: string;
-  /** The extra fields, as short JSON ("" without). */
+  /** The line's own fields, as short JSON ("" without). */
   props: string;
 }
 
-/** Lines kept. */
-export const BUFFER_LINES = 500;
+/** Lines kept (the ring's size). */
+export const BUFFER_LINES = logRing.size;
 
-const lines: BufferedLine[] = [];
+/** Fields the logger puts on every line (the page's context) — not worth repeating per line. */
+const CONTEXT_KEYS = new Set(['build', 'role', 'deviceId', 'deviceName', 'client', 'table', 'session']);
+
+/** Running numbers per ring entry (stable while the entry is kept, so list keys don't jump). */
+const numbers = new WeakMap<LogEntry, number>();
 let next = 0;
-let installed = false;
-const listeners = new Set<() => void>();
 
-/** Short JSON of a line's fields (cut at 300 characters). */
-function propsText(props: Record<string, unknown> | undefined): string {
-  if (!props || Object.keys(props).length === 0) return '';
+/** Short JSON of a line's own fields (cut at 300 characters). */
+function propsText(props: Record<string, unknown>): string {
+  const own = Object.fromEntries(Object.entries(props).filter(([k]) => !CONTEXT_KEYS.has(k)));
+  if (Object.keys(own).length === 0) return '';
   try {
-    const s = JSON.stringify(props);
+    const s = JSON.stringify(own);
     return s.length > 300 ? `${s.slice(0, 299)}…` : s;
   } catch {
     return '(unprintable)';
   }
 }
 
-/**
- * Records one line (exported for tests and for lines the app wants shown here only).
- *
- * @param level - the level
- * @param area - the area
- * @param msg - the message
- * @param props - its fields
- */
-export function record(level: Level, area: string, msg: string, props?: Record<string, unknown>): void {
-  lines.push({ n: next++, t: Date.now(), level, area, msg, props: propsText(props) });
-  if (lines.length > BUFFER_LINES) lines.splice(0, lines.length - BUFFER_LINES);
-  for (const f of listeners) f();
+/** A level the screen knows (anything else shows as info). */
+function asLevel(level: string): Level {
+  return (LEVELS as readonly string[]).includes(level) ? (level as Level) : 'info';
 }
 
-/** Starts recording the logger's lines (once per page; later calls do nothing). */
-export function installLogBuffer(): void {
-  if (installed) return;
-  installed = true;
-  const target = log as unknown as Record<string, (...a: unknown[]) => void>;
-  for (const level of ['debug', 'info', 'warn', 'error'] as const) {
-    const original = target[level]!.bind(log);
-    target[level] = (area: unknown, msg: unknown, props?: unknown) => {
-      record(level, String(area), String(msg), props as Record<string, unknown> | undefined);
-      original(area, msg, props);
-    };
+/**
+ * One ring entry as a screen line.
+ *
+ * @param e - the entry
+ * @returns the line
+ */
+export function toLine(e: LogEntry): BufferedLine {
+  let n = numbers.get(e);
+  if (n === undefined) {
+    n = next++;
+    numbers.set(e, n);
   }
-  const originalLog = target.log!.bind(log);
-  target.log = (level: unknown, area: unknown, msg: unknown, props?: unknown) => {
-    record(level as Level, String(area), String(msg), props as Record<string, unknown> | undefined);
-    originalLog(level, area, msg, props);
-  };
+  const t = Date.parse(e.ts);
+  return { n, t: Number.isFinite(t) ? t : Date.now(), level: asLevel(e.level), area: e.area, msg: e.msg, props: propsText(e.props) };
 }
 
 /**
- * The recorded lines, oldest first.
+ * The kept lines, oldest first.
  *
- * @returns a copy
+ * @param ring - the ring (default the logger's)
+ * @returns the lines
  */
-export function bufferedLines(): BufferedLine[] {
-  return lines.slice();
-}
-
-/** Forgets the recorded lines (MwLog keeps them). */
-export function clearBuffer(): void {
-  lines.length = 0;
-  for (const f of listeners) f();
+export function bufferedLines(ring: LogRing = logRing): BufferedLine[] {
+  return ring.lines().map(toLine);
 }
 
 /**
- * Calls back on every new line and on clear.
+ * Forgets the kept lines (MwLog keeps them).
+ *
+ * @param ring - the ring (default the logger's)
+ */
+export function clearBuffer(ring: LogRing = logRing): void {
+  ring.clear();
+}
+
+/**
+ * Calls back on every new line.
  *
  * @param f - the callback
+ * @param ring - the ring (default the logger's)
  * @returns a function that stops it
  */
-export function onBufferChange(f: () => void): () => void {
-  listeners.add(f);
-  return () => listeners.delete(f);
+export function onBufferChange(f: () => void, ring: LogRing = logRing): () => void {
+  return ring.subscribe(() => f());
 }
 
 /** Levels from most to least detail; a filter shows its level and the ones after it. */

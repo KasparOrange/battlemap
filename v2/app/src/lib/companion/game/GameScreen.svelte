@@ -211,7 +211,7 @@
         label={tvOk ? 'The table — connected' : 'The table — not connected'}
         badge={true}
         badgeTone={tvOk ? 'ok' : 'warn'}
-        onclick={() => notify(tvOk ? `Connected to the TV · ${config.tableId ?? ''}` : 'Waiting for the TV — is it on and in battlemap?', { kind: tvOk ? 'info' : 'warning' })}
+        onclick={() => notify(tvOk ? `Connected to the TV · ${config.lan ? 'the game runs on the TV, on this Wi-Fi' : 'online'}` : 'Waiting for the TV — is it on and in battlemap?', { kind: tvOk ? 'info' : 'warning' })}
       />
       <IconButton icon={fullscreen ? 'fullscreen-exit' : 'fullscreen'} label={fullscreen ? 'Leave full screen' : 'Full screen'} onclick={() => void toggleFullscreen()} />
     </div>
