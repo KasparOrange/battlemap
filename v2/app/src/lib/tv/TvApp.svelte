@@ -18,7 +18,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import type { GameSummary, LibraryEntry } from '@battlemap/shared';
-  import { appConfig, type AppConfig } from '../config.ts';
+  import { appConfig, lanJoinInfo, onLanChange, type AppConfig, type LanJoinInfo } from '../config.ts';
   import { log } from '../log.ts';
   import { markShellReady, onShellEvent, shellBridge } from '../shell.ts';
   import { TvSession } from '../state/sessions.svelte.ts';
@@ -31,6 +31,7 @@
   import { backAction, backGate, CHROME_MS, homeBadge, OFFLINE_RED_MS, PROBLEM_MS, problemBadge, screenFor } from './screen.ts';
   import type { TableViewEvent } from '../render/index.ts';
   import { openTableView, type TvTableView } from './table-view.ts';
+  import { lanLogFields } from './lan.ts';
   import TvBadge from './TvBadge.svelte';
   import TvBusy from './TvBusy.svelte';
   import TvCalibration from './TvCalibration.svelte';
@@ -60,6 +61,8 @@
   let shared = $state<LibraryEntry[]>([]);
   let listing = $state(false);
   let sharedError = $state<string | null>(null);
+  /** This TV's LAN table (LAN play): the home shows how to join it. */
+  let lan = $state<LanJoinInfo | null>(lanJoinInfo());
 
   let stage: HTMLDivElement | undefined = $state();
   let backArrow: HTMLButtonElement | undefined = $state();
@@ -251,6 +254,11 @@
         if (onBack()) event.preventDefault();
       }
     });
+    if (lan) log.info('tv', 'LAN table', lanLogFields(lan));
+    const stopLan = onLanChange((info) => {
+      lan = info;
+      log.info('tv', 'LAN table changed', lanLogFields(info));
+    });
     const shell = shellBridge();
     shell?.setKeepAwake(true);
     shell?.setImmersive(true);
@@ -275,6 +283,7 @@
     return () => {
       stopDpad();
       stopShell();
+      stopLan();
       removeEventListener('keydown', onKey, true);
       removeEventListener('resize', reportViewport);
       document.removeEventListener('visibilitychange', onHide);
@@ -299,6 +308,7 @@
       tableName={config.deviceName}
       tableId={config.tableId ?? 'table'}
       build={config.build}
+      {lan}
       thumbUrl={ports.files.url}
       onContinue={() => last && openGame(last.id)}
       onLibrary={showLibrary}
