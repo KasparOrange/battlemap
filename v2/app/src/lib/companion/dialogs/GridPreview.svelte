@@ -45,7 +45,7 @@
   );
 </script>
 
-<div class="preview" style:aspect-ratio="{grid.pictureW} / {grid.pictureH}" style:width="min(100%, calc(44dvh * {grid.pictureW} / {grid.pictureH}))">
+<div class="preview" style:aspect-ratio="{grid.pictureW} / {grid.pictureH}" style:width="min(100%, calc(34dvh * {grid.pictureW} / {grid.pictureH}))">
   <img {src} alt="" draggable="false" />
   <svg viewBox="0 0 {grid.pictureW} {grid.pictureH}" preserveAspectRatio="none" aria-hidden="true">
     <path d={outside} fill="rgb(0 0 0 / 0.55)" fill-rule="evenodd" />

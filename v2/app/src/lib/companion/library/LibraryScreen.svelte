@@ -208,7 +208,7 @@
           <h2 class="bm-headline">No games yet</h2>
           <p>Upload a map — a picture, a PDF or a .dd2vtt — or pick one from the shared maps to start the first game.</p>
           <div class="row">
-            <Button label="Upload a map" icon="upload" variant="primary" onclick={() => picker?.click()} />
+            <Button label="Upload a map" icon="upload" onclick={() => picker?.click()} />
             <Button label="Shared maps" icon="library" onclick={() => (view = 'maps')} />
           </div>
         </div>

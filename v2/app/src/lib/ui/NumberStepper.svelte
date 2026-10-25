@@ -95,14 +95,17 @@
 
         const el = root;
         const observer = new ResizeObserver(() => {
-            const chip = el.querySelector<HTMLElement>('.step');
+            // the widest chip ("+0.01" is wider than "+1"): chips differ with decimals
+            const chips = [...el.querySelectorAll<HTMLElement>('.step')];
             const center = el.querySelector<HTMLElement>('.pill');
 
-            if (!chip || !center) return;
+            if (chips.length === 0 || !center) return;
+
+            const chipW = Math.max(...chips.map((c) => c.offsetWidth));
 
             const row = el.querySelector<HTMLElement>('.row');
             const gap = row ? parseFloat(getComputedStyle(row).columnGap) || 0 : 0;
-            const per = 2 * (chip.offsetWidth + gap);
+            const per = 2 * (chipW + gap);
             // the number's MINIMUM width — it grows into whatever the steps leave over
             const pillMin = parseFloat(getComputedStyle(center).minWidth) || center.offsetWidth;
             const fit = Math.max(1, Math.floor((el.clientWidth - pillMin - gap * 2) / per));

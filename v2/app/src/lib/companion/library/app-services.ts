@@ -58,7 +58,7 @@ export function appServices(): CompanionServices {
       const r = await importFile(file, (p) => onProgress(p.fraction, p.label.replace(/…$/, '')), { format });
       const pic = r.map.grid;
       return {
-        fileName: file.name, name: r.map.name || nameFromFile(file.name), kind: r.map.kind,
+        fileName: file.name, name: nameFromFile(file.name), kind: r.map.kind,
         picture: r.pictureBlob, pictureExt: r.map.picture.ext === 'jpg' || r.map.picture.ext === 'webp' ? r.map.picture.ext : 'png',
         pictureW: pic.pictureW, pictureH: pic.pictureH, previewUrl: URL.createObjectURL(r.pictureBlob),
         geometry: null, grid: r.map.grid, drawGrid: r.map.drawGrid, finding: findingOf(r),

@@ -105,15 +105,16 @@
   {onclose}
 >
   <div class="body">
-    <GridPreview src={prepared.previewUrl} {grid}>
-      {#snippet badge()}
+    <figure class="pic">
+      <GridPreview src={prepared.previewUrl} {grid} />
+      <figcaption>
         {#if fitted}
           <Badge text="Fitted by hand: {grid.cols} × {grid.rows} squares" icon="success" tone="ok" />
         {:else}
           <Badge text={finding.text} icon={finding.tone === 'warn' ? 'warning' : 'success'} tone={finding.tone} />
         {/if}
-      {/snippet}
-    </GridPreview>
+      </figcaption>
+    </figure>
 
     <Field label="Name" bind:value={name} placeholder={prepared.name} />
 
@@ -154,6 +155,13 @@
     gap: var(--g2);
   }
 
+  .pic {
+    margin: 0;
+    display: grid;
+    gap: var(--g);
+    justify-items: center;
+  }
+
   .two {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -161,7 +169,14 @@
   }
 
   @media (max-width: 520px) {
-    .two {
+    .pic {
+    margin: 0;
+    display: grid;
+    gap: var(--g);
+    justify-items: center;
+  }
+
+  .two {
       grid-template-columns: 1fr;
     }
   }

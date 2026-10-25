@@ -91,6 +91,7 @@
   let lengthAmount = $state(1);
   let lengthUnit = $state<LengthUnitKind>('squares');
   let askLeave = $state(false);
+  let nudgeStep = $state(1);
   let magnifier = $state.raw<{ at: Point; pic: Point } | null>(null);
 
   let canvas: HTMLCanvasElement | undefined = $state();
@@ -503,8 +504,8 @@
     { id: 'look', label: 'Look', icon: 'view' as const },
     { id: 'move', label: 'Move', icon: 'pan' as const },
     { id: 'stretch', label: 'Stretch', icon: 'fullscreen' as const },
-    { id: 'corners', label: '2 corners', icon: 'grid' as const },
-    { id: 'length', label: 'Known length', icon: 'measure' as const },
+    { id: 'corners', label: 'Corners', icon: 'grid' as const },
+    { id: 'length', label: 'Length', icon: 'measure' as const },
   ];
 </script>
 
@@ -602,16 +603,14 @@
       </Section>
 
       <Section title="Position" description={positionText(grid)}>
-        <div class="nudge" data-ctl="compact">
-          <IconButton icon="arrow-left" label="Left 1 px" onclick={() => commit(moved(grid, -1, 0))} />
-          <IconButton icon="arrow-up" label="Up 1 px" onclick={() => commit(moved(grid, 0, -1))} />
-          <IconButton icon="arrow-down" label="Down 1 px" onclick={() => commit(moved(grid, 0, 1))} />
-          <IconButton icon="arrow-right" label="Right 1 px" onclick={() => commit(moved(grid, 1, 0))} />
-          <span class="sep"></span>
-          <Button label="−0.1 x" variant="flat" size="compact" onclick={() => commit(moved(grid, -0.1, 0))} />
-          <Button label="+0.1 x" variant="flat" size="compact" onclick={() => commit(moved(grid, 0.1, 0))} />
-          <Button label="−0.1 y" variant="flat" size="compact" onclick={() => commit(moved(grid, 0, -0.1))} />
-          <Button label="+0.1 y" variant="flat" size="compact" onclick={() => commit(moved(grid, 0, 0.1))} />
+        <div class="nudge">
+          <Segmented label="Step" value={String(nudgeStep)} onchange={(id) => (nudgeStep = Number(id))} options={[{ id: '1', label: '1 px' }, { id: '0.1', label: '0.1 px' }]} />
+          <span class="arrows" data-ctl="compact">
+            <IconButton icon="arrow-left" label="Left {nudgeStep} px" onclick={() => commit(moved(grid, -nudgeStep, 0))} />
+            <IconButton icon="arrow-up" label="Up {nudgeStep} px" onclick={() => commit(moved(grid, 0, -nudgeStep))} />
+            <IconButton icon="arrow-down" label="Down {nudgeStep} px" onclick={() => commit(moved(grid, 0, nudgeStep))} />
+            <IconButton icon="arrow-right" label="Right {nudgeStep} px" onclick={() => commit(moved(grid, nudgeStep, 0))} />
+          </span>
         </div>
         <Button label="Lines on the picture edge" icon="fit" variant="flat" onclick={() => commit({ ...grid, x: 0, y: 0 })} />
       </Section>
@@ -776,15 +775,14 @@
   .nudge {
     display: flex;
     flex-wrap: wrap;
-    gap: calc(var(--g) / 2);
+    gap: var(--g);
     align-items: center;
+    justify-content: space-between;
   }
 
-  .sep {
-    width: 1px;
-    align-self: stretch;
-    background: var(--hair);
-    margin: 0 calc(var(--g) / 2);
+  .arrows {
+    display: flex;
+    gap: calc(var(--g) / 2);
   }
 
   .jumps {
