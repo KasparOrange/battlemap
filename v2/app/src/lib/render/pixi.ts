@@ -33,6 +33,10 @@ export interface TableRenderer {
   readonly scheduler: RenderScheduler;
   /** The world container (camera transforms go here); screen-space layers sit beside it. */
   readonly world: Container;
+  /** The GPU's name (`WEBGL_debug_renderer_info`), null when the browser hides it. */
+  readonly gpu: string | null;
+  /** The WebGL context (the bench counts draw calls on it), null on another backend. */
+  readonly gl: WebGL2RenderingContext | null;
   /** Stops observing, frees the GPU. */
   destroy(): void;
 }
@@ -77,6 +81,9 @@ export async function createRenderer(host: HTMLElement, opts: RendererOptions): 
     height,
     background: opts.background ?? 0x000000,
     powerPreference: 'high-performance',
+    // We free textures ourselves (maps leave the table, memory events); Pixi's idle GC would
+    // unload tiles whose bitmaps we already closed.
+    gcActive: false,
   });
   app.ticker.stop();
   const canvas = app.canvas;
@@ -98,13 +105,16 @@ export async function createRenderer(host: HTMLElement, opts: RendererOptions): 
   });
   observer.observe(host);
 
-  opts.log.info('render', 'Renderer ready', { ms: Math.round(performance.now() - t0), width, height, resolution, ...gpuFacts(app) });
+  const facts = gpuFacts(app);
+  opts.log.info('render', 'Renderer ready', { ms: Math.round(performance.now() - t0), width, height, resolution, ...facts });
   scheduler.invalidate();
 
   return {
     app,
     scheduler,
     world,
+    gpu: typeof facts.gpu === 'string' ? facts.gpu : null,
+    gl: (app.renderer as unknown as { gl?: WebGL2RenderingContext }).gl ?? null,
     destroy() {
       observer.disconnect();
       app.destroy({ removeView: true }, { children: true, texture: true, textureSource: true });
