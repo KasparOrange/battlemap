@@ -1,0 +1,2121 @@
+# The effects catalogue: every shipped effect, where it comes from and how it is built.
+# build.py reads this file; v2/docs/effects.md explains the fields.
+#
+# squares   = width of the SOURCE frame in map squares (JB2A: px / 100, its grid; JB2A ranged
+#             and cone files use a 200 px grid — see the per-effect notes)
+# mode      = loop | once
+# blend     = normal | add | screen | multiply
+# layer     = ground (decals, circles: under the rest) | air (clouds, bursts: over the rest)
+# category  = global | regional | point | aura | map-loop
+
+# ------------------------------------------------------------------ sources
+[sources.jb2a]
+name = "JB2A — Jules&Ben's Animated Assets, free module"
+author = "JB2A (Jules & Ben)"
+licence = "CC BY-NC-SA 4.0"
+licence_url = "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+commercial = false
+share_alike = true
+url = "https://github.com/Jules-Bens-Aa/JB2A_DnD5e"
+attribution = "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap."
+dir = "jb2a-free"
+input = "video"
+blend = "normal"
+
+[sources.unity]
+name = "Unity Labs — free VFX image sequences & flipbooks"
+author = "Unity Technologies (Unity Labs)"
+licence = "CC0 1.0"
+licence_url = "https://creativecommons.org/publicdomain/zero/1.0/"
+url = "https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks"
+attribution = "Flipbook by Unity Labs (CC0)."
+dir = "unity-labs-vfx/x"
+input = "flipbook"
+blend = "normal"
+
+[sources.kenney-particles]
+name = "Kenney — Particle Pack"
+author = "Kenney (kenney.nl)"
+licence = "CC0 1.0"
+licence_url = "https://creativecommons.org/publicdomain/zero/1.0/"
+url = "https://kenney.nl/assets/particle-pack"
+attribution = "Particle texture by Kenney (kenney.nl), CC0."
+dir = "kenney-particle-pack/x/kenney_particlePack/PNG"
+input = "image"
+blend = "add"
+
+[sources.kenney-smoke]
+name = "Kenney — Smoke Particles"
+author = "Kenney (kenney.nl)"
+licence = "CC0 1.0"
+licence_url = "https://creativecommons.org/publicdomain/zero/1.0/"
+url = "https://kenney.nl/assets/smoke-particles"
+attribution = "Smoke texture by Kenney (kenney.nl), CC0."
+dir = "kenney-smoke-particles/x/smokeParticleAssets/PNG"
+input = "image"
+blend = "normal"
+
+[sources.johndh]
+name = "Colored summoning circles (OpenGameArt)"
+author = "johndh"
+licence = "CC BY 3.0"
+licence_url = "https://creativecommons.org/licenses/by/3.0/"
+url = "https://opengameart.org/content/colored-summoning-circles"
+attribution = "\"Colored summoning circles\" by johndh (opengameart.org), CC BY 3.0."
+dir = "oga-johndh-summoning-circles"
+input = "image"
+blend = "add"
+
+[sources.lottiefiles]
+name = "LottieFiles free animations (baked to frames)"
+author = "see effect"
+licence = "Lottie Simple License"
+licence_url = "https://lottiefiles.com/page/license"
+url = "https://lottiefiles.com"
+attribution = "Lottie animation from LottieFiles (Lottie Simple License), baked into a sprite sheet."
+dir = "lottiefiles/baked"
+input = "frames"
+blend = "add"
+
+[sources.own]
+name = "battlemap's own (hand-made or procedural)"
+author = "battlemap"
+licence = "Own work (repo licence)"
+licence_url = ""
+url = ""
+attribution = "battlemap (own work)."
+dir = "own"
+input = "frames"
+blend = "add"
+
+[sources.gemini]
+name = "Generated with Gemini (Nano Banana 2.1) for battlemap"
+author = "battlemap, generated with Google Gemini"
+licence = "Own work (generated)"
+licence_url = "https://ai.google.dev/gemini-api/terms"
+url = ""
+attribution = "Generated for battlemap with Google Gemini (Nano Banana 2.1)."
+dir = "gemini/picked"
+input = "image"
+blend = "normal"
+
+# ------------------------------------------------------------------ effects
+# ---------- spells: areas and bursts (JB2A, CC BY-NC-SA) ----------
+[[effect]]
+id = "fireball"
+name = "Fireball"
+category = "regional"
+source = "jb2a"
+file = "FireballExplosion_01_Orange_800x800.webm"
+mode = "once"
+end = 3.4
+fps = 16
+squares = 8
+damage = ["fire"]
+spells = ["Fireball", "Delayed Blast Fireball", "Meteor Swarm"]
+tags = ["explosion", "burst", "evocation"]
+notes = "40 ft diameter at 8 squares. The long smoke fade after 3.4 s is cut."
+
+[[effect]]
+id = "burning-hands"
+name = "Burning Hands (cone)"
+category = "regional"
+source = "jb2a"
+file = "BurningHands_01_Regular_Orange_600x600.webm"
+mode = "once"
+squares = 3
+anchor = [0.0, 0.5]
+damage = ["fire"]
+spells = ["Burning Hands"]
+tags = ["cone", "flame"]
+notes = "Apex of the 15 ft cone at the anchor (left middle); rotate toward the target."
+
+[[effect]]
+id = "breath-fire-cone"
+name = "Dragon breath — fire cone"
+category = "regional"
+source = "jb2a"
+file = "BreathWeapon_Fire01_Regular_Orange_30ft_Cone_Burst_600x600.webm"
+mode = "once"
+squares = 6
+anchor = [0.0, 0.5]
+damage = ["fire"]
+spells = ["Dragon breath", "Dragonborn breath weapon"]
+tags = ["cone", "breath", "dragon"]
+
+[[effect]]
+id = "breath-lightning-line"
+name = "Dragon breath — lightning line"
+category = "regional"
+source = "jb2a"
+file = "BreathWeapon_Lightning01_Regular_Blue_30ft_Line_Burst_1200x200.webm"
+mode = "once"
+squares = 6
+anchor = [0.0, 0.5]
+beam = [0.0, 1.0]
+damage = ["lightning"]
+spells = ["Dragon breath"]
+tags = ["line", "breath", "dragon"]
+
+[[effect]]
+id = "cone-of-cold"
+name = "Cone of Cold"
+category = "regional"
+source = "jb2a"
+file = "ConeOfCold_01_Regular_Blue_600x600.webm"
+mode = "once"
+squares = 6
+anchor = [0.0, 0.5]
+damage = ["cold"]
+spells = ["Cone of Cold"]
+tags = ["cone", "frost", "ice"]
+notes = "Drawn at 30 ft; scale ×2 for the spell's 60 ft cone."
+
+[[effect]]
+id = "thunderwave"
+name = "Thunderwave"
+category = "regional"
+source = "jb2a"
+file = "Thunderwave_01_Bright_Blue_Center_600x600.webm"
+mode = "once"
+squares = 3
+damage = ["thunder"]
+spells = ["Thunderwave"]
+tags = ["shockwave", "cube", "push"]
+
+[[effect]]
+id = "shatter"
+name = "Shatter"
+category = "regional"
+source = "jb2a"
+file = "Shatter_01_Blue_400x400.webm"
+mode = "once"
+squares = 4
+damage = ["thunder"]
+spells = ["Shatter"]
+tags = ["shockwave", "burst"]
+
+[[effect]]
+id = "darkness"
+name = "Darkness"
+category = "regional"
+source = "jb2a"
+file = "Darkness_01_Black_600x600.webm"
+squares = 6
+fps = 10
+damage = ["necrotic"]
+spells = ["Darkness"]
+tags = ["darkness", "shadow", "sphere"]
+
+[[effect]]
+id = "fog-cloud"
+name = "Fog Cloud"
+category = "regional"
+source = "jb2a"
+file = "FogCloud_01_White_800x800.webm"
+squares = 8
+fps = 10
+spells = ["Fog Cloud", "Obscuring mist"]
+tags = ["fog", "cloud", "mist", "obscure"]
+
+[[effect]]
+id = "cloudkill"
+name = "Cloudkill"
+category = "regional"
+source = "jb2a"
+file = "SmokeCircleLoop001_001_GreenPurple_15ft_800x800.webm"
+squares = 8
+fps = 10
+damage = ["poison"]
+spells = ["Cloudkill", "Stinking Cloud", "Poison cloud"]
+tags = ["cloud", "gas", "poison"]
+
+[[effect]]
+id = "spirit-guardians"
+name = "Spirit Guardians"
+category = "aura"
+source = "jb2a"
+file = "SpiritGuardians_01_Light_BlueYellow_600x600.webm"
+squares = 6
+fps = 10
+damage = ["radiant", "necrotic"]
+spells = ["Spirit Guardians"]
+tags = ["aura", "holy", "spirits"]
+
+[[effect]]
+id = "black-tentacles"
+name = "Evard's Black Tentacles"
+category = "regional"
+source = "jb2a"
+file = "BlackTentacles_01_Dark_Purple_600x600.webm"
+squares = 5
+layer = "ground"
+damage = ["bludgeoning"]
+spells = ["Evard's Black Tentacles", "Hunger of Hadar"]
+tags = ["tentacles", "shadow", "restrain"]
+
+[[effect]]
+id = "plant-growth"
+name = "Plant Growth ring"
+category = "regional"
+source = "jb2a"
+file = "PlantGrowthRingLoop03_01_Regular_GreenYellow_500x500.webm"
+squares = 5
+layer = "ground"
+spells = ["Plant Growth", "Goodberry", "Druid circle"]
+tags = ["plants", "flowers", "nature", "ring"]
+
+[[effect]]
+id = "call-lightning"
+name = "Call Lightning"
+category = "regional"
+source = "jb2a"
+file = "CallLightning_01_Blue_1000x1000.webm"
+mode = "once"
+squares = 4
+damage = ["lightning"]
+spells = ["Call Lightning", "Storm of Vengeance"]
+tags = ["lightning", "storm", "strike"]
+
+[[effect]]
+id = "ice-spikes"
+name = "Ice spikes burst"
+category = "regional"
+source = "jb2a"
+file = "IceSpikesRadialLoop_01_Regular_White_1000x1000.webm"
+squares = 6
+layer = "ground"
+damage = ["cold", "piercing"]
+spells = ["Ice Knife", "Frost spikes", "Spike Growth (ice)"]
+tags = ["ice", "spikes", "frost"]
+
+[[effect]]
+id = "wall-of-fire-line"
+name = "Wall of Fire (5 squares)"
+category = "regional"
+source = "jb2a"
+file = "WallOfFire_01_Yellow_500x100.webm"
+squares = 5
+damage = ["fire"]
+spells = ["Wall of Fire", "Blade Barrier (fire)"]
+tags = ["wall", "flames", "line"]
+notes = "A 25 ft segment; tile segments end to end along a line."
+
+[[effect]]
+id = "wall-of-fire-ring"
+name = "Wall of Fire (ring)"
+category = "regional"
+source = "jb2a"
+file = "WallOfFire_01_Yellow_Ring_400x400.webm"
+squares = 4
+damage = ["fire"]
+spells = ["Wall of Fire", "Fire Shield"]
+tags = ["wall", "flames", "ring"]
+
+[[effect]]
+id = "wall-of-force"
+name = "Wall of Force (dome)"
+category = "regional"
+source = "jb2a"
+file = "WallOfForce_01_Grey_Sphere_400x400.webm"
+squares = 4
+damage = ["force"]
+spells = ["Wall of Force", "Resilient Sphere", "Tiny Hut"]
+tags = ["dome", "barrier", "force"]
+
+[[effect]]
+id = "misty-step"
+name = "Misty Step (teleport)"
+category = "point"
+source = "jb2a"
+file = "MistyStep_01_Regular_Blue_400x400.webm"
+mode = "once"
+squares = 2
+spells = ["Misty Step", "Dimension Door", "Thunder Step", "Teleport"]
+tags = ["teleport", "conjuration", "mist"]
+
+[[effect]]
+id = "eruption"
+name = "Eruption"
+category = "regional"
+source = "jb2a"
+file = "Eruption_01_Regular_Orange_600x600.webm"
+mode = "once"
+squares = 4
+damage = ["fire", "bludgeoning"]
+spells = ["Eruption", "Erupting Earth", "Volcano"]
+tags = ["lava", "earth", "burst"]
+
+# ---------- spells: rays and bolts (JB2A ranged files: 200 px grid, 1 square padding each end) ----------
+[[effect]]
+id = "lightning-bolt"
+name = "Lightning Bolt"
+category = "regional"
+source = "jb2a"
+file = "LightningBolt_01_Regular_Blue_4000x200.webm"
+mode = "once"
+squares = 20
+beam = [0.05, 0.95]
+damage = ["lightning"]
+spells = ["Lightning Bolt"]
+tags = ["line", "bolt", "beam"]
+notes = "A line effect: stretch so beam.start→beam.end spans caster→target."
+
+[[effect]]
+id = "fire-bolt"
+name = "Fire Bolt"
+category = "regional"
+source = "jb2a"
+file = "FireBolt_01_Regular_Orange_30ft_1600x400.webm"
+mode = "once"
+squares = 8
+beam = [0.125, 0.875]
+damage = ["fire"]
+spells = ["Fire Bolt", "Produce Flame (thrown)"]
+tags = ["projectile", "bolt", "cantrip"]
+
+[[effect]]
+id = "ray-of-frost"
+name = "Ray of Frost"
+category = "regional"
+source = "jb2a"
+file = "RayOfFrost_01_Regular_Blue_30ft_1600x400.webm"
+mode = "once"
+squares = 8
+beam = [0.125, 0.875]
+damage = ["cold"]
+spells = ["Ray of Frost"]
+tags = ["ray", "beam", "cantrip"]
+
+[[effect]]
+id = "eldritch-blast"
+name = "Eldritch Blast"
+category = "regional"
+source = "jb2a"
+file = "EldritchBlast_01_Regular_Purple_30ft_1600x400.webm"
+mode = "once"
+squares = 8
+beam = [0.125, 0.875]
+damage = ["force"]
+spells = ["Eldritch Blast"]
+tags = ["beam", "cantrip", "warlock"]
+
+[[effect]]
+id = "magic-missile"
+name = "Magic Missile (one dart)"
+category = "regional"
+source = "jb2a"
+file = "MagicMissile_01_Regular_Purple_30ft_01_1600x400.webm"
+mode = "once"
+squares = 8
+beam = [0.125, 0.875]
+damage = ["force"]
+spells = ["Magic Missile"]
+tags = ["projectile", "dart"]
+
+[[effect]]
+id = "gust-of-wind"
+name = "Gust of Wind (line)"
+category = "regional"
+source = "jb2a"
+file = "GustOfWind_01_White_1200x200.webm"
+squares = 12
+anchor = [0.0, 0.5]
+beam = [0.0, 1.0]
+spells = ["Gust of Wind", "Wind Wall"]
+tags = ["wind", "line", "push"]
+
+# ---------- spells on a creature or a spot (JB2A) ----------
+[[effect]]
+id = "cure-wounds"
+name = "Cure Wounds"
+category = "point"
+source = "jb2a"
+file = "CureWounds_01_Blue_400x400.webm"
+mode = "once"
+squares = 2
+spells = ["Cure Wounds", "Healing Word", "Mass Cure Wounds"]
+tags = ["healing", "heal"]
+
+[[effect]]
+id = "healing-aura"
+name = "Healing aura"
+category = "aura"
+source = "jb2a"
+file = "HealingAbility_02_Regular_GreenOrange_Loop_600x600.webm"
+squares = 3
+spells = ["Aura of Vitality", "Regenerate", "Prayer of Healing"]
+tags = ["healing", "aura", "regeneration"]
+
+[[effect]]
+id = "sacred-flame"
+name = "Sacred Flame"
+category = "point"
+source = "jb2a"
+file = "SacredFlameTarget_01_Regular_Yellow_400x400.webm"
+mode = "once"
+squares = 2
+damage = ["radiant"]
+spells = ["Sacred Flame", "Flame Strike", "Dawn"]
+tags = ["holy", "light", "column"]
+
+[[effect]]
+id = "toll-the-dead"
+name = "Toll the Dead"
+category = "point"
+source = "jb2a"
+file = "TollTheDead_01_Regular_Green_400x400.webm"
+mode = "once"
+squares = 2
+damage = ["necrotic"]
+spells = ["Toll the Dead", "Chill Touch", "Inflict Wounds"]
+tags = ["necrotic", "bell", "death"]
+
+[[effect]]
+id = "lightning-strike"
+name = "Lightning strike"
+category = "point"
+source = "jb2a"
+file = "LightningStrike01_01_Regular_Blue_800x800.webm"
+mode = "once"
+squares = 4
+damage = ["lightning"]
+spells = ["Call Lightning", "Shocking Grasp", "Destructive Wave"]
+tags = ["lightning", "strike", "storm"]
+
+[[effect]]
+id = "explosion-arcane"
+name = "Arcane burst"
+category = "point"
+source = "jb2a"
+file = "Explosion_04_Regular_Blue_400x400.webm"
+mode = "once"
+squares = 2
+damage = ["force"]
+spells = ["Counterspell", "Dispel Magic", "Arcane Eruption"]
+tags = ["explosion", "burst", "arcane"]
+
+[[effect]]
+id = "impact-hit"
+name = "Hit impact"
+category = "point"
+source = "jb2a"
+file = "Impact_03_Regular_Blue_400x400.webm"
+mode = "once"
+squares = 1.5
+damage = ["force", "bludgeoning"]
+tags = ["hit", "impact", "attack"]
+
+[[effect]]
+id = "claw-slash"
+name = "Claw slash"
+category = "point"
+source = "jb2a"
+file = "CreatureAttackClaw_001_001_Red_800x600.webm"
+mode = "once"
+squares = 2
+damage = ["slashing"]
+tags = ["hit", "claw", "monster attack"]
+
+[[effect]]
+id = "ground-crack-impact"
+name = "Ground slam"
+category = "point"
+source = "jb2a"
+file = "GroundCrackImpact_01_Regular_Orange_600x600.webm"
+mode = "once"
+squares = 3
+layer = "ground"
+damage = ["bludgeoning", "thunder"]
+spells = ["Earth Tremor", "Erupting Earth"]
+tags = ["impact", "cracks", "earth"]
+
+[[effect]]
+id = "frost-impact"
+name = "Frost impact"
+category = "point"
+source = "jb2a"
+file = "FrostImpact_01_Regular_White_600x600.webm"
+mode = "once"
+squares = 3
+damage = ["cold"]
+spells = ["Ice Knife", "Frostbite", "Snilloc's Snowball Swarm"]
+tags = ["ice", "impact", "burst"]
+
+[[effect]]
+id = "blood-splash"
+name = "Blood splash (hit)"
+category = "point"
+source = "jb2a"
+file = "LiquidSplash02_01_Regular_Red_500x500.webm"
+mode = "once"
+squares = 2
+layer = "ground"
+damage = ["piercing", "slashing"]
+tags = ["blood", "hit", "splash"]
+
+# ---------- auras and token markers (JB2A) ----------
+
+[[effect]]
+id = "aura-arcane"
+name = "Aura — arcane"
+category = "aura"
+source = "jb2a"
+file = "AuraLoop01_01_Regular_BluePurple_500x500.webm"
+squares = 3
+spells = ["Aura of Protection", "Mage Armor", "Haste"]
+tags = ["aura", "glow"]
+
+[[effect]]
+id = "aura-frost"
+name = "Aura — frost orbit"
+category = "aura"
+source = "jb2a"
+file = "AuraThemedOrbitLoopCold01_01_Regular_Blue_700x700.webm"
+squares = 4
+damage = ["cold"]
+spells = ["Armor of Agathys", "Frost aura"]
+tags = ["aura", "ice", "orbit"]
+
+[[effect]]
+id = "token-ring"
+name = "Turn ring (spinning)"
+category = "aura"
+source = "jb2a"
+file = "TokenBorderCircleSpin_01_Regular_Blue_400x400.webm"
+squares = 2
+layer = "ground"
+tags = ["marker", "ring", "turn", "selected"]
+tint = true
+ops = [["desaturate", 0.85]]
+
+[[effect]]
+id = "bless"
+name = "Bless"
+category = "aura"
+source = "jb2a"
+file = "Bless_01_Regular_Yellow_Loop_400x400.webm"
+squares = 2
+spells = ["Bless", "Bardic Inspiration", "Heroism"]
+tags = ["buff", "holy", "aura"]
+
+[[effect]]
+id = "hunters-mark"
+name = "Hunter's Mark"
+category = "aura"
+source = "jb2a"
+file = "HuntersMark_01_Regular_Green_Loop_200x200.webm"
+squares = 1.5
+spells = ["Hunter's Mark", "Hex"]
+tags = ["marked", "target", "debuff"]
+
+[[effect]]
+id = "shield"
+name = "Shield"
+category = "aura"
+source = "jb2a"
+file = "Shield_01_Regular_Blue_Loop_400x400.webm"
+squares = 2.5
+spells = ["Shield", "Shield of Faith", "Protection from Energy"]
+tags = ["barrier", "buff", "abjuration"]
+
+[[effect]]
+id = "dancing-lights"
+name = "Dancing Lights"
+category = "point"
+source = "jb2a"
+file = "DancingLights_01_Yellow_200x200.webm"
+squares = 1
+spells = ["Dancing Lights", "Light", "Will-o'-wisp"]
+tags = ["light", "orb", "wisp"]
+
+[[effect]]
+id = "swirling-leaves"
+name = "Swirling leaves"
+category = "aura"
+source = "jb2a"
+file = "SwirlingLeavesLoop01_01_Regular_Green_400x400.webm"
+squares = 3
+spells = ["Pass without Trace", "Wild Shape", "Misty Step (Eladrin spring)"]
+tags = ["leaves", "nature", "wind"]
+
+[[effect]]
+id = "restrained-chains"
+name = "Restrained (chains)"
+category = "aura"
+source = "jb2a"
+file = "MarkerChainStandard01_01_Regular_Red_Loop_400x400.webm"
+squares = 2
+spells = ["Hold Person", "Hold Monster", "Banishing chains"]
+tags = ["condition", "restrained", "paralyzed", "chains"]
+
+[[effect]]
+id = "marker-poisoned"
+name = "Poisoned"
+category = "aura"
+source = "jb2a"
+file = "MarkerPoison_01_Dark_Green_400x400.webm"
+squares = 2
+damage = ["poison"]
+tags = ["condition", "poisoned", "marker"]
+
+[[effect]]
+id = "marker-frightened"
+name = "Frightened"
+category = "aura"
+source = "jb2a"
+file = "MarkerFear_01_Dark_Purple_400x400.webm"
+squares = 2
+damage = ["psychic"]
+spells = ["Cause Fear", "Fear"]
+tags = ["condition", "frightened", "marker"]
+
+[[effect]]
+id = "marker-stunned"
+name = "Stunned"
+category = "aura"
+source = "jb2a"
+file = "MarkerStun_01_Regular_Purple_400x400.webm"
+squares = 2
+spells = ["Stunning Strike", "Power Word Stun"]
+tags = ["condition", "stunned", "marker"]
+
+# ---------- map loops: fire, water, light (JB2A) ----------
+
+[[effect]]
+id = "campfire"
+name = "Campfire"
+category = "map-loop"
+source = "jb2a"
+file = "Campfire_01_Regular_Orange_200x200.webm"
+squares = 2
+fps = 15
+layer = "ground"
+damage = ["fire"]
+tags = ["fire", "camp", "light source"]
+
+[[effect]]
+id = "bonfire"
+name = "Bonfire"
+category = "map-loop"
+source = "jb2a"
+file = "Bonfire_01_Regular_Orange_400x400.webm"
+squares = 3
+fps = 15
+layer = "ground"
+damage = ["fire"]
+tags = ["fire", "pyre", "light source"]
+
+[[effect]]
+id = "flames-patch"
+name = "Burning ground"
+category = "map-loop"
+source = "jb2a"
+file = "Flames_02_Regular_Orange_400x400.webm"
+squares = 2
+fps = 15
+damage = ["fire"]
+spells = ["Create Bonfire", "Wall of Fire", "Flame Strike (aftermath)"]
+tags = ["fire", "burning", "hazard"]
+
+[[effect]]
+id = "lava-cracks"
+name = "Glowing lava cracks"
+category = "map-loop"
+source = "jb2a"
+file = "GroundCrackLoop_01_Regular_Orange_600x600.webm"
+squares = 4
+layer = "ground"
+damage = ["fire"]
+spells = ["Earthquake", "Molten ground"]
+tags = ["lava", "cracks", "hazard"]
+
+[[effect]]
+id = "scorched-earth"
+name = "Scorched earth"
+category = "regional"
+source = "jb2a"
+file = "ScorchedEarth_01_Black_800x800.webm"
+squares = 6
+layer = "ground"
+damage = ["fire"]
+spells = ["Fireball (aftermath)", "Incendiary Cloud"]
+tags = ["burnt", "lava", "hazard"]
+
+[[effect]]
+id = "water-splash"
+name = "Waterfall foot / splash"
+category = "map-loop"
+source = "jb2a"
+file = "WaterSplashLoop_01_01_Regular_Blue_600x600.webm"
+squares = 3
+tags = ["water", "waterfall", "fountain", "splash"]
+
+[[effect]]
+id = "bubbles"
+name = "Bubbles (swamp, cauldron)"
+category = "map-loop"
+source = "jb2a"
+file = "BubbleLoop001_001_Blue_2x2_400x400.webm"
+squares = 2
+layer = "ground"
+tint = true
+ops = [["desaturate", 0.6]]
+tags = ["water", "swamp", "cauldron", "bubbles"]
+
+[[effect]]
+id = "steam-vent"
+name = "Steam vent"
+category = "map-loop"
+source = "jb2a"
+file = "Fumes_02_Steam_White_400x400.webm"
+squares = 2
+tags = ["steam", "vent", "hot spring", "fumes"]
+
+[[effect]]
+id = "fog-patch"
+name = "Fog bank (patch)"
+category = "map-loop"
+source = "jb2a"
+file = "AmbientFog001_001_Loop_White_1200x1200.webm"
+squares = 8
+fps = 10
+tags = ["fog", "mist", "swamp", "ambient"]
+
+[[effect]]
+id = "fireflies"
+name = "Fireflies"
+category = "map-loop"
+source = "jb2a"
+file = "Fireflies_01_Green_Many01_400x400.webm"
+squares = 4
+blend = "add"
+tags = ["fireflies", "night", "forest", "ambient"]
+
+[[effect]]
+id = "portal"
+name = "Portal (golden)"
+category = "map-loop"
+source = "jb2a"
+file = "Portal_Bright_Yellow_H_400x400.webm"
+squares = 2
+spells = ["Gate", "Teleportation Circle", "Arcane Gate"]
+tags = ["portal", "gate", "teleport"]
+
+[[effect]]
+id = "glint"
+name = "Glints (loot)"
+category = "point"
+source = "jb2a"
+file = "GlintMany01_01_Regular_Yellow_200x200.webm"
+squares = 1
+blend = "add"
+tags = ["treasure", "sparkle", "loot", "gold"]
+
+[[effect]]
+id = "ward-rune"
+name = "Glyph of Warding (animated)"
+category = "regional"
+source = "jb2a"
+file = "WardRune_01_Regular_Yellow_600x600.webm"
+squares = 3
+layer = "ground"
+spells = ["Glyph of Warding", "Symbol", "Alarm"]
+tags = ["glyph", "ward", "trap", "rune"]
+
+# ---------- global (JB2A) ----------
+
+[[effect]]
+id = "wind-streams"
+name = "Wind streaks"
+category = "global"
+source = "jb2a"
+file = "WindStreams_01_White_20OPA_1200x1200.webm"
+squares = 12
+fps = 10
+frame_max = 256
+tags = ["wind", "weather", "storm"]
+notes = "Tile it over the map (repeat every 12 squares)."
+
+[[effect]]
+id = "bad-omen"
+name = "Bad omen (dark vignette)"
+category = "global"
+technique = "texture"
+source = "jb2a"
+file = "BadOmen01_01_Dark_Black_1920x1080.webm"
+squares = 34
+max_px = 768
+trim = false
+motion = { pulse = { period = 6, alpha = 0.3, scale = 0.0 }, fadeIn = 2.0 }
+tags = ["vignette", "dread", "mood", "darkness"]
+notes = "Stretch over the visible table (cover)."
+
+[[effect]]
+id = "school-circle-abjuration"
+name = "Magic circle — abjuration (JB2A)"
+category = "regional"
+technique = "texture"
+source = "jb2a"
+file = "AbjurationCircleLoop_02_Regular_Blue_800x800.webm"
+squares = 8
+max_px = 512
+layer = "ground"
+spells = ["Glyph of Warding", "Counterspell", "Banishment"]
+tags = ["magic circle", "school", "abjuration", "ward", "ritual"]
+motion = { rotate = 3, pulse = { period = 4, alpha = 0.2, scale = 0.0 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "school-circle-conjuration"
+name = "Magic circle — conjuration (JB2A)"
+category = "regional"
+technique = "texture"
+source = "jb2a"
+file = "ConjurationCircleLoop_02_Regular_Yellow_800x800.webm"
+squares = 8
+max_px = 512
+layer = "ground"
+spells = ["Conjure Animals", "Find Familiar", "Teleportation Circle"]
+tags = ["magic circle", "school", "conjuration", "summon", "ritual"]
+motion = { rotate = 3, pulse = { period = 4, alpha = 0.2, scale = 0.0 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "school-circle-divination"
+name = "Magic circle — divination (JB2A)"
+category = "regional"
+technique = "texture"
+source = "jb2a"
+file = "DivinationCircleLoop_02_Regular_Blue_800x800.webm"
+squares = 8
+max_px = 512
+layer = "ground"
+spells = ["Scrying", "Clairvoyance", "Augury"]
+tags = ["magic circle", "school", "divination", "scry", "ritual"]
+motion = { rotate = 3, pulse = { period = 4, alpha = 0.2, scale = 0.0 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "school-circle-enchantment"
+name = "Magic circle — enchantment (JB2A)"
+category = "regional"
+technique = "texture"
+source = "jb2a"
+file = "EnchantmentCircleLoop_02_Regular_Pink_800x800.webm"
+squares = 8
+max_px = 512
+layer = "ground"
+spells = ["Charm Person", "Hypnotic Pattern", "Suggestion"]
+tags = ["magic circle", "school", "enchantment", "charm", "ritual"]
+motion = { rotate = 3, pulse = { period = 4, alpha = 0.2, scale = 0.0 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "school-circle-evocation"
+name = "Magic circle — evocation (JB2A)"
+category = "regional"
+technique = "texture"
+source = "jb2a"
+file = "EvocationCircleLoop_02_Regular_Red_800x800.webm"
+squares = 8
+max_px = 512
+layer = "ground"
+spells = ["Fireball", "Flame Strike", "Wall of Fire"]
+tags = ["magic circle", "school", "evocation", "power", "ritual"]
+motion = { rotate = 3, pulse = { period = 4, alpha = 0.2, scale = 0.0 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "school-circle-illusion"
+name = "Magic circle — illusion (JB2A)"
+category = "regional"
+technique = "texture"
+source = "jb2a"
+file = "IllusionCircleLoop_02_Regular_Purple_800x800.webm"
+squares = 8
+max_px = 512
+layer = "ground"
+spells = ["Silent Image", "Mirror Image", "Major Image"]
+tags = ["magic circle", "school", "illusion", "illusion", "ritual"]
+motion = { rotate = 3, pulse = { period = 4, alpha = 0.2, scale = 0.0 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "school-circle-necromancy"
+name = "Magic circle — necromancy (JB2A)"
+category = "regional"
+technique = "texture"
+source = "jb2a"
+file = "NecromancyCircleLoop_02_Regular_Green_800x800.webm"
+squares = 8
+max_px = 512
+layer = "ground"
+spells = ["Animate Dead", "Speak with Dead", "Create Undead"]
+tags = ["magic circle", "school", "necromancy", "undead", "ritual"]
+motion = { rotate = 3, pulse = { period = 4, alpha = 0.2, scale = 0.0 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "school-circle-transmutation"
+name = "Magic circle — transmutation (JB2A)"
+category = "regional"
+technique = "texture"
+source = "jb2a"
+file = "TransmutationCircleLoop_02_Regular_Yellow_800x800.webm"
+squares = 8
+max_px = 512
+layer = "ground"
+spells = ["Polymorph", "Stone Shape", "Haste"]
+tags = ["magic circle", "school", "transmutation", "change", "ritual"]
+motion = { rotate = 3, pulse = { period = 4, alpha = 0.2, scale = 0.0 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "circle-summoning"
+name = "Magic circle — summoning circle"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "circle-summoning.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 9
+max_px = 512
+layer = "ground"
+spells = ["Conjure Elemental", "Summon Fiend", "Find Steed", "Planar Binding"]
+tags = ["magic circle", "golden", "ritual", "glyph"]
+motion = { rotate = 4, pulse = { period = 3.5, alpha = 0.25, scale = 0.0 }, fadeIn = 1.2, shader = "magic-circle.frag" }
+
+[[effect]]
+id = "circle-ward"
+name = "Magic circle — warding circle"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "circle-ward.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 9
+max_px = 512
+layer = "ground"
+spells = ["Magic Circle", "Protection from Evil and Good", "Forbiddance"]
+tags = ["magic circle", "icy blue", "ritual", "glyph"]
+motion = { rotate = 4, pulse = { period = 3.5, alpha = 0.25, scale = 0.0 }, fadeIn = 1.2, shader = "magic-circle.frag" }
+
+[[effect]]
+id = "circle-teleport"
+name = "Magic circle — teleportation circle"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "circle-teleport.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 9
+max_px = 512
+layer = "ground"
+spells = ["Teleportation Circle", "Teleport", "Word of Recall"]
+tags = ["magic circle", "cyan", "ritual", "glyph"]
+motion = { rotate = 4, pulse = { period = 3.5, alpha = 0.25, scale = 0.0 }, fadeIn = 1.2, shader = "magic-circle.frag" }
+
+[[effect]]
+id = "circle-counterspell"
+name = "Magic circle — counterspell sigil"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "circle-counterspell.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 9
+max_px = 512
+layer = "ground"
+spells = ["Counterspell", "Dispel Magic", "Antimagic Field"]
+tags = ["magic circle", "violet-red", "ritual", "glyph"]
+motion = { rotate = 4, pulse = { period = 3.5, alpha = 0.25, scale = 0.0 }, fadeIn = 1.2, shader = "magic-circle.frag" }
+
+[[effect]]
+id = "circle-necromantic"
+name = "Magic circle — necromantic binding circle"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "circle-necromantic.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 9
+max_px = 512
+layer = "ground"
+spells = ["Animate Dead", "Create Undead", "Finger of Death"]
+tags = ["magic circle", "sickly green", "ritual", "glyph"]
+motion = { rotate = 4, pulse = { period = 3.5, alpha = 0.25, scale = 0.0 }, fadeIn = 1.2, shader = "magic-circle.frag" }
+
+[[effect]]
+id = "circle-celestial"
+name = "Magic circle — celestial circle"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "circle-celestial.jpg"
+ops = ["unblack", ["alpha_gamma", 1.5]]
+blend = "add"
+squares = 9
+max_px = 512
+layer = "ground"
+spells = ["Hallow", "Holy Aura", "Divine Word", "Commune"]
+tags = ["magic circle", "white-gold", "ritual", "glyph"]
+motion = { rotate = 4, pulse = { period = 3.5, alpha = 0.25, scale = 0.0 }, fadeIn = 1.2, shader = "magic-circle.frag" }
+
+[[effect]]
+id = "circle-druidic"
+name = "Magic circle — druidic circle"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "circle-druidic.jpg"
+ops = ["unblack", ["alpha_gamma", 1.5]]
+blend = "add"
+squares = 9
+max_px = 512
+layer = "ground"
+spells = ["Druid Grove", "Commune with Nature", "Transport via Plants"]
+tags = ["magic circle", "green", "ritual", "glyph"]
+motion = { rotate = 4, pulse = { period = 3.5, alpha = 0.25, scale = 0.0 }, fadeIn = 1.2, shader = "magic-circle.frag" }
+
+[[effect]]
+id = "circle-infernal"
+name = "Magic circle — infernal pact circle"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "circle-infernal.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 9
+max_px = 512
+layer = "ground"
+spells = ["Summon Fiend", "Infernal Calling", "Warlock pact"]
+tags = ["magic circle", "crimson", "ritual", "glyph"]
+motion = { rotate = 4, pulse = { period = 3.5, alpha = 0.25, scale = 0.0 }, fadeIn = 1.2, shader = "magic-circle.frag" }
+
+[[effect]]
+id = "circle-arcane"
+name = "Magic circle — arcane circle (simple)"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "circle-arcane.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 9
+max_px = 512
+layer = "ground"
+spells = ["Mage Armor", "Arcane Lock", "Ritual casting"]
+tags = ["magic circle", "violet", "ritual", "glyph"]
+motion = { rotate = 4, pulse = { period = 3.5, alpha = 0.25, scale = 0.0 }, fadeIn = 1.2, shader = "magic-circle.frag" }
+
+[[effect]]
+id = "glyph-of-warding"
+name = "Glyph of Warding"
+category = "point"
+technique = "texture"
+source = "gemini"
+file = "glyph-of-warding.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 3
+max_px = 256
+layer = "ground"
+spells = ["Glyph of Warding", "Symbol", "Alarm", "Arcane Lock"]
+tags = ["glyph", "ward", "trap", "rune"]
+motion = { pulse = { period = 2.5, alpha = 0.4, scale = 0.03 }, fadeIn = 0.8 }
+
+[[effect]]
+id = "runes-arcane"
+name = "Arcane runes (16 variants)"
+category = "point"
+technique = "set"
+source = "gemini"
+input = "flipbook"
+file = "runes-arcane.jpg"
+grid = [4, 4]
+ops = ["unblack"]
+blend = "add"
+squares = 1.2
+layer = "ground"
+tags = ["runes", "glyphs", "writing", "magic"]
+motion = { pulse = { period = 2.0, alpha = 0.4, scale = 0.0 }, fadeIn = 0.5 }
+notes = "Place several; each placement picks a variant. Also the particle texture of rune-motes."
+
+[[effect]]
+id = "runes-ember"
+name = "Dwarven fire runes (16 variants)"
+category = "point"
+technique = "set"
+source = "gemini"
+input = "flipbook"
+file = "runes-ember.jpg"
+grid = [4, 4]
+ops = ["unblack"]
+blend = "add"
+squares = 1.2
+layer = "ground"
+tags = ["runes", "glyphs", "dwarven", "forge"]
+motion = { pulse = { period = 1.6, alpha = 0.45, scale = 0.0 }, fadeIn = 0.5 }
+
+[[effect]]
+id = "web"
+name = "Spider web"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "web-full.jpg"
+ops = [["key", "magenta"]]
+squares = 5
+max_px = 512
+layer = "ground"
+spells = ["Web"]
+tags = ["web", "spider", "restrain", "difficult terrain", "dungeon dressing"]
+motion = { fadeIn = 1.0 }
+
+[[effect]]
+id = "web-corner"
+name = "Corner cobweb"
+category = "map-loop"
+technique = "texture"
+source = "gemini"
+file = "web-corner.jpg"
+ops = [["key", "magenta"]]
+squares = 4
+max_px = 384
+anchor = [0.0, 0.0]
+layer = "ground"
+tags = ["web", "cobweb", "dungeon dressing", "corner"]
+motion = {}
+notes = "Anchor at the room corner (top left); rotate by 90° steps for other corners."
+
+[[effect]]
+id = "vines"
+name = "Entangling vines"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "vines-entangle.jpg"
+ops = [["key", "magenta"]]
+squares = 5
+max_px = 512
+layer = "ground"
+spells = ["Entangle", "Grasping Vine", "Wrath of Nature"]
+tags = ["vines", "plants", "restrain", "difficult terrain"]
+motion = { grow = { from = 0.3, duration = 1.2 }, sway = { angle = 1.5, period = 5 } }
+
+[[effect]]
+id = "spike-growth"
+name = "Spike Growth"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "spike-growth.jpg"
+ops = [["key", "magenta"]]
+squares = 5
+max_px = 512
+layer = "ground"
+damage = ["piercing"]
+spells = ["Spike Growth", "Caltrops", "Thorn Whip"]
+tags = ["thorns", "spikes", "difficult terrain", "hazard"]
+motion = { grow = { from = 0.6, duration = 0.8 }, fadeIn = 0.8 }
+
+[[effect]]
+id = "frost-patch"
+name = "Frost / ice patch"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "frost-patch.jpg"
+ops = [["key", "magenta"]]
+squares = 4
+max_px = 512
+layer = "ground"
+damage = ["cold"]
+spells = ["Ice Storm (aftermath)", "Sleet Storm", "Frost ground"]
+tags = ["ice", "frost", "slippery", "difficult terrain"]
+motion = { fadeIn = 1.5, pulse = { period = 6, alpha = 0.1, scale = 0.0 } }
+
+[[effect]]
+id = "acid-pool"
+name = "Acid pool"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "acid-pool.jpg"
+ops = [["key", "magenta"]]
+squares = 3
+max_px = 384
+layer = "ground"
+damage = ["acid"]
+spells = ["Acid Splash", "Melf's Acid Arrow", "Black dragon lair"]
+tags = ["acid", "puddle", "hazard"]
+motion = { pulse = { period = 2.2, alpha = 0.0, scale = 0.015 }, fadeIn = 0.8 }
+
+[[effect]]
+id = "blood-stains"
+name = "Blood stains (4 variants)"
+category = "point"
+technique = "set"
+source = "gemini"
+input = "flipbook"
+file = "blood-splats.jpg"
+grid = [2, 2]
+ops = [["key", "green"]]
+squares = 1.5
+layer = "ground"
+tags = ["blood", "stain", "wounded", "decal"]
+motion = { fadeIn = 0.4 }
+
+[[effect]]
+id = "scorch-marks"
+name = "Scorch marks (4 variants)"
+category = "point"
+technique = "set"
+source = "gemini"
+input = "flipbook"
+file = "scorch-marks.jpg"
+grid = [2, 2]
+ops = [["key", "magenta"]]
+squares = 2.5
+layer = "ground"
+damage = ["fire"]
+tags = ["scorch", "burn", "soot", "decal", "aftermath"]
+motion = { fadeIn = 0.6 }
+
+[[effect]]
+id = "hunger-of-hadar"
+name = "Hunger of Hadar"
+category = "regional"
+technique = "texture"
+source = "gemini"
+file = "hunger-of-hadar.jpg"
+ops = [["key", "green"]]
+squares = 9
+max_px = 512
+damage = ["cold", "acid"]
+spells = ["Hunger of Hadar", "Darkness", "Maddening Darkness"]
+tags = ["darkness", "void", "tentacles", "shadow"]
+motion = { rotate = -2, pulse = { period = 5, alpha = 0.0, scale = 0.02 }, fadeIn = 1.5 }
+
+[[effect]]
+id = "spirit-ring"
+name = "Spectral guardians ring"
+category = "aura"
+technique = "texture"
+source = "gemini"
+file = "spirit-guardians.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 6.5
+max_px = 512
+damage = ["radiant", "necrotic"]
+spells = ["Spirit Guardians", "Crusader's Mantle", "Aura of Life"]
+tags = ["aura", "spirits", "holy", "ring"]
+motion = { rotate = 18, pulse = { period = 2.0, alpha = 0.2, scale = 0.0 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "portal-swirl"
+name = "Portal swirl"
+category = "map-loop"
+technique = "texture"
+source = "gemini"
+file = "portal-swirl.jpg"
+ops = ["unblack"]
+blend = "add"
+squares = 3
+max_px = 384
+spells = ["Gate", "Plane Shift", "Dimension Door", "Arcane Gate"]
+tags = ["portal", "vortex", "gate", "teleport"]
+motion = { rotate = 40, pulse = { period = 2.4, alpha = 0.15, scale = 0.03 }, fadeIn = 1.0 }
+
+[[effect]]
+id = "campfire-base"
+name = "Campfire stones and embers (base)"
+category = "map-loop"
+technique = "texture"
+source = "gemini"
+file = "campfire-base.jpg"
+ops = [["key", "magenta"]]
+squares = 2
+max_px = 256
+layer = "ground"
+tags = ["campfire", "stones", "embers", "part"]
+motion = { glow = { period = 1.3, amount = 0.15 } }
+notes = "The ground part of the campfire composite."
+
+[[effect]]
+id = "brazier-base"
+name = "Iron brazier (base)"
+category = "map-loop"
+technique = "texture"
+source = "gemini"
+file = "brazier-base.jpg"
+ops = [["key", "magenta"]]
+squares = 1.3
+max_px = 192
+layer = "ground"
+tags = ["brazier", "coals", "part"]
+motion = { glow = { period = 1.1, amount = 0.15 } }
+notes = "The ground part of the brazier composite."
+
+[[effect]]
+id = "magic-circle-indicator"
+name = "Magic circle indicator (layered)"
+category = "regional"
+technique = "layers"
+source = "own"
+input = "frames"
+file = "magic-circle-layers"
+squares = 4
+blend = "add"
+layer = "ground"
+tint = true
+spells = ["Any spell being cast", "Concentration", "Ritual"]
+tags = ["magic circle", "indicator", "casting", "ring"]
+layers = [
+  { frame = 0, name = "outer ring", rotate = 45 },
+  { frame = 1, name = "dashed ring", rotate = -45 },
+  { frame = 2, name = "runes", rotate = 11.25 },
+  { frame = 3, name = "star", rotate = 9 },
+  { frame = 4, name = "pentagon", rotate = 9 },
+  { frame = 5, name = "inner ring", rotate = -22.5 },
+  { frame = 6, name = "core", pulse = { period = 4, scale = [0.92, 1.04] } },
+]
+author = "battlemap (hand-made Lottie, docs/mockups/effects/media/lottie-magic-circle.json)"
+notes = "The tabletop board's liked magic circle: each layer one texture turning at its own speed — no frames, smooth at any speed."
+
+[[effect]]
+id = "vortex-ring"
+name = "Spiral vortex ring"
+category = "aura"
+source = "lottiefiles"
+file = "vortex-ring"
+source_fps = 16.7
+squares = 3
+fps = 16
+ops = [["desaturate", 1.0]]
+tint = true
+blend = "add"
+spells = ["Gate", "Teleport", "Wild magic surge"]
+tags = ["vortex", "spiral", "portal", "aura"]
+author = "ZhengWang (LottieFiles)"
+origin = "https://lottiefiles.com/animations/vortex-UhsY3SdpvW"
+attribution = "\"vortex\" by ZhengWang on LottieFiles (Lottie Simple License), baked into a sprite sheet."
+
+[[effect]]
+id = "summoning-circle-green"
+name = "Summoning circle — green (johndh)"
+category = "regional"
+technique = "texture"
+source = "johndh"
+file = "circle4a.png"
+ops = ["unblack"]
+squares = 4
+max_px = 256
+layer = "ground"
+tags = ["magic circle", "summoning", "green"]
+motion = { rotate = 8, pulse = { period = 3, alpha = 0.2, scale = 0.0 } }
+
+[[effect]]
+id = "summoning-circle-red"
+name = "Summoning circle — red (johndh)"
+category = "regional"
+technique = "texture"
+source = "johndh"
+file = "circle5a.png"
+ops = ["unblack"]
+squares = 4
+max_px = 256
+layer = "ground"
+tags = ["magic circle", "summoning", "red", "infernal"]
+motion = { rotate = -8, pulse = { period = 3, alpha = 0.2, scale = 0.0 } }
+
+# ---------- CC0 sheets (Unity Labs flipbooks) ----------
+
+[[effect]]
+id = "explosion-smoky"
+name = "Explosion (fire and smoke)"
+category = "point"
+source = "unity"
+file = "Explosion02HD-flipbooks/Explosion02HD_5x5.tga"
+grid = [5, 5]
+source_fps = 15
+mode = "once"
+squares = 5
+damage = ["fire"]
+spells = ["Fireball", "Explosive runes", "Barrel of oil"]
+tags = ["explosion", "burst", "smoke"]
+
+[[effect]]
+id = "explosion-fiery"
+name = "Explosion (small, fiery)"
+category = "point"
+source = "unity"
+file = "Explosion00-flipbooks/Explosion00_5x5.tga"
+grid = [5, 5]
+source_fps = 15
+mode = "once"
+squares = 3
+damage = ["fire"]
+spells = ["Alchemist's fire", "Bomb", "Fire trap"]
+tags = ["explosion", "burst", "bomb"]
+
+[[effect]]
+id = "dust-burst"
+name = "Dust burst"
+category = "point"
+source = "unity"
+file = "Explosion01-light-nofire-flipbooks/Explosion01-light-nofire_5x5.tga"
+grid = [5, 5]
+source_fps = 15
+mode = "once"
+squares = 4
+damage = ["bludgeoning", "thunder"]
+spells = ["Earth Tremor", "Thunderwave", "Cave-in"]
+tags = ["dust", "smoke", "impact", "collapse"]
+
+[[effect]]
+id = "fire-orb"
+name = "Fire orb (flaming sphere)"
+category = "point"
+source = "unity"
+file = "FireBall01-flipbooks/FireBall01_8x8.tga"
+grid = [8, 8]
+source_fps = 24
+ops = ["unblack"]
+blend = "add"
+squares = 2
+fps = 16
+damage = ["fire"]
+spells = ["Flaming Sphere", "Fire Shield", "Fire elemental"]
+tags = ["fire", "orb", "ball"]
+
+[[effect]]
+id = "flame-large"
+name = "Flame (large, side view)"
+category = "map-loop"
+source = "unity"
+file = "Flame02-flipbooks/Flame02_16x4.tga"
+grid = [16, 4]
+source_fps = 24
+ops = [["edge_fade", 0.1]]
+blend = "add"
+squares = 2
+fps = 16
+anchor = [0.5, 0.92]
+damage = ["fire"]
+tags = ["fire", "flame", "bonfire", "burning building"]
+
+[[effect]]
+id = "flame-small"
+name = "Flame (torch)"
+category = "map-loop"
+source = "unity"
+file = "SmallFlame01-flipbooks/SmallFlame01_16x4.tga"
+grid = [16, 4]
+source_fps = 24
+ops = [["edge_fade", 0.1]]
+blend = "add"
+squares = 1
+fps = 16
+anchor = [0.5, 0.92]
+damage = ["fire"]
+tags = ["fire", "flame", "torch", "light source"]
+
+[[effect]]
+id = "flame-candle"
+name = "Flame (candle)"
+category = "map-loop"
+source = "unity"
+file = "SmallFlame01-mini-flipbooks/SmallFlame01-mini_16x4.tga"
+grid = [16, 4]
+source_fps = 24
+ops = [["edge_fade", 0.1]]
+blend = "add"
+squares = 0.5
+fps = 16
+anchor = [0.5, 0.92]
+tags = ["fire", "flame", "candle", "light source"]
+
+[[effect]]
+id = "flame-green"
+name = "Flame (green, fel / necrotic)"
+category = "map-loop"
+source = "unity"
+file = "Flame02-temperature-flipbooks/Flame02-temperature_16x4.tga"
+grid = [16, 5]
+source_fps = 24
+blend = "add"
+squares = 2
+fps = 16
+anchor = [0.5, 0.92]
+ops = [["gradient", [[0.0, "#000000", 0.0], [0.12, "#062810", 0.25], [0.35, "#18a040", 0.8], [0.7, "#7cff6a", 1.0], [1.0, "#eaffd8", 1.0]]], ["edge_fade", 0.1]]
+damage = ["necrotic", "poison"]
+spells = ["Hellish Rebuke (fel)", "Necrotic brazier"]
+tags = ["fire", "flame", "green fire", "witchfire"]
+
+[[effect]]
+id = "flame-blue"
+name = "Flame (blue, spectral / holy)"
+category = "map-loop"
+source = "unity"
+file = "Flame02-temperature-flipbooks/Flame02-temperature_16x4.tga"
+grid = [16, 5]
+source_fps = 24
+blend = "add"
+squares = 2
+fps = 16
+anchor = [0.5, 0.92]
+ops = [["gradient", [[0.0, "#000000", 0.0], [0.12, "#061430", 0.25], [0.35, "#1c50ff", 0.8], [0.7, "#5cc0ff", 1.0], [1.0, "#e6f6ff", 1.0]]], ["edge_fade", 0.1]]
+damage = ["radiant", "cold"]
+spells = ["Continual Flame", "Spectral fire", "Sacred Flame"]
+tags = ["fire", "flame", "blue fire", "ghost fire"]
+
+[[effect]]
+id = "smoke-cloud"
+name = "Smoke cloud"
+category = "regional"
+source = "unity"
+file = "Cloud02-flipbooks/Cloud02_8x8.tga"
+grid = [8, 8]
+source_fps = 15
+squares = 4
+fps = 12
+spells = ["Fog Cloud", "Pyrotechnics (smoke)", "Smoke bomb"]
+tags = ["smoke", "cloud", "obscure"]
+
+[[effect]]
+id = "poison-cloud"
+name = "Poison cloud"
+category = "regional"
+source = "unity"
+file = "Cloud01-flipbooks/Cloud01_8x8.tga"
+grid = [8, 8]
+source_fps = 15
+squares = 4
+fps = 12
+ops = [["gradient", [[0.0, "#0b2a08", 1.0], [0.5, "#3f8a1c", 1.0], [1.0, "#c4f27a", 1.0]]], ["alpha_scale", 0.85]]
+damage = ["poison"]
+spells = ["Cloudkill", "Stinking Cloud", "Poison Spray", "Green dragon breath"]
+tags = ["poison", "gas", "cloud"]
+
+[[effect]]
+id = "smoke-wisp"
+name = "Smoke wisps"
+category = "map-loop"
+source = "unity"
+file = "WispySmoke01-flipbooks/WispySmoke01_8x8.tga"
+grid = [8, 8]
+source_fps = 15
+squares = 2
+fps = 12
+tags = ["smoke", "chimney", "incense", "ruin"]
+
+[[effect]]
+id = "candle-smoke"
+name = "Candle smoke"
+category = "map-loop"
+source = "unity"
+file = "CandleSmoke01-flipbooks/CandleSmoke01_20x4.tga"
+grid = [20, 4]
+source_fps = 24
+squares = 0.5
+loop_blend = 8
+fps = 14
+anchor = [0.5, 0.95]
+tags = ["smoke", "candle", "incense"]
+
+# ---------- CC0 textures with a motion recipe (Kenney) ----------
+[[effect]]
+id = "torch-glow"
+name = "Torch light (flickering glow)"
+category = "map-loop"
+technique = "texture"
+source = "kenney-particles"
+file = "circle_05.png"
+ops = ["lum_alpha", ["alpha_scale", 0.6]]
+trim = false
+squares = 5
+max_px = 256
+tint = true
+layer = "ground"
+tags = ["light", "torch", "glow", "light source"]
+motion = { color = "#ff9a40", flicker = { hz = 7, alpha = [0.7, 1.0], scale = [0.97, 1.03] } }
+notes = "Additive warm light under a flame; colour is a tint."
+
+[[effect]]
+id = "candle-glow"
+name = "Candle light"
+category = "map-loop"
+technique = "texture"
+source = "kenney-particles"
+file = "circle_05.png"
+ops = ["lum_alpha", ["alpha_scale", 0.6]]
+trim = false
+squares = 2.5
+max_px = 128
+tint = true
+layer = "ground"
+tags = ["light", "candle", "glow", "light source"]
+motion = { color = "#ffc46b", flicker = { hz = 9, alpha = [0.75, 1.0], scale = [0.98, 1.02] } }
+
+[[effect]]
+id = "holy-light"
+name = "Radiant light"
+category = "regional"
+technique = "texture"
+source = "kenney-particles"
+file = "light_02.png"
+ops = ["lum_alpha"]
+trim = false
+squares = 4
+max_px = 256
+tint = true
+damage = ["radiant"]
+spells = ["Daylight", "Dawn", "Sunbeam", "Holy Aura"]
+tags = ["light", "holy", "sun", "glow"]
+motion = { color = "#ffe9a8", rotate = 6, pulse = { period = 3, alpha = 0.25, scale = 0.04 }, fadeIn = 0.8 }
+
+[[effect]]
+id = "moonlight-pool"
+name = "Moonlight pool"
+category = "regional"
+technique = "texture"
+source = "kenney-particles"
+file = "light_03.png"
+ops = ["lum_alpha"]
+trim = false
+squares = 4
+max_px = 256
+tint = true
+damage = ["radiant"]
+spells = ["Moonbeam", "Faerie light", "Starry Wisp"]
+tags = ["light", "moon", "night", "glow"]
+motion = { color = "#b8d4ff", pulse = { period = 4, alpha = 0.2, scale = 0.03 }, fadeIn = 1.2 }
+
+[[effect]]
+id = "shockwave-ring"
+name = "Shockwave ring"
+category = "point"
+technique = "texture"
+source = "kenney-particles"
+file = "circle_03.png"
+ops = ["lum_alpha"]
+squares = 4
+max_px = 256
+tint = true
+damage = ["thunder", "force"]
+spells = ["Thunderwave", "Shatter", "Thunderclap", "Destructive Wave"]
+tags = ["shockwave", "ring", "pulse", "impact"]
+motion = { color = "#cfe6ff", once = 0.7, grow = { from = 0.15, duration = 0.7 }, fadeOut = 0.5 }
+
+[[effect]]
+id = "arcane-sigil"
+name = "Arcane sigil (pentagon)"
+category = "aura"
+technique = "texture"
+source = "kenney-particles"
+file = "magic_02.png"
+ops = ["lum_alpha"]
+squares = 2.5
+max_px = 256
+tint = true
+layer = "ground"
+tags = ["sigil", "ring", "aura", "casting"]
+motion = { color = "#b08cff", rotate = 20, pulse = { period = 2, alpha = 0.3, scale = 0.0 } }
+
+# ---------- particles (CC0 textures + an emitter recipe; see effects.md "particles") ----------
+[[effect]]
+id = "embers"
+name = "Drifting embers (whole map)"
+category = "global"
+technique = "particles"
+source = "kenney-particles"
+blend = "add"
+tags = ["embers", "fire", "ash", "burning city", "volcano"]
+damage = ["fire"]
+textures = [{ source = "kenney-particles", file = "circle_05.png", ops = ["lum_alpha"], max_px = 32 }]
+particles = { emitter = "screen", rate = 6, max = 40, life = [3.0, 6.0], speed = [0.3, 0.9], angle = [-110, -70], gravity = [0.0, -0.05], size = [0.06, 0.14], grow = 0.4, alpha = [0.0, 1.0, 0.0], colors = ["#ffd27a", "#ff5a14"], wobble = [0.25, 0.7], flicker = 6 }
+
+[[effect]]
+id = "embers-rising"
+name = "Embers rising (from a fire)"
+category = "map-loop"
+technique = "particles"
+source = "kenney-particles"
+blend = "add"
+squares = 1
+tags = ["embers", "fire", "campfire", "sparks"]
+damage = ["fire"]
+textures = [{ source = "kenney-particles", file = "circle_05.png", ops = ["lum_alpha"], max_px = 32 }]
+particles = { emitter = "point", radius = 0.3, rate = 10, max = 60, life = [1.2, 2.6], speed = [0.5, 1.2], angle = [-115, -65], gravity = [0.0, -0.3], size = [0.05, 0.1], grow = 0.3, alpha = [0.0, 1.0, 0.0], colors = ["#ffe08a", "#ff4a10"], wobble = [0.15, 1.5], flicker = 8 }
+
+[[effect]]
+id = "ash-fall"
+name = "Falling ash"
+category = "global"
+technique = "particles"
+source = "kenney-particles"
+blend = "normal"
+tags = ["ash", "volcano", "burnt", "weather"]
+textures = [{ source = "kenney-particles", file = "circle_05.png", ops = ["lum_alpha"], max_px = 32 }]
+particles = { emitter = "screen", rate = 10, max = 90, life = [5.0, 9.0], speed = [0.2, 0.5], angle = [70, 110], gravity = [0.05, 0.02], size = [0.05, 0.12], grow = 1.0, alpha = [0.0, 0.7, 0.0], colors = ["#9a958f", "#5d5a56"], wobble = [0.3, 0.4] }
+
+[[effect]]
+id = "dust-motes"
+name = "Dust motes (sunbeam)"
+category = "global"
+technique = "particles"
+source = "kenney-particles"
+blend = "add"
+tags = ["dust", "ambient", "old library", "crypt"]
+textures = [{ source = "kenney-particles", file = "circle_05.png", ops = ["lum_alpha"], max_px = 32 }]
+particles = { emitter = "screen", rate = 4, max = 45, life = [6.0, 12.0], speed = [0.02, 0.1], angle = [0, 360], gravity = [0.0, 0.0], size = [0.03, 0.07], grow = 1.0, alpha = [0.0, 0.45, 0.0], colors = ["#fff1d0", "#ffe0a0"], wobble = [0.2, 0.15] }
+
+[[effect]]
+id = "falling-leaves"
+name = "Falling leaves"
+category = "global"
+technique = "particles"
+source = "gemini"
+blend = "normal"
+tags = ["leaves", "autumn", "forest", "wind", "weather"]
+textures = [
+  { source = "gemini", file = "leaves.jpg", cell = [0, 0, 3, 3], ops = [["key", "blue"]], max_px = 64 },
+  { source = "gemini", file = "leaves.jpg", cell = [1, 0, 3, 3], ops = [["key", "blue"]], max_px = 64 },
+  { source = "gemini", file = "leaves.jpg", cell = [2, 0, 3, 3], ops = [["key", "blue"]], max_px = 64 },
+  { source = "gemini", file = "leaves.jpg", cell = [0, 1, 3, 3], ops = [["key", "blue"]], max_px = 64 },
+  { source = "gemini", file = "leaves.jpg", cell = [1, 1, 3, 3], ops = [["key", "blue"]], max_px = 64 },
+  { source = "gemini", file = "leaves.jpg", cell = [2, 1, 3, 3], ops = [["key", "blue"]], max_px = 64 },
+  { source = "gemini", file = "leaves.jpg", cell = [0, 2, 3, 3], ops = [["key", "blue"]], max_px = 64 },
+  { source = "gemini", file = "leaves.jpg", cell = [1, 2, 3, 3], ops = [["key", "blue"]], max_px = 64 },
+  { source = "gemini", file = "leaves.jpg", cell = [2, 2, 3, 3], ops = [["key", "blue"]], max_px = 64 },
+]
+particles = { emitter = "screen", rate = 1.2, max = 12, life = [6.0, 10.0], speed = [0.3, 0.6], angle = [40, 70], gravity = [0.0, 0.0], size = [0.25, 0.4], grow = 1.0, alpha = [0.0, 1.0, 0.0], colors = ["#ffffff", "#ffffff"], spin = [-120, 120], wobble = [0.4, 0.5], flip = true }
+
+[[effect]]
+id = "sparkle-area"
+name = "Treasure sparkle (area)"
+category = "map-loop"
+technique = "particles"
+source = "kenney-particles"
+blend = "add"
+squares = 2
+tags = ["treasure", "sparkle", "loot", "gold", "magic item"]
+textures = [{ source = "kenney-particles", file = "star_07.png", ops = ["lum_alpha"], max_px = 64 }]
+particles = { emitter = "area", w = 2, h = 2, rate = 4, max = 12, life = [0.6, 1.2], speed = [0.0, 0.0], angle = [0, 0], gravity = [0.0, 0.0], size = [0.25, 0.5], grow = 0.6, alpha = [0.0, 1.0, 0.0], colors = ["#fff6c8", "#ffd060"], spin = [-90, 90] }
+
+[[effect]]
+id = "fireflies-cc0"
+name = "Fireflies (CC0)"
+category = "map-loop"
+technique = "particles"
+source = "kenney-particles"
+blend = "add"
+squares = 6
+tags = ["fireflies", "night", "forest", "swamp", "ambient"]
+textures = [{ source = "kenney-particles", file = "circle_05.png", ops = ["lum_alpha"], max_px = 32 }]
+particles = { emitter = "area", w = 6, h = 6, rate = 5, max = 40, life = [3.0, 6.0], speed = [0.1, 0.35], angle = [0, 360], gravity = [0.0, 0.0], size = [0.08, 0.14], grow = 1.0, alpha = [0.0, 1.0, 0.0], colors = ["#e8ff7a", "#9cff5a"], wobble = [0.3, 0.6], flicker = 2 }
+
+[[effect]]
+id = "rune-motes"
+name = "Rising rune motes"
+category = "regional"
+technique = "particles"
+source = "gemini"
+blend = "add"
+squares = 4
+spells = ["Ritual", "Identify", "Legend Lore", "Arcane library"]
+tags = ["runes", "magic", "arcane", "ambient"]
+textures = [
+  { source = "gemini", file = "runes-arcane.jpg", cell = [0, 0, 4, 4], ops = ["unblack"], max_px = 64 },
+  { source = "gemini", file = "runes-arcane.jpg", cell = [1, 1, 4, 4], ops = ["unblack"], max_px = 64 },
+  { source = "gemini", file = "runes-arcane.jpg", cell = [2, 2, 4, 4], ops = ["unblack"], max_px = 64 },
+  { source = "gemini", file = "runes-arcane.jpg", cell = [3, 1, 4, 4], ops = ["unblack"], max_px = 64 },
+]
+particles = { emitter = "area", w = 4, h = 4, rate = 3, max = 20, life = [2.5, 4.0], speed = [0.15, 0.35], angle = [-100, -80], gravity = [0.0, 0.0], size = [0.3, 0.5], grow = 1.2, alpha = [0.0, 0.9, 0.0], colors = ["#ffffff", "#ffffff"], wobble = [0.1, 0.5] }
+
+[[effect]]
+id = "explosion-puffs"
+name = "Explosion (puffs, CC0)"
+category = "point"
+technique = "particles"
+source = "kenney-smoke"
+blend = "normal"
+squares = 3
+damage = ["fire"]
+spells = ["Fireball", "Explosive barrel"]
+tags = ["explosion", "burst", "smoke"]
+textures = [
+  { source = "kenney-smoke", file = "Explosion/explosion00.png", max_px = 128 },
+  { source = "kenney-smoke", file = "Explosion/explosion03.png", max_px = 128 },
+  { source = "kenney-smoke", file = "Explosion/explosion06.png", max_px = 128 },
+  { source = "kenney-smoke", file = "Flash/flash00.png", max_px = 128 },
+]
+particles = { emitter = "point", radius = 0.3, rate = 0, burst = 14, max = 14, life = [0.6, 1.1], speed = [0.6, 2.0], angle = [0, 360], gravity = [0.0, -0.4], size = [0.8, 1.4], grow = 1.8, alpha = [1.0, 0.9, 0.0], colors = ["#ffffff", "#5a504a"], spin = [-60, 60] }
+
+[[effect]]
+id = "smoke-column"
+name = "Smoke column (CC0)"
+category = "map-loop"
+technique = "particles"
+source = "kenney-particles"
+blend = "normal"
+squares = 1
+tags = ["smoke", "chimney", "burning", "signal fire"]
+textures = [
+  { source = "kenney-particles", file = "smoke_04.png", ops = ["lum_alpha"], max_px = 96 },
+  { source = "kenney-particles", file = "smoke_05.png", ops = ["lum_alpha"], max_px = 96 },
+  { source = "kenney-particles", file = "smoke_07.png", ops = ["lum_alpha"], max_px = 96 },
+]
+particles = { emitter = "point", radius = 0.2, rate = 5, max = 40, life = [3.0, 5.0], speed = [0.3, 0.6], angle = [-100, -80], gravity = [0.15, -0.05], size = [0.6, 0.9], grow = 3.0, alpha = [0.0, 0.55, 0.0], colors = ["#8a8580", "#3c3a38"], spin = [-30, 30] }
+
+[[effect]]
+id = "healing-motes"
+name = "Healing motes"
+category = "aura"
+technique = "particles"
+source = "kenney-particles"
+blend = "add"
+squares = 1.5
+spells = ["Cure Wounds", "Aura of Vitality", "Regenerate"]
+tags = ["healing", "sparkles", "aura"]
+textures = [{ source = "kenney-particles", file = "star_06.png", ops = ["lum_alpha"], max_px = 48 }]
+particles = { emitter = "ring", radius = 0.7, rate = 12, max = 40, life = [1.0, 2.0], speed = [0.2, 0.5], angle = [-100, -80], gravity = [0.0, -0.2], size = [0.12, 0.22], grow = 0.4, alpha = [0.0, 1.0, 0.0], colors = ["#d8ffb0", "#40e070"], spin = [-90, 90] }
+
+[[effect]]
+id = "hit-sparks"
+name = "Hit sparks"
+category = "point"
+technique = "particles"
+source = "kenney-particles"
+blend = "add"
+squares = 1
+damage = ["slashing", "piercing", "bludgeoning"]
+tags = ["hit", "sparks", "metal", "parry"]
+textures = [{ source = "kenney-particles", file = "Rotated/trace_01_rotated.png", ops = ["lum_alpha"], max_px = 64 }]
+particles = { emitter = "point", radius = 0.05, rate = 0, burst = 18, max = 18, life = [0.2, 0.45], speed = [2.0, 4.5], angle = [0, 360], gravity = [0.0, 2.0], size = [0.15, 0.3], grow = 0.3, alpha = [1.0, 1.0, 0.0], colors = ["#fff4c0", "#ff9a30"], alignToVelocity = true }
+
+# ---------- procedural (GLSL filters in shaders/; own work) ----------
+[[effect]]
+id = "rain"
+name = "Rain"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "rain.frag"
+tags = ["rain", "weather", "storm"]
+uniforms = { uDensity = 0.55, uSpeed = 1.0, uAngle = 0.15, uDarken = 0.12, uColor = [0.75, 0.82, 0.95] }
+
+[[effect]]
+id = "rain-storm"
+name = "Rainstorm"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "rain.frag"
+tags = ["rain", "weather", "storm", "thunderstorm"]
+spells = ["Control Weather", "Storm of Vengeance"]
+uniforms = { uDensity = 1.0, uSpeed = 1.6, uAngle = 0.35, uDarken = 0.3, uColor = [0.72, 0.8, 0.95] }
+notes = "Combine with lightning-storm for thunder flashes."
+
+[[effect]]
+id = "snow"
+name = "Snowfall"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "snow.frag"
+tags = ["snow", "weather", "winter"]
+uniforms = { uDensity = 0.5, uSpeed = 1.0, uWind = 0.15, uSize = 1.0 }
+
+[[effect]]
+id = "blizzard"
+name = "Blizzard"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "snow.frag"
+tags = ["snow", "weather", "winter", "storm"]
+spells = ["Control Weather", "Sleet Storm", "Ice Storm"]
+damage = ["cold"]
+uniforms = { uDensity = 1.0, uSpeed = 2.2, uWind = 1.1, uSize = 0.8 }
+
+[[effect]]
+id = "mist"
+name = "Mist (drifting)"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "fog.frag"
+tags = ["fog", "mist", "weather", "swamp", "morning"]
+uniforms = { uDensity = 0.45, uSpeed = 0.35, uScale = 0.18, uColor = [0.82, 0.85, 0.9] }
+
+[[effect]]
+id = "fog-thick"
+name = "Thick fog"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "fog.frag"
+tags = ["fog", "weather", "obscure", "graveyard"]
+spells = ["Fog Cloud", "Control Weather"]
+uniforms = { uDensity = 0.85, uSpeed = 0.25, uScale = 0.12, uColor = [0.78, 0.8, 0.84] }
+
+[[effect]]
+id = "sandstorm"
+name = "Sandstorm"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "fog.frag"
+tags = ["sand", "desert", "weather", "storm", "dust"]
+uniforms = { uDensity = 0.7, uSpeed = 2.2, uScale = 0.25, uColor = [0.82, 0.66, 0.42] }
+
+[[effect]]
+id = "heat-haze"
+name = "Heat haze"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "heat-haze.frag"
+tags = ["heat", "desert", "lava", "forge", "shimmer"]
+damage = ["fire"]
+uniforms = { uStrength = 0.6, uSpeed = 1.0, uScale = 1.0 }
+notes = "Distorts what is drawn beneath it; give it a region (mask) over lava or a forge, or the whole map in a desert."
+
+[[effect]]
+id = "underwater"
+name = "Underwater (caustics)"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "caustics.frag"
+tags = ["water", "underwater", "caustics", "sea", "flooded"]
+uniforms = { uStrength = 0.8, uSpeed = 1.0, uScale = 0.5, uTint = [0.55, 0.8, 0.9] }
+
+[[effect]]
+id = "night"
+name = "Night (darkness with lights)"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "darkness.frag"
+tags = ["night", "darkness", "lighting", "mood"]
+spells = ["Darkness", "Darkvision"]
+uniforms = { uDarkness = 0.72, uTint = [0.35, 0.42, 0.7], uLightCount = 0 }
+notes = "Up to 8 lights in uLights (x, y in squares, radius in squares, strength 0..1)."
+
+[[effect]]
+id = "cloud-shadows"
+name = "Passing cloud shadows"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "cloud-shadows.frag"
+tags = ["clouds", "weather", "overcast", "outdoor"]
+uniforms = { uStrength = 0.35, uSpeed = 1.0, uScale = 0.06, uWind = [1.0, 0.3] }
+
+[[effect]]
+id = "lightning-storm"
+name = "Lightning flashes"
+category = "global"
+technique = "shader"
+source = "own"
+shader = "lightning-flash.frag"
+tags = ["lightning", "storm", "thunder", "weather"]
+damage = ["lightning"]
+spells = ["Call Lightning", "Control Weather", "Storm of Vengeance"]
+uniforms = { uEvery = 7.0, uStrength = 0.85, uColor = [0.85, 0.9, 1.0] }
+notes = "The flash timing is a hash of time; trigger lightning-strike sheets in sync from the runtime if wanted."
+
+[[effect]]
+id = "water-pool"
+name = "Water (flowing pool / river)"
+category = "map-loop"
+technique = "shader"
+source = "gemini"
+shader = "water-flow.frag"
+layer = "ground"
+tags = ["water", "pool", "river", "fountain", "moat"]
+apply = "mask"
+textures = { uFlowTex = { source = "gemini", file = "water-tile.jpg", max_px = 512, wrap = "repeat" } }
+uniforms = { uTileSquares = 4.0, uFlow = [0.15, 0.05], uStrength = 0.9, uCaustics = 0.5 }
+notes = "Draw the water's shape (a filled polygon) and apply this filter: the shape's alpha is kept, its colour becomes moving water."
+
+[[effect]]
+id = "lava-pool"
+name = "Lava (flowing)"
+category = "map-loop"
+technique = "shader"
+source = "gemini"
+shader = "lava-flow.frag"
+layer = "ground"
+damage = ["fire"]
+tags = ["lava", "magma", "volcano", "hazard"]
+apply = "mask"
+textures = { uFlowTex = { source = "gemini", file = "lava-tile.jpg", max_px = 512, wrap = "repeat" } }
+uniforms = { uTileSquares = 4.0, uFlow = [0.06, 0.02], uGlow = 0.6 }
+notes = "Same use as water-pool; pairs with heat-haze over it."
+
+# ---------- composites (other effects placed together) ----------
+[[effect]]
+id = "campfire-cc0"
+name = "Campfire (CC0 + generated)"
+category = "map-loop"
+technique = "composite"
+source = "own"
+squares = 2
+tags = ["fire", "camp", "light source"]
+damage = ["fire"]
+parts = [
+  { id = "torch-glow", x = 0.0, y = 0.0, scale = 1.0 },
+  { id = "campfire-base", x = 0.0, y = 0.0, scale = 1.0 },
+  { id = "flame-small", x = -0.15, y = 0.12, scale = 0.6 },
+  { id = "flame-small", x = 0.16, y = 0.1, scale = 0.55, phase = 0.4 },
+  { id = "flame-small", x = 0.0, y = 0.05, scale = 0.75, phase = 0.7 },
+  { id = "embers-rising", x = 0.0, y = 0.0, scale = 1.0 },
+]
+notes = "Parts keep their own licences (CC0 Unity flames + Kenney glow + generated base)."
+
+[[effect]]
+id = "brazier"
+name = "Brazier (CC0 + generated)"
+category = "map-loop"
+technique = "composite"
+source = "own"
+squares = 1.3
+tags = ["fire", "brazier", "light source", "temple"]
+damage = ["fire"]
+parts = [
+  { id = "torch-glow", x = 0.0, y = 0.0, scale = 0.8 },
+  { id = "brazier-base", x = 0.0, y = 0.0, scale = 1.0 },
+  { id = "flame-small", x = 0.0, y = 0.1, scale = 0.7 },
+  { id = "embers-rising", x = 0.0, y = 0.0, scale = 0.7 },
+]
+
+[[effect]]
+id = "wall-torch"
+name = "Torch (flame + light)"
+category = "map-loop"
+technique = "composite"
+source = "own"
+squares = 1
+tags = ["fire", "torch", "sconce", "light source", "dungeon"]
+damage = ["fire"]
+parts = [
+  { id = "torch-glow", x = 0.0, y = 0.0, scale = 1.0 },
+  { id = "flame-small", x = 0.0, y = 0.2, scale = 0.7 },
+]
+
+[[effect]]
+id = "candle"
+name = "Candle (flame + light)"
+category = "map-loop"
+technique = "composite"
+source = "own"
+squares = 0.5
+tags = ["candle", "light source", "altar", "ritual"]
+parts = [
+  { id = "candle-glow", x = 0.0, y = 0.0, scale = 1.0 },
+  { id = "flame-candle", x = 0.0, y = 0.1, scale = 1.0 },
+]
