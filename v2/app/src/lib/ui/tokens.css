@@ -1,0 +1,258 @@
+/* ════════════════════════════════════════════════════════════════════
+   battlemap v2 — design tokens (the one place values are chosen)
+
+   battlemap's application of the fleet's fluent language (the MitWare
+   tafel demo's theme.css is the blueprint; v2/docs/design.md explains
+   every choice). Components read ONLY these custom properties — never a
+   hex value, a font family or a hand-picked pixel size of their own.
+
+   Units: rem on a 16 px root (px in the comments). The TV sets its root
+   from the screen width (base.css), so one token set scales to 10-foot.
+
+   Themes: DARK is the default (a dim game room — the tablet must not
+   light up the DM's face); LIGHT is parchment. A theme is a
+   `data-theme` attribute on <html> or on any wrapper (the kit shows
+   both side by side).
+
+   THE LADDER (tafel naming, fixed meaning per index):
+     --bg  the ground = the gap channel between floating surfaces
+     --m0  base material: panels, squares, menus at rest
+     --m1  one step: sections, cards, rails
+     --m2  two steps: in-content hover / pressed tone
+     --m3  three steps: an OPEN plane and the hover tone of its activator
+     --m4  four steps: the selected row on an open plane
+   ════════════════════════════════════════════════════════════════════ */
+
+:root {
+    /* ── Type: faces → roles. Components use the ROLES only. ── */
+    --face-story: 'Fraunces', Georgia, 'Times New Roman', serif;
+    --face-display: 'Space Grotesk', system-ui, sans-serif;
+    --face-body: 'Outfit', system-ui, sans-serif;
+    --face-data: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+    --font-headline: var(--face-story);   /* game + map names, screen titles, TV hero */
+    --fw-headline: 600;
+    --font-title: var(--face-display);    /* panel, section, dialog titles */
+    --fw-title: 600;
+    --font-button: var(--face-display);   /* buttons, tabs, segments */
+    --fw-button: 600;
+    --font-body: var(--face-body);        /* rows, prose, helper text */
+    --fw-body: 400;
+    --fw-label: 500;
+    --font-value: var(--face-data);       /* numbers: steppers, readouts, counts */
+    --fw-value: 600;
+    --font-meta: var(--face-data);        /* eyebrows, units, versions */
+    --fw-meta: 500;
+
+    /* ── Type ramp ── */
+    --fs-meta: 0.6875rem;      /* 11 — eyebrow (uppercase, tracked) */
+    --fs-small: 0.8125rem;     /* 13 — sub lines, helper text, tab labels */
+    --fs-body: 0.9375rem;      /* 15 — rows, controls, prose */
+    --fs-field: 1rem;          /* 16 — inputs (iOS Safari zooms below 16) */
+    --fs-value: 1.125rem;      /* 18 — stepper value, readouts */
+    --fs-title: 1.1875rem;     /* 19 — panel + dialog titles */
+    --fs-headline: 1.625rem;   /* 26 — screen titles, game names */
+    --fs-display: 2.5rem;      /* 40 — TV hero */
+    --lh-tight: 1.15;
+    --lh-body: 1.4;
+    --ls-meta: 0.08em;
+
+    /* ── THE GAP — the one distance (tafel guideline 20). Need half?
+       calc(var(--g) / 2). Need double? var(--g2). Nothing else. ── */
+    --g: 0.5625rem;            /* 9 */
+    --g2: calc(var(--g) * 2);  /* 18 */
+
+    /* ── THE THREE RADII ── */
+    --r: 0.75rem;              /* 12 — surfaces: panels, cards, sheets, menus, dialogs */
+    --r-ctl: 0.5625rem;        /* 9  — controls: buttons, fields, rows, segments */
+    --r-sm: 0.28125rem;        /* 4.5 — marks: badges, kbd, swatches, thumbs */
+
+    /* ── THE FOUR CONTROL SIZES — touch first (the tablet is the main
+       device). (pointer: fine) tightens them to the desk sizes below.
+       A container declares --ctl-sq / --ctl-icon / --ctl-fs once; a
+       control without a `size` prop listens (base.css [data-ctl]). ── */
+    --sq-standalone: 3.5rem;   /* 56 — a square standing alone on the map */
+    --icon-standalone: 1.5rem; /* 24 */
+    --sq-toolbar: 3rem;        /* 48 — in a toolbar strip */
+    --icon-toolbar: 1.25rem;   /* 20 */
+    --sq-row: 2.75rem;         /* 44 — THE default: rows, buttons, fields (44 = touch minimum) */
+    --icon-row: 1.25rem;       /* 20 */
+    --sq-compact: 2.5rem;      /* 40 — menu rows, stepper chips, dense strips */
+    --icon-compact: 1.125rem;  /* 18 */
+
+    /* ── Layout ── */
+    --rail-w: 4.75rem;         /* 76 — the tablet's tab rail */
+    --panel-w: 22.5rem;        /* 360 — the tablet's tool panel */
+    --tabbar-h: 4rem;          /* 64 — the phone's tab bar */
+    --dialog-w: 30rem;         /* 480 — a medium dialog */
+
+    /* ── Motion — the fluent clock (fluent.ts holds the formulas:
+       open min(440, 200 + 0.6·px) ms, close min(310, 140 + 0.45·px) ms) ── */
+    --ease-open: cubic-bezier(0.34, 1.56, 0.64, 1);   /* easeOutBack — the bloom */
+    --ease-close: cubic-bezier(0.33, 1, 0.68, 1);     /* easeOutCubic — the quicker fold */
+    --ease-glide: cubic-bezier(0.3, 1.12, 0.5, 1);    /* a chosen look gliding (~1 % overshoot) */
+    --ease-std: cubic-bezier(0.2, 0, 0, 1);           /* tones, fades */
+    --dur-press: 90ms;
+    --dur-tone: 160ms;         /* hover / press tone */
+    --dur-glow: 300ms;         /* the edge glow arriving */
+    --dur-fade: 200ms;
+    --dur-open: 320ms;         /* fallback when the height is unknown */
+    --dur-close: 220ms;
+    --dur-sheet-open: 380ms;
+    --dur-sheet-close: 260ms;
+    --dur-hold: 420ms;         /* long press → menu (cross-project rule 15) */
+
+    /* ── Layers ── */
+    --z-chrome: 10;            /* squares and badges over the map */
+    --z-panel: 20;
+    --z-sheet: 30;
+    --z-plane: 40;             /* menus, numpads (top layer when supported) */
+    --z-dialog: 50;
+    --z-notice: 60;
+    --z-tooltip: 70;
+
+    /* ── Focus ── */
+    --focus-w: 2px;
+    --focus-offset: 2px;
+    --focus-scale: 1;          /* the TV grows the focused tile */
+
+    /* ── Edge glow strength (tafel guideline 24, mw-fluent recipe) ── */
+    --glow-w: 1.5px;
+    --glow-midpos: 0.45;
+    --glow-endpos: 0.8;
+}
+
+/* the desk: a mouse can hit smaller targets — the tafel's sizes */
+@media (pointer: fine) {
+    :root {
+        --sq-standalone: 3.375rem; /* 54 */
+        --sq-toolbar: 2.8125rem;   /* 45 */
+        --sq-row: 2.25rem;         /* 36 */
+        --sq-compact: 1.875rem;    /* 30 */
+        --icon-compact: 1rem;      /* 16 */
+    }
+}
+
+/* ─── DARK (default) — candlelit graphite ─── */
+:root,
+[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #0e0c0a;
+    --m0: #1a1714;
+    --m1: #201c18;
+    --m2: #28231e;
+    --m3: #2e2822;
+    --m4: #3a332b;
+    --hair: rgba(226, 200, 160, 0.11);
+    --hair-strong: rgba(226, 200, 160, 0.2);
+    --wash: rgba(255, 236, 205, 0.05);    /* a row you act on, pressed/hovered */
+
+    --t: #f0e8dc;      /* 14.7:1 on m0 */
+    --t2: #c4b8a4;     /*  9.1:1 on m0, 7.4 on m3 */
+    --t3: #a09380;     /*  5.9:1 on m0, 4.8 on m3 */
+
+    /* the accent: candle gold. --accent paints (fills, glows, rings),
+       --accent-text writes on surfaces, --accent-ink writes ON the accent */
+    --accent: #e3b45e;
+    --accent-text: #e8bd6c;
+    --accent-ink: #1a1306;
+    --accent-hover: #f0c878;
+
+    /* semantic tones (fog preview: reveal blue, hide red — the old app's) */
+    --reveal: #6cb4e6;
+    --hide: #f08890;
+    --ok: #72cf98;
+    --warn: #f0a050;
+    --err: #f47c7c;
+    --info: var(--accent);
+
+    /* token marker palette — 8 hues that stay apart on any map */
+    --mark-1: #e3b45e;
+    --mark-2: #e8746a;
+    --mark-3: #6cb4e6;
+    --mark-4: #72cf98;
+    --mark-5: #b693f0;
+    --mark-6: #f0a050;
+    --mark-7: #5fd0c8;
+    --mark-8: #e98ac4;
+    --mark-ink: #15110c;
+
+    --scrim: rgba(6, 5, 4, 0.62);
+    --shadow-sm: rgba(0, 0, 0, 0.42);
+    --elev-rest: 0 2px 5px var(--shadow-sm);
+    --elev-float: 0 6px 18px rgba(0, 0, 0, 0.5);   /* chrome over the wild map */
+    --elev-open: 0 18px 42px rgba(0, 0, 0, 0.55);
+    --glow-hi: 0.55;
+    --glow-mid: 0.22;
+    --glow-k: 150%;
+    --map-ground: #15120f;                         /* behind a map that does not fill */
+}
+
+/* ─── LIGHT — parchment ─── */
+[data-theme='light'] {
+    color-scheme: light;
+    --bg: #e4d9c4;
+    --m0: #f7f1e4;
+    --m1: #efe7d5;
+    --m2: #e9dfca;
+    --m3: #e3d6ba;
+    --m4: #d7c8a6;
+    --hair: rgba(93, 72, 40, 0.17);
+    --hair-strong: rgba(93, 72, 40, 0.3);
+    --wash: rgba(93, 72, 40, 0.07);
+
+    --t: #2c2216;      /* 13.9:1 on m0 */
+    --t2: #4f4332;     /*  8.6:1 on m0, 6.7 on m3 */
+    --t3: #675943;     /*  6.0:1 on m0, 4.7 on m3 */
+
+    --accent: #c99a3c;
+    --accent-text: #7a530a;
+    --accent-ink: #1f1606;
+    --accent-hover: #d6a94c;
+
+    --reveal: #1a5f92;
+    --hide: #a3303f;
+    --ok: #17663f;
+    --warn: #8a4a0c;
+    --err: #a52a31;
+    --info: var(--accent-text);
+
+    --mark-1: #b8862b;
+    --mark-2: #c4473c;
+    --mark-3: #2f78b0;
+    --mark-4: #2e8a57;
+    --mark-5: #7a55c4;
+    --mark-6: #c46a1c;
+    --mark-7: #1f8f87;
+    --mark-8: #b8478c;
+    --mark-ink: #fffaf0;
+
+    --scrim: rgba(44, 34, 22, 0.38);
+    --shadow-sm: rgba(68, 62, 52, 0.16);
+    --elev-rest: 0 2px 5px var(--shadow-sm);
+    --elev-float: 0 6px 18px rgba(68, 62, 52, 0.22);
+    --elev-open: 0 14px 34px rgba(68, 62, 52, 0.24);
+    --glow-hi: 0.42;
+    --glow-mid: 0.17;
+    --glow-k: 190%;
+    --map-ground: #d9ccb2;
+}
+
+/* ─── TV — 10-foot. The root scales with the screen (1/64 of its width:
+   30 px on a 1920 screen at any device-pixel ratio), so every rem token
+   above grows with it. No blur, no large shadows, no animated gradients
+   (Mali-G310): elevation is a hairline, focus is a solid ring. ─── */
+:root[data-surface='tv'] {
+    font-size: calc(100vw / 64);
+    --sq-standalone: 3.5rem;
+    --sq-toolbar: 3rem;
+    --sq-row: 2.75rem;
+    --sq-compact: 2.5rem;
+    --icon-compact: 1.125rem;
+    --elev-rest: 0 0 0 1px var(--hair);
+    --elev-float: 0 0 0 1px var(--hair-strong);
+    --elev-open: 0 0 0 1px var(--hair-strong);
+    --focus-w: 0.1875rem;      /* 6 px on 1080p */
+    --focus-offset: 0.1875rem;
+    --focus-scale: 1.04;
+}

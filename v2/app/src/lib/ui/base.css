@@ -1,0 +1,385 @@
+/* ════════════════════════════════════════════════════════════════════
+   battlemap v2 — base layer: reset, the shared primitives, focus, motion
+
+   Primitives (a LOOK declared once; components add the class, never
+   re-paint it — the tafel's mw-fluent.css idea):
+     .bm-sf        Surface — tone · hairline ring · elevation; states
+                   rest → hover (previews the open tone) → open · on
+                   (accent arrives as THE EDGE GLOW, never a bar or wash)
+     .bm-glow      the glow as a masked ring, for hosts whose own
+                   background is taken (selected cards, tab highlights)
+     [data-ctl]    THE CONTROL CONTEXT: a container declares its control
+                   scale once, controls without a `size` prop listen
+     .bm-scroll    a scrollport: hidden scrollbar, edges melt (scroll-fade.ts)
+     .bm-capped    long content scrolls in its own capped box (fleet rule)
+     .bm-eyebrow   the small uppercase mono label above a group
+   ════════════════════════════════════════════════════════════════════ */
+
+@property --sf-tone {
+    syntax: '<color>';
+    inherits: false;
+    initial-value: transparent;
+}
+
+@property --sf-glow {
+    syntax: '<color>';
+    inherits: false;
+    initial-value: transparent;
+}
+
+/* ─── Reset (zero specificity — any component rule wins) ─── */
+:where(*, *::before, *::after) {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+}
+
+:where(button) {
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+:where(svg) {
+    display: block;
+}
+
+html {
+    background: var(--bg);
+    color: var(--t);
+    font-family: var(--font-body);
+    font-size: 100%;
+    line-height: var(--lh-body);
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;     /* no double-tap zoom on controls */
+}
+
+/* a themed wrapper paints its own ground and ink (the kit shows both
+   themes side by side; the app sets data-theme on <html>) */
+[data-theme] {
+    color: var(--t);
+}
+
+::selection {
+    background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* ─── Focus — the ring is the accent, solid, following the radius. On
+   the TV it is thicker and a [data-focus-grow] tile grows a little. ─── */
+:focus {
+    outline: none;
+}
+
+:focus-visible {
+    outline: var(--focus-w) solid var(--accent);
+    outline-offset: var(--focus-offset);
+}
+
+/* an activator whose plane is open: the plane is the focus context now */
+.open:focus-visible {
+    outline: none;
+}
+
+[data-focus-grow] {
+    transition: transform var(--dur-tone) var(--ease-std);
+}
+
+[data-focus-grow]:focus-visible {
+    transform: scale(var(--focus-scale));
+}
+
+/* ─── THE CONTROL CONTEXT ─── */
+[data-ctl='standalone'] {
+    --ctl-sq: var(--sq-standalone);
+    --ctl-icon: var(--icon-standalone);
+    --ctl-fs: var(--fs-body);
+    --ctl-r: var(--r);
+}
+
+[data-ctl='toolbar'] {
+    --ctl-sq: var(--sq-toolbar);
+    --ctl-icon: var(--icon-toolbar);
+    --ctl-fs: var(--fs-body);
+    --ctl-r: var(--r-ctl);
+}
+
+[data-ctl='row'] {
+    --ctl-sq: var(--sq-row);
+    --ctl-icon: var(--icon-row);
+    --ctl-fs: var(--fs-body);
+    --ctl-r: var(--r-ctl);
+}
+
+[data-ctl='compact'] {
+    --ctl-sq: var(--sq-compact);
+    --ctl-icon: var(--icon-compact);
+    --ctl-fs: var(--fs-small);
+    --ctl-r: var(--r-ctl);
+}
+
+/* ─── Surface ─── */
+.bm-sf {
+    --sf-c: var(--accent);
+    --sf-tone: var(--m0);
+    --sf-glow: transparent;
+    --sf-ring: var(--hair);
+    --sf-elev: var(--elev-rest);
+    --glow-c: var(--sf-glow);
+    --glow-layer: radial-gradient(140% 130% at var(--glow-at, 0% 100%),
+        color-mix(in srgb, var(--glow-c) min(calc(var(--glow-hi) * var(--glow-boost, 1) * var(--glow-k)), 96%), transparent) 0%,
+        color-mix(in srgb, var(--glow-c) min(calc(var(--glow-mid) * var(--glow-boost, 1) * 260%), 96%), transparent)
+            calc(var(--glow-midpos) * 100%),
+        transparent calc(var(--glow-endpos) * 100%));
+    border: var(--glow-w) solid transparent;
+    border-radius: var(--ctl-r, var(--r-ctl));
+    background:
+        linear-gradient(var(--sf-tone), var(--sf-tone)) padding-box,
+        var(--glow-layer) border-box,
+        linear-gradient(var(--sf-ring), var(--sf-ring)) border-box;
+    box-shadow: var(--sf-elev);
+    color: var(--t2);
+    transition:
+        --sf-tone var(--dur-tone) var(--ease-std),
+        --sf-glow var(--dur-glow) var(--ease-std),
+        box-shadow var(--dur-glow) ease,
+        color var(--dur-tone) ease;
+}
+
+/* hover PREVIEWS the open tone — only where a hover exists (a tapped
+   tablet button must not keep it) */
+@media (hover: hover) {
+    .bm-sf:not(:disabled):hover {
+        --sf-tone: var(--m3);
+        color: var(--t);
+    }
+}
+
+/* touch feedback: the pressed tone */
+.bm-sf:not(:disabled):active,
+.bm-sf.pressed {
+    --sf-tone: var(--m3);
+    color: var(--t);
+}
+
+/* open = activator and plane are ONE surface: the plane's tone, no hover
+   of its own, the plane carries the elevation */
+.bm-sf.open,
+.bm-sf.open:hover {
+    --sf-tone: var(--m3);
+    color: var(--t);
+    box-shadow: none;
+}
+
+/* an activator joined to its open plane: the joined corners are square */
+.bm-sf[data-joint='down'] {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.bm-sf[data-joint='up'] {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+/* on = the accent: edge glow + a faint wash of the accent in the tone */
+.bm-sf.on {
+    --sf-glow: var(--sf-c);
+    --sf-tone: color-mix(in srgb, var(--sf-c) 13%, var(--m0));
+    color: var(--t);
+    box-shadow: var(--sf-elev), -3px 2px 9px -8px color-mix(in srgb, var(--sf-c) 65%, transparent);
+}
+
+@media (hover: hover) {
+    .bm-sf.on:not(:disabled):hover {
+        --sf-tone: color-mix(in srgb, var(--sf-c) 19%, var(--m0));
+    }
+}
+
+/* disabled: the surface stays solid (it may float over the map), only its
+   content fades */
+.bm-sf:disabled,
+.bm-sf[aria-disabled='true'] {
+    --sf-elev: 0 0 0 transparent;
+    cursor: default;
+}
+
+.bm-sf:disabled > *,
+.bm-sf[aria-disabled='true'] > * {
+    opacity: 0.4;
+}
+
+/* flat: no tone, no ring, no shadow until touched */
+.bm-sf.flat {
+    --sf-tone: transparent;
+    --sf-ring: transparent;
+    --sf-elev: 0 0 0 transparent;
+}
+
+@media (hover: hover) {
+    .bm-sf.flat:not(:disabled):hover {
+        --sf-tone: var(--m2);
+    }
+}
+
+.bm-sf.flat:not(:disabled):active {
+    --sf-tone: var(--m2);
+}
+
+/* ─── The glow as a masked ring (tafel .mw-glow) ─── */
+.bm-glow {
+    position: relative;
+}
+
+.bm-glow::before {
+    --glow-layer: radial-gradient(140% 130% at var(--glow-at, 0% 100%),
+        color-mix(in srgb, var(--glow-c, transparent) min(calc(var(--glow-hi) * var(--glow-k)), 96%), transparent) 0%,
+        color-mix(in srgb, var(--glow-c, transparent) min(calc(var(--glow-mid) * 260%), 96%), transparent)
+            calc(var(--glow-midpos) * 100%),
+        transparent calc(var(--glow-endpos) * 100%));
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: var(--glow-w);
+    background:
+        var(--glow-layer),
+        linear-gradient(var(--glow-ring, var(--hair)), var(--glow-ring, var(--hair)));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* ─── Scrollports ─── */
+.bm-scroll {
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    --fade: 1.25rem;
+}
+
+.bm-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+/* the edge melts only while something is hidden on that side */
+.bm-scroll[data-fade='top'] {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade));
+    mask-image: linear-gradient(to bottom, transparent, #000 var(--fade));
+}
+
+.bm-scroll[data-fade='bottom'] {
+    -webkit-mask-image: linear-gradient(to top, transparent, #000 var(--fade));
+    mask-image: linear-gradient(to top, transparent, #000 var(--fade));
+}
+
+.bm-scroll[data-fade='both'] {
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 var(--fade), #000 calc(100% - var(--fade)), transparent);
+}
+
+.bm-capped {
+    max-height: var(--cap, 16rem);
+    overflow: auto;
+    overscroll-behavior: contain;
+}
+
+/* ─── Text styles ─── */
+.bm-eyebrow {
+    font-family: var(--font-meta);
+    font-weight: var(--fw-meta);
+    font-size: var(--fs-meta);
+    letter-spacing: var(--ls-meta);
+    line-height: 1.2;
+    text-transform: uppercase;
+    color: var(--t3);
+}
+
+.bm-headline {
+    font-family: var(--font-headline);
+    font-weight: var(--fw-headline);
+    font-size: var(--fs-headline);
+    line-height: var(--lh-tight);
+    letter-spacing: -0.01em;
+    font-variation-settings: 'SOFT' 50, 'WONK' 0;
+}
+
+.bm-kbd {
+    display: inline-block;
+    padding: 0.0625rem 0.3125rem;
+    font: var(--fw-meta) var(--fs-meta) / 1.3 var(--font-meta);
+    color: var(--t2);
+    border: 1px solid var(--hair-strong);
+    border-bottom-width: 2px;
+    border-radius: var(--r-sm);
+}
+
+.bm-visually-hidden {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* ─── Tooltip bubble (tooltip.ts) — one per page ─── */
+.bm-tooltip {
+    position: fixed;
+    z-index: var(--z-tooltip);
+    max-width: 18rem;
+    padding: calc(var(--g) / 2) var(--g);
+    border-radius: var(--r-ctl);
+    background: var(--t);
+    color: var(--m0);
+    font: var(--fw-label) var(--fs-small) / 1.3 var(--font-body);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(3px);
+    transition:
+        opacity var(--dur-fade) var(--ease-std),
+        transform var(--dur-fade) var(--ease-std);
+}
+
+.bm-tooltip[data-show] {
+    opacity: 1;
+    transform: none;
+}
+
+/* ─── TV: no animated gradients (each glow transition repaints a
+   gradient per frame on the Mali GPU) ─── */
+:root[data-surface='tv'] .bm-sf {
+    transition: color var(--dur-tone) ease, transform var(--dur-tone) var(--ease-std);
+}
+
+/* ─── Reduced motion: every duration token snaps; geometry still lands
+   (fluent rule 13). Spinners and notice countdowns keep their own
+   durations — they carry information, not decoration. ─── */
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --dur-press: 1ms;
+        --dur-tone: 1ms;
+        --dur-glow: 1ms;
+        --dur-fade: 1ms;
+        --dur-open: 1ms;
+        --dur-close: 1ms;
+        --dur-sheet-open: 1ms;
+        --dur-sheet-close: 1ms;
+    }
+
+    *,
+    *::before,
+    *::after {
+        transition-duration: 1ms !important;
+        transition-delay: 0ms !important;
+    }
+}

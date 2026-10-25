@@ -1,0 +1,41 @@
+/* ════════════════════════════════════════════════════════════════════
+   The four vendored faces (variable weight, latin, woff2, ~150 KB in
+   all — shipped with the app, no network). All SIL Open Font License 1.1:
+     Fraunces        — Undercase Type (story: names and titles)
+     Space Grotesk   — Florian Karsten (display: buttons, tabs, titles)
+     Outfit          — Outfit.io (body)
+     JetBrains Mono  — JetBrains (data: numbers, eyebrows)
+   Components never name a face — they use the role tokens (tokens.css).
+   ════════════════════════════════════════════════════════════════════ */
+
+@font-face {
+    font-family: 'Fraunces';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('./fonts/Fraunces.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Space Grotesk';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url('./fonts/SpaceGrotesk.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('./fonts/Outfit.woff2') format('woff2');
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    font-style: normal;
+    font-weight: 100 800;
+    font-display: swap;
+    src: url('./fonts/JetBrainsMono.woff2') format('woff2');
+}

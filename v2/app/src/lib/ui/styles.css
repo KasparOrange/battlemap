@@ -1,0 +1,6 @@
+/* The kit's one stylesheet entry — import it once (main.ts / kit.ts):
+     import '$lib/ui/styles.css';
+   Order matters: faces, then tokens, then the base layer that uses them. */
+@import './fonts.css';
+@import './tokens.css';
+@import './base.css';
