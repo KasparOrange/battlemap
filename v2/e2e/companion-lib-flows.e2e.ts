@@ -10,8 +10,9 @@ import { activeMap, peekTv } from './companion-lib-peek.ts';
 
 const SERVER_PORT = Number(process.env.BATTLEMAP_SERVER_PORT ?? 5929);
 
-// One flow at a time: grid detection runs in a worker and starves when four flows share the CPU.
-test.describe.configure({ mode: 'serial' });
+// One flow after the other (the file's tests share one worker): grid detection runs in a worker
+// and starves when four flows share the CPU. Not 'serial': one slow flow must not skip the rest.
+test.describe.configure({ mode: 'default' });
 
 /** A 1280 × 960 picture with a 32 px grid drawn in (40 × 30 squares), made in the page. */
 async function gridPicture(page: Page, w = 1280, h = 960): Promise<Buffer> {
@@ -41,7 +42,8 @@ async function openTv(browser: Browser, name: string): Promise<{ tv: Page; table
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
   const tv = await ctx.newPage();
   await tv.goto(`/app/?mode=tv&table=${table}&debug=1&name=${encodeURIComponent(name)}`);
-  await expect(tv.getByTestId('tv-status')).toContainText('open');
+  // generous: under load the first page load stalls the TV's event loop for 15 s and more
+  await expect(tv.getByTestId('tv-status')).toContainText('open', { timeout: 45_000 });
   return { tv, table };
 }
 
@@ -54,11 +56,20 @@ async function openCompanion(browser: Browser, table: string): Promise<Page> {
   return page;
 }
 
-/** Uploads the grid picture and starts a game on it; returns when the TV has the game. */
-async function startGame(page: Page, tv: Page): Promise<void> {
-  await page.getByTestId('upload-input').setInputFiles({ name: 'cave_level.png', mimeType: 'image/png', buffer: await gridPicture(page) });
+/**
+ * Uploads a grid picture and starts a game on it; returns when the TV has the game. Only the
+ * pairing flow checks the detection (the big picture); the others take a small picture whose
+ * squares come from its name, so a loaded machine doesn't spend the flow's time on detection
+ * (qa#15: the calibration flow ran out of time before it reached the dialog).
+ */
+async function startGame(page: Page, tv: Page, detect = false): Promise<void> {
+  const file = detect
+    ? { name: 'cave_level.png', mimeType: 'image/png', buffer: await gridPicture(page) }
+    : { name: 'cave_level_20x15.png', mimeType: 'image/png', buffer: await gridPicture(page, 640, 480) };
+  await page.getByTestId('upload-input').setInputFiles(file);
   try {
-    await expect(page.getByText(/Found a drawn grid: 40 × 30 squares of 32 px/)).toBeVisible({ timeout: 45_000 });
+    if (detect) await expect(page.getByText(/Found a drawn grid: 40 × 30 squares of 32 px/)).toBeVisible({ timeout: 120_000 });
+    await expect(page.getByRole('button', { name: 'Upload and play' })).toBeEnabled({ timeout: 45_000 });
   } catch (e) {
     await page.screenshot({ path: test.info().outputPath('companion.png') });
     throw e;
@@ -69,7 +80,7 @@ async function startGame(page: Page, tv: Page): Promise<void> {
 }
 
 test('pair from the picker, new game from a picture with a detected grid, rename it', async ({ browser }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(240_000);
   const { tv, table } = await openTv(browser, `Pairing TV ${Date.now() % 1000}`);
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
@@ -79,7 +90,7 @@ test('pair from the picker, new game from a picture with a detected grid, rename
   await expect(page.getByTestId('library')).toBeVisible({ timeout: 15_000 });
   expect(new URL(page.url()).searchParams.get('table')).toBe(table);
 
-  await startGame(page, tv);
+  await startGame(page, tv, true);
   const map = activeMap(await peekTv(SERVER_PORT, table));
   expect(map.info.grid).toMatchObject({ cols: 40, rows: 30 });
   expect(map.info.grid.cellW).toBeCloseTo(32, 1);
@@ -102,7 +113,7 @@ test('pair from the picker, new game from a picture with a detected grid, rename
 });
 
 test('the calibration dialog changes the TV table', async ({ browser }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(240_000);
   const { tv, table } = await openTv(browser, 'Calibration TV');
   const page = await openCompanion(browser, table);
   await startGame(page, tv);
@@ -120,7 +131,9 @@ test('the calibration dialog changes the TV table', async ({ browser }) => {
 
   await page.getByRole('button', { name: /Back to auto/ }).click();
   await expect.poll(async () => (await peekTv(SERVER_PORT, table)).table.widthInches).toBe(34.5);
-  await page.getByRole('button', { name: 'Undo', exact: true }).last().click(); // the notice's (the rail has one too)
+  // the notice's Undo — drawn inside the open dialog, where it can be pressed (qa#15: `.last()`
+  // took the rail's disabled Undo, and the root notice sat inert behind the modal dialog)
+  await page.getByRole('status').getByRole('button', { name: 'Undo', exact: true }).click();
   await expect.poll(async () => (await peekTv(SERVER_PORT, table)).table.widthInches).toBeCloseTo(37.95, 1);
 
   await page.getByRole('button', { name: 'Done' }).click();
@@ -128,7 +141,7 @@ test('the calibration dialog changes the TV table', async ({ browser }) => {
 });
 
 test('the ruler and the template disc reach the TV', async ({ browser }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(240_000);
   const { tv, table } = await openTv(browser, 'Measure TV');
   const page = await openCompanion(browser, table);
   await startGame(page, tv);
@@ -146,7 +159,7 @@ test('the ruler and the template disc reach the TV', async ({ browser }) => {
 });
 
 test('a DM layer is in the game but the TV never loads its picture', async ({ browser }) => {
-  test.setTimeout(90_000);
+  test.setTimeout(240_000);
   const { tv, table } = await openTv(browser, 'Layers TV');
   const tvFiles: string[] = [];
   tv.on('request', (r) => r.url().includes('/files/') && tvFiles.push(r.url()));
