@@ -51,13 +51,13 @@ clock, ms — receivers log anything older than 1.5 s as late), `from`, `to`.
 
 | Message | Direction | Fields |
 |---|---|---|
-| `hello` | client → server, first frame | `protocol`, `role` (`tv` \| `companion`), `room` (the table's id), `client` (this device's id, kept across reconnects), `name`, `build` |
+| `hello` | client → server, first frame | `protocol`, `role` (`tv` \| `companion`), `room` (the table's id), `client` (this page's id: new on every page load, kept across reconnects of that page — so `seq` can restart at 1 safely), `name`, `build` |
 | `welcome` | server → client | `client`, `room`, `role`, `peers` (`{client, role, name}[]`, everyone else), `build` (the app build the server serves, or null), `serverTime` |
 | `ping` / `pong` | client → server → client | `t` (client clock, echoed), `serverTime` |
 | `peer.joined` | server → room | `peer` |
 | `peer.left` | server → room | `client`, `role` |
 | `replaced` | server → the old TV, then closed | `by` (the new TV's name) — stop reconnecting until the DM taps "Take over" |
-| `relay.undelivered` | server → sender | `msgType`, `seq` (of a `sync.cmd`), `reason` (`no-tv`, `no-such-client`) |
+| `relay.undelivered` | server → sender | `msgType`, `seq` (of a `sync.cmd`), `reason` (`no-tv`, `no-such-client`, `rate-limited`) — the companion drops the command from its prediction and says why ("Too fast — that change was dropped" for `rate-limited`) |
 | `server.build` | server → everyone | `build` — a newer app bundle is being served |
 | `server.error` | server → client, then closed | `reason` (bad hello, protocol mismatch) |
 
@@ -65,6 +65,16 @@ clock, ms — receivers log anything older than 1.5 s as late), `from`, `to`.
 {"type":"hello","protocol":1,"role":"companion","room":"tbl-3f2a9c","client":"k2v9x3m7qa1b","name":"Tab A11+","build":"2026-10-25.ab12cd3"}
 {"type":"welcome","client":"k2v9x3m7qa1b","room":"tbl-3f2a9c","role":"companion","peers":[{"client":"tv-7h2k","role":"tv","name":"Living-room TV"}],"build":"2026-10-25.ab12cd3","serverTime":1761400000000}
 ```
+
+## Table code
+
+The TV's home shows its **name** and a **table code**; the tablet's table picker shows the same
+two for every TV online, so the DM picks by matching (qa#18). The code is `tableCode(room)` from
+`@battlemap/shared` (`shared/src/util/table-code.ts`) — the room id's last four letters or
+digits, upper case (`table-yf6kig4q` → `IG4Q`; fewer than four characters give what there is,
+none gives `?`). It is display only: the room id stays the address, and both sides compute the
+code from it, so they can't disagree. The name is the device's own (Android's "Device name"
+from the shell; a browser's guess; `?name=` overrides), "This TV" when empty.
 
 ## Peer messages
 
@@ -83,6 +93,19 @@ clock, ms — receivers log anything older than 1.5 s as late), `from`, `to`.
 | `diag.status` | — | `diag.report` to the sender |
 | `deploy.prepare` | — | saves now → `deploy.ready` |
 | `tv.reload` | — | saves, reloads the app (a new build), reopens its game |
+
+**Lost commands (qa#6).** A command can vanish without a `relay.undelivered` — the TV page
+reloading took it and died. So the companion keeps two rules besides the acks, and needs nothing
+from the server: (1) when the TV leaves the room (`peer.left`) or its own link drops, every
+pending command is rolled back from the prediction at once, with one notice; (2) a command not
+echoed (`sync.applied`/`sync.rejected`) within **5 s** is rolled back the same way. Neither is
+ever resent. A late echo still lands in the confirmed state — the TV's state is the truth — and
+an unanswered `sync.request` is repeated every 3 s.
+
+**Dev and test control (QA-03).** Tools speak the same peer messages as a companion — no extra
+protocol: *status* = `diag.status` → `diag.report`; *prepare* = `deploy.prepare` → `deploy.ready`;
+*resume* = `lib.list` → `game.open` of the newest game; *reload* = `tv.reload`.
+`bun tools/tv-ctl.ts <status|prepare|resume|reload|list> --server … --table …` wraps them.
 
 ### TV → companion
 

@@ -27,7 +27,7 @@ export type Role = v.InferOutput<typeof Role>;
 
 /** Someone in a room. */
 export const Peer = v.object({
-  /** Their client id (stable per device). */
+  /** Their client id (per page load). */
   client: Id,
   /** TV or companion. */
   role: Role,
@@ -58,7 +58,7 @@ export const Hello = v.object({
   role: Role,
   /** The table's id. */
   room: Id,
-  /** This device's client id (kept across reconnects). */
+  /** This page's client id: new on every page load, kept across its reconnects (rv#38). */
   client: Id,
   /** A human name for this device. */
   name: Name,

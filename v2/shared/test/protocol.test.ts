@@ -3,6 +3,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import {
+  tableCode,
   checkClientControl, checkCommand, checkRouting, checkServerMessage, initialRoot, parseToCompanion, parseToTv, PROTOCOL_VERSION,
 } from '../src/index.ts';
 
@@ -65,5 +66,14 @@ describe('server layer', () => {
     expect(checkServerMessage({ type: 'welcome', client: 'c', room: 'r', role: 'companion', peers: [], build: null, serverTime: 1 }).ok).toBe(true);
     expect(checkServerMessage({ type: 'replaced', by: 'Other TV' }).ok).toBe(true);
     expect(checkServerMessage({ type: 'sync.cmd' }).ok).toBe(false);
+  });
+});
+
+describe('tableCode (qa#18)', () => {
+  test('the last four letters or digits, upper case', () => {
+    expect(tableCode('table-yf6kig4q')).toBe('IG4Q');
+    expect(tableCode('smoke-1792952976968')).toBe('6968');
+    expect(tableCode('a-b')).toBe('AB');
+    expect(tableCode('--')).toBe('?');
   });
 });

@@ -9,13 +9,14 @@
   - last: GameSummary | null — the game to continue (null: none yet)
   - loading: boolean — the game list is still being read
   - badge: Badge — the tablet / server state
-  - tableName: string · tableId: string — what the tablet's table picker shows
+  - tableName: string · tableId: string — what the tablet's table picker shows: the TV's name and
+    the table code (`tableCode`, protocol.md "table code"), never the raw room id (qa#18)
   - build: string — the app build
   - thumbUrl: (ref) => string — a thumbnail's URL
   - onContinue · onLibrary · onMeasure · onReload · onTakeOver: () => void
 -->
 <script lang="ts">
-  import type { FileRef, GameSummary } from '@battlemap/shared';
+  import { tableCode, type FileRef, type GameSummary } from '@battlemap/shared';
   import Card from '../ui/Card.svelte';
   import Badge from '../ui/Badge.svelte';
   import Icon from '../ui/Icon.svelte';
@@ -104,8 +105,8 @@
   <footer class="pair">
     <Icon name="tablet" size="1.25rem" />
     <span>On the tablet, open battlemap and pick this table:</span>
-    <span class="code">{tableName}</span>
-    <span class="id">{tableId}</span>
+    <span class="name">{tableName.trim() || 'This TV'}</span>
+    <span class="code" data-testid="tv-table-code">{tableCode(tableId)}</span>
   </footer>
 </div>
 
@@ -233,9 +234,8 @@
     color: var(--accent-text);
   }
 
-  .id {
-    font-family: var(--font-meta);
-    font-size: var(--fs-small);
-    color: var(--t3);
+  .name {
+    font-weight: var(--fw-value);
+    color: var(--t);
   }
 </style>
