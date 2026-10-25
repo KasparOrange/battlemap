@@ -16,12 +16,18 @@
   keeps the notice over the map, clear of the tool panel; the phone layout lifts it above the
   tab bar). The `bottom` prop overrides `--notice-bottom`.
 
+  While a modal dialog is open everything outside it is inert, so each `Dialog` holds its own
+  host (`scope` = the dialog's id) and the notice shows in the topmost dialog's host instead
+  (`dialog-stack.svelte.ts`) — an Undo raised from a dialog can be pressed.
+
   Props:
   - bottom: string — CSS length from the bottom edge (default THE GAP × 2)
+  - scope: string — the dialog this host lives in (none = the app's root host)
 -->
 <script lang="ts">
     import Icon from './Icon.svelte';
     import IconButton from './IconButton.svelte';
+    import { dialogStack } from './dialog-stack.svelte';
     import { dismiss, notices, type NoticeKind } from './notice.svelte';
     import { rise } from './fluent';
     import type { IconName } from './icons';
@@ -29,16 +35,19 @@
     interface Props {
         /** Distance from the bottom edge (CSS length). */
         bottom?: string;
+        /** The dialog this host lives in; none for the root host. */
+        scope?: string;
     }
 
-    let { bottom }: Props = $props();
+    let { bottom, scope }: Props = $props();
 
     const ICONS: Record<NoticeKind, IconName> = { info: 'info', success: 'success', warning: 'warning', error: 'error' };
 
     let host = $state<HTMLElement>();
     let held = $state(false);
 
-    const current = $derived(notices.current);
+    // only the host of the topmost dialog (or the root host without one) draws the notice
+    const current = $derived((scope ?? null) === dialogStack.top ? notices.current : null);
     const supportsPopover = typeof HTMLElement !== 'undefined' && 'showPopover' in HTMLElement.prototype;
 
     // re-enter the top layer on every new notice, so it lands above a dialog opened since

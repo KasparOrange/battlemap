@@ -16,7 +16,10 @@
 -->
 <script lang="ts">
     import type { Snippet } from 'svelte';
+    import { onDestroy } from 'svelte';
+    import { dialogStack } from './dialog-stack.svelte';
     import Icon from './Icon.svelte';
+    import NoticeHost from './NoticeHost.svelte';
     import IconButton from './IconButton.svelte';
     import { scrollFade } from './scroll-fade';
     import type { IconName } from './icons';
@@ -69,6 +72,7 @@
         if (open && !dialog.open) {
             closing = false;
             dialog.showModal();
+            dialogStack.push(titleId);
             focusStart(dialog);
         } else if (!open && dialog.open && !closing) {
             // let the leave animation run, then really close
@@ -79,6 +83,7 @@
                 el.close();
                 closing = false;
             };
+            dialogStack.remove(titleId);
             const ms = parseFloat(getComputedStyle(el).animationDuration) * 1000;
 
             if (!ms) done();
@@ -96,6 +101,8 @@
 
         (start ?? el).focus({ preventScroll: true });
     }
+
+    onDestroy(() => dialogStack.remove(titleId));
 
     function onCancel(e: Event) {
         e.preventDefault();
@@ -134,6 +141,7 @@
         {/if}
         {#if footer}<footer>{@render footer()}</footer>{/if}
     </div>
+    <NoticeHost scope={titleId} />
 </dialog>
 
 <style>
