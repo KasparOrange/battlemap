@@ -27,7 +27,6 @@ holds only what is open.
 ## Wave 3 leftovers (collected from the reports, for wave 4)
 
 - import: upload only after the squares dialog is confirmed (W3-B2 request; W3-C done).
-- Session settings: "Light from the map" switch for `GameSettings.mapLights` (check whether W3-B2 built it).
 - Effects browser: small looping previews instead of stills.
 - Bench run on the emulator and, when reachable, the box.
 
