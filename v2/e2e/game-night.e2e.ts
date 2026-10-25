@@ -66,9 +66,12 @@ async function companionMatchesTv(t: Table): Promise<void> {
   }
 }
 
-/** The TV page's screenshot (the table as the players see it), without the `?debug=1` status line (its `rev` changes with every command). */
+/**
+ * The TV page's screenshot (the table as the players see it), without the `?debug=1` status line
+ * (its `rev` changes with every command) and the problem badge (it times out after 8 s).
+ */
 async function tvShot(t: Table): Promise<Buffer> {
-  return t.tv.screenshot({ animations: 'disabled', mask: [t.tv.getByTestId('tv-status')] });
+  return t.tv.screenshot({ animations: 'disabled', mask: [t.tv.getByTestId('tv-status'), t.tv.getByTestId('tv-badge')] });
 }
 
 /**

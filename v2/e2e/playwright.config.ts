@@ -35,6 +35,8 @@ const APP_ORIGIN = `http://localhost:${DEV ? APP_PORT : SERVER_PORT}`;
 // grandchild that outlived the run, and the next run reused it with the old build.
 const SERVER_CMD = `rm -rf "${DATA_DIR}" && cd ../server && exec bun src/main.ts`;
 const BUILD_CMD = `rm -rf "${APP_DIR}" && (cd ../app && bunx vite build --outDir "${APP_DIR}" --logLevel warn)`;
+/** Flows that load the app's source modules (only the dev server has them). */
+const MODULE_FLOWS = /[\\/]import-[^\\/]*\.e2e\.ts$/;
 /** Reuse a server already on the port only in dev mode — a built run always builds fresh. */
 const REUSE = DEV;
 
@@ -59,6 +61,12 @@ export default defineConfig({
     // WebGL in headless Chromium without a GPU: SwiftShader.
     launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] },
   },
+  // The `import-*` flows import the app's source modules into a page (`/app/src/…`), which only
+  // the Vite dev server serves; they run against it. Every other flow runs on the build.
+  projects: [
+    { name: 'app', testIgnore: MODULE_FLOWS },
+    { name: 'modules', testMatch: MODULE_FLOWS, use: { baseURL: `http://localhost:${APP_PORT}` } },
+  ],
   webServer: DEV
     ? [
         { command: SERVER_CMD, url: `http://localhost:${SERVER_PORT}/health`, env: SERVER_ENV, reuseExistingServer: true, timeout: 20_000 },
@@ -67,5 +75,6 @@ export default defineConfig({
     : [
         // Build first, then serve build + server from one process; ready when the app answers.
         { command: `${BUILD_CMD} && ${SERVER_CMD}`, url: `http://localhost:${SERVER_PORT}/app/`, env: SERVER_ENV, reuseExistingServer: REUSE, timeout: 240_000 },
+        { command: 'bun run --cwd ../app dev', url: `http://localhost:${APP_PORT}/app/`, env: APP_ENV, reuseExistingServer: false, timeout: 60_000 },
       ],
 });

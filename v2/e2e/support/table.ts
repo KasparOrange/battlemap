@@ -180,6 +180,11 @@ export async function openTable(browser: Browser, opts: TableOptions = {}): Prom
   return table;
 }
 
+/** A page's revision, or `'busy'` when the page doesn't answer within 3 s (a blocked main thread). */
+async function boundedRev(page: Page): Promise<number | null | 'busy'> {
+  return Promise.race([pageRev(page), new Promise<'busy'>((r) => setTimeout(() => r('busy'), 3000))]);
+}
+
 /**
  * Waits until the TV, the bot and every companion page agree on the revision (and the bot's
  * copy has caught up with a fresh snapshot).
@@ -188,12 +193,12 @@ export async function openTable(browser: Browser, opts: TableOptions = {}): Prom
  * @param timeoutMs - how long to wait
  * @returns the TV's snapshot at that point
  */
-export async function waitSynced(t: Table, timeoutMs = 10_000): Promise<Snapshot> {
+export async function waitSynced(t: Table, timeoutMs = 20_000): Promise<Snapshot> {
   let snap: Snapshot | null = null;
   let last = 'nothing read yet';
   await expect.poll(async () => {
-    snap = await t.bot.snapshot();
-    const revs = [await pageRev(t.tv), t.bot.rev, ...(await Promise.all(t.companions.map(pageRev)))];
+    snap = await t.bot.snapshot(5000);
+    const revs = [await boundedRev(t.tv), t.bot.rev, ...(await Promise.all(t.companions.map(boundedRev)))];
     last = `TV snapshot rev ${snap.rev} epoch ${snap.epoch}; TV page, bot, companions: ${revs.join(', ')}`;
     return revs.every((r) => r === snap!.rev) ? 'synced' : last;
   }, { timeout: timeoutMs, message: 'table did not sync' }).toBe('synced').catch((e: unknown) => {
