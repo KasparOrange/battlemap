@@ -12,7 +12,8 @@ holds only what is open.
 | 2 | renderer, companion game/tools (4a), companion library/tabs (4b), effects runtime, QA harness | ~80–90 %, cut off by the session limit; work committed (`33b2d8a`) |
 | 2.5 | integration pass (test hook; e2e 44 pass / 8 fail; soak 2,900 commands converge; 25 bugs in `qa.md`) + code review (0 blockers, 8 major in `review.md`) + Rust server (contract 72/72, VPS port 5930 side by side) | done |
 | 3 | W3-A core/TV/harness · W3-B1 companion game + map tabs · W3-B2 companion frame, library, dialogs, settings, developer screen · W3-C renderer, effects runtime, import, torch glow · W3-D Effects tab · W3-E shell, embedded Rust server, LAN play, VPS switch to Rust | done (545 unit tests; LAN play on the emulators; production on the Rust server) |
-| 4 | W4-Q regression on Bun + Rust, soak, LAN, bench, qa/review bookkeeping · W4-C companion fixes, LAN table picker, import after confirm, looping previews, visual pass · W4-T TV LAN join code + QR, reload speed, phone fit, TV visual pass, reveal animations · W4-F curtain + scene presets | running |
+| 4 | W4-Q regression (unit 584/0, e2e Rust 77/79, soak 0 lost on Rust, LAN ok) · W4-C companion fixes, "Tables nearby" picker, import after confirm, looping previews, visual pass · W4-T TV LAN join code + QR, label turning, grid contrast · W4-F curtain + scene presets | done |
+| 5 | W5-P start-up + import speed, e2e on Rust by default, flaky flows · W5-1 fog-honest thumbnails, reveal animations, prepared reveal areas, secret doors + traps · W5-2 spotlight, TV timer, handouts, DM notes · W5-3 sound library + soundscapes · W5-4 v1 import, PDF page picker, players' view, installable companion | running |
 
 ## Next
 
