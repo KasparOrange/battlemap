@@ -352,6 +352,11 @@ A *gesture* lasts from the first finger down to the last finger up.
 - Rates: a brush sends one `fog.apply` per square entered; window drags ≤ one per 80 ms; disc,
   ruler, measure and live stroke ≤ 30 per second. Everything predicts locally at full rate.
 - Desktop: wheel zooms at the cursor, right-drag or space-drag pans.
+- **One camera owner:** the DM camera lives in the table view (`lib/render/camera.ts`); the
+  companion keeps no camera state or limits of its own. Gestures use the pure helpers there
+  (pan, zoom, pinch) and call `setDmCamera`; `onCameraChange` reports every change; the view fits
+  a new map into the host minus `setDmInsets`. Hit tests likewise come from the view
+  (`view.hits(p)`, pure `hitsAt`) — no second hit test in the companion (review rv#8, rv#32).
 
 **TV** (`lib/tv/`): no chrome while all is well. Every control is focusable and works with D-pad
 + OK (the start screen's buttons, "Take over", "Back to library"); the back arrow appears for 5 s
