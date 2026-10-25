@@ -24,6 +24,13 @@ holds only what is open.
 3. **Wave 5 — roadmap** (`roadmap.md` tiers): curtain + scene presets, lighting from walls,
    ambient sound, LAN play through the shell, v1 games import.
 
+## Wave 3 leftovers (collected from the reports, for wave 4)
+
+- import: upload only after the squares dialog is confirmed (W3-B2 request; W3-C done).
+- Session settings: "Light from the map" switch for `GameSettings.mapLights` (check whether W3-B2 built it).
+- Effects browser: small looping previews instead of stills.
+- Bench run on the emulator and, when reachable, the box.
+
 ## Plan B for the TV renderer
 
 Only if the real box fails the WebView gate (roadmap N1), and only after the two cheap steps of
