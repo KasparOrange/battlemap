@@ -12,7 +12,7 @@
   - session: CompanionSession — the joined table (a game is open)
 -->
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { AppConfig } from '../../config.ts';
   import { log } from '../../log.ts';
   import type { CompanionSession } from '../../state/sessions.svelte.ts';
@@ -27,6 +27,7 @@
   import MapView from './MapView.svelte';
   import { collectTabs, DEFAULT_TAB, type MapTool, type TabDef } from './tabs.ts';
   import { canRedo, canUndo, undoKey } from './undo.ts';
+  import { hiddenTabs } from '../session-settings/settings-logic.ts';
 
   interface Props {
     /** The page's configuration. */
@@ -48,10 +49,13 @@
   let fullscreen = $state(false);
 
   const phone = $derived(width < 720);
-  const active = $derived(tabs.find((t) => t.id === ctx.tab) ?? tabs[0]!);
+  // the game's session settings hide some tabs (parity DP-04); a hidden chosen tab falls back to Tokens
+  const hidden = $derived(hiddenTabs(session.view?.game?.settings));
+  const shown = $derived(tabs.filter((t) => !hidden.has(t.id)));
+  const active = $derived(shown.find((t) => t.id === ctx.tab) ?? shown.find((t) => t.id === DEFAULT_TAB) ?? shown[0]!);
   const tokensTab = tabs.find((t) => t.id === DEFAULT_TAB);
   const tool = $derived<MapTool>((active.tool ?? tokensTab?.tool)?.(ctx) ?? {});
-  const items = $derived<TabItem[]>(tabs.map((t) => ({ id: t.id, label: t.label, icon: t.icon, group: t.group })));
+  const items = $derived<TabItem[]>(shown.map((t) => ({ id: t.id, label: t.label, icon: t.icon, group: t.group })));
   const showFooter = $derived(!!active.footer && (active.hasFooter?.(ctx) ?? true));
   const undoOk = $derived(canUndo(session.view));
   const redoOk = $derived(canRedo(session.view));
@@ -73,6 +77,15 @@
 
   $effect(() => {
     ctx.phone = phone;
+  });
+  // the chosen tab got hidden by the game's settings: leave it properly, land on the fallback
+  $effect(() => {
+    const now = active.id;
+    untrack(() => {
+      if (ctx.tab === now) return;
+      tabs.find((t) => t.id === ctx.tab)?.onLeave?.(ctx);
+      ctx.selectTab(now);
+    });
   });
 
   let mapEl = $state<HTMLDivElement>();
@@ -145,8 +158,8 @@
     }
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const n = Number(e.key);
-    if (Number.isInteger(n) && n >= 1 && n <= tabs.length) {
-      choose(tabs[n - 1]!.id);
+    if (Number.isInteger(n) && n >= 1 && n <= shown.length) {
+      choose(shown[n - 1]!.id);
       return;
     }
     if (e.key === 'f' || e.key === 'F') void toggleFullscreen();
