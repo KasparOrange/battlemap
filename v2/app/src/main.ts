@@ -1,6 +1,7 @@
 /**
  * The app's entry (index.html): logger first, then the start screen or the chosen mode. The
- * Android shell is told the app booted once it is mounted.
+ * Android shell is told the app booted once it is mounted — except in TV mode, which signals
+ * itself after its own boot (storage, last game), so a bundle that breaks there gets rolled back.
  */
 import { mount } from 'svelte';
 import { appConfig } from './lib/config.ts';
@@ -20,4 +21,4 @@ log.info('lifecycle', 'Boot', {
 const target = document.getElementById('app');
 if (!target) throw new Error('index.html has no #app');
 mount(App, { target, props: { config } });
-markShellReady();
+if (config.mode !== 'tv') markShellReady();
