@@ -68,6 +68,18 @@ async function runProbe(): Promise<unknown> {
   throw new Error('no PROBE_RESULT in logcat within 120 s');
 }
 
+/** What the bench page exposes as `window.__bench`. */
+interface BenchState { done?: boolean; results?: unknown[]; error?: string }
+
+/** Reads `window.__bench` from the page; `'loading'` while the page can't answer yet. */
+function readBench(): BenchState | null | 'loading' {
+  try {
+    return evalPage('window.__bench ?? null') as BenchState | null;
+  } catch {
+    return 'loading';
+  }
+}
+
 /** The bench: start the app, navigate its page to bench.html, poll `window.__bench`. */
 async function runBench(): Promise<unknown> {
   adb('shell', 'am', 'start', '-S', '-n', `${PKG}/.MainActivity`);
@@ -76,8 +88,8 @@ async function runBench(): Promise<unknown> {
   process.stdout.write('bench: running [1/2]\n');
   for (let i = 0; i < 300; i++) {
     await Bun.sleep(3000);
-    let b: { done?: boolean; results?: unknown[]; error?: string } | null = null;
-    try { b = evalPage('window.__bench ?? null') as typeof b; } catch { continue; } // page still loading
+    const b = readBench();
+    if (b === 'loading') continue; // page still loading
     if (b?.done) {
       evalPage(`(location.href = new URL('/app/index.html', location.href).toString(), 'ok')`);
       return b;
