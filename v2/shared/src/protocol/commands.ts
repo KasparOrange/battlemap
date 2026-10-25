@@ -5,7 +5,7 @@
  * `docs/protocol.md` "commands".
  */
 import * as v from 'valibot';
-import { Cell, Id, Int, Name, Num, Positive } from '../model/basics.ts';
+import { Cell, FileRef, Id, Int, Name, Num, Positive } from '../model/basics.ts';
 import { TemplateDisc } from '../model/disc.ts';
 import { OneShot, PlacedEffect } from '../model/effect.ts';
 import { GameSettings, TvMode } from '../model/game.ts';
@@ -316,6 +316,8 @@ export const MapRegrid = v.object({
   grid: RasterGrid,
   /** Whether battlemap draws grid lines (kept when missing). */
   drawGrid: v.optional(v.boolean()),
+  /** A new table copy for the new grid (null = none, the TV uses the picture; kept when missing). */
+  tableCopy: v.optional(v.nullable(FileRef)),
 });
 
 // ── effects ─────────────────────────────────────────────────────────────────────────────────

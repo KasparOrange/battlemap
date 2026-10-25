@@ -222,6 +222,16 @@ describe('maps in a game', () => {
     expect(s.history.undo).toEqual([]);
     expect(refused(withGame(uvttMap()), { type: 'map.regrid', grid: fine })).toContain('picture');
   });
+
+  test('regrid sets the table copy when given, keeps it when not', () => {
+    const copy = { hash: 'fedcba9876543210', ext: 'webp' as const, bytes: 10 };
+    let s = run(withGame(pictureMap('m', 20, 15)), { type: 'map.regrid', grid: wholeGrid(40, 30, 2000, 1500), tableCopy: copy });
+    expect(active(s).info.tableCopy).toEqual(copy);
+    s = run(s, { type: 'map.regrid', grid: wholeGrid(40, 30, 2000, 1500), drawGrid: true });
+    expect(active(s).info.tableCopy).toEqual(copy);
+    s = run(s, { type: 'map.regrid', grid: wholeGrid(20, 15, 2000, 1500), tableCopy: null });
+    expect(active(s).info.tableCopy).toBeNull();
+  });
 });
 
 describe('effects and game', () => {

@@ -111,7 +111,9 @@ export function mapRegrid(root: RootState, cmd: CommandOf<'map.regrid'>): ApplyR
     if (map.info.kind !== 'picture') return 'Only picture maps take a new grid.';
     mapId = map.info.id;
     const drawGrid = cmd.drawGrid ?? map.info.drawGrid;
-    const info = { ...map.info, grid: cmd.grid, drawGrid };
+    // A finer grid may need a sharper table copy (rv#29): the sender made it and says so.
+    const tableCopy = cmd.tableCopy !== undefined ? cmd.tableCopy : map.info.tableCopy;
+    const info = { ...map.info, grid: cmd.grid, drawGrid, tableCopy };
     const showGrid = cmd.drawGrid ?? map.showGrid;
     const same = map.info.grid.cols === cmd.grid.cols && map.info.grid.rows === cmd.grid.rows;
     if (same) return { map: { ...map, info, showGrid } };
