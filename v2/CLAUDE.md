@@ -23,6 +23,8 @@ application id, so both apps install side by side.
 | `server/` | relay (WebSocket) + files (maps, uploads, shared library, link fetch, log forward) | Bun + TS |
 | `shell/` | the Android shell: Google TV, Fire TV, tablets, phones | Kotlin WebView, loads the built app |
 | `assets/` | effects library and other shipped art, each with a manifest entry and licence | see `docs/effects.md` |
+| `e2e/` | Playwright flows across a TV page and a companion page | `bun run e2e` |
+| `tools/` | device deploy, bench runs, soak bot | |
 | `docs/` | `architecture.md`, `protocol.md`, `design.md`, `effects.md`, `parity.md`, `action.md`, `archive.md`, … | |
 
 A helper owns the folders its brief names and edits nothing else. A change another owner's
@@ -45,8 +47,10 @@ folder needs goes into your report, not into their files.
   render on demand (no frame when nothing changed, except while something animates); no
   per-frame allocations; textures ≤ 4096 px per side (tile larger maps); dispose what is off.
 - New features default OFF unless they are core table behaviour.
-- Tests: `bun test` / vitest for shared logic and server, Playwright for flows. Every module
+- Tests: `bun test` for shared logic, app logic and server, Playwright for flows. Every module
   with logic has tests. Don't mark something done that you didn't run.
+- Parallel helpers each run their own ports: `BATTLEMAP_APP_PORT` / `BATTLEMAP_SERVER_PORT`
+  for `bun run e2e`, `PORT` + a temp `DATA_DIR` for the server. Never the defaults 5884/5929.
 
 ## Secrets (never commit)
 

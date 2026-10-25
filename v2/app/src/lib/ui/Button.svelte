@@ -101,7 +101,7 @@
     let menuOpen = $state(false);
     let menuHeld = $state(false);
     let menuFocus = $state(false);
-    let lastPress = 0;
+    let lastPress = -Infinity;
 
     const bare = $derived(!label && !children && !hint);
 

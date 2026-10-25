@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@battlemap/shared": "workspace:*",
-    "mwlog": "file:../../../mwlog-ts"
+    "mwlog": "file:../../../mwlog-ts",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "@types/bun": "^1.4.4",

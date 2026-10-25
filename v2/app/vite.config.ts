@@ -10,8 +10,8 @@ import { defineConfig, type Plugin } from 'vite';
 /** Where the dev server proxies `/ws`, `/log`, `/api`, `/files`, `/health`. */
 const SERVER = process.env.BATTLEMAP_SERVER ?? 'http://localhost:5929';
 
-/** The app's dev port (the launcher passes `--port` when it starts it). */
-const DEV_PORT = 5884;
+/** The app's dev port (`BATTLEMAP_APP_PORT` overrides it, e.g. for parallel test runs). */
+const DEV_PORT = Number(process.env.BATTLEMAP_APP_PORT ?? 5884);
 
 const here = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
