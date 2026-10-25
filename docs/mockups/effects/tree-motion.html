@@ -26,10 +26,9 @@ const state = { Gusts: true, "Strong wind": false, "Show cuts": false };
 toggles(document.getElementById("bar"), Object.keys(state), state);
 
 const load = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
-const [still, sheet, labels, info] = await Promise.all([
-  load("media/oak-still.png"), load("media/oak-sheet.webp"), load("media/oak-parts.png"),
-  fetch("media/oak-parts.json").then((r) => r.json()),
-]);
+const oak = (await fetch("trees/trees.json").then((r) => r.json())).find((t) => t.name === "oak");
+const info = { w: oak.w, h: oak.h, centre: oak.centre, parts: oak.parts.list };
+const [still, sheet, labels] = await Promise.all([load("trees/oak-still.webp"), load("trees/oak-sheet.webp"), load("trees/oak-parts.png")]);
 const SHEET = { fw: 256, fh: 241, cols: 6, frames: 30, fps: 12 };
 
 // one wind for every panel: a steady breeze, gusts rolling in (smooth noise), a fixed direction

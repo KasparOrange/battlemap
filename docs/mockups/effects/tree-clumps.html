@@ -1,0 +1,76 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Tree crowns — clump motion</title>
+<link rel="stylesheet" href="fx.css">
+<script type="module">
+import { score } from "./fx.js";
+import { loadTrees, stage, mb, windAt, windDir, hash } from "./trees/common.js";
+score({ gpu: "A", mem: "A", cpu: "A" }, "one still per tree type + ~20 small quads per tree (one batched draw)");
+const trees = await loadTrees(["oak", "birch", "maple"]);
+
+// Every clump its own picture, grown 3 px into its neighbours with the same pixels (so at rest the
+// tree is exactly the still), feathered at that rim; drawn outer first, centre last (the top of
+// the crown is its middle), over a darkened copy that shows through the gaps as shade.
+function cut(tree) {
+  const W = tree.w, H = tree.h, GROW = 3;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const g = c.getContext("2d", { willReadFrequently: true });
+  g.drawImage(tree.labels, 0, 0); const lab = g.getImageData(0, 0, W, H).data;
+  g.clearRect(0, 0, W, H); g.drawImage(tree.img, 0, 0); const px = g.getImageData(0, 0, W, H).data;
+  const [cx, cy] = tree.centre, R = Math.max(W, H) / 2;
+  const parts = tree.parts.list.map((pt) => {
+    let x0 = W, y0 = H, x1 = 0, y1 = 0;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (lab[(y * W + x) * 4] === pt.id) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    x0 = Math.max(0, x0 - GROW); y0 = Math.max(0, y0 - GROW); x1 = Math.min(W - 1, x1 + GROW); y1 = Math.min(H - 1, y1 + GROW);
+    const w = x1 - x0 + 1, h = y1 - y0 + 1, out = new ImageData(w, h), lines = new ImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let best = 0;
+      for (let oy = -GROW; oy <= GROW && best < 1; oy++) for (let ox = -GROW; ox <= GROW; ox++) {
+        const X = x0 + x + ox, Y = y0 + y + oy;
+        if (X < 0 || Y < 0 || X >= W || Y >= H || lab[(Y * W + X) * 4] !== pt.id) continue;
+        best = Math.max(best, 1 - Math.hypot(ox, oy) / (GROW + 1)); if (best >= 1) break;
+      }
+      const i = ((y0 + y) * W + x0 + x) * 4, o = (y * w + x) * 4;
+      out.data[o] = px[i]; out.data[o + 1] = px[i + 1]; out.data[o + 2] = px[i + 2]; out.data[o + 3] = px[i + 3] * Math.min(1, best * 1.6);
+      if (lab[i] === pt.id && px[i + 3] > 128 && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => lab[((y0 + y + b) * W + x0 + x + a) * 4] !== pt.id)) {
+        lines.data[o] = 255; lines.data[o + 1] = 230; lines.data[o + 2] = 60; lines.data[o + 3] = 255;
+      }
+    }
+    const pic = document.createElement("canvas"); pic.width = w; pic.height = h; pic.getContext("2d").putImageData(out, 0, 0);
+    const cuts = document.createElement("canvas"); cuts.width = w; cuts.height = h; cuts.getContext("2d").putImageData(lines, 0, 0);
+    const rx = (pt.cx - cx) / R, ry = (pt.cy - cy) / R, r = Math.min(1, Math.hypot(rx, ry));
+    // pivot: the clump's edge toward the trunk (it hangs off a branch from there)
+    return { pic, cuts, x0, y0, rx, ry, r, pivot: [pt.cx - rx * R * 0.18 - x0, pt.cy - ry * R * 0.18 - y0], seed: hash(pt.id * 7.3 + W) };
+  }).sort((a, b) => b.r - a.r);
+  const under = document.createElement("canvas"); under.width = W; under.height = H;
+  const u = under.getContext("2d"); u.filter = "brightness(0.5) saturate(0.8) blur(2px)"; u.drawImage(tree.img, 0, 0);
+  return { parts, under };
+}
+const rigs = new Map(trees.map((t) => [t, cut(t)]));
+
+stage({
+  trees, toggles: { "Show cuts": false },
+  label: (t) => `${t.name} · ${t.parts.list.length} clumps · ${mb(t.still_gpu)}`,
+  caption: `<b>Clump motion</b> — the same still, cut by code along its painted outlines into the leaf clumps it is made of; each clump hangs off the trunk and sways on its own, a wave running through the crown with the wind. The gaps that open show a darkened copy — they read as shade. Only for crowns made of clumps (a pine or a bare tree takes the shader). <b>Show cuts</b> draws the clumps. Click a tree to see it alone.`,
+  draw(t, placed, g, { W, H, state }) {
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H);
+    const [dx, dy] = windDir();
+    for (const p of placed) {
+      const rig = rigs.get(p.tree), s = p.s, w = windAt(t, p.fx, p.fy), A = 4.5;   // A: px of sway at the rim, in still pixels
+      g.drawImage(rig.under, p.x, p.y, p.w, p.h);
+      for (const q of rig.parts) {
+        const k = 0.35 + 0.65 * q.r, phase = 2.4 * (q.rx * dx + q.ry * dy) + q.seed * 1.4;
+        const wave = Math.sin(t * 2.6 - phase) + 0.35 * Math.sin(t * 5.9 - phase * 1.7 + q.seed * 6);
+        const along = A * w * k * (0.55 + 0.45 * wave), across = A * 0.35 * w * k * Math.sin(t * 3.3 + q.seed * 9);
+        const ox = dx * along - dy * across, oy = dy * along + dx * across;
+        const rot = 0.022 * w * k * wave, sc = 1 + 0.012 * w * Math.sin(t * 1.9 + phase);
+        g.setTransform(s, 0, 0, s, p.x + (q.x0 + q.pivot[0] + ox) * s, p.y + (q.y0 + q.pivot[1] + oy) * s);
+        g.rotate(rot); g.scale(sc, sc); g.translate(-q.pivot[0], -q.pivot[1]);
+        g.drawImage(q.pic, 0, 0);
+        if (state["Show cuts"]) g.drawImage(q.cuts, 0, 0);
+      }
+      g.setTransform(1, 0, 0, 1, 0, 0);
+    }
+  },
+});
+</script>

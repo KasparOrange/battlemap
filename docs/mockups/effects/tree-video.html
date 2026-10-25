@@ -1,0 +1,32 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Tree crowns — video frames</title>
+<link rel="stylesheet" href="fx.css">
+<script type="module">
+import { score } from "./fx.js";
+import { loadTrees, stage, mb, hash } from "./trees/common.js";
+score({ gpu: "B", mem: "B", cpu: "A" }, "memory per tree TYPE (copies share it); over battlemap v2's 6 MB loop cap");
+const trees = await loadTrees(["oak", "pine", "birch", "maple", "dead"], true);
+stage({
+  trees, wind: false, toggles: { "Blend frames": false, "Same start": false },
+  label: (t) => `${t.name} · ${t.sheet.frames} frames · ${mb(t.sheet.gpu)}`,
+  caption: `<b>Video frames</b> — the painted crown went to a video model ("top-down, locked camera, gentle wind"); the clip became 30 keyed frames at 12 fps on one sprite sheet, looped with a crossfade. The most natural motion, but the wind is baked in: it can't turn or gust with the table, and every tree type costs ~7 MB. <b>Blend frames</b> mixes neighbours for smooth motion. Click a tree to see it alone.`,
+  draw(t, placed, g, { W, H, state }) {
+    g.clearRect(0, 0, W, H);
+    for (const p of placed) {
+      const s = p.tree.sheet, f = t * s.fps + (state["Same start"] ? 0 : hash(p.tree.w + p.tree.h) * s.frames);
+      const i = Math.floor(f) % s.frames, k = f - Math.floor(f);
+      const frame = (n, a) => {
+        g.globalAlpha = a;
+        g.drawImage(p.tree.sheetImg, (n % s.cols) * s.fw, Math.floor(n / s.cols) * s.fh, s.fw, s.fh, p.x, p.y, p.w, p.w * s.fh / s.fw);
+      };
+      if (state["Blend frames"]) {
+        // premultiplied mix: (1 − k)·this frame + k·the next ("lighter" adds)
+        g.globalCompositeOperation = "lighter"; frame(i, 1 - k); frame((i + 1) % s.frames, k);
+        g.globalCompositeOperation = "source-over";
+      } else frame(i, 1);
+    }
+    g.globalAlpha = 1;
+  },
+});
+</script>

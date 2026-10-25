@@ -1,0 +1,69 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Tree crowns — wind shader</title>
+<link rel="stylesheet" href="fx.css">
+<script type="module">
+import { score } from "./fx.js";
+import { loadTrees, stage, mb, windAt, windDir, hash } from "./trees/common.js";
+score({ gpu: "B", mem: "A", cpu: "A" }, "one still per tree type; cost grows with the area the crowns cover");
+const trees = await loadTrees(["oak", "pine", "birch", "maple", "dead"]);
+const textures = new Map();
+
+const vs = `attribute vec2 p; uniform vec4 box; varying vec2 uv;
+void main(){ uv = p; vec2 q = box.xy + (p * 1.24 - 0.12) * box.zw; gl_Position = vec4(q.x * 2.0 - 1.0, 1.0 - q.y * 2.0, 0, 1); }`;
+// Sample the still where the wind pushed this pixel from: a sway that grows toward the rim (the
+// crown bends around its trunk) and travels across it as a wave, plus noise flutter.
+const fs = `precision mediump float;
+varying vec2 uv; uniform sampler2D tree; uniform float t, w, seed, aspect; uniform vec2 dir, centre;
+float h(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453); }
+float n(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+  return mix(mix(h(i),h(i+vec2(1,0)),f.x), mix(h(i+vec2(0,1)),h(i+vec2(1,1)),f.x), f.y); }
+void main(){
+  vec2 q = uv * 1.24 - 0.12;
+  vec2 d = (q - centre) * 2.0; float r = clamp(length(d), 0.0, 1.3);
+  vec2 dv = vec2(dir.x, dir.y * aspect);
+  float wave = sin(t * 2.6 + seed - dot(d, dir) * 2.2);
+  vec2 sway = dv * w * (0.022 * r * r * (0.6 + 0.4 * wave) + 0.010 * r);
+  vec2 flutter = (vec2(n(d * 6.0 + t * 1.7 + seed), n(d * 6.0 - t * 1.5 + 7.0)) - 0.5) * 0.020 * r * w;
+  vec2 s = q - sway - flutter;
+  vec4 c = texture2D(tree, s);
+  gl_FragColor = c * step(0.0, s.x) * step(s.x, 1.0) * step(0.0, s.y) * step(s.y, 1.0);
+}`;
+let pr, U;
+function init(gl) {
+  const sh = (ty, src) => { const o = gl.createShader(ty); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  U = (k) => gl.getUniformLocation(pr, k);
+  gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+  for (const t of trees) {
+    const tx = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tx);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, t.img);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    textures.set(t, tx);
+  }
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+}
+
+stage({
+  trees, gl: true,
+  label: (t) => `${t.name} · 1 picture · ${mb(t.still_gpu)}`,
+  caption: `<b>Wind shader</b> — one still picture per tree type; a small program on the graphics chip bends it every frame: the rim sways more than the centre, a wave runs across the crown, leaves flutter. Works on any tree (needles, bare branches). One wind for the whole map: a gust reaches the downwind trees later, <b>Turn wind</b> turns all of them. Click a tree to see it alone.`,
+  draw(t, placed, gl, { W, H }) {
+    if (!pr) init(gl);
+    gl.viewport(0, 0, W, H); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    const [dx, dy] = windDir();
+    for (const p of placed) {
+      gl.bindTexture(gl.TEXTURE_2D, textures.get(p.tree));
+      gl.uniform4f(U("box"), p.x / W, p.y / H, p.w / W, p.h / H);
+      gl.uniform2f(U("centre"), p.tree.centre[0] / p.tree.w, p.tree.centre[1] / p.tree.h);
+      gl.uniform2f(U("dir"), dx, dy); gl.uniform1f(U("aspect"), p.tree.w / p.tree.h);
+      gl.uniform1f(U("t"), t); gl.uniform1f(U("w"), windAt(t, p.fx, p.fy)); gl.uniform1f(U("seed"), hash(p.tree.w) * 6.28);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+  },
+});
+</script>
