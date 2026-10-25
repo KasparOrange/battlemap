@@ -217,7 +217,7 @@
       <IconButton icon={fullscreen ? 'fullscreen-exit' : 'fullscreen'} label={fullscreen ? 'Leave full screen' : 'Full screen'} onclick={() => void toggleFullscreen()} />
     </div>
 
-    <div class="corner bl" data-ctl="toolbar">
+    <div class="corner bl" data-ctl={phone ? 'toolbar' : 'standalone'}>
       <IconButton icon="fit" label="Fit the map on my screen" onclick={() => ctx.camera.fit()} />
       <IconButton icon="jump" label="Jump to what the TV shows" onclick={() => ctx.camera.showTv()} />
     </div>

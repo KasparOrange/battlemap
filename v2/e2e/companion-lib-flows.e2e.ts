@@ -75,7 +75,8 @@ async function startGame(page: Page, tv: Page, detect = false): Promise<void> {
     throw e;
   }
   await page.getByRole('button', { name: 'Upload and play' }).click();
-  await expect(tv.getByTestId('tv-status')).toContainText(/game Session \d+/, { timeout: 20_000 });
+  // the upload starts at the click now (nothing goes up before the squares are confirmed)
+  await expect(tv.getByTestId('tv-status')).toContainText(/game Session \d+/, { timeout: 45_000 });
   await expect(page.getByRole('tab', { name: 'Measure' }).first()).toBeVisible({ timeout: 15_000 });
 }
 

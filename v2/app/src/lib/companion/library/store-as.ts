@@ -10,7 +10,7 @@ const KEY = 'storeAs';
 
 /** The options of the Segmented control, with the old app's hints. */
 export const STORE_AS_OPTIONS: SegmentOption[] = [
-  { id: 'webp', label: 'WebP', hint: 'recommended' },
+  { id: 'webp', label: 'WebP', hint: 'best' }, // short: four options share a phone's width
   { id: 'jpeg', label: 'JPEG' },
   { id: 'png', label: 'PNG' },
   { id: 'asis', label: 'As is' },

@@ -1,7 +1,7 @@
 <!--
   SharedLibrary — the server's maps, for every game (parity §19): browse (cards, newest first,
   filtered by the search), fill (a link with a paste button: picture, PDF, .dd2vtt, a page's
-  main picture, Drive, Dropbox — or "Upload from device"), prune (Remove, after a question:
+  main picture, Drive, Dropbox — or "Upload from this device"), prune (Remove, after a question:
   games that use the map keep their copy). "Store as" sits at the foot and is remembered.
   Reloads itself on mount and after every change.
 
@@ -158,30 +158,36 @@
 
 <div class="shared" class:list={columns === 'list'}>
   <Section title="Add a map">
-    <Field
-      label="From a link"
-      type="url"
-      inputmode="url"
-      enterkeyhint="go"
-      icon="link"
-      placeholder="Picture, PDF, .dd2vtt, a page, Drive, Dropbox"
-      bind:value={link}
-      onenter={() => void fetchLink()}
-      disabled={fetching}
-    >
-      {#snippet trailing()}
-        <IconButton icon="paste" label="Paste the link and get the map" variant="quiet" loading={fetching} onclick={() => void paste()} />
-      {/snippet}
-    </Field>
-    <div class="row">
-      <Button label="Get the map" icon="download" disabled={!link.trim()} loading={fetching} onclick={() => void fetchLink()} />
-      <Button label="Upload from device" icon="upload" variant="flat" onclick={() => picker?.click()} />
-    </div>
-    <input bind:this={picker} type="file" hidden onchange={picked} />
-    <div class="store">
-      <span class="bm-eyebrow">Store as</span>
-      <Segmented label="Store as" options={STORE_AS_OPTIONS} bind:value={storeAs} block onchange={(v) => void saveStoreAs(v as StoreAs)} />
-      <p class="hint">{STORE_AS_HINTS[storeAs]}</p>
+    <div class="add">
+      <div class="link-row">
+        <div class="link">
+          <Field
+            label="From a link"
+            type="url"
+            inputmode="url"
+            enterkeyhint="go"
+            icon="link"
+            placeholder="Picture, PDF, .dd2vtt, a page, Drive, Dropbox"
+            bind:value={link}
+            onenter={() => void fetchLink()}
+            disabled={fetching}
+          >
+            {#snippet trailing()}
+              <IconButton icon="paste" label="Paste the link and get the map" variant="quiet" loading={fetching} onclick={() => void paste()} />
+            {/snippet}
+          </Field>
+        </div>
+        <Button label="Get the map" icon="download" disabled={!link.trim()} loading={fetching} onclick={() => void fetchLink()} />
+      </div>
+      <div class="row">
+        <Button label="Upload from this device" icon="upload" variant="flat" onclick={() => picker?.click()} />
+      </div>
+      <input bind:this={picker} type="file" hidden onchange={picked} />
+      <div class="store">
+        <span class="bm-eyebrow">Store as</span>
+        <Segmented label="Store as" options={STORE_AS_OPTIONS} bind:value={storeAs} block onchange={(v) => void saveStoreAs(v as StoreAs)} />
+        <p class="hint">{STORE_AS_HINTS[storeAs]}</p>
+      </div>
     </div>
   </Section>
 
@@ -255,6 +261,24 @@
     gap: var(--g2);
   }
 
+  /* the form keeps a readable width on a wide library; the maps below use the full width */
+  .add {
+    display: grid;
+    gap: var(--g);
+    max-width: 40rem;
+  }
+
+  .link-row {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--g);
+  }
+
+  .link {
+    flex: 1;
+    min-width: 0;
+  }
+
   .row {
     display: flex;
     flex-wrap: wrap;
@@ -264,6 +288,20 @@
   .store {
     display: grid;
     gap: calc(var(--g) / 2);
+    margin-top: var(--g);
+  }
+
+  /* the side sheet (rows) and the phone: the button goes under the field */
+  .list .link-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  @media (max-width: 719px) {
+    .link-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
   }
 
   .hint,

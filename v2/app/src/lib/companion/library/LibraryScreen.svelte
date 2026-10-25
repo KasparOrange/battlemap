@@ -64,14 +64,6 @@
   let shared: SharedLibrary | undefined = $state();
 
   const root = $derived(session.view);
-  let wide = $state(typeof matchMedia === 'function' ? matchMedia('(min-width: 720px)').matches : true);
-
-  $effect(() => {
-    const mq = matchMedia('(min-width: 720px)');
-    const on = () => (wide = mq.matches);
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  });
   const groups = $derived(groupGames(games ?? [], query));
   const cont = $derived(groups.cont);
   const table = $derived.by(() => {
@@ -236,7 +228,8 @@
       onmenu={(id) => (id === 'table' ? onchangetable?.() : id === 'import' ? gamePicker?.click() : id === 'dev' ? (developer = true) : list())}
     />
     <div class="search">
-      <SearchField bind:value={query} expanded={wide} label="Search games and maps" placeholder="Search games and maps" />
+      <!-- the phone gives the search its own row, so it stays open there too -->
+      <SearchField bind:value={query} expanded label="Search games and maps" placeholder="Search games and maps" />
     </div>
     <Segmented
       label="Show"
@@ -268,6 +261,8 @@
           </div>
         </div>
       {:else}
+        <!-- no games of its own but backups: the backups lead, without an empty grid above -->
+        {#if cont || groups.onTv.length > 0}
         <div class="grid" data-testid="games">
           {#if cont}
             <div class="cont">
@@ -292,6 +287,7 @@
             {@render gameCard(g)}
           {/each}
         </div>
+        {/if}
         {#if groups.backups.length > 0}
           <section class="backups" data-testid="backups" aria-labelledby="bm-backups-h">
             <h2 id="bm-backups-h" class="bm-eyebrow">Backups on the server</h2>
@@ -402,9 +398,12 @@
   }
 
   .backups {
-    margin-top: calc(var(--g2) * 2);
     display: grid;
     gap: var(--g);
+  }
+
+  .grid + .backups {
+    margin-top: calc(var(--g2) * 2);
   }
 
   .backups h2 {

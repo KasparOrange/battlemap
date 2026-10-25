@@ -134,7 +134,7 @@
 
 {#snippet row(r: PickerRow)}
   <li>
-    <ListRow title={r.name} sub={r.sub} icon={r.where === 'tv' ? 'tv' : 'connected'} selected={r.lastUsed} onclick={() => pick(r)}>
+    <ListRow title={r.name} sub={r.sub} icon="tv" selected={r.lastUsed} onclick={() => pick(r)}>
       {#snippet trailing()}
         {#if r.lastUsed}<span class="last"><Badge text="Last used" tone="accent" /></span>{/if}
         <Badge text={WHERE_LABEL[r.where]} tone={r.where === 'tv' ? 'ok' : undefined} />
