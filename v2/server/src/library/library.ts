@@ -46,7 +46,8 @@ export class Library {
   /**
    * Adds a map, or replaces the entry with the same id (keeping when it was added).
    *
-   * @param body - `{map: MapInfo, thumb?, originalBytes?, note?}` as sent by the app
+   * @param body - `{map: MapInfo, thumb?, originalBytes?, note?, addedAt?}` as sent by the app
+   *   (`addedAt` is taken for a new entry only — the v1 import keeps the old dates)
    * @param now - the time to stamp a new entry with
    * @returns the stored entry and whether it was new
    * @throws {BadEntry} when the body isn't a map or names files the server doesn't have
@@ -64,6 +65,7 @@ export class Library {
     }
     const originalBytes = typeof b.originalBytes === 'number' && Number.isInteger(b.originalBytes) && b.originalBytes >= 0 ? b.originalBytes : null;
     const note = typeof b.note === 'string' ? b.note.slice(0, 200) : null;
+    const addedAt = typeof b.addedAt === 'string' && Number.isFinite(Date.parse(b.addedAt)) ? new Date(b.addedAt).toISOString() : now.toISOString();
     const info = { ...map.value, libraryId: map.value.id };
     for (const [what, ref] of [['picture', info.picture], ['tableCopy', info.tableCopy], ['geometry', info.geometry], ['thumb', thumb]] as const) {
       if (ref && !(await this.files.has(ref))) throw new BadEntry(`${what} ${ref.hash.slice(0, 12)}….${ref.ext} is not on the server — upload it first`);
@@ -73,7 +75,7 @@ export class Library {
     return this.lock.run('library', async () => {
       const file = await readJsonFile<LibraryFile>(this.path, { entries: [] });
       const i = file.entries.findIndex((e) => e.map.id === info.id);
-      const entry: Entry = { map: info, thumb, addedAt: i >= 0 ? file.entries[i]!.addedAt : now.toISOString(), originalBytes, note };
+      const entry: Entry = { map: info, thumb, addedAt: i >= 0 ? file.entries[i]!.addedAt : addedAt, originalBytes, note };
       if (i >= 0) file.entries[i] = entry;
       else file.entries.unshift(entry);
       await writeAtomic(this.path, JSON.stringify(file, null, 1));
