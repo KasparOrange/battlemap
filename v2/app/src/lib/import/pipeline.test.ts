@@ -68,7 +68,7 @@ async function gridPng(w: number, h: number, cell: number): Promise<Uint8Array> 
       raw[p + 3] = 255;
     }
   }
-  const enc = await backend!.encode({ width: w, height: h, data: raw, readRows: async () => raw, close() {} } as never, { width: w, height: h }, 'lossless');
+  const enc = await backend!.encode({ width: w, height: h, data: raw, readRows: async () => raw, close() {} } as never, { width: w, height: h }, 'page');
   return new Uint8Array(await enc.blob.arrayBuffer());
 }
 

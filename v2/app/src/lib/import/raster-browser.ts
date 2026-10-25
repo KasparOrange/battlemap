@@ -93,17 +93,15 @@ export const browserBackend: RasterBackend = {
     try {
       let blob: Blob | null;
       let ext: Encoded['ext'];
-      if (purpose === 'lossless') {
+      const quality = purpose === 'thumb' ? 0.85 : purpose === 'page' ? 0.95 : 0.9;
+      blob = await encodeAs(bitmap, 'image/webp', quality);
+      ext = 'webp';
+      if (!blob && purpose === 'page') {
         blob = await encodeAs(bitmap, 'image/png');
         ext = 'png';
-      } else {
-        const quality = purpose === 'thumb' ? 0.85 : 0.9;
-        blob = await encodeAs(bitmap, 'image/webp', quality);
-        ext = 'webp';
-        if (!blob) {
-          blob = await encodeAs(bitmap, 'image/jpeg', quality);
-          ext = 'jpg';
-        }
+      } else if (!blob) {
+        blob = await encodeAs(bitmap, 'image/jpeg', quality);
+        ext = 'jpg';
       }
       if (!blob) throw new Error(`the canvas can't encode ${ext}`);
       return { blob, ext, width: bitmap.width, height: bitmap.height };

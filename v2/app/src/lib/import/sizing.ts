@@ -125,6 +125,6 @@ export function detectionPlan(width: number, height: number, maxSide = DETECT_MA
   if (width * height > MAX_FULL_DECODE_PIXELS) {
     return { mode: 'scaled', factor, stripRows: 0, width: Math.floor(width / factor), height: Math.floor(height / factor) };
   }
-  const rows = Math.max(factor, Math.floor(MAX_CANVAS_PIXELS / 4 / width / factor) * factor);
+  const rows = Math.max(factor, Math.floor(MAX_CANVAS_PIXELS / width / factor) * factor);
   return { mode: 'strips', factor, stripRows: Math.min(rows, height), width, height };
 }

@@ -46,16 +46,23 @@ export async function renderPdfFirstPage(file: Blob): Promise<RenderedPage> {
     const page = await doc.getPage(1);
     const base = page.getViewport({ scale: 1 });
     const viewport = page.getViewport({ scale: pdfRenderScale(base.width, base.height) });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
+    const width = Math.floor(viewport.width);
+    const height = Math.floor(viewport.height);
+    // An OffscreenCanvas hands its pixels over without a copy (transferToImageBitmap); a DOM
+    // canvas needs a read-back on the main thread, which took ~80 ms for a 4096 px page.
+    const offscreen = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(width, height) : null;
+    const canvas = offscreen ? null : Object.assign(document.createElement('canvas'), { width, height });
+    const ctx = (offscreen ?? canvas!).getContext('2d') as CanvasRenderingContext2D | null;
+    if (!ctx) throw new ImportError('pdf', "This device can't draw the PDF (no canvas).");
     try {
-      await page.render({ canvas, viewport, background: '#ffffff' }).promise;
-      const bitmap = await createImageBitmap(canvas);
+      await page.render({ canvas, canvasContext: ctx, viewport, background: '#ffffff' }).promise;
+      const bitmap = offscreen ? offscreen.transferToImageBitmap() : await createImageBitmap(canvas!);
       return { bitmap, pageCount: doc.numPages };
     } finally {
-      canvas.width = 0; // gives the canvas memory back at once (Safari keeps it otherwise)
-      canvas.height = 0;
+      if (canvas) {
+        canvas.width = 0; // gives the canvas memory back at once (Safari keeps it otherwise)
+        canvas.height = 0;
+      }
       page.cleanup();
     }
   } catch (e) {

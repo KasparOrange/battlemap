@@ -231,7 +231,7 @@ describe('size rules', () => {
     const d = detectionPlan(6000, 6000);
     expect(d).toMatchObject({ mode: 'strips', factor: 2 });
     expect(d.stripRows % 2).toBe(0);
-    expect(d.stripRows * 6000).toBeLessThanOrEqual(MAX_CANVAS_PIXELS / 4);
+    expect(d.stripRows * 6000).toBeLessThanOrEqual(MAX_CANVAS_PIXELS);
     expect(detectionPlan(17100, 9600)).toMatchObject({ mode: 'scaled', factor: 6, width: 2850, height: 1600 });
   });
 });

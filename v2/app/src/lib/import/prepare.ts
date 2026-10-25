@@ -13,7 +13,7 @@ import {
   detectFromLuminance, LuminanceBuilder, rescaleDetection, type GridDetection,
 } from './grid-detect.ts';
 import { guessGrid, type GridSource } from './grid-choice.ts';
-import type { Encoded, RasterBackend, RasterImage } from './raster.ts';
+import type { Encoded, EncodePurpose, RasterBackend, RasterImage } from './raster.ts';
 import { readPictureHeader, type PictureExt } from './sniff.ts';
 import {
   detectionPlan, MAX_CANVAS_PIXELS, MAX_PICTURE_PIXELS, tableCopyPlan, thumbSize, type DetectionPlan,
@@ -196,7 +196,8 @@ export async function preparePicture(file: Blob, name: string, backend: RasterBa
 }
 
 /**
- * Prepares a rendered PDF page: stored as a lossless PNG, then treated like any picture.
+ * Prepares a rendered PDF page: stored as WebP (PNG where the engine has no WebP), then treated
+ * like any picture.
  *
  * @param page - the rendered page
  * @param name - the PDF's file name
@@ -211,7 +212,7 @@ export async function preparePdfPage(page: RasterImage, name: string, backend: R
   const timed = timer(report, timings, now);
   const warnings: string[] = [];
   const { width, height } = page;
-  const png = await timed('decode', () => encodeOrThrow(backend, page, { width, height }, 'lossless'));
+  const png = await timed('decode', () => encodeOrThrow(backend, page, { width, height }, 'page'));
   const plan = detectionPlan(width, height);
   const detection = await timed('detect', () => detectOnImage(page, { ...plan, mode: 'strips', width, height }, width, height));
   const guess = guessGrid(name, width, height, detection);
@@ -307,7 +308,7 @@ async function makeCopies(
 export async function detectOnImage(image: RasterImage, plan: DetectionPlan, width: number, height: number): Promise<GridDetection | null> {
   const f = plan.mode === 'strips' ? plan.factor : 1;
   const lb = new LuminanceBuilder(image.width, image.height, f);
-  const rows = Math.min(image.height, Math.max(f, Math.floor(MAX_CANVAS_PIXELS / 4 / image.width / f) * f));
+  const rows = Math.min(image.height, Math.max(f, Math.floor(MAX_CANVAS_PIXELS / image.width / f) * f));
   for (let y = 0; y < image.height; y += rows) {
     const n = Math.min(rows, image.height - y);
     lb.addRows(await image.readRows(y, n), y, n);
@@ -325,7 +326,7 @@ async function decodeOrThrow(backend: RasterBackend, blob: Blob, size?: { width:
   }
 }
 
-async function encodeOrThrow(backend: RasterBackend, image: RasterImage, size: { width: number; height: number }, purpose: 'table' | 'thumb' | 'lossless'): Promise<Encoded> {
+async function encodeOrThrow(backend: RasterBackend, image: RasterImage, size: { width: number; height: number }, purpose: EncodePurpose): Promise<Encoded> {
   try {
     return await backend.encode(image, size, purpose);
   } catch (e) {

@@ -53,7 +53,7 @@ export function sharpBackend(): RasterBackend | null {
       const img = image as SharpImage;
       let chain = sharp(img.data, { raw: { width: img.width, height: img.height, channels: 4 }, limitInputPixels: false });
       if (size.width !== img.width || size.height !== img.height) chain = chain.resize(size.width, size.height, { fit: 'fill' });
-      const ext = purpose === 'lossless' ? 'png' : 'webp';
+      const ext = purpose === 'page' ? 'png' : 'webp';
       chain = ext === 'png' ? chain.png() : chain.webp({ quality: 90 });
       const { data, info } = await chain.toBuffer({ resolveWithObject: true });
       return { blob: new Blob([data as Uint8Array<ArrayBuffer>]), ext, width: info.width, height: info.height };

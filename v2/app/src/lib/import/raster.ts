@@ -22,7 +22,7 @@ export interface RasterImage {
   readonly height: number;
   /**
    * Straight RGBA of `count` rows from row `y` (`width × count × 4` bytes). Callers keep
-   * `width × count` within `MAX_CANVAS_PIXELS / 4`.
+   * `width × count` within `MAX_CANVAS_PIXELS`.
    *
    * @param y - first row
    * @param count - rows
@@ -33,8 +33,8 @@ export interface RasterImage {
   close(): void;
 }
 
-/** What an encoded copy is for: the table copy, the thumbnail, or a lossless original (a PDF page). */
-export type EncodePurpose = 'table' | 'thumb' | 'lossless';
+/** What an encoded copy is for: the table copy, the thumbnail, or a PDF page as the map's original. */
+export type EncodePurpose = 'table' | 'thumb' | 'page';
 
 /** An encoded picture. */
 export interface Encoded {
@@ -60,8 +60,9 @@ export interface RasterBackend {
    */
   decode(blob: Blob, size?: Size): Promise<RasterImage>;
   /**
-   * Encodes `image` scaled to `size`: WebP (lossy, quality 0.9) for `table` and `thumb` where
-   * the engine can, else JPEG; PNG for `lossless`.
+   * Encodes `image` scaled to `size`: WebP (lossy; quality 0.9, thumbnails 0.85, a PDF page
+   * 0.95) where the engine can, else JPEG — a PDF page PNG (a 4096 px page as PNG is ~35 MB,
+   * as WebP ~3 MB).
    *
    * @param image - the picture
    * @param size - the copy's size
