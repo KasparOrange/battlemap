@@ -25,9 +25,25 @@ holds only what is open.
 
 ## Plan B for the TV renderer
 
-If the real box fails the WebView gate, the TV side moves to a native renderer: Rust + wgpu
-(OpenGL ES / Vulkan on the box), the same crate compiled to WebAssembly on WebGL2 for the
-companion's DM view, so the drawing code still exists once. Not started; only if the box forces it.
+Only if the real box fails the WebView gate (roadmap N1), and only after the two cheap steps of
+roadmap N14 (Pixi's WebGPU backend, a lower table resolution) didn't save it. Then the TV side
+moves to a native renderer in Rust, drawing into a native surface under a transparent web view;
+the web app keeps networking, state, storage and menus and sends scene changes over the shell.
+WebGPU alone is not plan B: it keeps every browser cost and only makes draw calls cheaper.
+
+The generic engine exists; what we write is battlemap's scene on top of it (map tiles, fog shader,
+grid, tokens, doors, drawings, ruler, template disc, effects — the Pixi renderer's list again)
+plus the bridge. Two candidates (Konrad 26-10-25: Bevy):
+
+| | **Bevy** (recommended) | **Macroquad** |
+|---|---|---|
+| What it is | full Rust game engine on wgpu, large community | small Rust game library on miniquad, mostly one maintainer |
+| Graphics on the box | Vulkan or OpenGL ES via wgpu | OpenGL ES 2/3 |
+| Companion DM view | same code as WebAssembly on WebGPU or WebGL2 | same code as WebAssembly on WebGL |
+| Built in | sprites, 2D cameras, custom WGSL shaders, text, asset loading, ECS | sprites, simple shaders (GLSL), basic text; we write batching, tiling, the effect layer |
+| Expect | Pixi-equivalent features, modern shaders incl. compute | the most headroom on 2 GB: tiny binary, fast start, least memory |
+| Cost | pre-1.0: a breaking release every few months to migrate; larger binary, slower builds, more memory than Macroquad (still far below a WebView) | more hand-built code; no compute shaders; bus factor of one |
+| Shared cost | port the scene (≈ the wave-2 renderer work again); both expect to own the Android activity, so drawing under a transparent web view in our Kotlin shell needs custom glue | |
 
 ## Waiting on the real devices
 
