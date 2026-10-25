@@ -8,7 +8,7 @@
  * - a drag that starts on a token moves it square by square (one `token.move` per square
  *   entered, one gesture = one undo step); a drag elsewhere pans the view.
  */
-import { tokenAt } from '../../input/hits.ts';
+import type { Point, Token } from '@battlemap/shared';
 import type { GameContext, MapTool, ToolDrag } from '../../game/tabs.ts';
 import { log } from '../../../log.ts';
 import { notify } from '../../../ui/notice.svelte.ts';
@@ -22,14 +22,19 @@ import { tokensLocal } from './local.svelte.ts';
  * @returns the tool
  */
 export function tokensTool(ctx: GameContext): MapTool {
+  /** The token under a map point (the renderer's hit test: grab room, hidden ones for the DM). */
+  const tokenAt = (at: Point): Token | null => {
+    const hit = ctx.hitsAt(at).find((h) => h.kind === 'token');
+    return hit?.kind === 'token' ? ctx.map.tokens.find((t) => t.id === hit.id) ?? null : null;
+  };
   const inside = (col: number, row: number) => col >= 0 && row >= 0 && col < ctx.map.info.grid.cols && row < ctx.map.info.grid.rows;
 
   return {
-    claims: (at) => tokenAt(ctx.map.tokens, at) !== null,
+    claims: (at) => tokenAt(at) !== null,
 
     tap(at) {
       const map = ctx.map;
-      const hit = tokenAt(map.tokens, at);
+      const hit = tokenAt(at);
       if (hit) {
         ctx.selectedToken = ctx.selectedToken === hit.id ? null : hit.id;
         return;
@@ -56,7 +61,7 @@ export function tokensTool(ctx: GameContext): MapTool {
     },
 
     begin(from): ToolDrag | null {
-      const token = tokenAt(ctx.map.tokens, from);
+      const token = tokenAt(from);
       if (!token) return null;
       const gesture = ctx.newGesture();
       let col = token.col;

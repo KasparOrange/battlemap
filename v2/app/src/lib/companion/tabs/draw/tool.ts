@@ -6,7 +6,7 @@
  */
 import { newId, type Stroke } from '@battlemap/shared';
 import type { GameContext, MapTool, ToolDrag } from '../../game/tabs.ts';
-import { TOUCH_SLOP_PX } from '../../input/hits.ts';
+import { GRAB_PX } from '../../../render/hit.ts';
 import { LIVE_PER_SECOND, throttle } from '../../input/throttle.ts';
 import { log } from '../../../log.ts';
 import { drawLocal, mmToSquares } from './local.svelte.ts';
@@ -19,7 +19,7 @@ import { StrokeBuilder, strokesHit } from './stroke.ts';
  * @returns the tool
  */
 export function drawTool(ctx: GameContext): MapTool {
-  const reach = () => Math.max(0.15, (TOUCH_SLOP_PX * 0.6) / ctx.camera.get().zoom);
+  const reach = () => Math.max(0.15, (GRAB_PX * 0.6) / (ctx.camera.get()?.zoom ?? 40));
 
   const erase = (at: { x: number; y: number }) => {
     for (const id of strokesHit(ctx.map.strokes, at, reach())) {

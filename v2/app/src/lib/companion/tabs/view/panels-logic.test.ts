@@ -1,8 +1,11 @@
 /// <reference types="bun" />
+import '../../runes-shim.ts';
 import { describe, expect, test } from 'bun:test';
-import { classicDisc, defaultTable, newMapPlay, wholeGrid, type MapInfo, type MapPlay, type TableState } from '@battlemap/shared';
+import { apply, classicDisc, defaultTable, newMapPlay, wholeGrid, type MapInfo, type MapPlay, type TableState } from '@battlemap/shared';
 import { addLayer, addedText, moveLayer, removeLayer, restoreLayer, topFirst, updateLayer } from '../layers/layers-logic.ts';
 import { addSize, lookOf, readLook, removeSize, sameLook, stepSize, turned, withLook } from '../measure/disc-look.ts';
+import { fakeContext, stateWithGame, testMap } from '../../game/fake-context.ts';
+import { followCommand, followOf } from './follow.svelte.ts';
 import { panReach, rotationLabel, tvQuad, viewOf, viewSentence, windowAt } from './view-logic.ts';
 
 const file = (c: string) => ({ hash: c.repeat(16), ext: 'png' as const, bytes: 10 });
@@ -100,5 +103,54 @@ describe('view', () => {
     expect(q[2].y).toBeCloseTo(40);
     expect(viewSentence(viewOf(t, fit), fit)).toContain('whole map is on the TV');
     expect(rotationLabel(3)).toBe('270°');
+  });
+});
+
+describe('TV follows the tablet (rv#1)', () => {
+  const bigGame = () => {
+    const s = stateWithGame(testMap(60, 40));
+    return { ...s, table: { ...s.table, viewport: { width: 1920, height: 1080 } } };
+  };
+  const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  test('sends only when the camera moves somewhere the TV does not show; the echo sends nothing', async () => {
+    const ctx = fakeContext(bigGame());
+    const follow = followOf(ctx);
+    follow.set(true);
+    const first = ctx.sent.length;
+    await wait(100);
+    expect(ctx.sent.length).toBe(first); // nothing while the DM does nothing
+    ctx.camera.set({ ...ctx.camera.get()!, centerX: 45, centerY: 30 });
+    await wait(100);
+    expect(ctx.sent.at(-1)).toMatchObject({ type: 'view.window' });
+    const n = ctx.sent.length;
+    ctx.camera.set({ ...ctx.camera.get()!, centerX: 45.2 }); // same window
+    await wait(100);
+    expect(ctx.sent.length).toBe(n);
+    expect(followOf(ctx)).toBe(follow);
+  });
+
+  test('stops with the screen; a new screen starts with following off', async () => {
+    const ctx = fakeContext(bigGame());
+    followOf(ctx).set(true);
+    ctx.dispose();
+    expect(followOf(ctx).on).toBe(false);
+    const n = ctx.sent.length;
+    ctx.camera.set({ ...ctx.camera.get()!, centerX: 50, centerY: 35 });
+    await wait(100);
+    expect(ctx.sent.length).toBe(n);
+    expect(followOf(fakeContext(bigGame())).on).toBe(false);
+  });
+
+  test('the command: nothing when the TV shows it already or the map fits', () => {
+    const s = bigGame();
+    const cam = { centerX: 17, centerY: 9.5, zoom: 40, quarterTurns: 0 };
+    const cmd = followCommand(s, cam);
+    expect(cmd).toEqual({ type: 'view.window', col: 0, row: 0 }); // the window starts centred
+    const moved = apply(s, cmd!);
+    expect(moved.ok && followCommand(moved.state, cam)).toBeNull(); // the echo asks for nothing
+    expect(followCommand(s, { ...cam, centerX: 40 })).toMatchObject({ type: 'view.window', row: 0 });
+    const small = { ...stateWithGame(testMap(20, 10)), table: s.table };
+    expect(followCommand(small, cam)).toBeNull();
   });
 });

@@ -150,7 +150,7 @@ describe('tokens', () => {
     tool.tap!(P(4.5, 2.5));
     expect(ctx.map.tokens).toHaveLength(1);
     expect(ctx.map.tokens[0]).toMatchObject({ col: 4, row: 2, placed: true, label: '1' });
-    expect(tool.claims!(P(4.2, 2.9))).toBe(true);
+    expect(tool.claims!(P(4.3, 2.8))).toBe(true); // the renderer's hit: the token's circle plus grab room
     tool.tap!(P(4.5, 2.5));
     expect(ctx.selectedToken).toBe(ctx.map.tokens[0]!.id);
     tool.tap!(P(9.5, 9.5)); // empty square with a selection: only deselects

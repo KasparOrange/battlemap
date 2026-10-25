@@ -9,6 +9,7 @@
   - ctx: GameContext
 -->
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { TabPanelProps } from '../../game/tabs.ts';
   import { log } from '../../../log.ts';
   import Button from '../../../ui/Button.svelte';
@@ -18,14 +19,23 @@
   import ToggleSwitch from '../../../ui/ToggleSwitch.svelte';
   import { notify } from '../../../ui/notice.svelte.ts';
   import LayersSection from '../layers/LayersSection.svelte';
-  import { tvFollow } from './follow.svelte.ts';
+  import { followOf } from './follow.svelte.ts';
   import OverviewMap from './OverviewMap.svelte';
   import { panReach, rotationLabel, viewOf, viewSentence } from './view-logic.ts';
 
   let { ctx }: TabPanelProps = $props();
 
-  const map = $derived(ctx.map);
-  const view = $derived(viewOf(ctx.state.table, map));
+  const follow = $derived(followOf(ctx));
+  // The map as far as the view cares (its grid and view): other patches don't re-run this (rv#37).
+  const info = $derived(ctx.map.info);
+  const mapView = $derived(ctx.map.view);
+  const map = $derived.by(() => {
+    void info;
+    void mapView;
+    return untrack(() => ctx.map);
+  });
+  const table = $derived(ctx.state.table);
+  const view = $derived(viewOf(table, map));
   const reach = $derived(panReach(view, map));
   const pans = $derived(reach.left || reach.right || reach.up || reach.down);
   const mode = $derived(map.view.mode === 'free' ? 'free' : map.view.mode);
@@ -50,7 +60,8 @@
   }
 
   function showMine(): void {
-    if (tvFollow.showOnce(ctx)) notify('The TV shows your view.', { kind: 'success' });
+    if (follow.showOnce()) notify('The TV shows your view.', { kind: 'success' });
+    else notify('The TV shows that already.');
   }
 </script>
 
@@ -84,9 +95,9 @@
   <ToggleSwitch
     label="TV follows the tablet"
     description={mode === 'table' ? 'The window moves with your view, a square at a time.' : 'The TV moves with your view.'}
-    checked={tvFollow.on}
+    checked={follow.on}
     onchange={(on) => {
-      tvFollow.set(ctx, on);
+      follow.set(on);
       notify(on ? 'TV follows the tablet' : 'TV stays where it is');
     }}
   />

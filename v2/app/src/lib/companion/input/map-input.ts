@@ -1,29 +1,33 @@
 /**
- * The companion map's input: turns the gesture tracker's decisions into camera moves, disc and
- * ruler drags, door taps and the chosen tab's tool (architecture.md "input"). The decision part
- * ({@link MapInputController}) has no DOM and is tested under `bun test`; {@link bindPointers}
- * wires a real element's Pointer Events, the wheel and the space key to it.
+ * The companion map's input: turns the gesture tracker's decisions into camera moves, disc,
+ * ruler and players'-window drags, door taps and the chosen tab's tool (architecture.md
+ * "input"). The camera and the hit tests are the table view's (`render/`, rv#8, rv#32): this
+ * file keeps neither — it asks the view what is under a finger and hands it the next camera.
+ * The decision part ({@link MapInputController}) has no DOM and is tested under `bun test`;
+ * {@link bindPointers} wires a real element's Pointer Events, the wheel and the space key to it.
  */
-import { snapDiscPoint, type Camera, type Command, type MapGeometry, type MapPlay, type Point, type Ruler, type TemplateDisc } from '@battlemap/shared';
+import { snapDiscPoint, tvView, type Camera, type Command, type MapPlay, type Point, type Ruler, type TableState, type TemplateDisc } from '@battlemap/shared';
 import type { Logger } from '../../log.ts';
+import { pinchCamera } from '../../render/camera.ts';
+import type { TableView } from '../../render/types.ts';
 import type { MapTool, ToolDrag } from '../game/tabs.ts';
-import { panBy, pinchCamera, toSquares, zoomAt, type Viewport } from './camera.ts';
 import { GestureTracker, type GestureHandler } from './gesture.ts';
-import { doorAt, hitAt, TOUCH_SLOP_PX } from './hits.ts';
 import { LIVE_PER_SECOND, throttle, type Throttle } from './throttle.ts';
+
+/** How often a players'-window drag sends, in ms (v1: 80). */
+export const WINDOW_SEND_MS = 80;
+
+/** What the controller uses of the table view. */
+export type InputView = Pick<TableView, 'dmCamera' | 'setDmCamera' | 'viewport' | 'screenToSquares' | 'hits' | 'zoomAt'>;
 
 /** What the controller needs from the game screen (all read fresh on every event). */
 export interface MapInputDeps {
   /** The map on the table, or null without a game. */
   map(): MapPlay | null;
-  /** Its walls and doors. */
-  geometry(): MapGeometry | null;
-  /** The DM camera. */
-  camera(): Camera;
-  /** Moves the DM camera (the deps clamp it). */
-  setCamera(c: Camera): void;
-  /** The view's size in CSS px. */
-  viewport(): Viewport;
+  /** The TV's calibration and screen (for the players' window). */
+  table(): TableState | null;
+  /** The table view, null before it runs. */
+  view(): InputView | null;
   /** The chosen tab's tool. */
   tool(): MapTool;
   /** Whether door taps work in the chosen tab. */
@@ -40,13 +44,14 @@ type Target =
   | { kind: 'discKnob'; disc: TemplateDisc }
   | { kind: 'ruler'; ruler: Ruler; from: Point }
   | { kind: 'door'; index: number }
-  | { kind: 'tool'; claimed: boolean };
+  | { kind: 'frame'; from: Point; col: number; row: number; maxCol: number; maxRow: number; pansX: boolean; pansY: boolean }
+  | { kind: 'tool' };
 
 /** Decides what each gesture does. */
 export class MapInputController implements GestureHandler {
   /** The pointer tracker feeding this controller. */
   readonly tracker: GestureTracker;
-  private target: Target = { kind: 'tool', claimed: false };
+  private target: Target = { kind: 'tool' };
   private drag: ToolDrag | null = null;
   private live: Throttle<Command> | null = null;
   private camStart: Camera | null = null;
@@ -57,37 +62,49 @@ export class MapInputController implements GestureHandler {
     this.tracker = new GestureTracker(this);
   }
 
-  /** A screen point in squares. */
-  private sq(at: Point): Point {
-    return toSquares(this.deps.camera(), this.deps.viewport(), at);
-  }
-
-  /** Touch slop in squares at the current zoom. */
-  private reach(): number {
-    return TOUCH_SLOP_PX / this.deps.camera().zoom;
+  /** A host point in squares (the view's camera), or null before a map is drawn. */
+  private sq(at: Point): Point | null {
+    return this.deps.view()?.screenToSquares(at) ?? null;
   }
 
   /** @inheritdoc */
   press(at: Point): void {
     const map = this.deps.map();
-    this.target = { kind: 'tool', claimed: false };
-    if (!map) return;
+    const view = this.deps.view();
+    this.target = { kind: 'tool' };
     const p = this.sq(at);
-    const hit = hitAt(map, null, p, this.reach(), { tokens: false, doors: false });
-    if (hit?.kind === 'discKnob') this.target = { kind: 'discKnob', disc: map.disc };
-    else if (hit?.kind === 'disc') this.target = { kind: 'disc', disc: map.disc, from: p };
-    else if (hit?.kind === 'ruler') this.target = { kind: 'ruler', ruler: map.ruler, from: p };
-    else if (this.deps.tool().claims?.(p)) this.target = { kind: 'tool', claimed: true };
-    else if (this.deps.doors()) {
-      const door = doorAt(this.deps.geometry(), p, Math.max(this.reach(), 0.35));
-      if (door !== null && door < map.info.doorCount) this.target = { kind: 'door', index: door };
+    if (!map || !view || !p) return;
+    const hits = view.hits(at);
+    const first = (kind: string) => hits.find((h) => h.kind === kind);
+    const disc = hits.find((h) => h.kind === 'disc');
+    if (disc?.kind === 'disc' && disc.part === 'knob') this.target = { kind: 'discKnob', disc: map.disc };
+    else if (disc) this.target = { kind: 'disc', disc: map.disc, from: p };
+    else if (first('ruler')) this.target = { kind: 'ruler', ruler: map.ruler, from: p };
+    else if (this.deps.tool().claims?.(p)) this.target = { kind: 'tool' };
+    else {
+      const door = this.deps.doors() ? hits.find((h) => h.kind === 'door') : undefined;
+      if (door?.kind === 'door' && door.index < map.info.doorCount) this.target = { kind: 'door', index: door.index };
+      else if (first('frame')) this.target = this.frameTarget(map, p) ?? { kind: 'tool' };
     }
+  }
+
+  /** The players' window under the finger, when it can move (table mode, a map bigger than the table). */
+  private frameTarget(map: MapPlay, from: Point): Target | null {
+    const table = this.deps.table();
+    const layout = table ? tvView(table, map)?.layout : null;
+    if (!layout || !(layout.pansX || layout.pansY)) return null;
+    const { cols, rows } = map.info.grid;
+    return {
+      kind: 'frame', from, col: layout.col, row: layout.row,
+      maxCol: Math.max(0, cols - layout.winCols), maxRow: Math.max(0, rows - layout.winRows), pansX: layout.pansX, pansY: layout.pansY,
+    };
   }
 
   /** @inheritdoc */
   tap(at: Point): void {
     const map = this.deps.map();
-    if (!map) return;
+    const p = this.sq(at);
+    if (!map || !p) return;
     const t = this.target;
     if (t.kind === 'door') {
       const open = !map.doorsOpen.includes(t.index);
@@ -95,7 +112,7 @@ export class MapInputController implements GestureHandler {
       this.deps.dispatch({ type: 'door.set', index: t.index, open });
       return;
     }
-    if (t.kind === 'tool') this.deps.tool().tap?.(this.sq(at));
+    if (t.kind === 'tool' || t.kind === 'frame') this.deps.tool().tap?.(p);
   }
 
   /** @inheritdoc */
@@ -109,9 +126,15 @@ export class MapInputController implements GestureHandler {
         this.live = throttle(1000 / LIVE_PER_SECOND, send);
         this.dragMove(at);
         return true;
+      case 'frame':
+        this.live = throttle(WINDOW_SEND_MS, send);
+        this.dragMove(at);
+        return true;
       case 'door':
       case 'tool': {
-        const drag = this.deps.tool().begin?.(this.sq(from), this.sq(at)) ?? null;
+        const a = this.sq(from);
+        const b = this.sq(at);
+        const drag = a && b ? this.deps.tool().begin?.(a, b) ?? null : null;
         this.drag = drag;
         return drag !== null;
       }
@@ -122,6 +145,7 @@ export class MapInputController implements GestureHandler {
   dragMove(at: Point): void {
     const t = this.target;
     const p = this.sq(at);
+    if (!p) return;
     if (t.kind === 'disc') {
       const moved = snapDiscPoint(t.disc, { x: t.disc.x + p.x - t.from.x, y: t.disc.y + p.y - t.from.y });
       this.live?.push({ type: 'disc.set', disc: { ...t.disc, x: moved.x, y: moved.y } });
@@ -131,6 +155,10 @@ export class MapInputController implements GestureHandler {
       this.live?.push({ type: 'disc.set', disc: { ...t.disc, rotation: ((rotation % 360) + 360) % 360 } });
     } else if (t.kind === 'ruler') {
       this.live?.push({ type: 'ruler.set', ruler: { ...t.ruler, x: t.ruler.x + p.x - t.from.x, y: t.ruler.y + p.y - t.from.y } });
+    } else if (t.kind === 'frame') {
+      const col = t.pansX ? clampInt(t.col + Math.round(p.x - t.from.x), t.maxCol) : t.col;
+      const row = t.pansY ? clampInt(t.row + Math.round(p.y - t.from.y), t.maxRow) : t.row;
+      this.live?.push({ type: 'view.window', col, row });
     } else {
       this.drag?.move(p);
     }
@@ -142,16 +170,19 @@ export class MapInputController implements GestureHandler {
       this.dragMove(at);
       this.live.flush();
       this.live = null;
+      if (this.target.kind === 'frame') this.deps.log.info('companion', "Players' window dragged");
       return;
     }
-    this.drag?.end(this.sq(at));
+    const p = this.sq(at);
+    if (p) this.drag?.end(p);
+    else this.drag?.cancel();
     this.drag = null;
   }
 
   /** @inheritdoc */
   dragCancel(): void {
     if (this.live) {
-      this.live.flush(); // the disc / ruler stays where it got to
+      this.live.flush(); // the disc / ruler / window stays where it got to
       this.live = null;
     }
     this.drag?.cancel();
@@ -160,19 +191,20 @@ export class MapInputController implements GestureHandler {
 
   /** @inheritdoc */
   cameraStart(fingers: Point[]): void {
-    this.camStart = this.deps.camera();
+    this.camStart = this.deps.view()?.dmCamera() ?? null;
     this.fingers0 = fingers;
   }
 
   /** @inheritdoc */
   cameraMove(fingers: Point[]): void {
     const start = this.camStart;
-    if (!start || fingers.length === 0 || fingers.length !== this.fingers0.length) return;
-    const vp = this.deps.viewport();
-    const next = fingers.length >= 2
-      ? pinchCamera(start, vp, this.fingers0[0]!, this.fingers0[1]!, fingers[0]!, fingers[1]!)
-      : panBy(start, fingers[0]!.x - this.fingers0[0]!.x, fingers[0]!.y - this.fingers0[0]!.y);
-    this.deps.setCamera(next);
+    const view = this.deps.view();
+    if (!start || !view || fingers.length === 0 || fingers.length !== this.fingers0.length) return;
+    const a0 = this.fingers0[0]!;
+    const b0 = this.fingers0[1] ?? a0;
+    const a1 = fingers[0]!;
+    const b1 = fingers[1] ?? a1;
+    view.setDmCamera(pinchCamera(start, view.viewport(), a0, b0, a1, b1));
   }
 
   /** @inheritdoc */
@@ -189,8 +221,12 @@ export class MapInputController implements GestureHandler {
    */
   wheel(at: Point, deltaY: number): void {
     const factor = Math.pow(1.15, -Math.sign(deltaY) * Math.min(3, Math.abs(deltaY) / 100 || 1));
-    this.deps.setCamera(zoomAt(this.deps.camera(), this.deps.viewport(), at, factor));
+    this.deps.view()?.zoomAt(factor, at);
   }
+}
+
+function clampInt(v: number, max: number): number {
+  return Math.min(Math.max(Math.round(v), 0), max);
 }
 
 /**

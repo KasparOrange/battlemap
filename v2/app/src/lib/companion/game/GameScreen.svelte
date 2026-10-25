@@ -77,25 +77,21 @@
 
   let mapEl = $state<HTMLDivElement>();
   let sheetZone = $state<HTMLDivElement>();
-  // phone: keep a fitted map above the sheet (measured once the sheet has moved)
+  // phone: the view fits the map into the part the sheet leaves free (measured once it moved)
   $effect(() => {
     void sheetOpen;
     void detent;
     if (!phone) {
-      ctx.setFitBottom(0);
+      ctx.setInsets({ top: 0, right: 0, bottom: 0, left: 0 });
       return;
     }
     const t = setTimeout(() => {
       const sheet = sheetZone?.querySelector<HTMLElement>('.bm-sheet');
       if (!mapEl || !sheet) return;
       const covered = sheetOpen ? mapEl.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top : 0;
-      ctx.setFitBottom(Math.min(covered, mapEl.clientHeight * 0.6));
+      ctx.setInsets({ top: 0, right: 0, bottom: Math.max(0, Math.round(Math.min(covered, mapEl.clientHeight * 0.6))), left: 0 });
     }, 380);
     return () => clearTimeout(t);
-  });
-  $effect(() => {
-    void session.view;
-    ctx.follow();
   });
 
   /** Chooses a tab: leaves the old one, opens the panel / sheet. */
@@ -159,7 +155,10 @@
   onMount(() => {
     const fs = () => (fullscreen = !!document.fullscreenElement);
     document.addEventListener('fullscreenchange', fs);
-    return () => document.removeEventListener('fullscreenchange', fs);
+    return () => {
+      document.removeEventListener('fullscreenchange', fs);
+      ctx.dispose(); // following the tablet, listeners and timers stop with the screen
+    };
   });
 </script>
 
@@ -186,8 +185,8 @@
     </div>
 
     <div class="corner bl" data-ctl="toolbar">
-      <IconButton icon="fit" label="Fit the map on my screen" onclick={() => ctx.fit()} />
-      <IconButton icon="jump" label="Jump to what the TV shows" onclick={() => ctx.showTv()} />
+      <IconButton icon="fit" label="Fit the map on my screen" onclick={() => ctx.camera.fit()} />
+      <IconButton icon="jump" label="Jump to what the TV shows" onclick={() => ctx.camera.showTv()} />
     </div>
 
     {#if phone && !sheetOpen}

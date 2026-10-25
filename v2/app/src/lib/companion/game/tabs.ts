@@ -23,6 +23,7 @@ import type { Component } from 'svelte';
 import type { Camera, Command, FileRef, Game, MapGeometry, MapPlay, Point, RootState } from '@battlemap/shared';
 import type { AppConfig } from '../../config.ts';
 import type { CompanionSession } from '../../state/sessions.svelte.ts';
+import type { Hit } from '../../render/hit.ts';
 import type { IconName } from '../../ui/icons.ts';
 
 /** The two groups of the rail, set apart by a hairline: modes first, panels below. */
@@ -97,11 +98,14 @@ export interface ToolDrag {
   cancel(): void;
 }
 
-/** The DM's own camera on the companion (never the TV's). */
+/**
+ * The DM's own camera on the companion (never the TV's). The table view (`render/`) owns it —
+ * it fits new maps, clamps and refits on a resize; this is the companion's handle on it.
+ */
 export interface DmCameraControl {
-  /** The camera now. */
-  get(): Camera;
-  /** Moves the camera (clamped). */
+  /** The camera the view shows now (reactive), null before the view draws a map. */
+  get(): Camera | null;
+  /** Moves the camera (the view clamps it). */
   set(camera: Camera): void;
   /** Centres the view on a point in squares, keeping the zoom. */
   jumpTo(at: Point): void;
@@ -109,6 +113,12 @@ export interface DmCameraControl {
   fit(): void;
   /** Shows what the TV shows. */
   showTv(): void;
+  /**
+   * Listens to every change of the camera (gestures, fits, resizes).
+   *
+   * @returns a function that stops listening
+   */
+  onChange(fn: (camera: Camera) => void): () => void;
 }
 
 /**
@@ -132,10 +142,26 @@ export interface GameContext {
   readonly phone: boolean;
   /** The chosen tab's id. */
   readonly tab: string;
-  /** The token selected on the map or in the list, or null. */
+  /** The token selected on the map or in the list, or null (drawn with a ring). */
   selectedToken: string | null;
+  /** Whether this device draws the map's DM layers (the master eye, never synced). */
+  showDmLayers: boolean;
   /** The DM camera. */
   readonly camera: DmCameraControl;
+  /**
+   * What lies under a map point, highest priority first (the renderer's one hit test, with the
+   * grab room of the current zoom).
+   *
+   * @param at - a point in squares
+   * @returns the hits (empty when nothing)
+   */
+  hitsAt(at: Point): Hit[];
+  /**
+   * Runs a function when the game screen closes (stop timers, listeners, following).
+   *
+   * @param fn - the clean-up
+   */
+  onDispose(fn: () => void): void;
   /**
    * Sends a command (predicted at once, logged).
    *

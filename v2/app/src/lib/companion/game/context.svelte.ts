@@ -1,20 +1,33 @@
 /**
  * The game screen's context ({@link GameContext}) as Svelte runes: the predicted state, the map
- * on the table and its walls, the chosen tab, the selected token and the DM's own camera. One
- * instance per game screen; tab panels, footers and tools read it.
+ * on the table and its walls, the chosen tab, the selected token and the companion's handle on
+ * the DM camera. One instance per game screen; tab panels, footers and tools read it.
+ *
+ * The DM camera and the hit tests belong to the table view (`render/`, rv#8, rv#32): the view
+ * fits each new map, clamps, refits on a resize and reports every change; this context only
+ * passes gestures on and keeps the last reported camera as a reactive copy for the panels.
+ * The walls and doors come from the view too (it loads the map's geometry file once, rv#19).
  */
-import { check, MapGeometry, newId, tvView, type Camera, type Command, type FileRef, type Game, type MapPlay, type Point, type RootState } from '@battlemap/shared';
+import { newId, tvView, type Camera, type Command, type FileRef, type Game, type MapGeometry, type MapPlay, type Point, type RootState } from '@battlemap/shared';
 import type { AppConfig } from '../../config.ts';
 import { log } from '../../log.ts';
+import type { Hit } from '../../render/hit.ts';
+import type { Insets, TableView } from '../../render/index.ts';
 import type { CompanionSession } from '../../state/sessions.svelte.ts';
 import { notify } from '../../ui/notice.svelte.ts';
-import { clampCamera, fitCamera, sameCamera, type Viewport } from '../input/camera.ts';
 import { DEFAULT_TAB, type DmCameraControl, type GameContext } from './tabs.ts';
 
 /** The URL of a file on the server. */
 export function fileUrlFor(serverUrl: string, ref: FileRef): string {
   return `${serverUrl}/files/${ref.hash}.${ref.ext}`;
 }
+
+/** What the context uses of the table view (the real one, or a test's fake). */
+export type MapViewPort = Pick<
+  TableView,
+  'update' | 'dmCamera' | 'setDmCamera' | 'fitDmCamera' | 'setDmInsets' | 'onCameraChange' | 'viewport' | 'screenToSquares'
+  | 'squaresToScreen' | 'hits' | 'zoomAt' | 'geometry' | 'setSelectedToken' | 'setDmLayersShown'
+>;
 
 /** The game screen's live context. */
 export class GameScreenContext implements GameContext {
@@ -33,17 +46,17 @@ export class GameScreenContext implements GameContext {
   tab = $state(DEFAULT_TAB);
   /** The token selected on the map or in the list. */
   selectedToken = $state<string | null>(null);
-  /** The DM camera as drawn now. */
-  cam = $state.raw<Camera>({ centerX: 0, centerY: 0, zoom: 32, quarterTurns: 0 });
-  /** The map view's size in CSS px. */
-  viewport = $state.raw<Viewport>({ width: 1, height: 1 });
+  /** Whether this device draws the DM layers. */
+  showDmLayers = $state(true);
+  /** The name of the map the view is loading, null when it shows (a spinner on the map). */
+  mapLoading = $state<string | null>(null);
 
-  /** Px at the view's bottom covered by the phone's sheet: fitting keeps the map above it. */
-  private fitBottom = 0;
-  /** The camera the last fit produced (a refit only replaces it while the DM hasn't moved). */
-  private fittedCam: Camera | null = null;
-  private geometryRef: string | null = null;
-  private fittedMap: string | null = null;
+  /** The camera the view reported last (a copy for reactivity — the view owns the camera). */
+  private seen = $state.raw<Camera | null>(null);
+  private view: MapViewPort | null = null;
+  private readonly listeners = new Set<(c: Camera) => void>();
+  private readonly disposers: (() => void)[] = [];
+  private shownMap: string | null = null;
 
   /**
    * @param config - the page's configuration
@@ -53,11 +66,18 @@ export class GameScreenContext implements GameContext {
     this.config = config;
     this.session = session;
     this.camera = {
-      get: () => this.cam,
-      set: (c) => this.setCamera(c),
-      jumpTo: (at) => this.setCamera({ ...this.cam, centerX: at.x, centerY: at.y }),
-      fit: () => this.fit(),
+      get: () => this.seen,
+      set: (c) => this.view?.setDmCamera(c),
+      jumpTo: (at) => {
+        const cam = this.view?.dmCamera();
+        if (cam) this.view!.setDmCamera({ ...cam, centerX: at.x, centerY: at.y });
+      },
+      fit: () => this.view?.fitDmCamera(),
       showTv: () => this.showTv(),
+      onChange: (fn) => {
+        this.listeners.add(fn);
+        return () => this.listeners.delete(fn);
+      },
     };
   }
 
@@ -104,112 +124,98 @@ export class GameScreenContext implements GameContext {
     return fileUrlFor(this.config.serverUrl, ref);
   }
 
-  /**
-   * The view was measured: keep the camera clamped, fit a map seen for the first time.
-   *
-   * @param vp - the view's size in CSS px
-   */
-  setViewport(vp: Viewport): void {
-    if (vp.width === this.viewport.width && vp.height === this.viewport.height) return;
-    this.viewport = vp;
-    if (!this.session.view?.game) return;
-    if (this.fittedMap !== this.map.info.id) this.fit();
-    else this.setCamera(this.cam);
+  /** @inheritdoc */
+  hitsAt(at: Point): Hit[] {
+    const p = this.view?.squaresToScreen(at);
+    return p ? this.view!.hits(p) : [];
   }
 
-  /** Called when the state changed: fits a new map, loads its walls, drops a vanished selection. */
-  follow(): void {
-    if (!this.session.view?.game) return;
-    const map = this.map;
-    if (this.fittedMap !== map.info.id && this.viewport.width > 1) this.fit();
-    if (this.selectedToken && !map.tokens.some((t) => t.id === this.selectedToken)) this.selectedToken = null;
-    const ref = map.info.geometry;
-    const key = ref ? `${ref.hash}.${ref.ext}` : null;
-    if (key !== this.geometryRef) {
-      this.geometryRef = key;
-      this.geometry = null;
-      if (ref) void this.loadGeometry(ref, key!);
+  /** @inheritdoc */
+  onDispose(fn: () => void): void {
+    this.disposers.push(fn);
+  }
+
+  /**
+   * The map view is running: listen to its camera, draw the state it missed.
+   *
+   * @param view - the table view (DM profile)
+   */
+  attach(view: MapViewPort): void {
+    this.view = view;
+    this.seen = view.dmCamera();
+    this.disposers.push(view.onCameraChange((c) => this.cameraChanged(c)));
+    if (this.session.view) this.draw(this.session.view);
+  }
+
+  /** The table view the screen draws into, null before it runs (the input layer's seam). */
+  get mapView(): MapViewPort | null {
+    return this.view;
+  }
+
+  /**
+   * Draws a state on the view and picks up what follows from it: the map's walls, a token
+   * selection that vanished, the loading spinner of a new map.
+   *
+   * @param state - the predicted state
+   */
+  draw(state: RootState): void {
+    const view = this.view;
+    if (!view) return;
+    view.update(state);
+    const game = state.game;
+    const map = game ? game.maps[game.activeMapId] ?? null : null;
+    if (!map) return;
+    if (map.info.id !== this.shownMap) {
+      this.shownMap = map.info.id;
+      log.info('companion', 'Map on the table', { id: map.info.id, name: map.info.name });
     }
-  }
-
-  /** Fits the whole map on the companion's screen. */
-  fit(): void {
-    if (!this.session.view?.game) return;
-    const { cols, rows } = this.map.info.grid;
-    this.fittedMap = this.map.info.id;
-    const free = { width: this.viewport.width, height: Math.max(80, this.viewport.height - this.fitBottom) };
-    const cam = fitCamera(cols, rows, free);
-    // centre the map in the free part: shift the centre down by half the covered strip
-    this.setCamera({ ...cam, centerY: cam.centerY + (this.viewport.height - free.height) / 2 / cam.zoom });
-    this.fittedCam = this.cam;
+    this.geometry = view.geometry();
+    if (this.selectedToken && !map.tokens.some((t) => t.id === this.selectedToken)) this.selectedToken = null;
   }
 
   /**
-   * The phone's sheet covers this many px of the view's bottom; a map still as fitted is refitted
-   * into the part above it.
+   * The phone's sheet (or any panel) covers part of the map: the view fits into the rest.
    *
-   * @param px - covered px (0 when the sheet is closed)
+   * @param insets - covered CSS px per side
    */
-  setFitBottom(px: number): void {
-    const v = Math.max(0, Math.round(px));
-    if (v === this.fitBottom) return;
-    this.fitBottom = v;
-    if (this.fittedCam && this.fittedCam === this.cam) this.fit();
+  setInsets(insets: Insets): void {
+    this.view?.setDmInsets(insets);
   }
 
   /** Centres the companion on what the TV shows, zoomed so all of it fits. */
   showTv(): void {
     const view = tvView(this.state.table, this.map);
-    if (!view) {
+    const port = this.view;
+    if (!view || !port) {
       notify("The TV hasn't reported its screen yet.", { kind: 'warning' });
       return;
     }
+    const vp = port.viewport();
     const tvW = view.grid.width / view.camera.zoom;
     const tvH = view.grid.height / view.camera.zoom;
     const sideways = view.camera.quarterTurns % 2 !== 0;
     const w = sideways ? tvH : tvW;
     const h = sideways ? tvW : tvH;
-    const zoom = 0.92 * Math.min(this.viewport.width / w, this.viewport.height / h);
-    this.setCamera({ centerX: view.camera.centerX, centerY: view.camera.centerY, zoom, quarterTurns: 0 });
+    const zoom = 0.92 * Math.min(vp.width / w, vp.height / h);
+    port.setDmCamera({ centerX: view.camera.centerX, centerY: view.camera.centerY, zoom, quarterTurns: 0 });
+    log.info('companion', 'Jumped to the TV view');
   }
 
-  /**
-   * Sets the camera, clamped to the map.
-   *
-   * @param c - the camera asked for
-   */
-  setCamera(c: Camera): void {
-    if (!this.session.view?.game) return;
-    const { cols, rows } = this.map.info.grid;
-    const next = clampCamera(c, cols, rows, this.viewport);
-    if (!sameCamera(next, this.cam)) this.cam = next;
-  }
-
-  /**
-   * A point in squares on the map's centre (for "jump to").
-   *
-   * @param col - column
-   * @param row - row
-   * @returns the square's centre
-   */
-  squareCentre(col: number, row: number): Point {
-    return { x: col + 0.5, y: row + 0.5 };
-  }
-
-  private async loadGeometry(ref: FileRef, key: string): Promise<void> {
-    const url = this.fileUrl(ref);
-    const t0 = performance.now();
-    try {
-      const r = await fetch(url);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const parsed = check(MapGeometry, await r.json());
-      if (!parsed.ok) throw new Error(parsed.error);
-      if (this.geometryRef !== key) return; // another map came meanwhile
-      this.geometry = parsed.value;
-      log.info('companion', 'Walls and doors loaded', { walls: parsed.value.walls.length, doors: parsed.value.doors.length, ms: Math.round(performance.now() - t0) });
-    } catch (e) {
-      log.warn('companion', 'Walls and doors not loaded', { url, error: String(e) });
-      if (this.geometryRef === key) notify("Couldn't load this map's walls and doors — Room and Circle ignore walls for now.", { kind: 'error' });
+  /** Closes the screen: stops every listener, timer and following that hangs on it. */
+  dispose(): void {
+    for (const fn of this.disposers.splice(0)) {
+      try {
+        fn();
+      } catch (e) {
+        log.warn('companion', 'Clean-up failed', { error: String(e) });
+      }
     }
+    this.listeners.clear();
+    this.view = null;
+  }
+
+  private cameraChanged(c: Camera): void {
+    this.seen = c;
+    for (const fn of this.listeners) fn(c);
   }
 }

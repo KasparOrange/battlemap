@@ -23,7 +23,6 @@
   import ToggleSwitch from '../../../ui/ToggleSwitch.svelte';
   import { notify } from '../../../ui/notice.svelte.ts';
   import { addedText, addLayer, moveLayer, removeLayer, restoreLayer, topFirst, updateLayer } from './layers-logic.ts';
-  import { layersLocal } from './local.svelte.ts';
 
   interface Props {
     /** The game context. */
@@ -91,13 +90,13 @@
 
 <Section title="DM layers · only you see them" description="Pictures over the map — a DM version, notes, secrets. The TV never shows them.">
   {#snippet trailing()}
-    <ToggleSwitch ariaLabel="Show DM layers on this tablet" bind:checked={layersLocal.show} />
+    <ToggleSwitch ariaLabel="Show DM layers on this tablet" checked={ctx.showDmLayers} onchange={(on) => (ctx.showDmLayers = on)} />
   {/snippet}
   {#if layers.length > 0}
     <ul class="rows" data-testid="dm-layers">
       {#each topFirst(layers) as l, i (l.id)}
         <li>
-          <ListRow title={l.name} sub="{Math.round((opacity[l.id] ?? l.opacity) * 100)} %" dim={!l.visible || !layersLocal.show}>
+          <ListRow title={l.name} sub="{Math.round((opacity[l.id] ?? l.opacity) * 100)} %" dim={!l.visible || !ctx.showDmLayers}>
             {#snippet leading()}<img class="th" src={ctx.fileUrl(l.file)} alt="" />{/snippet}
             {#snippet trailing()}
               <IconButton

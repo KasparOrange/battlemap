@@ -3,7 +3,10 @@
  * game, commands applied with the shared reducer (like the companion's prediction), a camera
  * that just stores. Used by the companion's `bun test` files only.
  */
-import { apply, initialRoot, newGame, newId, wholeGrid, type Camera, type Command, type MapGeometry, type MapInfo, type RootState } from '@battlemap/shared';
+import { apply, initialRoot, newGame, newId, wholeGrid, type Camera, type Command, type MapGeometry, type MapInfo, type Point, type RootState } from '@battlemap/shared';
+import { clampDmCamera, fitDmCamera, screenToSquares, squaresToScreen, zoomCameraAt, type Size } from '../../render/camera.ts';
+import { hitsAt } from '../../render/hit.ts';
+import type { InputView } from '../input/map-input.ts';
 import type { DmCameraControl, GameContext } from './tabs.ts';
 
 /** A fake context plus what it recorded. */
@@ -14,6 +17,10 @@ export interface FakeContext extends GameContext {
   setState(s: RootState): void;
   /** Sets the walls and doors. */
   setGeometry(g: MapGeometry | null): void;
+  /** A stand-in for the table view (the renderer's camera maths and hit test, no WebGL). */
+  view: InputView;
+  /** Runs the clean-ups registered with `onDispose` (the screen closed). */
+  dispose(): void;
 }
 
 /**
@@ -53,12 +60,41 @@ export function fakeContext(state: RootState = stateWithGame()): FakeContext {
   let current = state;
   let geometry: MapGeometry | null = null;
   let cam: Camera = { centerX: 10, centerY: 7.5, zoom: 40, quarterTurns: 0 };
+  const size: Size = { width: 800, height: 600 };
+  const listeners = new Set<(c: Camera) => void>();
+  const disposers: (() => void)[] = [];
+  const limits = () => {
+    const g = current.game!.maps[current.game!.activeMapId]!.info.grid;
+    return { cols: g.cols, rows: g.rows, view: size };
+  };
+  const setCam = (c: Camera) => {
+    const next = clampDmCamera(c, limits());
+    if (next.centerX === cam.centerX && next.centerY === cam.centerY && next.zoom === cam.zoom && next.quarterTurns === cam.quarterTurns) return;
+    cam = next;
+    for (const fn of listeners) fn(cam);
+  };
+  const hitsAtScreen = (p: Point) => {
+    const map = current.game!.maps[current.game!.activeMapId]!;
+    return hitsAt({ map, doors: geometry?.doors ?? [], dm: true, zoom: cam.zoom, frame: null }, screenToSquares(cam, size, p));
+  };
+  const view: InputView = {
+    dmCamera: () => cam,
+    setDmCamera: setCam,
+    viewport: () => size,
+    screenToSquares: (p) => screenToSquares(cam, size, p),
+    hits: hitsAtScreen,
+    zoomAt: (f, at) => setCam(zoomCameraAt(cam, size, f, at)),
+  };
   const camera: DmCameraControl = {
     get: () => cam,
-    set: (c) => (cam = c),
-    jumpTo: (p) => (cam = { ...cam, centerX: p.x, centerY: p.y }),
-    fit: () => {},
+    set: setCam,
+    jumpTo: (p) => setCam({ ...cam, centerX: p.x, centerY: p.y }),
+    fit: () => setCam(fitDmCamera(limits())),
     showTv: () => {},
+    onChange: (fn) => {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
   };
   const ctx: FakeContext = {
     sent: [],
@@ -71,7 +107,12 @@ export function fakeContext(state: RootState = stateWithGame()): FakeContext {
     phone: false,
     tab: 'tokens',
     selectedToken: null,
+    showDmLayers: true,
     camera,
+    view,
+    hitsAt: (at) => hitsAtScreen(squaresToScreen(cam, size, at)),
+    onDispose: (fn) => disposers.push(fn),
+    dispose: () => disposers.splice(0).forEach((fn) => fn()),
     dispatch(cmd) {
       ctx.sent.push(cmd);
       const r = apply(current, cmd);
