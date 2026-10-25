@@ -11,6 +11,14 @@ export const WIDTH_MIN_MM = 1;
 /** Widest line. */
 export const WIDTH_MAX_MM = 14;
 
+/** Line width presets (parity DR-03: S 2 / M 4 / L 8 / XL 14), in mm on the table. */
+export const WIDTH_PRESETS = [
+  { id: 's', label: 'S', mm: 2 },
+  { id: 'm', label: 'M', mm: 4 },
+  { id: 'l', label: 'L', mm: 8 },
+  { id: 'xl', label: 'XL', mm: 14 },
+] as const;
+
 const KEY = 'battlemap.companion.draw';
 
 /**

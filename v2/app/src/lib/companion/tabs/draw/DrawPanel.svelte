@@ -1,6 +1,6 @@
 <!--
   DrawPanel — the Draw tab's panel (design.md "the tool tabs", parity §9): Ink (colour swatches
-  with an own colour, line width in mm on the table, Pen | Eraser) and Whole map (Clear all
+  with an own colour, line width in mm on the table — presets S/M/L/XL and a slider, Pen | Eraser) and Whole map (Clear all
   drawings, danger, with an Undo notice). Undo of a single stroke is the one undo button.
 
   Props:
@@ -16,7 +16,7 @@
   import Segmented from '../../../ui/Segmented.svelte';
   import Slider from '../../../ui/Slider.svelte';
   import { notify } from '../../../ui/notice.svelte.ts';
-  import { drawLocal, INK_COLORS, WIDTH_MAX_MM, WIDTH_MIN_MM } from './local.svelte.ts';
+  import { drawLocal, INK_COLORS, WIDTH_MAX_MM, WIDTH_MIN_MM, WIDTH_PRESETS } from './local.svelte.ts';
 
   let { ctx }: TabPanelProps = $props();
 
@@ -46,6 +46,13 @@
     colors={[...INK_COLORS]}
     bind:value={drawLocal.color}
     onchange={() => { drawLocal.pen = 'pen'; drawLocal.save(); }}
+  />
+  <Segmented
+    label="Line width presets"
+    block
+    value={WIDTH_PRESETS.find((w) => w.mm === drawLocal.widthMm)?.id ?? ''}
+    onchange={(id) => { drawLocal.widthMm = WIDTH_PRESETS.find((w) => w.id === id)!.mm; drawLocal.pen = 'pen'; drawLocal.save(); }}
+    options={WIDTH_PRESETS.map((w) => ({ id: w.id, label: w.label }))}
   />
   <Slider
     label="Line width"

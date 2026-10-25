@@ -116,7 +116,7 @@ async function setup(browser: import('@playwright/test').Browser, size = { width
   await expect(page.getByTestId('game-screen')).toBeVisible();
   await connected(page);
   // the map is fitted once the view is measured (then map points have a place on the page)
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __bmMap?: { camera(): { centerX: number } } }).__bmMap?.camera().centerX ?? 0), { timeout: 20_000 }).toBe(COLS / 2);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __bmMap?: { camera(): { centerX: number } | null } }).__bmMap?.camera()?.centerX ?? 0), { timeout: 20_000 }).toBe(COLS / 2);
   await page.waitForTimeout(400); // the kit Button's start-up debounce
   const close = async () => {
     drv.close();
@@ -181,6 +181,9 @@ test('tokens: tap adds, drag moves, tap selects; the TV has them', async ({ brow
   await page.getByPlaceholder(/Name a new token/).press('Enter');
   await tap(page, 5.5, 3.5);
   await expect.poll(async () => mapOf(await drv.snapshot()).tokens.find((t) => t.name === 'Thorin')).toMatchObject({ placed: true, col: 5, row: 3 });
+  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
+  await page.waitForTimeout(500);
+  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -212,6 +215,9 @@ test('fog: a single brush tap, a stroke, Room and Circle reach the TV; undo take
   const hidden = afterRoom - revealedOn(await drv.snapshot());
   expect(hidden).toBeGreaterThan(9);
   expect(hidden).toBeLessThanOrEqual(81);
+  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
+  await page.waitForTimeout(500);
+  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -232,6 +238,9 @@ test('fog preview: staged until Apply; Reveal all with an Undo notice', async ({
   await expect.poll(async () => revealedOn(await drv.snapshot())).toBe(COLS * ROWS);
   await page.getByRole('button', { name: 'Undo', exact: true }).first().click();
   await expect.poll(async () => revealedOn(await drv.snapshot())).toBeLessThan(COLS * ROWS);
+  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
+  await page.waitForTimeout(500);
+  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -242,6 +251,9 @@ test('a tap on a door opens it on the TV', async ({ browser }) => {
   await page.waitForTimeout(300); // walls and doors load
   await tap(page, (door.a.x + door.b.x) / 2, (door.a.y + door.b.y) / 2);
   await expect.poll(async () => mapOf(await drv.snapshot()).doorsOpen).toEqual([0]);
+  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
+  await page.waitForTimeout(500);
+  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -259,6 +271,9 @@ test('draw: a stroke reaches the TV, undo removes it, clear offers Undo', async 
   await expect.poll(async () => mapOf(await drv.snapshot()).strokes.length).toBe(0);
   await page.getByRole('button', { name: 'Undo', exact: true }).first().click();
   await expect.poll(async () => mapOf(await drv.snapshot()).strokes.length).toBe(1);
+  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
+  await page.waitForTimeout(500);
+  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -272,31 +287,16 @@ test('screenshots: tablet and phone', async ({ browser }) => {
     const cells: number[] = [];
     for (let r = 3; r <= 10; r++) for (let c = 5; c <= 13; c++) cells.push(r * COLS + c);
     drv.send({ type: 'sync.cmd', seq: 4, cmd: { type: 'fog.apply', cells, value: 'reveal', gesture: 'shotgesture1' } });
-    await openTab(page, 'Fog');
-    await page.getByRole('radio', { name: /Room/ }).click();
-    await page.waitForTimeout(800);
-    await page.screenshot({ path: `e2e/test-results/shots/companion-game-${name}-fog.png` });
-    await openTab(page, 'Tokens');
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: `e2e/test-results/shots/companion-game-${name}-tokens.png` });
-    await openTab(page, 'Draw');
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: `e2e/test-results/shots/companion-game-${name}-draw.png` });
+    drv.send({ type: 'sync.cmd', seq: 5, cmd: { type: 'layers.set', layers: [{ id: 'layer0000001', name: 'DM version of the lair', file: { hash: PIC_HASH, ext: 'jpg', bytes: PICTURE.length }, visible: true, opacity: 0.6 }] } });
+    drv.send({ type: 'sync.cmd', seq: 6, cmd: { type: 'draw.add', stroke: { id: 'strk00000001', points: [6, 4, 8, 5, 10, 4.5, 12, 6], color: '#e53935', width: 0.16 } } });
+    await expect.poll(async () => { const m = mapOf(await drv.snapshot()); return `${m.layers.length} ${m.strokes.length}`; }, { timeout: 10_000 }).toBe('1 1');
+    for (const tab of ['Tokens', 'Fog', 'Draw', 'Measure', 'View']) {
+      await openTab(page, tab);
+      if (tab === 'Fog') await page.getByRole('radio', { name: /Room/ }).click();
+      if (tab === 'Measure' && !(await page.getByRole('switch', { name: /Template disc on the map/ }).isChecked())) await page.getByRole('switch', { name: /Template disc on the map/ }).click();
+      await page.waitForTimeout(700);
+      await page.screenshot({ path: `e2e/test-results/shots/companion-game-${name}-${tab.toLowerCase()}.jpg`, type: 'jpeg', quality: 70 });
+    }
     await close();
   }
-});
-
-test('DEBUG layout', async ({ browser }) => {
-  test.skip(!process.env.E2E_DEBUG);
-  const { page, close } = await setup(browser, { width: 390, height: 844 });
-  await openTab(page, 'Fog');
-  await page.waitForTimeout(800);
-  const boxes = await page.evaluate(() => {
-    const q = (s: string) => { const e = document.querySelector(s) as HTMLElement | null; if (!e) return null; const r = e.getBoundingClientRect(); return `${s}: y ${Math.round(r.top)}..${Math.round(r.bottom)} h ${Math.round(r.height)} disp ${getComputedStyle(e).display}`; };
-    return ['.full', '.screen', '.map', '.tabbar', '.sheet-zone', '.bm-sheet', 'body', 'html', '#app'].map(q);
-  });
-  console.log(boxes.join('\n'));
-  console.log('scroll', await page.evaluate(() => [scrollY, visualViewport?.offsetTop, visualViewport?.height, innerHeight]));
-  await page.screenshot({ path: 'e2e/test-results/shots/debug-phone.png' });
-  await close();
 });
