@@ -27,6 +27,7 @@
   import { appServices } from './library/app-services.ts';
   import LibraryScreen from './library/LibraryScreen.svelte';
   import { setServices } from './library/services.ts';
+  import { serverWhere } from './library/picker-logic.ts';
   import TablePicker from './library/TablePicker.svelte';
 
   setServices(appServices());
@@ -148,7 +149,7 @@
       {:else if serverCheck === 'fallback'}
         The TV's own server doesn't answer — switching to the online server…
       {:else if session.connection !== 'open'}
-        Connecting to the table {config.lan ? 'on the TV' : 'online'}…
+        Connecting to the table {serverWhere(config.serverUrl) === 'tv' ? 'on the TV' : 'online'}…
       {:else if !session.tvOnline}
         Waiting for the TV — switch it on and start battlemap in TV mode.
       {:else}

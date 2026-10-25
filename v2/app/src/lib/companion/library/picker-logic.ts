@@ -32,6 +32,24 @@ export interface PickerRow {
   lastUsed: boolean;
 }
 
+/**
+ * Where the games of a server run: a LAN address is a TV's own table server; `localhost` and
+ * `127.x` count as online (a development server on this machine — a TV's server is never
+ * reached as localhost from a tablet).
+ *
+ * @param serverUrl - the server's base URL
+ * @returns `tv` or `online`
+ */
+export function serverWhere(serverUrl: string): TableWhere {
+  let host = '';
+  try {
+    host = new URL(serverUrl).hostname;
+  } catch {
+    return 'online';
+  }
+  return isLanUrl(serverUrl) && host !== 'localhost' && !host.startsWith('127.') ? 'tv' : 'online';
+}
+
 /** "2 tablets connected" / "Waiting for a tablet". */
 function companionsText(n: number): string {
   return n > 0 ? `${n} ${n === 1 ? 'tablet' : 'tablets'} connected` : 'Waiting for a tablet';
@@ -79,7 +97,7 @@ export function nearbyRows(found: readonly LanTable[], lastTable: string | null)
  */
 export function serverRows(tables: readonly TableRow[], serverUrl: string, lastTable: string | null, nearby: readonly PickerRow[] = []): PickerRow[] {
   const seen = new Set(nearby.map((r) => r.room).filter((r): r is string => !!r));
-  const where: TableWhere = isLanUrl(serverUrl) ? 'tv' : 'online';
+  const where = serverWhere(serverUrl);
   return sortRows(tables.filter((t) => !seen.has(t.room)).map((t) => ({
     key: `srv:${t.room}`,
     room: t.room,

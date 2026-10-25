@@ -28,6 +28,7 @@
   import { collectTabs, DEFAULT_TAB, type MapTool, type TabDef } from './tabs.ts';
   import { canRedo, canUndo, undoKey } from './undo.ts';
   import { hiddenTabs } from '../session-settings/settings-logic.ts';
+  import { serverWhere } from '../library/picker-logic.ts';
   import CurtainButton from '../tabs/scenes/CurtainButton.svelte';
 
   interface Props {
@@ -211,7 +212,7 @@
         label={tvOk ? 'The table — connected' : 'The table — not connected'}
         badge={true}
         badgeTone={tvOk ? 'ok' : 'warn'}
-        onclick={() => notify(tvOk ? `Connected to the TV · ${config.lan ? 'the game runs on the TV, on this Wi-Fi' : 'online'}` : 'Waiting for the TV — is it on and in battlemap?', { kind: tvOk ? 'info' : 'warning' })}
+        onclick={() => notify(tvOk ? `Connected to the TV · ${serverWhere(config.serverUrl) === 'tv' ? 'the game runs on the TV, on this Wi-Fi' : 'online'}` : 'Waiting for the TV — is it on and in battlemap?', { kind: tvOk ? 'info' : 'warning' })}
       />
       <IconButton icon={fullscreen ? 'fullscreen-exit' : 'fullscreen'} label={fullscreen ? 'Leave full screen' : 'Full screen'} onclick={() => void toggleFullscreen()} />
     </div>

@@ -17,7 +17,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { api } from '../../api/index.ts';
-  import { canDiscoverLan, decodeLanCode, discoverLanTables, isLanUrl } from '../../config.ts';
+  import { canDiscoverLan, decodeLanCode, discoverLanTables } from '../../config.ts';
   import { log } from '../../log.ts';
   import type { LanTable } from '../../shell.ts';
   import Badge from '../../ui/Badge.svelte';
@@ -28,7 +28,7 @@
   import Spinner from '../../ui/Spinner.svelte';
   import { notify } from '../../ui/notice.svelte.ts';
   import DeveloperScreen from '../developer/DeveloperScreen.svelte';
-  import { nearbyRows, serverRows, tablesAt, WHERE_LABEL, type PickerRow } from './picker-logic.ts';
+  import { nearbyRows, serverRows, serverWhere, tablesAt, WHERE_LABEL, type PickerRow } from './picker-logic.ts';
   import { services, type TableRow } from './services.ts';
 
   interface Props {
@@ -42,7 +42,7 @@
 
   const discover = canDiscoverLan();
   /** This page itself talks to a TV's table server (opened from the TV's QR code). */
-  const onTvServer = isLanUrl(api.serverUrl);
+  const onTvServer = serverWhere(api.serverUrl) === 'tv';
 
   let tables = $state.raw<TableRow[] | null>(null);
   let found = $state.raw<LanTable[]>([]);
