@@ -17,6 +17,8 @@
 
   const chosen = $derived(effectsLocal.chosen);
   const aim = $derived(effectsLocal.aim);
+  /** The name without its "(cone)" or "— fire cone" tail, so the button fits a phone. */
+  const short = $derived(chosen ? chosen.name.replace(/\s*[(—–].*$/, '') : '');
   const count = $derived(aim ? coveredSquares(aim, ctx.map.info.grid.cols, ctx.map.info.grid.rows).length : 0);
   const selected = $derived(effectsLocal.selectedId ? ctx.map.effects.find((e) => e.id === effectsLocal.selectedId) ?? null : null);
 </script>
@@ -24,7 +26,7 @@
 <div class="row">
   {#if aim && chosen}
     <Button variant="flat" icon="close" label="Cancel" onclick={() => (effectsLocal.aim = null)} />
-    <Button variant="primary" icon={chosen.once ? 'wand' : 'pin'} label="{chosen.once ? 'Cast' : 'Place'} {chosen.name}" hint="{count} sq" block onclick={() => commitAim(ctx)} />
+    <Button variant="primary" icon={chosen.once ? 'wand' : 'pin'} label="{chosen.once ? 'Cast' : 'Place'} {short}" hint="{count} sq" block onclick={() => commitAim(ctx)} />
   {:else if selected}
     <Button variant="flat" icon="check" label="Done" onclick={() => (effectsLocal.selectedId = null)} />
     <Button icon="delete" tone="danger" label="Remove {effectsLocal.byId(selected.effect)?.name ?? 'effect'}" block onclick={() => removeEffect(ctx, selected.id)} />

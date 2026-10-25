@@ -76,6 +76,7 @@
   const placed = $derived(ctx.map.effects.filter((p) => !isWeather(p)));
   const area = $derived(!!chosen && (chosen.group === 'cast' || chosen.group === 'area'));
   const shapes = $derived(chosen ? shapesFor(chosen.shape) : []);
+  const otherSpells = $derived(chosen ? chosen.spells.filter((sp) => sp.toLowerCase() !== chosen.name.toLowerCase()).slice(0, 2) : []);
 
   const verb = $derived(!chosen ? '' : chosen.group === 'cast' ? 'cast' : 'place');
   const hint = $derived.by(() => {
@@ -143,7 +144,7 @@
         <span class="stage"><img src={libraryUrl(chosen.thumb, LIB)} alt="" /></span>
         <div class="who">
           <span class="title">{chosen.name}</span>
-          <span class="meta">{sizeWords(chosen)}{chosen.spells.length ? ` · ${chosen.spells.slice(0, 2).join(', ')}` : ''}</span>
+          <span class="meta">{sizeWords(chosen)}{otherSpells.length ? ` · also ${otherSpells.join(', ')}` : ''}</span>
           {#if chosen.damage.length}
             <span class="badges">{#each chosen.damage as d (d)}<Badge text={d} />{/each}</span>
           {/if}
@@ -182,7 +183,7 @@
       <Segmented label="Effect group" layout="tile" block value={effectsLocal.group} onchange={setGroup} options={GROUPS.map((g) => ({ id: g.id, label: g.label, hint: g.hint, icon: g.id === 'cast' ? 'wand' : g.id === 'area' ? 'circle' : g.id === 'aura' ? 'token' : 'candle' }))} />
     </div>
     {#if chips.length > 1}
-      <div class="chips" role="group" aria-label="Damage type">
+      <div class="chips bm-scroll" use:scrollFade role="group" aria-label="Damage type">
         {#each chips as d (d)}
           <button type="button" class="chip bm-sf flat" class:on={effectsLocal.damage === d} aria-pressed={effectsLocal.damage === d} style:--dot={DAMAGE_COLORS[d]} onclick={() => (effectsLocal.damage = effectsLocal.damage === d ? null : d)}>{d}</button>
         {/each}
@@ -307,16 +308,17 @@
 
   .chips {
     display: flex;
-    flex-wrap: wrap;
     gap: calc(var(--g) / 2);
+    overflow-x: auto;
   }
 
   .chip {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    flex: none;
     min-height: 2.25rem;
-    padding: 0 calc(var(--g) * 1.25);
+    padding: 0 var(--g);
     border-radius: 999px;
     font: 500 var(--fs-small) / 1 var(--font-button);
     text-transform: capitalize;

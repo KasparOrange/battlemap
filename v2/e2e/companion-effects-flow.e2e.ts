@@ -173,8 +173,21 @@ async function arm(page: Page, query: string, id: string): Promise<void> {
 
 const SHOTS = 'e2e/test-results/shots';
 
+let seq = 1000;
+/** Sends a command as the driver (a second companion). */
+function command(drv: { send(msg: object): void }, cmd: object): void {
+  drv.send({ type: 'sync.cmd', seq: seq++, cmd });
+}
+
+/** Reveals the whole map, so the TV shows it under the effects. */
+async function revealAll(drv: Awaited<ReturnType<typeof setup>>['drv']): Promise<void> {
+  command(drv, { type: 'fog.all', value: 'reveal' });
+  await expect.poll(async () => revealedOn(await drv.snapshot())).toBe(COLS * ROWS);
+}
+
 test('cast: a fireball aimed then fired reaches the TV once', async ({ browser }) => {
   const { tv, page, drv, close } = await setup(browser);
+  await revealAll(drv);
   await openTab(page, 'Effects');
   await arm(page, 'fireball', 'fireball');
   await tap(page, 9.4, 7.2); // aims: nothing sent yet
@@ -196,6 +209,7 @@ test('cast: a fireball aimed then fired reaches the TV once', async ({ browser }
 
 test('areas: cloudkill placed, then removed from the list', async ({ browser }) => {
   const { tv, page, drv, close } = await setup(browser);
+  await revealAll(drv);
   await openTab(page, 'Effects');
   await arm(page, 'cloudkill', 'cloudkill');
   await tap(page, 6.5, 6.5);
@@ -225,6 +239,7 @@ test('weather: rain on and off; a screen flash is one shot', async ({ browser })
 
 test('auras: bless on a token follows it when it moves', async ({ browser }) => {
   const { tv, page, drv, close } = await setup(browser);
+  await revealAll(drv);
   await openTab(page, 'Tokens');
   await tap(page, 9.5, 7.5);
   await expect.poll(async () => mapOf(await drv.snapshot()).tokens.length).toBe(1);
@@ -256,4 +271,24 @@ test('screenshots: the Effects tab on a tablet and a phone', async ({ browser })
     await page.screenshot({ path: `${SHOTS}/effects-${name}-cone.png` });
     await close();
   }
+});
+
+test('showcase: a dressed table on the TV (torches, campfire, web, aura, mist)', async ({ browser }) => {
+  const { tv, page, drv, close } = await setup(browser);
+  await revealAll(drv);
+  command(drv, { type: 'token.add', token: { id: 'tokshow00001', label: '1', name: 'Thorin', color: '#e3b45e', col: 9, row: 9, placed: true, hidden: false } });
+  const at = (id: string, effect: string, x: number, y: number, size: number) => ({ type: 'fx.place', effect: { id, effect, anchor: { kind: 'point', x, y }, params: { size }, on: true } });
+  command(drv, at('fxshow000001', 'wall-torch', 4.2, 9.1, 1));
+  command(drv, at('fxshow000002', 'wall-torch', 14.8, 9.1, 1));
+  command(drv, at('fxshow000003', 'campfire', 12.5, 11.5, 2));
+  command(drv, { type: 'fx.place', effect: { id: 'fxshow000004', effect: 'web', anchor: { kind: 'region', points: [{ x: 3, y: 2 }, { x: 7, y: 2 }, { x: 7, y: 6 }, { x: 3, y: 6 }] }, params: { shape: 'cube' }, on: true } });
+  command(drv, { type: 'fx.place', effect: { id: 'fxshow000005', effect: 'spirit-guardians', anchor: { kind: 'token', tokenId: 'tokshow00001' }, params: { size: 6 }, on: true } });
+  command(drv, { type: 'fx.place', effect: { id: 'weather-mist', effect: 'mist', anchor: { kind: 'global' }, params: { uDensity: 0.3, intensityPercent: 70 }, on: true } });
+  await expect.poll(async () => mapOf(await drv.snapshot()).effects.length).toBe(6);
+  await tv.waitForTimeout(2500);
+  await tv.screenshot({ path: `${SHOTS}/effects-tv-showcase.png` });
+  await openTab(page, 'Effects');
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: `${SHOTS}/effects-tablet-onmap.png` });
+  await close();
 });
