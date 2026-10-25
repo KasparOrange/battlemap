@@ -46,6 +46,8 @@ function swap(game: Game, entry: UndoEntry): { map: MapPlay; inverse: UndoEntry 
     }
     case 'effects':
       return { map: { ...map, effects: entry.effects }, inverse: { ...entry, effects: map.effects } };
+    case 'notes':
+      return { map: { ...map, notes: entry.notes }, inverse: { ...entry, notes: map.notes } };
   }
 }
 

@@ -8,6 +8,7 @@ import * as v from 'valibot';
 import { Id, Mask } from './basics.ts';
 import { OneShot, PlacedEffect } from './effect.ts';
 import { Game } from './game.ts';
+import { DmNote } from './moments.ts';
 import { MeasureLine, Stroke, Token } from './pieces.ts';
 import { SoundShot } from './sound.ts';
 import { defaultTable, TableState } from './table.ts';
@@ -44,6 +45,8 @@ export const UndoEntry = v.variant('kind', [
   v.object({ kind: v.literal('strokes'), mapId: Id, gesture: v.nullable(Id), remove: v.array(Id), restore: v.array(Stroke) }),
   /** The map's lasting effects as they were (`fx.place` / `fx.remove`; a clear sends its removes under one gesture). */
   v.object({ kind: v.literal('effects'), mapId: Id, gesture: v.nullable(Id), effects: v.array(PlacedEffect) }),
+  /** The map's DM notes as they were (`note.set` / `note.remove`; a drag is one gesture). */
+  v.object({ kind: v.literal('notes'), mapId: Id, gesture: v.nullable(Id), notes: v.array(DmNote) }),
 ]);
 /** One undo step; see the schema of the same name. */
 export type UndoEntry = v.InferOutput<typeof UndoEntry>;
