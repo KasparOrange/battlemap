@@ -23,7 +23,7 @@ export function saveNewScene(ctx: GameContext): Scene | null {
   const scene = captureScene(ctx.game, newId(), nextSceneName(ctx.game));
   if (!scene || !ctx.dispatch({ type: 'scene.save', scene })) return null;
   log.info('companion', 'Scene saved', { scene: scene.id, map: scene.mapId, effects: scene.effects.length });
-  notify(`Saved “${scene.name}” — hold ⋯ to rename`, { kind: 'success' });
+  notify(`Saved “${scene.name}” — rename it from its ⋯`, { kind: 'success' });
   return scene;
 }
 
