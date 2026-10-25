@@ -1,0 +1,21 @@
+{
+  "name": "@battlemap/server-contract",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "battlemap v2: the server's black-box contract (HTTP + WebSocket against SERVER_URL), run against the Bun server and the Rust server alike; also generates the JSON Schema the Rust server embeds.",
+  "scripts": {
+    "contract:bun": "bun run.ts --target bun --port 6301",
+    "contract:rust": "bun run.ts --target rust --port 6302",
+    "schema": "bun scripts/schema.ts",
+    "test:schema": "bun test ./generated.check.ts",
+    "check": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4",
+    "@valibot/to-json-schema": "^1.5.0",
+    "sharp": "^0.35.5",
+    "typescript": "^6.0.3",
+    "valibot": "^1.5.0"
+  }
+}
