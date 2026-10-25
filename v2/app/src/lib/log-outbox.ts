@@ -46,6 +46,11 @@ export interface Outbox {
   close(): void;
 }
 
+/** Whether the page is being hidden or unloaded (then a request must outlive it). */
+function pageHidden(): boolean {
+  return (globalThis as { document?: { visibilityState?: string } }).document?.visibilityState === 'hidden';
+}
+
 /** Lines per drain request (the server takes at most 200 lines / 64 KB per batch). */
 const DRAIN_LINES = 100;
 
@@ -61,6 +66,8 @@ export function createOutbox(opts: OutboxOptions): Outbox {
   const doFetch = opts.fetch ?? ((...a: Parameters<typeof fetch>) => fetch(...a));
   let draining = false;
   let droppedLines = 0;
+  /** Lines `keep()` cut from the head so far — a drain in flight subtracts them (rv#25). */
+  let trimmedTotal = 0;
 
   const load = (): unknown[] => {
     try {
@@ -99,7 +106,10 @@ export function createOutbox(opts: OutboxOptions): Outbox {
   const keep = (lines: readonly unknown[]): void => {
     const all = [...load(), ...lines];
     const over = all.length - max;
-    if (over > 0) droppedLines += over;
+    if (over > 0) {
+      droppedLines += over;
+      trimmedTotal += over;
+    }
     save(over > 0 ? all.slice(over) : all);
   };
 
@@ -111,8 +121,11 @@ export function createOutbox(opts: OutboxOptions): Outbox {
         const all = load();
         if (all.length === 0) return true;
         const batch = all.slice(0, DRAIN_LINES);
+        const trimmedBefore = trimmedTotal;
         if (!(await post(batch, false))) return false;
-        save(load().slice(batch.length));
+        // `keep()` may have cut the oldest lines (this batch's) meanwhile: remove only the rest.
+        const alreadyGone = trimmedTotal - trimmedBefore;
+        save(load().slice(Math.max(0, batch.length - alreadyGone)));
       }
     } finally {
       draining = false;
@@ -125,7 +138,9 @@ export function createOutbox(opts: OutboxOptions): Outbox {
 
   return {
     async send(lines) {
-      if (await post(lines, true)) void drain();
+      // keepalive only while the page goes away (browsers refuse keepalive bodies over 64 KB, and
+      // it is only needed to outlive the page) — rv#25.
+      if (await post(lines, pageHidden())) void drain();
       else keep(lines);
     },
     drain,

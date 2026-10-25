@@ -39,6 +39,34 @@ describe('log outbox', () => {
     expect(box.dropped()).toBe(1);
     box.close();
   });
+
+  test('rv#25: lines trimmed while a drain is in flight are not removed twice; no keepalive while visible', async () => {
+    const storage = memoryStorage();
+    let hold: (() => void) | null = null;
+    let fail = true;
+    const keepalives: boolean[] = [];
+    const posted: unknown[][] = [];
+    const fakeFetch = (async (_url: string, init?: RequestInit) => {
+      keepalives.push(Boolean(init?.keepalive));
+      if (fail) throw new Error('offline');
+      const body = JSON.parse(String(init?.body)) as unknown[];
+      if (body[0] === 1) await new Promise<void>((r) => (hold = r)); // the drain's batch hangs
+      posted.push(body);
+      return new Response(null, { status: 204 });
+    }) as typeof fetch;
+    const box = createOutbox({ endpoint: '/log', storage, fetch: fakeFetch, maxLines: 4, retryMs: 0 });
+    await box.send([1, 2, 3, 4]); // kept: 1 2 3 4
+    fail = false;
+    const draining = box.drain(); // posts 1 2 3 4, hangs
+    await Bun.sleep(5);
+    fail = true;
+    await box.send([5, 6]); // kept: 3 4 5 6 (1 2 trimmed meanwhile)
+    hold!();
+    await draining;
+    expect(JSON.parse(storage.data.get('bm.log.outbox')!)).toEqual([5, 6]);
+    expect(keepalives.every((k) => !k)).toBe(true);
+    box.close();
+  });
 });
 
 describe('render scheduler', () => {
