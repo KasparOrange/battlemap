@@ -32,10 +32,13 @@
   let trim = $state(0);
   let trimTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const map = $derived(ctx.map);
-  const game = $derived(ctx.game);
-  const cells = $derived(map.info.grid.cols * map.info.grid.rows);
-  const staged = $derived(map.fog.staged ? maskCount(map.fog.staged.reveal, cells) + maskCount(map.fog.staged.hide, cells) : 0);
+  // slices, so a patch elsewhere (a disc drag, a token) doesn't re-run this panel (rv#37)
+  const grid = $derived(ctx.map.info.grid);
+  const fog = $derived(ctx.map.fog);
+  const settings = $derived(ctx.game.settings);
+  const previewFirst = $derived(ctx.game.previewFirst);
+  const cells = $derived(grid.cols * grid.rows);
+  const staged = $derived(fog.staged ? maskCount(fog.staged.reveal, cells) + maskCount(fog.staged.hide, cells) : 0);
   const verb = $derived(fogLocal.value === 'reveal' ? 'reveal' : 'hide');
   const hint = $derived(
     fogLocal.tool === 'brush' ? `Drag over the map to ${verb} squares.`
@@ -44,7 +47,7 @@
   );
 
   $effect(() => {
-    if (trimTimer === null) trim = game.settings.fogEdgeInset;
+    if (trimTimer === null) trim = settings.fogEdgeInset;
   });
 
   function setTool(id: string): void {
@@ -65,7 +68,7 @@
 
   function setPreview(id: string): void {
     const on = id === 'preview';
-    if (on === game.previewFirst) return;
+    if (on === previewFirst) return;
     if (ctx.dispatch({ type: 'fog.preview', on })) {
       log.info('companion', 'Preview first', { on });
       fogLocal.lastCircle = null;
@@ -73,7 +76,7 @@
   }
 
   function wholeMap(value: 'reveal' | 'hide'): void {
-    const preview = game.previewFirst;
+    const preview = previewFirst;
     const r = withUndo(() => ctx.session.view, (c) => ctx.dispatch(c), { type: 'fog.all', value }, (t) => notify(t));
     if (!r.sent) return;
     log.info('companion', value === 'reveal' ? 'Reveal all' : 'Hide all', { preview, changed: r.changed });
@@ -87,14 +90,14 @@
     if (trimTimer) clearTimeout(trimTimer);
     trimTimer = setTimeout(() => {
       trimTimer = null;
-      if (trim === game.settings.fogEdgeInset) return;
+      if (trim === settings.fogEdgeInset) return;
       if (ctx.dispatch({ type: 'game.settings', settings: { fogEdgeInset: trim } })) log.info('companion', 'Trim revealed edges', { percent: trim });
     }, 350);
   }
 
   function setStyle(id: string): void {
     const fogStyle = id as 'standard' | 'soft' | 'cloud' | 'atmospheric';
-    if (fogStyle !== game.settings.fogStyle) ctx.dispatch({ type: 'game.settings', settings: { fogStyle } });
+    if (fogStyle !== settings.fogStyle) ctx.dispatch({ type: 'game.settings', settings: { fogStyle } });
   }
 </script>
 
@@ -140,14 +143,14 @@
   <Segmented
     label="Players see changes"
     block
-    value={game.previewFirst ? 'preview' : 'now'}
+    value={previewFirst ? 'preview' : 'now'}
     onchange={setPreview}
     options={[
       { id: 'now', label: 'Instantly', icon: 'play' },
       { id: 'preview', label: 'Preview first', icon: 'reveal' },
     ]}
   />
-  {#if game.previewFirst}
+  {#if previewFirst}
     <div class="staged">
       {#if staged > 0}
         <Badge text={staged === 1 ? '1 square waiting' : `${staged} squares waiting`} tone="reveal" icon="reveal" />
@@ -156,7 +159,7 @@
         <span>Changes wait here, tinted, until you apply them.</span>
       {/if}
     </div>
-    {#if fogLocal.tool === 'circle' && map.fog.live}
+    {#if fogLocal.tool === 'circle' && fog.live}
       <p class="note">− / + resizes the circle waiting in the preview.</p>
     {/if}
   {/if}
@@ -173,13 +176,13 @@
   <ToggleSwitch
     label="Fog on this map"
     description="Off shows the players the whole map"
-    checked={map.fog.on}
+    checked={fog.on}
     onchange={(on) => ctx.dispatch({ type: 'fog.enable', on })}
   />
   <Segmented
     label="Fog style"
     block
-    value={game.settings.fogStyle}
+    value={settings.fogStyle}
     onchange={setStyle}
     options={[
       { id: 'standard', label: 'Plain' },

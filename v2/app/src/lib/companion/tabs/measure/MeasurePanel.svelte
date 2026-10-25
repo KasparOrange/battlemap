@@ -27,9 +27,9 @@
 
   let { ctx }: TabPanelProps = $props();
 
-  const map = $derived(ctx.map);
-  const disc = $derived(map.disc);
-  const ruler = $derived(map.ruler);
+  // slices: a token or fog patch doesn't re-run the disc editor (rv#37)
+  const disc = $derived(ctx.map.disc);
+  const ruler = $derived(ctx.map.ruler);
 
   /** Sends a disc and remembers its look. */
   function sendDisc(next: TemplateDisc, remember = true): void {
@@ -53,7 +53,7 @@
       return;
     }
     const remembered = await discLookStore.load();
-    sendDisc(discToMiddle(ctx.state.table, map, withLook(disc, remembered)), false);
+    sendDisc(discToMiddle(ctx.state.table, ctx.map, withLook(disc, remembered)), false);
     log.info('companion', 'Disc shown');
   }
 
@@ -88,7 +88,7 @@
     label="Ruler on the table"
     description="The L-shaped inch ruler. Drag it on the map in any tab."
     checked={ruler.visible}
-    onchange={(on) => ctx.dispatch({ type: 'ruler.set', ruler: rulerShown(ctx.state.table, map, on) })}
+    onchange={(on) => ctx.dispatch({ type: 'ruler.set', ruler: rulerShown(ctx.state.table, ctx.map, on) })}
   />
   {#if ruler.visible}
     <Button label="Turn it a quarter" icon="rotate" hint="{ruler.rotation}°" onclick={() => ctx.dispatch({ type: 'ruler.set', ruler: rulerTurned(ruler) })} />
@@ -114,7 +114,7 @@
       <span class="deg">{Math.round(disc.rotation)}°</span>
       <Button label="↻ 15°" variant="flat" onclick={() => sendDisc(turned(disc, 15), false)} />
     </div>
-    <Button label="To the middle of the TV" icon="tv" block onclick={() => sendDisc(discToMiddle(ctx.state.table, map, disc), false)} />
+    <Button label="To the middle of the TV" icon="tv" block onclick={() => sendDisc(discToMiddle(ctx.state.table, ctx.map, disc), false)} />
   {/if}
 </Section>
 

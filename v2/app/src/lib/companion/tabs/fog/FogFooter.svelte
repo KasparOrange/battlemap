@@ -15,9 +15,11 @@
 
   let { ctx }: TabPanelProps = $props();
 
-  const map = $derived(ctx.map);
-  const cells = $derived(map.info.grid.cols * map.info.grid.rows);
-  const staged = $derived(map.fog.staged ? maskCount(map.fog.staged.reveal, cells) + maskCount(map.fog.staged.hide, cells) : 0);
+  // slices, so a patch elsewhere (a disc drag, a token) doesn't re-run this panel (rv#37)
+  const grid = $derived(ctx.map.info.grid);
+  const fog = $derived(ctx.map.fog);
+  const cells = $derived(grid.cols * grid.rows);
+  const staged = $derived(fog.staged ? maskCount(fog.staged.reveal, cells) + maskCount(fog.staged.hide, cells) : 0);
 
   function apply(): void {
     const n = staged;

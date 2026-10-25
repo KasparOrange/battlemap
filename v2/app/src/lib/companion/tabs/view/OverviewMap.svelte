@@ -9,6 +9,7 @@
   - ctx: GameContext
 -->
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { Point } from '@battlemap/shared';
   import type { GameContext } from '../../game/tabs.ts';
   import { throttle } from '../../input/throttle.ts';
@@ -21,9 +22,17 @@
 
   let { ctx }: Props = $props();
 
-  const map = $derived(ctx.map);
+  // The map as far as the view cares (its grid and view): other patches don't re-run this (rv#37).
+  const info = $derived(ctx.map.info);
+  const mapView = $derived(ctx.map.view);
+  const map = $derived.by(() => {
+    void info;
+    void mapView;
+    return untrack(() => ctx.map);
+  });
+  const table = $derived(ctx.state.table);
   const grid = $derived(map.info.grid);
-  const view = $derived(viewOf(ctx.state.table, map));
+  const view = $derived(viewOf(table, map));
   const quad = $derived(view ? tvQuad(view) : null);
   const draggable = $derived(!!view?.layout && (view.layout.pansX || view.layout.pansY));
   const src = $derived(ctx.fileUrl(map.info.tableCopy ?? map.info.picture));
