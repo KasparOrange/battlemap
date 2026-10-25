@@ -17,6 +17,7 @@
   import Badge from '../../ui/Badge.svelte';
   import Spinner from '../../ui/Spinner.svelte';
   import { notify } from '../../ui/notice.svelte.ts';
+  import DeveloperScreen from '../developer/DeveloperScreen.svelte';
   import { tableCode } from '../frame/table-code.ts';
   import { services, type TableRow } from './services.ts';
 
@@ -32,6 +33,7 @@
   let tables = $state<TableRow[] | null>(null);
   let loading = $state(false);
   let failed = $state(false);
+  let developer = $state(false);
 
   /** Tables sorted: last used first, then by name. */
   const sorted = $derived(
@@ -117,7 +119,11 @@
       </ul>
     {/if}
   </section>
+
+  <Button label="Logs and diagnostics" icon="info" variant="flat" size="compact" onclick={() => (developer = true)} />
 </main>
+
+<DeveloperScreen open={developer} session={null} onclose={() => (developer = false)} />
 
 <style>
   .picker {

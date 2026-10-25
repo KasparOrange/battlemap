@@ -30,6 +30,9 @@
   import Sheet from '../../../ui/Sheet.svelte';
   import ToggleSwitch from '../../../ui/ToggleSwitch.svelte';
   import { dismiss, notify } from '../../../ui/notice.svelte.ts';
+  import DeveloperScreen from '../../developer/DeveloperScreen.svelte';
+  import { exportGame } from '../../library/game-files.ts';
+  import SessionSettingsDialog from '../../session-settings/SessionSettingsDialog.svelte';
   import { theme } from './theme.svelte.ts';
 
   let { ctx }: TabPanelProps = $props();
@@ -49,6 +52,19 @@
   let sheet = $state(false);
   let renaming = $state<{ id: string; name: string; game: boolean } | null>(null);
   let picker: HTMLInputElement | undefined = $state();
+  let gameSettings = $state(false);
+  let developer = $state(false);
+  let exporting = $state(false);
+
+  async function exportThis(): Promise<void> {
+    if (exporting) return;
+    exporting = true;
+    try {
+      await exportGame({ id: game.id, name: game.name }, game);
+    } finally {
+      exporting = false;
+    }
+  }
 
   function switchTo(m: MapPlay): void {
     if (m.info.id === game.activeMapId) return;
@@ -189,12 +205,8 @@
 
 <Section title="This game">
   <ListRow title={game.name} sub="The game's name" icon="edit" chevron onclick={() => (renaming = { id: game.id, name: game.name, game: true })} />
-  <ToggleSwitch
-    label="Effects"
-    description="Weather, torches and spell effects on the table."
-    checked={game.settings.effects}
-    onchange={(on) => ctx.dispatch({ type: 'game.settings', settings: { effects: on } })}
-  />
+  <ListRow title="Game settings" sub="Tools, fog look, effects" icon="settings" chevron onclick={() => (gameSettings = true)} />
+  <Button label="Export this game" icon="upload" variant="flat" block loading={exporting} onclick={() => void exportThis()} />
 </Section>
 
 <Section title="This tablet">
@@ -205,9 +217,20 @@
     onchange={(id) => theme.set(id as 'dark' | 'light')}
     options={[{ id: 'dark', label: 'Dark', icon: 'moon' }, { id: 'light', label: 'Light', icon: 'sun' }]}
   />
+  <ListRow title="Logs and diagnostics" sub="Versions, connection, the last log lines" icon="info" chevron onclick={() => (developer = true)} />
 </Section>
 
 <Button label="Leave the game" icon="back" variant="flat" block onclick={leave} />
+
+<SessionSettingsDialog
+  open={gameSettings}
+  mode="game"
+  settings={game.settings}
+  onchange={(settings) => ctx.dispatch({ type: 'game.settings', settings })}
+  onclose={() => (gameSettings = false)}
+/>
+
+<DeveloperScreen open={developer} session={ctx.session} onclose={() => (developer = false)} />
 
 <CalibrationDialog open={calibrating} table={ctx.state.table} dispatch={(c) => ctx.dispatch(c)} onclose={() => (calibrating = false)} />
 

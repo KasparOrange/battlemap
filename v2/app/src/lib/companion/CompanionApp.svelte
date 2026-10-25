@@ -21,6 +21,7 @@
   import ProgressBar from '../ui/ProgressBar.svelte';
   import Spinner from '../ui/Spinner.svelte';
   import { notify } from '../ui/notice.svelte.ts';
+  import { installLogBuffer } from './developer/log-buffer.ts';
   import { lastUsedTable, rememberUsedTable } from './frame/last-table.ts';
   import { peerMessage } from './frame/peer-message.ts';
   import GameScreen from './game/GameScreen.svelte';
@@ -29,6 +30,7 @@
   import { setServices } from './library/services.ts';
   import TablePicker from './library/TablePicker.svelte';
 
+  installLogBuffer();
   setServices(appServices());
 
   const config: AppConfig = appConfig();

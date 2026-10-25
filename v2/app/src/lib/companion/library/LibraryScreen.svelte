@@ -11,7 +11,7 @@
   - onchangetable: () => void — "Change table" in the menu
 -->
 <script lang="ts">
-  import { newId, tableGrid, type GameSummary, type LibraryEntry, type MapInfo } from '@battlemap/shared';
+  import { newId, tableGrid, type GameSettings, type GameSummary, type LibraryEntry, type MapInfo } from '@battlemap/shared';
   import { log } from '../../log.ts';
   import type { CompanionSession } from '../../state/sessions.svelte.ts';
   import Badge from '../../ui/Badge.svelte';
@@ -26,7 +26,10 @@
   import { notify } from '../../ui/notice.svelte.ts';
   import MapImport from '../dialogs/MapImport.svelte';
   import { defaultGameName, gameMeta, groupGames } from './library-logic.ts';
+  import DeveloperScreen from '../developer/DeveloperScreen.svelte';
   import { peerMessage } from '../frame/peer-message.ts';
+  import SessionSettingsDialog from '../session-settings/SessionSettingsDialog.svelte';
+  import { exportGame, GAME_FILE_ACCEPT, importGame } from './game-files.ts';
   import { services } from './services.ts';
   import SharedLibrary from './SharedLibrary.svelte';
 
@@ -49,6 +52,13 @@
   let newName = $state('');
   let deleting = $state<GameSummary | null>(null);
   let picker: HTMLInputElement | undefined = $state();
+  let gamePicker: HTMLInputElement | undefined = $state();
+  let developer = $state(false);
+  /** A new game waiting for its settings (shared map → Session settings dialog). */
+  let starting = $state.raw<{ map: MapInfo; name: string } | null>(null);
+  /** The settings this device started its last new game with (Upload and play uses them too). */
+  let lastSettings = $state.raw<Partial<GameSettings>>({});
+  services().getSetting<Partial<GameSettings>>('newGameSettings', {}).then((v) => (lastSettings = v ?? {}), () => {});
   let shared: SharedLibrary | undefined = $state();
 
   const root = $derived(session.view);
@@ -110,17 +120,41 @@
     else notify(`Loading “${g.name}”…`);
   }
 
-  function newGameOn(map: MapInfo): void {
+  /**
+   * Starts a new game on a map.
+   *
+   * @param map - the first map
+   * @param name - its name (default "Session N · date")
+   * @param settings - its settings (default: the ones this device used last)
+   */
+  function newGameOn(map: MapInfo, name = defaultGameName(map.name, games ?? []), settings: Partial<GameSettings> = lastSettings): void {
     if (!startOpening(map.id)) return;
-    const name = defaultGameName(map.name, games ?? []);
-    log.info('companion', 'New game', { name, map: map.name, cols: map.grid.cols, rows: map.grid.rows });
-    const sent = session.request({ type: 'game.new', game: { id: newId(), name, createdAt: new Date().toISOString(), map } });
+    log.info('companion', 'New game', { name, map: map.name, cols: map.grid.cols, rows: map.grid.rows, settings });
+    const sent = session.request({ type: 'game.new', game: { id: newId(), name, createdAt: new Date().toISOString(), map, settings } });
     if (!sent) endOpening();
     else notify(`Starting “${name}”…`);
   }
 
+  /** A shared map's card: the session settings first, then the game (parity CL-05). */
   function playShared(e: LibraryEntry): void {
-    newGameOn({ ...e.map, libraryId: e.map.id });
+    if (opening) return;
+    starting = { map: { ...e.map, libraryId: e.map.id }, name: defaultGameName(e.map.name, games ?? []) };
+  }
+
+  function startWith(name: string, settings: Partial<GameSettings>): void {
+    const s = starting;
+    starting = null;
+    if (!s) return;
+    lastSettings = settings;
+    void services().putSetting('newGameSettings', settings);
+    newGameOn(s.map, name, settings);
+  }
+
+  function pickedGame(e: Event): void {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = '';
+    if (file) void importGame(file, (gameId) => session.request({ type: 'game.open', gameId })).then(() => setTimeout(list, 600));
   }
 
   function saveRename(): void {
@@ -151,6 +185,7 @@
       newName = g.name;
       renaming = g;
     } else if (id === 'delete') deleting = g;
+    else if (id === 'export') void exportGame(g, root?.game ?? null);
   }
 
   function picked(e: Event): void {
@@ -163,6 +198,7 @@
   const thumb = (g: GameSummary) => (g.thumb ? services().fileUrl(g.thumb) : undefined);
   const MENU = [
     { id: 'rename', label: 'Rename', icon: 'edit' as const },
+    { id: 'export', label: 'Export to a file', icon: 'upload' as const },
     { id: 'delete', label: 'Delete', icon: 'delete' as const, danger: true, divider: true },
   ];
 </script>
@@ -185,9 +221,11 @@
       label="Menu"
       menu={[
         { id: 'refresh', label: 'Refresh the list', icon: 'sync' },
-        { id: 'table', label: 'Change table', icon: 'tv' },
+        { id: 'import', label: 'Import a game file', icon: 'download' },
+        { id: 'table', label: 'Change table', icon: 'tv', divider: true },
+        { id: 'dev', label: 'Logs and diagnostics', icon: 'info' },
       ]}
-      onmenu={(id) => (id === 'table' ? onchangetable?.() : list())}
+      onmenu={(id) => (id === 'table' ? onchangetable?.() : id === 'import' ? gamePicker?.click() : id === 'dev' ? (developer = true) : list())}
     />
     <div class="search">
       <SearchField bind:value={query} expanded={wide} label="Search games and maps" placeholder="Search games and maps" />
@@ -202,6 +240,7 @@
     </span>
     <Button label="Upload" icon="upload" variant="primary" onclick={() => picker?.click()} />
     <input bind:this={picker} type="file" hidden onchange={picked} data-testid="upload-input" />
+    <input bind:this={gamePicker} type="file" accept={GAME_FILE_ACCEPT} hidden onchange={pickedGame} data-testid="game-file-input" />
   </header>
 
   <div class="content bm-scroll">
@@ -276,6 +315,12 @@
     oncancel={() => (importing = null)}
   />
 {/if}
+
+{#if starting}
+  <SessionSettingsDialog open mode="new" name={starting.name} settings={lastSettings} onstart={startWith} onclose={() => (starting = null)} />
+{/if}
+
+<DeveloperScreen open={developer} {session} onclose={() => (developer = false)} />
 
 <Dialog open={renaming !== null} title="Rename the game" icon="edit" size="sm" onclose={() => (renaming = null)}>
   <Field label="Name" bind:value={newName} onenter={saveRename} />
