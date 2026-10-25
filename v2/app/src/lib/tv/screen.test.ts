@@ -38,6 +38,9 @@ describe('navigation', () => {
   test('back targets', () => {
     expect(backAction('game', true)).toBe('pattern-off');
     expect(backAction('game', false)).toBe('close-game');
+    expect(backAction('game', false, true)).toBe('lift-curtain');
+    expect(backAction('game', true, true)).toBe('pattern-off');
+    expect(backAction('library', false, true)).toBe('home');
     expect(backAction('library', false)).toBe('home');
     expect(backAction('home', false)).toBe('exit');
   });

@@ -73,6 +73,8 @@
 
   const game = $derived(session.state.game);
   const patternOn = $derived(session.state.table.pattern.on);
+  /** The game's curtain is down: the TV shows nothing but it (no busy card, no map name). */
+  const curtainDown = $derived(session.state.game?.curtain?.down ?? false);
   const screen = $derived(screenFor(game !== null, wanted));
   const companions = $derived(session.peers.filter((p) => p.role === 'companion').length);
   const badgeInput = $derived({ connection: session.connection, companions, problem, offlineMs: offlineLong ? OFFLINE_RED_MS : 0 });
@@ -156,10 +158,11 @@
   /** One press of Back; returns whether the app handled it (else the shell closes the app). */
   function onBack(): boolean {
     if (!gate.accept()) return lastBackHandled; // the same press, delivered twice
-    const action = backAction(screen, patternOn);
+    const action = backAction(screen, patternOn, curtainDown);
     log.info('tv', 'Back', { action, screen });
     lastBackHandled = action !== 'exit';
     if (action === 'pattern-off') setPattern(false);
+    else if (action === 'lift-curtain') session.host.applyLocal({ type: 'curtain.set', down: false });
     else if (action === 'close-game') closeGame();
     else if (action === 'home') showHome();
     return lastBackHandled;
@@ -367,7 +370,7 @@
   <TvCalibration table={session.state.table} onDone={() => setPattern(false)} />
 {/if}
 
-{#if status.busy}
+{#if status.busy && !curtainDown}
   <TvBusy busy={status.busy} progress={status.progress} />
 {/if}
 

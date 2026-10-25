@@ -95,6 +95,8 @@ export function screenFor(gameOpen: boolean, wanted: 'home' | 'library'): TvScre
 export type BackAction =
   /** Turn the calibration pattern off. */
   | 'pattern-off'
+  /** Lift the curtain (the game stays open). */
+  | 'lift-curtain'
   /** Save and close the game, then show the library. */
   | 'close-game'
   /** Library → home. */
@@ -103,14 +105,18 @@ export type BackAction =
   | 'exit';
 
 /**
- * Where Back goes (parity TV-32): pattern → off, game → library, library → home, home → exit.
+ * Where Back goes (parity TV-32): pattern → off, curtain → up, game → library, library → home,
+ * home → exit. With the curtain down, Back first lifts it (features.md "the curtain"): the
+ * remote's way back to the table when the tablet is gone, never a jump out of the game.
  *
  * @param screen - the screen shown
  * @param patternOn - whether the calibration pattern is up
+ * @param curtainDown - whether the game's curtain is down
  * @returns the action
  */
-export function backAction(screen: TvScreen, patternOn: boolean): BackAction {
+export function backAction(screen: TvScreen, patternOn: boolean, curtainDown = false): BackAction {
   if (patternOn) return 'pattern-off';
+  if (screen === 'game' && curtainDown) return 'lift-curtain';
   if (screen === 'game') return 'close-game';
   if (screen === 'library') return 'home';
   return 'exit';
