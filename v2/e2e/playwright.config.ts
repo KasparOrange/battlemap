@@ -13,7 +13,7 @@
  * need their own server use the `privateServer` fixture (`support/fixtures.ts`).
  *
  * Traces and screenshots of failures stay on disk under `$TMPDIR/claude-v2-e2e-results-<app port>/`, the JSON
- * report in `test-results/e2e-report-<app port>.json` (never printed);
+ * report in `$TMPDIR/claude-v2-e2e-report-<app port>.json` (never printed);
  * open one with `bunx playwright show-trace <path>/trace.zip`.
  */
 import { tmpdir } from 'node:os';
@@ -46,7 +46,7 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 7_000 },
   // Per app port, so parallel runs of other helpers never clean or overwrite this run's results.
-  reporter: [['list'], ['json', { outputFile: `../test-results/e2e-report-${APP_PORT}.json` }]],
+  reporter: [['list'], ['json', { outputFile: join(tmpdir(), `claude-v2-e2e-report-${APP_PORT}.json`) }]],
   // Artifacts live in the temp dir: other helpers' runs clean `test-results/` while this one is
   // still writing its traces there (ENOENT on trace files).
   outputDir: join(tmpdir(), `claude-v2-e2e-results-${APP_PORT}`),
