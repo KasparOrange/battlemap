@@ -178,7 +178,7 @@ they say otherwise; without a game they are refused ("No game is open."), except
 | `map.remove` | `mapId` (not the last) | — | new (a leftover of 2026-10-10) |
 | `map.rename` | `mapId`, `name` | — | new |
 | `map.regrid` | `grid` (`RasterGrid`), `drawGrid?` (same counts keep the fog) | — | `vtt.setMapGrid` |
-| `fx.place` / `fx.remove` | `effect` (`PlacedEffect`) / `id`; `gesture?` (one undo step: a clear sends its removes under one) | effects | new |
+| `fx.place` / `fx.remove` | `effect` (`PlacedEffect`) / `id`; `gesture?` (one undo step: a clear sends its removes under one) | yes, per gesture | new |
 | `fx.trigger` | `shot` (`OneShot`, live — the last 8 kept) | — | `vtt.triggerEffect` |
 | `game.rename` | `name` (the open game) | — | `lib.renameSession` |
 | `game.settings` | `settings` (any of `fogStyle`, `fogEdgeInset`, `fogFade`, `effects`) | — | `vtt.updateSessionSettings` |
