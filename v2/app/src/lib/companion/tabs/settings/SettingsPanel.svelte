@@ -10,10 +10,11 @@
   - ctx: GameContext
 -->
 <script lang="ts">
-  import { tableGrid, type LibraryEntry, type MapInfo, type MapPlay, type RasterGrid } from '@battlemap/shared';
+  import { MapRegrid, tableGrid, type Command, type FileRef, type LibraryEntry, type MapInfo, type MapPlay, type RasterGrid } from '@battlemap/shared';
   import type { TabPanelProps } from '../../game/tabs.ts';
   import CalibrationDialog from '../../dialogs/CalibrationDialog.svelte';
   import GridEditor from '../../dialogs/grid-editor/GridEditor.svelte';
+  import { copyChanges, remakeTableCopy } from '../../dialogs/grid-editor/table-copy.ts';
   import MapImport from '../../dialogs/MapImport.svelte';
   import { mapMeta } from '../../library/library-logic.ts';
   import SharedLibrary from '../../library/SharedLibrary.svelte';
@@ -28,7 +29,7 @@
   import Segmented from '../../../ui/Segmented.svelte';
   import Sheet from '../../../ui/Sheet.svelte';
   import ToggleSwitch from '../../../ui/ToggleSwitch.svelte';
-  import { notify } from '../../../ui/notice.svelte.ts';
+  import { dismiss, notify } from '../../../ui/notice.svelte.ts';
   import { theme } from './theme.svelte.ts';
 
   let { ctx }: TabPanelProps = $props();
@@ -85,10 +86,35 @@
     renaming = null;
   }
 
-  function regrid(g: RasterGrid): void {
-    const recount = g.cols !== map.info.grid.cols || g.rows !== map.info.grid.rows;
+  /** Whether `map.regrid` can carry a new table copy (the protocol field, rv#29 — asked of shared). */
+  const regridTakesCopy = 'tableCopy' in MapRegrid.entries;
+  let regridding = $state(false);
+
+  /**
+   * Applies the editor's grid. A grid whose table copy would differ gets a new copy first (made
+   * on this tablet, uploaded), so the TV keeps drawing the map at table density (rv#29).
+   */
+  async function regrid(g: RasterGrid): Promise<void> {
+    if (regridding) return;
+    const info = map.info;
+    const recount = g.cols !== info.grid.cols || g.rows !== info.grid.rows;
     editor = null;
-    if (ctx.dispatch({ type: 'map.regrid', grid: g })) {
+    let tableCopy: FileRef | null | undefined;
+    if (regridTakesCopy && info.kind === 'picture' && copyChanges(info.grid, g)) {
+      regridding = true;
+      const id = notify('Making the table copy for the new grid…', { ms: 60_000 });
+      try {
+        tableCopy = await remakeTableCopy(info.picture, g, () => {});
+      } catch (e) {
+        log.warn('companion', 'Table copy not remade — regrid without it', { error: String(e) });
+        notify("Couldn't remake the TV's copy of the picture — the TV uses the old one.", { kind: 'warning' });
+      } finally {
+        regridding = false;
+        dismiss(id);
+      }
+    }
+    const cmd = tableCopy !== undefined ? { type: 'map.regrid' as const, grid: g, tableCopy } : { type: 'map.regrid' as const, grid: g };
+    if (ctx.dispatch(cmd as Command)) {
       notify(`Grid: ${g.cols} × ${g.rows} squares of ${g.cellW.toFixed(2)} px${recount ? ' — the fog of this map starts over' : ''}`, { kind: 'success' });
     }
   }
@@ -139,7 +165,7 @@
 
 <Section title="This map's squares" description="{map.info.grid.cols} × {map.info.grid.rows} squares · one square = one inch on the table">
   {#if map.info.kind === 'picture'}
-    <Button label="Fit the grid on the picture" icon="grid" iconEnd="chevron-right" block onclick={() => (editor = { tool: 'fit' })} />
+    <Button label="Fit the grid on the picture" icon="grid" iconEnd="chevron-right" block loading={regridding} onclick={() => (editor = { tool: 'fit' })} />
     <Button label="Set the scale by a known length" icon="measure" variant="flat" block onclick={() => (editor = { tool: 'length' })} />
   {/if}
   <ToggleSwitch
@@ -193,7 +219,7 @@
     tool={editor.tool}
     {table}
     applyLabel="Apply"
-    onapply={regrid}
+    onapply={(g) => void regrid(g)}
     onclose={() => (editor = null)}
   />
 {/if}
