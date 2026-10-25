@@ -11,8 +11,8 @@
 <script lang="ts">
   import { newId, type DmLayer, type FileRef } from '@battlemap/shared';
   import type { GameContext } from '../../game/tabs.ts';
-  import '../../library/app-services.ts';
-  import { services } from '../../library/services.ts';
+  import { api } from '../../../api/index.ts';
+  import { files as fileCache } from '../../../storage/index.ts';
   import { log } from '../../../log.ts';
   import Button from '../../../ui/Button.svelte';
   import IconButton from '../../../ui/IconButton.svelte';
@@ -54,7 +54,10 @@
       try {
         const label = files.length > 1 ? `Uploading ${i + 1} of ${files.length}: ${f.name}` : `Uploading ${f.name}`;
         uploading = { value: 0, label };
-        const ref = await services().uploadFile(f, { ext, format: 'asis' }, (value, _l, detail) => (uploading = { value, label, detail }));
+        const res = await api.uploadFile(f, { ext, format: 'asis' }, (loaded, total) =>
+          (uploading = { value: total ? loaded / total : null, label, detail: `${(loaded / 1e6).toFixed(1)} of ${(total / 1e6).toFixed(1)} MB` }));
+        void fileCache.put(res, f).catch(() => {}); // this tablet never downloads its own upload
+        const ref: FileRef = { hash: res.hash, ext: res.ext, bytes: res.bytes };
         send(addLayer(ctx.map.layers, newId(), f.name.replace(/\.[^.]+$/, ''), ref));
         added++;
         log.info('companion', 'DM layer added', { name: f.name, bytes: f.size, hash: ref.hash });
