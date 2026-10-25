@@ -388,3 +388,34 @@ export type CommandType = Command['type'];
 /** The command of one type. */
 export type CommandOf<T extends CommandType> = Extract<Command, { type: T }>;
 
+
+/**
+ * Commands that act on "the map on the table" implicitly (rv#28). A `sync.cmd` may say which map
+ * its sender saw there (`onMap`); the TV refuses such a command when another map is on the table
+ * by then, so fog cells or a token meant for one map never land on the next (two companions, one
+ * switching maps while the other paints). Table, game and map-list commands are not in the list.
+ */
+export const MAP_SCOPED_COMMANDS: ReadonlySet<CommandType> = new Set<CommandType>([
+  'fog.apply', 'fog.all', 'fog.enable', 'fog.preview', 'fog.commit', 'fog.discard',
+  'door.set',
+  'token.add', 'token.move', 'token.update', 'token.remove', 'token.clear',
+  'draw.add', 'draw.remove', 'draw.clear', 'draw.live',
+  'measure.set', 'ruler.set', 'disc.set', 'layers.set',
+  'view.mode', 'view.window', 'view.pan', 'view.rotate', 'view.free', 'view.grid',
+  'map.regrid',
+  'fx.place', 'fx.remove',
+]);
+
+/**
+ * Why the TV refuses a map-scoped command sent for another map, or null when it applies.
+ *
+ * @param activeMapId - the map on the table now (null: no game)
+ * @param cmd - the command
+ * @param onMap - the map its sender saw on the table, if it said
+ * @returns the reason, or null
+ */
+export function staleMapReason(activeMapId: string | null, cmd: Command, onMap: string | undefined): string | null {
+  if (onMap === undefined || activeMapId === null || onMap === activeMapId) return null;
+  if (!MAP_SCOPED_COMMANDS.has(cmd.type)) return null;
+  return 'The map on the table changed — that wasn’t applied.';
+}

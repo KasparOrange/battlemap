@@ -18,7 +18,7 @@
  * - a snapshot request that isn't answered is repeated every `snapshotRetryMs` (rv#9); a new
  *   epoch drops what is pending (rv#10).
  */
-import { apply, applyAll, check, ToCompanion, type Command, type RootState } from '@battlemap/shared';
+import { apply, applyAll, check, MAP_SCOPED_COMMANDS, ToCompanion, type Command, type RootState } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
 import type { SendFn } from './host.ts';
 
@@ -164,7 +164,9 @@ export class SyncClient {
     const seq = this.nextSeq++;
     this.pending.push({ seq, cmd, at: this.now() }); // before sending: an echo may come back at once
     this.setView(predicted.state);
-    if (!this.send({ type: 'sync.cmd', seq, cmd })) {
+    // Map-scoped commands say which map they were meant for (rv#28).
+    const onMap = MAP_SCOPED_COMMANDS.has(cmd.type) ? this.view.game?.activeMapId : undefined;
+    if (!this.send({ type: 'sync.cmd', seq, cmd, ...(onMap ? { onMap } : {}) })) {
       this.pending = this.pending.filter((p) => p.seq !== seq);
       this.rebuild();
       this.onNotice?.("Not connected to the TV — that wasn't sent.", 'warning');

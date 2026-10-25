@@ -82,7 +82,7 @@ from the shell; a browser's guess; `?name=` overrides), "This TV" when empty.
 
 | Message | Fields | What the TV does |
 |---|---|---|
-| `sync.cmd` | `seq` (per sender, from 1, kept across reconnects), `cmd` | applies it → `sync.applied` to all, or `sync.rejected` to the sender |
+| `sync.cmd` | `seq` (per sender, from 1, kept across reconnects), `cmd`, `onMap?` (the map the sender saw on the table, sent with map-scoped commands — `MAP_SCOPED_COMMANDS`) | applies it → `sync.applied` to all, or `sync.rejected` to the sender (also when `onMap` is no longer the map on the table, rv#28) |
 | `sync.request` | — | `sync.snapshot` to the sender |
 | `lib.list` | — | `lib.listing` to the sender |
 | `game.open` | `gameId` | saves the open game, loads this one (from the server's backup if not on the TV), new epoch → `sync.snapshot` to all |

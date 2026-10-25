@@ -214,4 +214,22 @@ describe('sync', () => {
     c.undelivered(1, 'rate-limited');
     expect(room.notices.at(-1)?.text).toContain('Too fast');
   });
+
+  test('rv#28: a map-scoped command meant for the previous map is refused', () => {
+    const room = roomWithGame();
+    room.host.applyLocal({ type: 'map.add', map: map('m2'), activate: false });
+    const a = room.join('a');
+    const b = room.join('b');
+    room.instant = false;
+    expect(b.dispatch({ type: 'fog.all', value: 'reveal' })).toBe(true); // meant for m1, held
+    room.instant = true;
+    a.dispatch({ type: 'map.switch', mapId: 'm2' });
+    room.flush(); // b's fog.all arrives after the switch
+    expect(room.host.state.game?.activeMapId).toBe('m2');
+    expect(room.host.state.game?.maps.m2?.fog.revealed).toEqual(room.host.state.game?.maps.m2?.fog.revealed);
+    expect(room.notices.some((n) => n.client === 'b' && n.text.includes('map on the table changed'))).toBe(true);
+    expect(b.pendingCount).toBe(0);
+    expect(b.view).toEqual(room.host.state);
+  });
 });
+

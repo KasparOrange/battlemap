@@ -149,6 +149,11 @@ export const SyncCmd = v.object({
   seq: Count,
   /** The command. */
   cmd: Command,
+  /**
+   * The map the sender saw on the table when it sent a map-scoped command (rv#28); the TV refuses
+   * the command when another map is there by then (`staleMapReason`). Optional.
+   */
+  onMap: v.optional(Id),
 });
 
 /** Please send me a snapshot. */

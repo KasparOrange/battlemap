@@ -9,7 +9,7 @@
  *
  * @see ../../../../docs/architecture.md "sync"
  */
-import { apply, check, newId, ToTv, type Command, type RootState } from '@battlemap/shared';
+import { apply, check, newId, ToTv, type Command, type RootState, staleMapReason } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
 
 /** How the host talks to the room — the connection's `send` (false = not delivered). */
@@ -76,6 +76,15 @@ export class SyncHost {
         if (msg.seq <= (this.acks.get(from) ?? 0)) {
           this.log.debug('sync', 'Duplicate command ignored', { from, seq: msg.seq, type: msg.cmd.type });
           return;
+        }
+        {
+          const stale = staleMapReason(this.state.game?.activeMapId ?? null, msg.cmd, msg.onMap);
+          if (stale) {
+            this.acks.set(from, msg.seq);
+            this.log.info('sync', 'Command for another map refused', { from, seq: msg.seq, type: msg.cmd.type, onMap: msg.onMap, active: this.state.game?.activeMapId ?? null });
+            this.send({ type: 'sync.rejected', to: from, seq: msg.seq, reason: stale });
+            return;
+          }
         }
         this.applyFrom(from, msg.seq, msg.cmd);
         return;
