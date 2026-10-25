@@ -11,7 +11,8 @@ holds only what is open.
 | 2 | server (live: `https://battlemap.srv1189697.hstgr.cloud/app/`), storage + API, map import, TV mode | done |
 | 2 | renderer, companion game/tools (4a), companion library/tabs (4b), effects runtime, QA harness | ~80–90 %, cut off by the session limit; work committed (`33b2d8a`) |
 | 2.5 | integration pass (test hook; e2e 44 pass / 8 fail; soak 2,900 commands converge; 25 bugs in `qa.md`) + code review (0 blockers, 8 major in `review.md`) + Rust server (contract 72/72, VPS port 5930 side by side) | done |
-| 3 | W3-A core/TV/harness · W3-B1 companion game + map tabs · W3-B2 companion frame, library, dialogs, settings, developer screen · W3-C renderer, effects runtime, import, torch glow · W3-D Effects tab · W3-E shell, embedded Rust server, LAN play, VPS switch to Rust | running (ownership in each brief; camera + hit tests owned by the renderer) |
+| 3 | W3-A core/TV/harness · W3-B1 companion game + map tabs · W3-B2 companion frame, library, dialogs, settings, developer screen · W3-C renderer, effects runtime, import, torch glow · W3-D Effects tab · W3-E shell, embedded Rust server, LAN play, VPS switch to Rust | done (545 unit tests; LAN play on the emulators; production on the Rust server) |
+| 4 | W4-Q regression on Bun + Rust, soak, LAN, bench, qa/review bookkeeping · W4-C companion fixes, LAN table picker, import after confirm, looping previews, visual pass · W4-T TV LAN join code + QR, reload speed, phone fit, TV visual pass, reveal animations · W4-F curtain + scene presets | running |
 
 ## Next
 
