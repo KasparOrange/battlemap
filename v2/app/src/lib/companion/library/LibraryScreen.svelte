@@ -25,7 +25,7 @@
   import Spinner from '../../ui/Spinner.svelte';
   import { notify } from '../../ui/notice.svelte.ts';
   import MapImport from '../dialogs/MapImport.svelte';
-  import { continueGame, defaultGameName, gameMeta, gameSearchText, matchesSearch, newestFirst } from './library-logic.ts';
+  import { defaultGameName, gameMeta, groupGames } from './library-logic.ts';
   import './app-services.ts';
   import { services } from './services.ts';
   import SharedLibrary from './SharedLibrary.svelte';
@@ -62,10 +62,8 @@
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
   });
-  const sorted = $derived(newestFirst(games ?? []));
-  const cont = $derived(continueGame(games ?? []));
-  const shownGames = $derived(sorted.filter((g) => g.id !== cont?.id && matchesSearch(gameSearchText(g), query)));
-  const showCont = $derived(cont !== null && matchesSearch(gameSearchText(cont), query));
+  const groups = $derived(groupGames(games ?? [], query));
+  const cont = $derived(groups.cont);
   const table = $derived.by(() => {
     const t = root?.table;
     const g = t?.viewport ? tableGrid(t.viewport, t.widthInches, t.overscanPercent) : null;
@@ -171,6 +169,17 @@
   ];
 </script>
 
+{#snippet gameCard(g: GameSummary)}
+  <Card title={g.name} meta={gameMeta(g)} image={thumb(g)} disabled={opening !== null && opening !== g.id} onclick={() => openGame(g)}>
+    {#snippet badges()}
+      {#if opening === g.id}<Spinner size="16px" />{:else if g.where === 'server'}<Badge text="Backup" />{/if}
+    {/snippet}
+    {#snippet actions()}
+      <IconButton icon="more" label="More for {g.name}" variant="quiet" menu={MENU} onmenu={(id) => gameMenu(g, id)} />
+    {/snippet}
+  </Card>
+{/snippet}
+
 <main class="library" data-testid="library">
   <header class="toolbar" data-ctl="toolbar">
     <IconButton
@@ -214,7 +223,7 @@
         </div>
       {:else}
         <div class="grid" data-testid="games">
-          {#if cont && showCont}
+          {#if cont}
             <div class="cont">
               <Card
                 title={cont.name}
@@ -233,18 +242,22 @@
               </Card>
             </div>
           {/if}
-          {#each shownGames as g (g.id)}
-            <Card title={g.name} meta={gameMeta(g)} image={thumb(g)} disabled={opening !== null && opening !== g.id} onclick={() => openGame(g)}>
-              {#snippet badges()}
-                {#if opening === g.id}<Spinner size="16px" />{:else if g.where === 'server'}<Badge text="Backup" />{/if}
-              {/snippet}
-              {#snippet actions()}
-                <IconButton icon="more" label="More for {g.name}" variant="quiet" menu={MENU} onmenu={(id) => gameMenu(g, id)} />
-              {/snippet}
-            </Card>
+          {#each groups.onTv as g (g.id)}
+            {@render gameCard(g)}
           {/each}
         </div>
-        {#if query && !showCont && shownGames.length === 0}<p class="state">No game matches “{query}”.</p>{/if}
+        {#if groups.backups.length > 0}
+          <section class="backups" data-testid="backups" aria-labelledby="bm-backups-h">
+            <h2 id="bm-backups-h" class="bm-eyebrow">Backups on the server</h2>
+            <p class="hint">Not on this TV — saved by this or another TV. Opening one brings it onto this TV.</p>
+            <div class="grid">
+              {#each groups.backups as g (g.id)}
+                {@render gameCard(g)}
+              {/each}
+            </div>
+          </section>
+        {/if}
+        {#if query && !cont && groups.onTv.length === 0 && groups.backups.length === 0}<p class="state">No game matches “{query}”.</p>{/if}
       {/if}
     {:else}
       <SharedLibrary bind:this={shared} {query} busyId={opening} onpick={playShared} onfile={(f) => (importing = f)} />
@@ -334,6 +347,22 @@
 
   .cont {
     grid-column: span 2;
+  }
+
+  .backups {
+    margin-top: calc(var(--g2) * 2);
+    display: grid;
+    gap: var(--g);
+  }
+
+  .backups h2 {
+    margin: 0;
+  }
+
+  .hint {
+    margin: 0 0 var(--g);
+    font-size: var(--fs-small);
+    color: var(--t2);
   }
 
   .state {

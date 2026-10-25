@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import { wholeGrid, type GameSummary, type LibraryEntry, type MapInfo } from '@battlemap/shared';
 import {
-  ago, continueGame, defaultGameName, fileUrl, formatBytes, gameMeta, mapMeta, matchesSearch, nameFromFile, newestFirst,
+  ago, continueGame, defaultGameName, groupGames, fileUrl, formatBytes, gameMeta, mapMeta, matchesSearch, nameFromFile, newestFirst,
   shortDate, visibleEntries,
 } from './library-logic.ts';
 import { followingRows } from './grid-guess.ts';
@@ -86,5 +86,31 @@ describe('rows follow', () => {
   test('square squares', () => {
     expect(followingRows(40, 1280, 960)).toBe(30);
     expect(followingRows(1, 100, 10)).toBe(1);
+  });
+});
+
+describe('continue card and groups (qa#7)', () => {
+  const g = (id: string, savedAt: string, where: GameSummary['where']): GameSummary => ({ ...game(id, savedAt), where });
+  const games = [
+    g('mine', '2026-10-09T10:00:00Z', 'tv'),
+    g('other', '2026-10-10T10:00:00Z', 'server'),
+    g('both', '2026-10-08T10:00:00Z', 'both'),
+    g('older', '2026-10-01T10:00:00Z', 'server'),
+  ];
+  test('Continue never offers a server-only backup', () => {
+    expect(continueGame(games)?.id).toBe('mine');
+    expect(continueGame([games[1]!])).toBeNull();
+  });
+  test('this TV\'s games first, backups in their own group, newest first', () => {
+    const r = groupGames(games, '');
+    expect(r.cont?.id).toBe('mine');
+    expect(r.onTv.map((x) => x.id)).toEqual(['both']);
+    expect(r.backups.map((x) => x.id)).toEqual(['other', 'older']);
+  });
+  test('the search filters every group', () => {
+    const r = groupGames(games, 'G other');
+    expect(r.cont).toBeNull();
+    expect(r.onTv).toEqual([]);
+    expect(r.backups.map((x) => x.id)).toEqual(['other']);
   });
 });

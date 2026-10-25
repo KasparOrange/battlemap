@@ -56,15 +56,49 @@ export function ago(iso: string, now: Date = new Date()): string {
 }
 
 /**
- * The game the Continue card offers: the one saved last.
+ * The game the Continue card offers: the one saved last among the games this TV holds. A game
+ * that is only in the server's backup (`where === 'server'` — often another TV's) is never
+ * offered (qa#7; the TV home has the same rule).
  *
  * @param games - the TV's games
- * @returns that game, or null without games
+ * @returns that game, or null without one on this TV
  */
 export function continueGame(games: readonly GameSummary[]): GameSummary | null {
   let best: GameSummary | null = null;
-  for (const g of games) if (!best || Date.parse(g.savedAt) > Date.parse(best.savedAt)) best = g;
+  for (const g of games) {
+    if (g.where === 'server') continue;
+    if (!best || Date.parse(g.savedAt) > Date.parse(best.savedAt)) best = g;
+  }
   return best;
+}
+
+/** The library's game list in its two groups. */
+export interface GameGroups {
+  /** The Continue card's game (when it matches the search), else null. */
+  cont: GameSummary | null;
+  /** The other games this TV holds, newest first. */
+  onTv: GameSummary[];
+  /** Games only in the server's backup (this TV lost them, or another TV's), newest first. */
+  backups: GameSummary[];
+}
+
+/**
+ * Splits the TV's games for the library: the Continue game, this TV's other games, then the
+ * server-only backups in their own group — each filtered by the search.
+ *
+ * @param games - the TV's listing
+ * @param query - the search ("" = all)
+ * @returns the groups
+ */
+export function groupGames(games: readonly GameSummary[], query: string): GameGroups {
+  const cont = continueGame(games);
+  const hit = (g: GameSummary) => matchesSearch(gameSearchText(g), query);
+  const rest = newestFirst(games).filter((g) => g.id !== cont?.id && hit(g));
+  return {
+    cont: cont && hit(cont) ? cont : null,
+    onTv: rest.filter((g) => g.where !== 'server'),
+    backups: rest.filter((g) => g.where === 'server'),
+  };
 }
 
 /**
