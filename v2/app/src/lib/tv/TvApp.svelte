@@ -1,61 +1,264 @@
 <!--
-  TvApp — TV mode (skeleton): joins its table's room as the authority, reports its viewport,
-  starts the renderer full screen, and shows no chrome while all is well — only a badge for a
-  problem (server unreachable, another TV took over, no tablet yet). With `?debug=1` a line at
-  the bottom shows the sync state (the e2e smoke test reads it).
+  TvApp — TV mode: the table and the authority for its room (architecture.md "work packages"
+  #3). It restores the TV (calibration, the game it had open), joins the room, and shows one of
+  three screens over the renderer's players' view:
+
+  - home — the start and waiting screen ("Waiting for the tablet", how to pair, Continue);
+  - library — the TV's games and the shared maps, for the remote;
+  - game — nothing but the map while all is well: the back arrow for 5 s after a remote key
+    (always focusable), the top-right badge only for a problem.
+
+  The calibration pattern (drawn by the renderer) gets its instruction card over any screen.
+  Requests from the tablet (open, new, close, delete, rename, list, deploy, reload) are answered
+  by `games.ts` from storage; it also autosaves and backs up. Every control works with the D-pad
+  and OK; Back walks pattern → game → library → home → (the shell closes the app).
+  With `?debug=1` a line at the bottom shows the sync state (the e2e tests read it).
   No props: it reads the page's configuration (lib/config.ts, mode tv).
 -->
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
+  import type { GameSummary, LibraryEntry } from '@battlemap/shared';
   import { appConfig, type AppConfig } from '../config.ts';
   import { log } from '../log.ts';
-  import { createRenderer, type TableRenderer } from '../render/pixi.ts';
+  import { markShellReady, onShellEvent, shellBridge } from '../shell.ts';
   import { TvSession } from '../state/sessions.svelte.ts';
-  import Button from '../ui/Button.svelte';
+  import Icon from '../ui/Icon.svelte';
+  import { focusFirst, installDpad, setSurface } from '../ui/spatial.ts';
+  import { TvGames, type BusyStatus } from './games.ts';
   import { answerRequest } from './requests.ts';
+  import { realPorts, requestPersistentStorage } from './seams.ts';
+  import { backAction, backGate, CHROME_MS, homeBadge, OFFLINE_RED_MS, PROBLEM_MS, problemBadge, screenFor } from './screen.ts';
+  import { openTableView, type TvTableView } from './table-view.ts';
+  import TvBadge from './TvBadge.svelte';
+  import TvBusy from './TvBusy.svelte';
+  import TvCalibration from './TvCalibration.svelte';
+  import TvHome from './TvHome.svelte';
+  import TvLibrary from './TvLibrary.svelte';
 
   const config: AppConfig = appConfig();
-
-  const startedAt = Date.now();
   const debug = new URL(location.href).searchParams.get('debug') === '1';
-  const session = new TvSession(config, (req, from, s) =>
-    answerRequest(req, from, {
-      get state() { return s.host.state; },
-      build: config.build,
-      uptimeS: () => Math.round((Date.now() - startedAt) / 1000),
-      replace: (state, reason) => s.host.replace(state, reason),
-      send: (msg) => s.send(msg),
-      syncInfo: () => ({ epoch: s.host.epoch, rev: s.host.rev }),
-    }, log),
-  );
+  const ports = realPorts();
+
+  // The session hands requests to `games` only once it is connected, after both exist.
+  const session = new TvSession(config, (req, from) => void answerRequest(req, from, games, log));
+  const games = new TvGames(ports, session.host, (msg) => session.send(msg), log, { build: config.build });
+  const sessionOnChange = session.host.onChange;
+  session.host.onChange = (state, cmd) => {
+    sessionOnChange?.(state, cmd);
+    games.changed(state);
+  };
+
+  let booted = $state(false);
+  let wanted = $state<'home' | 'library'>('home');
+  let status = $state<BusyStatus>({ busy: null, progress: null });
+  let problem = $state<string | null>(null);
+  let offlineLong = $state(false);
+  let chromeShown = $state(false);
+  let listed = $state<GameSummary[]>([]);
+  let shared = $state<LibraryEntry[]>([]);
+  let listing = $state(false);
+  let sharedError = $state<string | null>(null);
 
   let stage: HTMLDivElement | undefined = $state();
-  let renderer: TableRenderer | null = null;
+  let backArrow: HTMLButtonElement | undefined = $state();
+  let view: TvTableView | null = null;
 
+  const game = $derived(session.state.game);
+  const patternOn = $derived(session.state.table.pattern.on);
+  const screen = $derived(screenFor(game !== null, wanted));
   const companions = $derived(session.peers.filter((p) => p.role === 'companion').length);
-  const badge = $derived(
-    session.connection === 'replaced' ? 'Another TV took over this table.'
-    : session.connection === 'refused' ? 'The server refused this app version — update it.'
-    : session.connection !== 'open' ? 'Connecting to the server…'
-    : companions === 0 ? `Waiting for the tablet · ${config.tableId}`
-    : null,
-  );
+  const badgeInput = $derived({ connection: session.connection, companions, problem, offlineMs: offlineLong ? OFFLINE_RED_MS : 0 });
+  const badge = $derived(problemBadge(badgeInput));
+  const home = $derived(homeBadge(badgeInput));
+  // Continue offers this TV's own newest game; other TVs' backups are only in the library.
+  const last = $derived(listed.find((g) => g.where !== 'server') ?? null);
+  // The library lists this TV's games first, then the backups of games it doesn't hold.
+  const libraryGames = $derived([...listed.filter((g) => g.where !== 'server'), ...listed.filter((g) => g.where === 'server')]);
+
+  games.onStatus = (s) => (status = s);
+  let problemTimer: ReturnType<typeof setTimeout> | undefined;
+  games.onProblem = (text) => {
+    problem = text;
+    clearTimeout(problemTimer);
+    problemTimer = setTimeout(() => (problem = null), PROBLEM_MS);
+  };
+  games.onGameChanged = (g) => {
+    if (g === null) void refreshLists();
+  };
+
+  /** Re-reads the games (and, in the library, the shared maps) for the screens. */
+  async function refreshLists(): Promise<void> {
+    listing = true;
+    try {
+      listed = await games.listGames();
+      if (wanted === 'library') {
+        try {
+          shared = await ports.library.list();
+          sharedError = null;
+        } catch (e) {
+          sharedError = 'The shared library could not be read — is the server reachable?';
+          log.warn('tv', 'Shared library could not be listed', { error: String(e) });
+        }
+      }
+    } finally {
+      listing = false;
+    }
+  }
+
+  // ── actions from the remote ────────────────────────────────────────────────────────────────
+
+  function showLibrary(): void {
+    wanted = 'library';
+    log.info('tv', 'Screen', { screen: 'library', by: 'remote' });
+    void refreshLists();
+  }
+
+  function showHome(): void {
+    wanted = 'home';
+    log.info('tv', 'Screen', { screen: 'home', by: 'remote' });
+    void refreshLists();
+  }
+
+  function closeGame(): void {
+    wanted = 'library';
+    void games.run('close', null, () => games.close()).then(() => refreshLists());
+  }
+
+  function openGame(id: string): void {
+    void games.run('open', null, () => games.open(id, null));
+  }
+
+  function startMap(entry: LibraryEntry): void {
+    void games.run('start', null, () => games.startFromMap(entry));
+  }
+
+  function setPattern(on: boolean): void {
+    session.host.applyLocal({ type: 'table.pattern', on });
+  }
+
+  function reload(): void {
+    void games.run('reload', null, () => games.reloadApp());
+  }
+
+  // ── Back ───────────────────────────────────────────────────────────────────────────────────
+
+  const gate = backGate();
+  let lastBackHandled = false;
+
+  /** One press of Back; returns whether the app handled it (else the shell closes the app). */
+  function onBack(): boolean {
+    if (!gate.accept()) return lastBackHandled; // the same press, delivered twice
+    const action = backAction(screen, patternOn);
+    log.info('tv', 'Back', { action, screen });
+    lastBackHandled = action !== 'exit';
+    if (action === 'pattern-off') setPattern(false);
+    else if (action === 'close-game') closeGame();
+    else if (action === 'home') showHome();
+    return lastBackHandled;
+  }
+
+  // ── chrome: the back arrow for 5 s after a remote key ─────────────────────────────────────
+
+  let chromeTimer: ReturnType<typeof setTimeout> | undefined;
+  function onKey(e: KeyboardEvent): void {
+    if (screen !== 'game') return;
+    // The first OK while the arrow is hidden only shows it — a stray press never closes the game.
+    if (!chromeShown && (e.key === 'Enter' || e.key === ' ') && document.activeElement === backArrow) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    chromeShown = true;
+    clearTimeout(chromeTimer);
+    chromeTimer = setTimeout(() => (chromeShown = false), CHROME_MS);
+  }
+
+  // ── focus: each screen starts on its first control; the game parks it on the back arrow ──
+
+  $effect(() => {
+    void screen;
+    void patternOn;
+    void booted;
+    void tick().then(() => {
+      if (screen === 'game' && !patternOn) backArrow?.focus();
+      else focusFirst();
+    });
+  });
+
+  // ── the table ──────────────────────────────────────────────────────────────────────────────
+
+  $effect(() => {
+    view?.update(session.state);
+  });
+
+  // ── the server: badge red after a while offline, backups retried when back ────────────────
+
+  let offlineTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => {
+    const open = session.connection === 'open';
+    clearTimeout(offlineTimer);
+    if (open) {
+      offlineLong = false;
+      void games.retryBackups();
+    } else {
+      offlineTimer = setTimeout(() => (offlineLong = true), OFFLINE_RED_MS);
+    }
+  });
 
   /** Tells the reducer the TV's viewport (CSS px). */
   function reportViewport(): void {
     session.host.applyLocal({ type: 'table.viewport', width: Math.max(1, innerWidth), height: Math.max(1, innerHeight) });
   }
 
+  function onHide(): void {
+    if (document.visibilityState === 'hidden') void games.flush('page hidden');
+  }
+
   onMount(() => {
-    session.start();
-    reportViewport();
+    setSurface('tv');
+    const stopDpad = installDpad({ onBack });
+    const stopShell = onShellEvent((detail, event) => {
+      if (detail.type === 'back') {
+        if (onBack()) event.preventDefault();
+      } else if (detail.type === 'memory') {
+        log.info('tv', 'Memory pressure', { level: detail.level });
+        view?.dropTextures();
+      }
+    });
+    const shell = shellBridge();
+    shell?.setKeepAwake(true);
+    shell?.setImmersive(true);
+    requestPersistentStorage();
+
+    addEventListener('keydown', onKey, true);
     addEventListener('resize', reportViewport);
-    createRenderer(stage!, { log, maxRenderHeight: 1080 })
-      .then((r) => (renderer = r))
-      .catch((e: unknown) => log.error('render', 'Renderer failed', { error: String(e) }));
+    document.addEventListener('visibilitychange', onHide);
+    addEventListener('pagehide', () => void games.flush('page hide'));
+    reportViewport();
+
+    void games.boot().then(async () => {
+      booted = true;
+      session.start();
+      markShellReady();
+      await refreshLists();
+    });
+
+    openTableView(stage!, log)
+      .then((v) => {
+        view = v;
+        v.update(session.state);
+      })
+      .catch((e: unknown) => log.error('render', 'Table view failed', { error: String(e) }));
+
     return () => {
+      stopDpad();
+      stopShell();
+      removeEventListener('keydown', onKey, true);
       removeEventListener('resize', reportViewport);
-      renderer?.destroy();
+      document.removeEventListener('visibilitychange', onHide);
+      clearTimeout(chromeTimer);
+      clearTimeout(problemTimer);
+      clearTimeout(offlineTimer);
+      view?.destroy();
       session.stop();
     };
   });
@@ -63,27 +266,117 @@
 
 <div class="stage" bind:this={stage}></div>
 
-{#if badge}
-  <div class="badge" role="status">
-    <span>{badge}</span>
-    {#if session.connection === 'replaced'}
-      <Button label="Take over" icon="sync" autofocus onclick={() => session.conn.takeOver()} />
+{#if booted && !patternOn}
+  {#if screen === 'home'}
+    <TvHome
+      {last}
+      loading={listing && listed.length === 0}
+      badge={home}
+      tableName={config.deviceName}
+      tableId={config.tableId ?? 'table'}
+      build={config.build}
+      thumbUrl={ports.files.url}
+      onContinue={() => last && openGame(last.id)}
+      onLibrary={showLibrary}
+      onMeasure={() => setPattern(true)}
+      onReload={reload}
+      onTakeOver={() => session.conn.takeOver()}
+    />
+  {:else if screen === 'library'}
+    <TvLibrary
+      games={libraryGames}
+      maps={shared}
+      loading={listing && listed.length === 0 && shared.length === 0}
+      mapsError={sharedError}
+      openId={game?.id ?? null}
+      thumbUrl={ports.files.url}
+      onOpenGame={openGame}
+      onStartMap={startMap}
+      onBack={showHome}
+    />
+  {/if}
+{/if}
+
+{#if screen === 'game'}
+  <div class="game" data-testid="tv-game">
+    <button
+      type="button"
+      class="back"
+      class:shown={chromeShown}
+      aria-label="Back to the library"
+      bind:this={backArrow}
+      onclick={closeGame}
+    >
+      <Icon name="back" size="1.5rem" />
+    </button>
+    {#if badge && !patternOn}
+      <div class="problem"><TvBadge {badge} onTakeOver={() => session.conn.takeOver()} /></div>
     {/if}
   </div>
+{/if}
+
+{#if patternOn}
+  <TvCalibration table={session.state.table} onDone={() => setPattern(false)} />
+{/if}
+
+{#if status.busy}
+  <TvBusy busy={status.busy} progress={status.progress} />
 {/if}
 
 {#if debug}
   <p class="debug" data-testid="tv-status">
     {session.connection} · rev {session.rev} · width {session.state.table.widthInches} in · companions {companions}
-    · game {session.state.game?.name ?? 'none'}
+    · game {game?.name ?? 'none'} · screen {screen}{patternOn ? ' · pattern' : ''}
   </p>
 {/if}
 
 <style>
-  .stage { position: fixed; inset: 0; background: #000; }
-  .badge {
-    position: fixed; top: 24px; right: 24px; display: flex; gap: 16px; align-items: center;
-    padding: 12px 18px; border-radius: 12px; background: rgb(0 0 0 / 0.7); color: #ddd; font-size: 20px;
+  .stage {
+    position: fixed;
+    inset: 0;
+    background: #000;
   }
-  .debug { position: fixed; left: 12px; bottom: 8px; margin: 0; font: 12px ui-monospace, monospace; color: #8a8; }
+
+  .game {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .back {
+    pointer-events: auto;
+    position: absolute;
+    top: var(--g2);
+    left: var(--g2);
+    display: grid;
+    place-items: center;
+    width: var(--sq-standalone);
+    height: var(--sq-standalone);
+    border-radius: var(--r);
+    background: var(--m0);
+    color: var(--t2);
+    box-shadow: var(--elev-rest);
+    opacity: 0;
+    transition: opacity 200ms var(--ease-std);
+  }
+
+  .back.shown {
+    opacity: 1;
+  }
+
+  .problem {
+    pointer-events: auto;
+    position: absolute;
+    top: var(--g2);
+    right: var(--g2);
+  }
+
+  .debug {
+    position: fixed;
+    left: 12px;
+    bottom: 8px;
+    margin: 0;
+    font: 12px ui-monospace, monospace;
+    color: #8a8;
+  }
 </style>
