@@ -98,13 +98,25 @@
       ctx.setInsets({ top: 0, right: 0, bottom: 0, left: 0 });
       return;
     }
-    const t = setTimeout(() => {
-      const sheet = sheetZone?.querySelector<HTMLElement>('.bm-sheet');
+    const sheet = sheetZone?.querySelector<HTMLElement>('.bm-sheet');
+    const measure = () => {
       if (!mapEl || !sheet) return;
       const covered = sheetOpen ? mapEl.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top : 0;
-      ctx.setInsets({ top: 0, right: 0, bottom: Math.max(0, Math.round(Math.min(covered, mapEl.clientHeight * 0.6))), left: 0 });
-    }, 380);
-    return () => clearTimeout(t);
+      // the chrome squares along the top edge cover the map too (the margin alone is too little)
+      const chrome = mapEl.querySelector<HTMLElement>('.corner.tl');
+      const top = chrome ? Math.round(chrome.getBoundingClientRect().bottom - mapEl.getBoundingClientRect().top) - 24 : 0;
+      ctx.setInsets({ top: Math.max(0, top), right: 0, bottom: Math.max(0, Math.round(Math.min(covered, mapEl.clientHeight * 0.6))), left: 0 });
+    };
+    // measured where the sheet came to rest (its transform animates), with a timer as a fallback
+    const settled = (e: TransitionEvent) => {
+      if (e.target === sheet && e.propertyName === 'transform') measure();
+    };
+    sheet?.addEventListener('transitionend', settled);
+    const t = setTimeout(measure, 500);
+    return () => {
+      clearTimeout(t);
+      sheet?.removeEventListener('transitionend', settled);
+    };
   });
 
   /** Chooses a tab: leaves the old one, opens the panel / sheet. */

@@ -279,7 +279,7 @@ test('screenshots: tablet and phone', async ({ browser }) => {
       await openTab(page, tab);
       if (tab === 'Fog') await page.getByRole('radio', { name: /Room/ }).click();
       if (tab === 'Measure' && !(await page.getByRole('switch', { name: /Template disc on the map/ }).isChecked())) await page.getByRole('switch', { name: /Template disc on the map/ }).click();
-      await page.waitForTimeout(700);
+      await page.waitForTimeout(1300); // the phone's sheet settles, then the map refits above it
       await page.screenshot({ path: `e2e/test-results/shots/companion-game-${name}-${tab.toLowerCase()}.jpg`, type: 'jpeg', quality: 70 });
     }
     // the DM-layer row at the panel's foot must fit its width (qa#5)
