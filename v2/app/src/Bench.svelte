@@ -13,7 +13,7 @@
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
-  import type { RootState } from '@battlemap/shared';
+  import { initialRoot, type RootState } from '@battlemap/shared';
   import { log } from './lib/log.ts';
   import { createTableView, type EffectsFactory, type TableView, type ViewProfile } from './lib/render/index.ts';
   import { activeMap, benchFiles, benchMap, benchScenes, gameOn, showcase, withMap, type BenchScene } from './lib/render/bench-scenes.ts';
@@ -143,6 +143,10 @@
   async function runScene(view: TableView, scene: BenchScene, draws: { take(): number }, gpu: ReturnType<typeof gpuTimer>, vp: { width: number; height: number }): Promise<Result> {
     status = `${scene.id}: loading…`;
     const sched = view.scheduler!;
+    // An empty table first, so a scene on the same map as the last one loads it anew (and its
+    // map-shown event ends the wait instead of the 90 s timeout).
+    view.update({ ...initialRoot(), table: { ...initialRoot().table, viewport: { ...vp } } });
+    await sleep(100);
     let state: RootState = scene.setup(profile, vp, params);
     const t0 = performance.now();
     let shown = !state.game;

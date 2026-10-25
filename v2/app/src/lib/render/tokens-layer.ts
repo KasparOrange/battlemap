@@ -94,6 +94,7 @@ export class TokensLayer {
   private tokens: readonly Token[] | null = null;
   private faceRotation = 0;
   private selectedId: string | null = null;
+  private readonly keep = new Set<string>();
   private selection: Graphics | null = null;
 
   /**
@@ -133,7 +134,8 @@ export class TokensLayer {
   set(tokens: readonly Token[] | null): boolean {
     if (tokens === this.tokens) return false;
     this.tokens = tokens;
-    const keep = new Set<string>();
+    const keep = this.keep; // reused: tokens move up to 30 times a second
+    keep.clear();
     let order = 0;
     for (const t of tokens ?? []) {
       if (!t.placed || (t.hidden && !this.dm)) continue;

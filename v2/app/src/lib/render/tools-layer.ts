@@ -6,7 +6,7 @@
  * moving or turning it is a transform), and the measure line (gold dashes, end dots, "N ft" by
  * the 5e diagonal rule).
  */
-import { BitmapText, Container, Graphics } from 'pixi.js';
+import { BitmapText, Container, Graphics, Texture, TilingSprite } from 'pixi.js';
 import {
   coneTriangle, feetToSquares, markerAngles, markerRadius, rimRadius, RULER_ARM_SQUARES, shows, knobLocal,
   type DiscShapeSet, type MeasureLine, type Ruler, type TemplateDisc,
@@ -49,8 +49,13 @@ export class ToolsLayer {
   private readonly rulerShape = new Graphics({ label: 'ruler-shape' });
   private readonly rulerNumbers: BitmapText[] = [];
   private readonly measure = new Container({ label: 'measure' });
-  private readonly measureLine = new Graphics({ label: 'measure-line' });
+  /** The dashes: one tiling sprite over a dash texture — moving or stretching it tessellates nothing. */
+  private readonly measureLine: TilingSprite;
+  private readonly measureDash: Texture;
+  /** The two end dots (one circle each, drawn once). */
+  private readonly measureEnds = [new Graphics({ label: 'measure-end' }), new Graphics({ label: 'measure-end' })];
   private readonly measurePill = new Graphics({ label: 'measure-pill' });
+  private measurePillText = '';
   private readonly measureText: BitmapText;
   private labels: Label[] = [];
   private discLook = '';
@@ -73,7 +78,13 @@ export class ToolsLayer {
     this.ruler.visible = false;
     this.measureText = new BitmapText({ text: '', style: TEXT, anchor: 0.5 });
     this.measureText.scale.set((0.35 * SQUARE) / GLYPH_PX);
-    this.measure.addChild(this.measureLine, this.measurePill, this.measureText);
+    this.measureDash = dashTexture();
+    this.measureLine = new TilingSprite({ texture: this.measureDash, width: 1, height: MEASURE_WIDTH * SQUARE, label: 'measure-line' });
+    this.measureLine.anchor.set(0, 0.5);
+    this.measureLine.tint = MEASURE_COLOR;
+    this.measureLine.tileScale.set((MEASURE_PERIOD * SQUARE) / DASH_TEX_W, (MEASURE_WIDTH * SQUARE) / DASH_TEX_H);
+    for (const e of this.measureEnds) e.circle(0, 0, 0.08 * SQUARE).fill(MEASURE_COLOR);
+    this.measure.addChild(this.measureLine, ...this.measureEnds, this.measurePill, this.measureText);
     this.measure.visible = false;
     // drawn order: disc, measure, ruler on top (the old layer order)
     this.container.addChild(this.disc, this.measure, this.ruler);
@@ -271,31 +282,65 @@ export class ToolsLayer {
     for (const t of this.rulerNumbers) t.rotation = r;
   }
 
+  /**
+   * The measure line follows the finger 30 times a second: only transforms change (rv perf:
+   * re-tessellating the dashed line every frame was 95 % of the "everything" scene's
+   * allocations, ~30 MB/s); the pill is redrawn only when its text changes.
+   */
   private setMeasure(m: MeasureLine | null): void {
-    const g = this.measureLine.clear();
     const S = SQUARE;
     const length = m ? Math.hypot(m.b.x - m.a.x, m.b.y - m.a.y) : 0;
     this.measure.visible = !!m && length > 0.02;
     if (!m || !this.measure.visible) return;
-    dashed(g, [{ x: m.a.x * S, y: m.a.y * S }, { x: m.b.x * S, y: m.b.y * S }], false, 0.2 * S, 0.1 * S);
-    g.stroke({ width: 0.04 * S, color: 0xd4a76a, cap: 'round' });
-    g.circle(m.a.x * S, m.a.y * S, 0.08 * S).circle(m.b.x * S, m.b.y * S, 0.08 * S).fill(0xd4a76a);
-    this.measureText.text = `${measureFeet(m)} ft`;
+    const line = this.measureLine;
+    line.position.set(m.a.x * S, m.a.y * S);
+    line.rotation = Math.atan2(m.b.y - m.a.y, m.b.x - m.a.x);
+    line.width = length * S;
+    this.measureEnds[0]!.position.set(m.a.x * S, m.a.y * S);
+    this.measureEnds[1]!.position.set(m.b.x * S, m.b.y * S);
+    const text = `${measureFeet(m)} ft`;
+    if (text !== this.measurePillText) {
+      this.measurePillText = text;
+      this.measureText.text = text;
+      const w = this.measureText.width + 0.3 * S;
+      const h = 0.55 * S;
+      this.measurePill.clear().roundRect(-w / 2, -h / 2, w, h, h / 2).fill({ color: 0x000000, alpha: 0.8 });
+    }
     const mx = ((m.a.x + m.b.x) / 2) * S;
     const my = ((m.a.y + m.b.y) / 2) * S;
     this.measureText.position.set(mx, my);
     this.measureText.rotation = -this.camRotation;
-    const w = this.measureText.width + 0.3 * S;
-    const h = 0.55 * S;
-    this.measurePill.clear().roundRect(-w / 2, -h / 2, w, h, h / 2).fill({ color: 0x000000, alpha: 0.8 });
     this.measurePill.position.set(mx, my);
     this.measurePill.rotation = -this.camRotation;
   }
 
+
   /** Frees everything. */
   destroy(): void {
     this.container.destroy({ children: true });
+    this.measureDash.destroy(true);
   }
+}
+
+/** Measure line: colour, width and dash period (dash 0.2 + gap 0.1) in squares. */
+const MEASURE_COLOR = 0xd4a76a;
+const MEASURE_WIDTH = 0.04;
+const MEASURE_PERIOD = 0.3;
+const DASH_TEX_W = 48;
+const DASH_TEX_H = 4;
+
+/** One dash period, white: two thirds on, one third off (tinted and tiled by the line). */
+function dashTexture(): Texture {
+  const c = document.createElement('canvas');
+  c.width = DASH_TEX_W;
+  c.height = DASH_TEX_H;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#ffffff';
+  g.fillRect(0, 0, Math.round((DASH_TEX_W * 2) / 3), DASH_TEX_H);
+  const t = Texture.from(c);
+  t.source.label = 'measure-dash';
+  t.source.addressMode = 'repeat';
+  return t;
 }
 
 /** The disc's look without where it lies (a move or turn needs no new tessellation). */

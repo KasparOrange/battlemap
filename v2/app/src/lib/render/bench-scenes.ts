@@ -261,6 +261,9 @@ export const showcase: BenchScene = {
   step: () => null,
 };
 
+/** Parts the `everything` scene leaves out (`&omit=`), set by its setup. */
+let omit = new Set<string>();
+
 /** The bench's scenes, in run order. */
 export const benchScenes: readonly BenchScene[] = [
   {
@@ -319,23 +322,27 @@ export const benchScenes: readonly BenchScene[] = [
     id: 'everything',
     name: 'Everything at once: big map panned, fog painted, 60 tokens, 200 strokes, disc turning, ruler, measure',
     effects: true,
-    setup: (_p, vp) =>
-      gameOn(benchMap('big', 64, 64, 128), vp, (m) => ({
+    setup: (_p, vp, params) => {
+      // `&omit=strokes,tokens,disc,measure,fog,pan` leaves parts out (to find what costs)
+      omit = new Set((params?.get('omit') ?? '').split(',').filter(Boolean));
+      return gameOn(benchMap('big', 64, 64, 128), vp, (m) => ({
         ...m,
-        tokens: tokens(60, 64, 64),
-        strokes: strokes(200, 120, 64, 64),
-        disc: { ...classicDisc(), visible: true, x: 32, y: 32 },
+        tokens: omit.has('tokens') ? [] : tokens(60, 64, 64),
+        strokes: omit.has('strokes') ? [] : strokes(200, 120, 64, 64),
+        disc: { ...classicDisc(), visible: !omit.has('disc'), x: 32, y: 32 },
         ruler: { visible: true, x: 28, y: 36, rotation: 0 },
         fog: { ...m.fog, revealed: emptyMask(64 * 64) },
-      })),
+      }));
+    },
     step: (s, f) => {
       const ppi = (s.table.viewport?.width ?? 1920) / 34.5;
       const next = withMap(s, (m) => {
-        let mm = panView(m, f.t, ppi);
-        mm = paintFog(mm, f.t, f.n) ?? mm;
-        mm = { ...mm, tokens: moveTokens(mm.tokens, f.n, 64, 64), disc: { ...mm.disc, rotation: (f.t / 20) % 360 } };
+        let mm = omit.has('pan') ? m : panView(m, f.t, ppi);
+        if (!omit.has('fog')) mm = paintFog(mm, f.t, f.n) ?? mm;
+        mm = { ...mm, tokens: omit.has('tokens') ? mm.tokens : moveTokens(mm.tokens, f.n, 64, 64), disc: omit.has('disc') ? mm.disc : { ...mm.disc, rotation: (f.t / 20) % 360 } };
         return mm;
       });
+      if (omit.has('measure')) return next;
       return { ...next, live: { ...next.live, measure: { a: { x: 30, y: 30 }, b: { x: 30 + Math.cos(f.t / 500) * 6, y: 30 + Math.sin(f.t / 500) * 6 } } } };
     },
   },
