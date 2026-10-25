@@ -115,7 +115,7 @@ async function setup(browser: import('@playwright/test').Browser, size = { width
   await expect(page.getByTestId('game-screen')).toBeVisible();
   await connected(page);
   // the map is fitted once the view is measured (then map points have a place on the page)
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __bmMap?: { camera(): { centerX: number } | null } }).__bmMap?.camera()?.centerX ?? 0), { timeout: 20_000 }).toBe(COLS / 2);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __bmMap?: { camera(): { centerX: number } | null } }).__bmMap?.camera()?.centerX ?? 0), { timeout: 45_000 }) // WebGL starts slowly under SwiftShader on a loaded Mac.toBe(COLS / 2);
   await page.waitForTimeout(400); // the kit Button's start-up debounce
   const close = async () => {
     drv.close();

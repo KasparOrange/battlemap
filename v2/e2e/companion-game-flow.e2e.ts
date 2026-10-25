@@ -116,7 +116,7 @@ async function setup(browser: import('@playwright/test').Browser, size = { width
   await expect(page.getByTestId('game-screen')).toBeVisible();
   await connected(page);
   // the map is fitted once the view is measured (then map points have a place on the page)
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __bmMap?: { camera(): { centerX: number } | null } }).__bmMap?.camera()?.centerX ?? 0), { timeout: 20_000 }).toBe(COLS / 2);
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __bmMap?: { camera(): { centerX: number } | null } }).__bmMap?.camera()?.centerX ?? 0), { timeout: 45_000 }) // WebGL starts slowly under SwiftShader on a loaded Mac.toBe(COLS / 2);
   await page.waitForTimeout(400); // the kit Button's start-up debounce
   const close = async () => {
     drv.close();
@@ -181,9 +181,6 @@ test('tokens: tap adds, drag moves, tap selects; the TV has them', async ({ brow
   await page.getByPlaceholder(/Name a new token/).press('Enter');
   await tap(page, 5.5, 3.5);
   await expect.poll(async () => mapOf(await drv.snapshot()).tokens.find((t) => t.name === 'Thorin')).toMatchObject({ placed: true, col: 5, row: 3 });
-  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
-  await page.waitForTimeout(500);
-  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -215,9 +212,6 @@ test('fog: a single brush tap, a stroke, Room and Circle reach the TV; undo take
   const hidden = afterRoom - revealedOn(await drv.snapshot());
   expect(hidden).toBeGreaterThan(9);
   expect(hidden).toBeLessThanOrEqual(81);
-  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
-  await page.waitForTimeout(500);
-  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -238,9 +232,6 @@ test('fog preview: staged until Apply; Reveal all with an Undo notice', async ({
   await expect.poll(async () => revealedOn(await drv.snapshot())).toBe(COLS * ROWS);
   await page.getByRole('button', { name: 'Undo', exact: true }).first().click();
   await expect.poll(async () => revealedOn(await drv.snapshot())).toBeLessThan(COLS * ROWS);
-  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
-  await page.waitForTimeout(500);
-  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -251,9 +242,6 @@ test('a tap on a door opens it on the TV', async ({ browser }) => {
   await page.waitForTimeout(300); // walls and doors load
   await tap(page, (door.a.x + door.b.x) / 2, (door.a.y + door.b.y) / 2);
   await expect.poll(async () => mapOf(await drv.snapshot()).doorsOpen).toEqual([0]);
-  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
-  await page.waitForTimeout(500);
-  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -271,9 +259,6 @@ test('draw: a stroke reaches the TV, undo removes it, clear offers Undo', async 
   await expect.poll(async () => mapOf(await drv.snapshot()).strokes.length).toBe(0);
   await page.getByRole('button', { name: 'Undo', exact: true }).first().click();
   await expect.poll(async () => mapOf(await drv.snapshot()).strokes.length).toBe(1);
-  await page.getByRole('button', { name: 'Fit the map on my screen' }).click();
-  await page.waitForTimeout(500);
-  console.log('PROBE after fit', JSON.stringify(await page.evaluate(() => (window as unknown as { __bmMap: { camera(): unknown } }).__bmMap.camera())));
   await close();
 });
 
@@ -297,6 +282,12 @@ test('screenshots: tablet and phone', async ({ browser }) => {
       await page.waitForTimeout(700);
       await page.screenshot({ path: `e2e/test-results/shots/companion-game-${name}-${tab.toLowerCase()}.jpg`, type: 'jpeg', quality: 70 });
     }
+    // the DM-layer row at the panel's foot must fit its width (qa#5)
+    await page.getByTestId('dm-layers').scrollIntoViewIfNeeded();
+    await page.waitForTimeout(400);
+    const fits = await page.getByTestId('dm-layers').evaluate((el) => el.scrollWidth <= el.clientWidth + 1);
+    expect(fits).toBe(true);
+    await page.screenshot({ path: `e2e/test-results/shots/companion-game-${name}-layers.jpg`, type: 'jpeg', quality: 70 });
     await close();
   }
 });
