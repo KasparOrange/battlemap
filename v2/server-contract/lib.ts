@@ -157,7 +157,10 @@ export async function picture(w: number, h: number, format: 'png' | 'jpeg' | 'we
   } else {
     img = sharp({ create: { width: w, height: h, channels, background: alpha ? { r: 40, g: 90, b: 160, alpha: 0.5 } : '#285aa0' } });
   }
-  return new Uint8Array(await img.toFormat(format, format === 'webp' ? { quality: 50 } : {}).toBuffer());
+  // TIFF: LZW, not sharp's default JPEG-in-TIFF (YCbCr), which the Rust server's decoder can't
+  // read (docs/server-rs.md "known differences").
+  const options = format === 'webp' ? { quality: 50 } : format === 'tiff' ? { compression: 'lzw' } : {};
+  return new Uint8Array(await img.toFormat(format, options).toBuffer());
 }
 
 /**

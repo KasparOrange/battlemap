@@ -34,3 +34,6 @@ export * from './geometry/disc.ts';
 
 export * from './util/assert.ts';
 export * from './util/ids.ts';
+
+/** The server-only HTTP answers, generated from the Rust server (server-rs/src/wire.rs). */
+export type * from './generated/server.ts';

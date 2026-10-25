@@ -19,7 +19,7 @@
 import { spawn, type Subprocess } from 'bun';
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { MAIN, TIGHT_LIMITS } from './lib-settings.ts';
 
 const args = process.argv.slice(2);
@@ -32,7 +32,7 @@ const flag = (name: string) => {
 };
 const target = flag('--target') ?? 'bun';
 const port = Number(flag('--port') ?? (target === 'bun' ? 6301 : 6302));
-const bin = flag('--bin') ?? join(import.meta.dir, '..', 'server-rs', 'target', 'release', 'battlemap-server');
+const bin = resolve(flag('--bin') ?? join(import.meta.dir, '..', 'server-rs', 'target', 'release', 'battlemap-server'));
 const keep = args.includes('--keep');
 const only = args.filter((a) => a !== '--keep');
 if (target !== 'bun' && target !== 'rust') throw new Error('--target bun | rust');
@@ -70,6 +70,7 @@ const common = {
   APP_DIR: appDir,
   BATTLEMAP_SERVER_BUILD: 'contract',
   BATTLEMAP_FETCH_TEST_ADDR: '127.0.0.1',
+  BATTLEMAP_LOG_STDERR: '1',
 };
 const mainEnv = {
   ...common,
@@ -147,12 +148,14 @@ async function gracefulStop(url: string, proc: Subprocess): Promise<string | nul
   return null;
 }
 
-const main = start('main', mainEnv);
-const tight = start('tight', tightEnv);
 const mainUrl = `http://127.0.0.1:${port}`;
 const tightUrl = `http://127.0.0.1:${port + 100}`;
 let status = 1;
+let main: Subprocess | null = null;
+let tight: Subprocess | null = null;
 try {
+  main = start('main', mainEnv);
+  tight = start('tight', tightEnv);
   await healthy(mainUrl, main);
   await healthy(tightUrl, tight);
   const dir = join(import.meta.dir, 'tests');
@@ -174,10 +177,13 @@ try {
     console.error(`graceful stop FAILED: ${stopProblem}`);
     status = status || 1;
   }
+} catch (e) {
+  console.error(String(e));
 } finally {
-  for (const p of [main, tight]) if (p.exitCode === null) p.kill('SIGTERM');
-  await Promise.race([Promise.all([main.exited, tight.exited]), Bun.sleep(5_000)]);
-  for (const p of [main, tight]) if (p.exitCode === null) p.kill('SIGKILL');
+  const procs = [main, tight].filter((p): p is Subprocess => p !== null);
+  for (const p of procs) if (p.exitCode === null) p.kill('SIGTERM');
+  await Promise.race([Promise.all(procs.map((p) => p.exited)), Bun.sleep(5_000)]);
+  for (const p of procs) if (p.exitCode === null) p.kill('SIGKILL');
   if (keep) console.info(`kept ${root}`);
   else rmSync(root, { recursive: true, force: true });
 }
