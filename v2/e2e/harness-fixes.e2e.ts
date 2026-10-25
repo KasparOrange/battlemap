@@ -59,6 +59,7 @@ test('qa#18 the TV home shows the table code the picker uses, never the raw room
 });
 
 test('rv#4 cloud fog drifts only while the fog shows; fog off leaves the TV idle', async ({ table }) => {
+  test.setTimeout(90_000);
   const map = await uploadMap(table.serverUrl, 'tavern');
   await startGame(table, 'Cloud idle', map.info);
   await table.bot.must({ type: 'game.settings', settings: { fogStyle: 'cloud' } });
@@ -73,4 +74,25 @@ test('rv#4 cloud fog drifts only while the fog shows; fog off leaves the TV idle
   test.info().annotations.push({ type: 'frames', description: `cloud fog on: ${drifting} frames in 3 s; fog off: ${idle}` });
   expect(drifting, 'the cloud drift lease should run while the fog shows').toBeGreaterThan(5); // 20 fps lease; SwiftShader under load draws ~5 fps
   expect(idle, 'fog off: render on demand, nothing drifts').toBeLessThanOrEqual(2);
+});
+
+test('rv#1 "TV follows the tablet" in free view sends nothing while the DM does nothing', async ({ table }) => {
+  test.setTimeout(90_000);
+  const map = await uploadMap(table.serverUrl, 'tavern');
+  await startGame(table, 'Follow idle', map.info);
+  await table.bot.must({ type: 'view.mode', mode: 'free' });
+  await waitSynced(table);
+  const page = table.companions[0]!;
+  const tab = page.getByRole('tab', { name: 'View' });
+  await expect(tab).toBeVisible({ timeout: 45_000 });
+  if ((await tab.getAttribute('aria-selected')) !== 'true') await tab.click();
+  const follow = page.getByRole('switch', { name: 'TV follows the tablet' });
+  await follow.click();
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+  await page.waitForTimeout(2000); // the first follow step may send once
+  const rev0 = (await table.bot.snapshot()).rev;
+  await page.waitForTimeout(5000);
+  const sent = (await table.bot.snapshot()).rev - rev0;
+  test.info().annotations.push({ type: 'commands', description: `${sent} revisions in 5 s idle with follow on (the loop sent ~12/s)` });
+  expect(sent).toBeLessThanOrEqual(1);
 });
