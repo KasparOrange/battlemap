@@ -69,6 +69,20 @@ picture, decoded once by `createImageBitmap(blob, sx, sy, sw, sh, {resizeWidth, 
 at the wanted density: **TV** its ppi (≈ 56 px per square at 1080p) from the table copy when
 there is one, **DM** the picture's own. Budgets: TV 128 MB map / 2048 px tiles, DM 192 MB /
 4096 px tiles; over budget the density drops, never below 32 px per square (the floor wins).
+**One texture budget** (`TextureBudget`, rv#17): map + "everything else" (TV 128 + 32 MB); the
+effects registry gets `effectsBudget()` = everything else minus a 4 MB reserve for fog, the token
+atlas and glyph pages (TV 28 MB); `stats().budget` reports it.
+
+**Loads that lose the race** (a quick `map.switch`, a drop, a context restore) free every tile
+and bitmap they made in one `finally` (rv#2). Tiles that leave the screen are taken off at once
+and destroyed two frames later, after a render without them (qa#21: no "destroyed while bound"
+— the same for DM layers). DM-layer bitmaps are closed after their upload; a layer is tried
+three times, then the view raises `layer-failed` (rv#18).
+
+**Memory warnings** (`memory.ts`, rv#3): only `RUNNING_LOW` (10), `RUNNING_CRITICAL` (15) and
+≥ 60 (in the background) drop textures; 5, 20 (`UI_HIDDEN`, every trip to Home) and 40 are
+logged and ignored. A drop reloads the map at ¾ density; full density comes back after 2 min
+without another drop, and with the next map.
 `planTiles` cuts the decode into even tiles with a 1 px apron (no seams under linear
 filtering); tiles upload one per frame, then the bitmaps are closed (RAM back; a lost WebGL
 context reloads the map). Mipmaps on the DM only (it zooms far out). Pixi's texture GC is off —
@@ -92,12 +106,28 @@ the style's edge width in screen px (standard 4, soft 16, cloud 1 with drifting 
 (`FogFade`) gives newly revealed squares full fog in G and eases it out over 500 ms under a
 render lease; hiding is instant; a new map or snapshot never fades.
 
+## Map lights (RD-120)
+
+`effects/map-lights.ts` (pure maths in `light-look.ts`): a soft pool at every light of the
+`.dd2vtt` geometry — its colour, its range (radius, capped at 30 squares), its intensity — one
+additive sprite per light from one 128 px glow texture (64 KB), all in one draw call, first
+child of `fx.ground` (under the fog: the players see a torch once they find it). Warm lights
+(red > blue) flicker ±16 % in brightness (size ±4 %), cold ones breathe ±5 %, on the shared
+render clock under a `map-lights` lease capped at 30 fps. Effects quality: `full` flickers,
+`low` draws still pools (no lease, 0 idle frames), `off` none; nothing shows while the game's
+`effects` setting is off. Walls don't stop the light yet.
+
+The switch is per game: `GameSettings.mapLights` (default **off**; the scene reads it
+defensively until the shared schema has the field). The scene hands
+`geometry().lights` to the runtime's `setMapLights` while it is on. Bench: scene `lights`
+(80 torches, the castle's count) and `showcase&lights=1`.
+
 ## Render on demand
 
 `scheduler.ts`: `invalidate()` coalesces into one rAF; `hold(name, maxFps?)` keeps frames coming
 (uncapped, or at most `maxFps` through a timer); `onFrame` tickers (fog fade, door swings,
 cloud drift, the bench) run before each render. The view invalidates only when a layer reports
-a change or the camera moved. Idle = 0 frames (cloud fog is the one exception: 20 fps).
+a change or the camera moved. Idle = 0 frames. Leases that animate on their own: cloud fog (20 fps, only while the fog layer shows — rv#4) and map lights at full quality (30 fps, only with the switch on).
 
 ## Bench
 
@@ -116,4 +146,24 @@ window (or the device); CPU and GPU ms are meaningful either way.
 
 ### Results
 
-RESULTS_PLACEHOLDER
+2026-10-25, Mac (M2 Max, headed Chromium, ANGLE Metal, 1920 × 1080, load 25–38 from other
+sessions), `everything` scene, before → after the wave-3 pass:
+
+| | CPU ms avg / p95 | heap growth MB/s | sampled allocations | draw calls | idle frames |
+|---|---|---|---|---|---|
+| before | 1.80 / 4.6 | 2.03 | 180 MB in 5 s (36 MB/s), 95 % Graphics re-tessellation | 15 | 0 |
+| after | 1.41 / 3.2 | 0.77 | 11.6 MB in 4 s (2.9 MB/s; the bench's own state building and fog base64 lead) | 13 | 0 |
+
+The cause was the measure line: a dashed `Graphics` rebuilt on every move (`&omit=measure` took
+the allocations from 180 MB to 7 MB). It is now a `TilingSprite` over a dash texture, moved by
+transforms; the pill is redrawn only when its text changes. Profiling recipe: CDP
+`Profiler` + `HeapProfiler.startSampling` while the bench says "measuring",
+`everything&omit=strokes,tokens,disc,measure,fog,pan` to bisect.
+
+Other scenes, same Mac: `lights` 0.24 / 0.5 ms CPU, 3 draw calls, 30 fps lease (idle frames
+count the flicker); `fx:fireballs` 0.31 / 0.7 ms (the emulator's 5 / 31 ms is the WebView
+under load: with Chrome's CPU throttled 6× it reads 7.3 / 35 ms, and the one texture upload in
+the scene — the fireball atlas, 1974 × 1425, at the first burst — is the p95 spike; later bursts
+reuse it from the registry cache). Import (qa#10): the castle's table copy 4.6 s → 1.8 s in the
+browser worker (JPEG instead of WebP for copies over 4 MP: encode 7.5 s → 0.4 s, +13 % bytes),
+`e2e/import-perf.e2e.ts` prints the split.
