@@ -190,6 +190,10 @@ export class TvGames {
   private work: Promise<void> = Promise.resolve();
   private readonly pendingBackups = new Map<string, Game>();
   private backingUp = false;
+  /** The backup run in progress (awaited before a backup is deleted). */
+  private pushRun: Promise<void> = Promise.resolve();
+  /** Games the DM deleted: never backed up again (rv#6). */
+  private readonly deleted = new Set<string>();
   private backupAgain = false;
   private backupTimer: unknown = null;
   private readonly startedAt: number;
@@ -338,6 +342,7 @@ export class TvGames {
 
   /** Queues a game for the server backup (the newest version per game wins). */
   private backup(game: Game): void {
+    if (this.deleted.has(game.id)) return;
     this.pendingBackups.set(game.id, game);
     void this.pushBackups();
   }
@@ -352,16 +357,26 @@ export class TvGames {
     return this.pendingBackups.size;
   }
 
-  private async pushBackups(): Promise<void> {
+  private pushBackups(): Promise<void> {
     if (this.backingUp) {
       this.backupAgain = true;
-      return;
+      return this.pushRun;
     }
     this.backingUp = true;
+    this.pushRun = this.pushAll();
+    return this.pushRun;
+  }
+
+  /** One backup run: every queued game, again while new ones were queued meanwhile. */
+  private async pushAll(): Promise<void> {
     try {
       do {
         this.backupAgain = false;
         for (const [id, game] of [...this.pendingBackups]) {
+          if (this.deleted.has(id)) {
+            this.pendingBackups.delete(id);
+            continue;
+          }
           const t0 = this.now();
           try {
             await this.ports.backups.put(game);
@@ -506,8 +521,12 @@ export class TvGames {
    * @param gameId - the game
    */
   async remove(gameId: string): Promise<void> {
-    if (this.host.state.game?.id === gameId) await this.close();
+    // Marked first (rv#6): the close below saves, and that save must not back the game up again;
+    // a backup already on its way is awaited, so the DELETE comes after it, not before.
+    this.deleted.add(gameId);
     this.pendingBackups.delete(gameId);
+    if (this.host.state.game?.id === gameId) await this.close();
+    await this.pushRun;
     await this.ports.games.delete(gameId);
     this.log.info('tv', 'Game deleted', { gameId });
     if (this.ports.backups.delete) {

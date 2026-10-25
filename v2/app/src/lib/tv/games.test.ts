@@ -166,6 +166,27 @@ describe('requests', () => {
     expect(listing?.games).toEqual([]);
   });
 
+  test('rv#6: deleting the open game while its backup is on the way leaves no backup behind', async () => {
+    const r = rig();
+    await r.games.boot();
+    fromCompanion(r, { type: 'game.new', game: gameInput() });
+    await settle();
+    // Hold the next backup PUT until released, as a slow network would.
+    const put = r.ports.backups.put;
+    let release: () => void = () => {};
+    r.ports.backups.put = (game) => new Promise<void>((done) => { release = () => void put(game).then(done); });
+    r.host.applyLocal({ type: 'fog.all', value: 'reveal' });
+    r.timers.advance(2500); // autosave → backup PUT starts and hangs
+    await settle();
+    fromCompanion(r, { type: 'game.delete', gameId: 'g1' });
+    await settle();
+    release();
+    await settle();
+    await settle();
+    expect(r.ports.server.has('g1')).toBe(false);
+    expect(r.ports.stored.has('g1')).toBe(false);
+  });
+
   test('game.renameStored renames a stored game, and the open one through the reducer', async () => {
     const r = rig();
     r.ports.stored.set('g2', { game: newGame(gameInput('g2', 'Second')), savedAt: '2026-10-24T00:00:00.000Z' });
