@@ -91,11 +91,14 @@ export class TableMask {
     const inches = barInches(grid.widthInches, heightIn, pivot, grid.overscanPercent);
     const dir = barRunsRight(pivot) ? 1 : -1;
     const len = inches * ppi;
-    g.rect(dir > 0 ? p.x : p.x - len, p.y - 4, len, 8).fill(0xffffff);
+    // qa#20: the bar is gold, as the TV's and the tablet's texts say ("the gold bar"); a dark
+    // edge keeps it readable over a bright map
+    g.rect(dir > 0 ? p.x : p.x - len, p.y - 5, len, 10).fill({ color: 0x000000, alpha: 0.6 });
+    g.rect(dir > 0 ? p.x : p.x - len, p.y - 4, len, 8).fill(0xd4a24a);
     for (let i = 0; i <= inches; i++) {
       const x = p.x + dir * i * ppi;
       const h = (i === 0 || i === inches ? 0.9 : i % 5 === 0 ? 0.6 : 0.35) * ppi;
-      g.moveTo(x, p.y - h).lineTo(x, p.y).stroke({ width: 2, color: 0xffffff });
+      g.moveTo(x, p.y - h).lineTo(x, p.y).stroke({ width: 2, color: 0xd4a24a });
     }
     g.circle(p.x, p.y, 0.3 * ppi).stroke({ width: 3, color: 0xd4a24a });
     g.moveTo(p.x, p.y - 0.45 * ppi).lineTo(p.x, p.y + 0.45 * ppi).stroke({ width: 2, color: 0xd4a24a });
