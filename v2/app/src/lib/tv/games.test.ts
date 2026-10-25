@@ -8,7 +8,7 @@ import { describe, expect, test } from 'bun:test';
 import { initialRoot, newGame, wholeGrid, type Game, type MapInfo } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
 import { SyncHost } from '../state/host.ts';
-import { KEY_LAST_GAME, KEY_TABLE, mergeListings, summarize, TvGames, type Timers } from './games.ts';
+import { KEY_LAST_GAME, KEY_TABLE, mergeListings, summarize, TvGames, withOpenGame, type Timers } from './games.ts';
 import { memoryPorts, type MemoryPorts } from './memory-ports.ts';
 import { answerRequest } from './requests.ts';
 
@@ -371,3 +371,18 @@ describe('listing helpers', () => {
     expect(mergeListings(local, null)).toEqual(local);
   });
 });
+
+describe('withOpenGame (qa#9)', () => {
+  test('the open game is listed under the map on the table, not the stored one', () => {
+    const stored = newGame(gameInput());
+    const live = { ...stored, maps: { ...stored.maps, m1: { ...stored.maps.m1!, info: { ...stored.maps.m1!.info, name: 'Tower upper' } } } };
+    const rows = [summarize(stored, '2026-10-25T10:00:00.000Z', 'both')];
+    const out = withOpenGame(rows, live, '2026-10-25T11:00:00.000Z');
+    expect(out[0]!.activeMapName).toBe('Tower upper');
+    expect(out[0]!.where).toBe('both');
+    expect(out[0]!.savedAt).toBe('2026-10-25T10:00:00.000Z');
+    expect(withOpenGame([], live, 'now')[0]!.where).toBe('tv');
+    expect(withOpenGame(rows, null, 'now')).toBe(rows);
+  });
+});
+

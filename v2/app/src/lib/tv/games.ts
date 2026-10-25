@@ -139,6 +139,26 @@ export function mergeListings(local: GameSummary[], remote: GameSummary[] | null
 }
 
 /**
+ * Puts the open game's live names into its row (qa#9): the stored copy lags up to one autosave
+ * behind, so right after a map switch it still names the previous map. A game not stored yet is
+ * added on top.
+ *
+ * @param rows - the merged listing
+ * @param open - the game on the table, or null
+ * @param nowIso - its `savedAt` when it isn't stored yet
+ * @returns the listing with the open game current
+ */
+export function withOpenGame(rows: GameSummary[], open: Game | null, nowIso: string): GameSummary[] {
+  if (!open) return rows;
+  const i = rows.findIndex((r) => r.id === open.id);
+  if (i < 0) return [summarize(open, nowIso, 'tv'), ...rows];
+  const live = summarize(open, rows[i]!.savedAt, rows[i]!.where);
+  const out = rows.slice();
+  out[i] = { ...live, thumb: rows[i]!.thumb };
+  return out;
+}
+
+/**
  * The name of a game the TV starts by itself from a shared map (the remote's fallback).
  *
  * @param map - the map
@@ -406,7 +426,7 @@ export class TvGames {
     } catch (e) {
       this.log.warn('tv', 'Server backups could not be listed', { error: errorText(e) });
     }
-    const games = mergeListings(local, remote);
+    const games = withOpenGame(mergeListings(local, remote), this.host.state.game, new Date(this.now()).toISOString());
     this.log.info('tv', 'Games listed', { local: local.length, remote: remote?.length ?? null, ms: this.now() - t0 });
     return games;
   }
