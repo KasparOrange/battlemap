@@ -130,7 +130,9 @@ test('every TV screen works with the D-pad and OK only', async ({ page }) => {
   expect(await focused(page)).toMatch(/Games|Maps/);
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Enter');
-  await expect(page.getByTestId('tv-library')).toContainText('shared library');
+  // The Maps shelf: the shared library's maps (cards) or its empty note (qa#13: the library has
+  // a Games | Maps switch now, no "shared library" heading).
+  await expect(page.getByRole('radio', { name: 'Maps' })).toHaveAttribute('aria-checked', 'true');
   await page.waitForTimeout(450);
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('tv-home')).toBeVisible();
