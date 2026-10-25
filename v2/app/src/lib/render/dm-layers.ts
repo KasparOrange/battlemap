@@ -14,6 +14,9 @@ import type { FileLoader } from './types.ts';
 /** Largest side a DM layer is decoded at. */
 export const LAYER_MAX_PX = 4096;
 
+/** Tries per DM layer picture before the DM is told it failed. */
+export const LAYER_ATTEMPTS = 3;
+
 interface Shown {
   layer: DmLayer;
   sprite: Sprite | null;
@@ -36,7 +39,21 @@ export class DmLayers {
    * @param log - logger
    * @param invalidate - asks for a frame when a picture arrives
    */
-  constructor(parent: Container, private readonly files: FileLoader, private readonly log: Logger, private readonly invalidate: () => void) {
+  /**
+   * @param parent - the scene's dmLayers slot
+   * @param files - the file loader
+   * @param log - the logger
+   * @param invalidate - asks for a frame
+   * @param hooks - `upload` puts a texture on the GPU at once (then its bitmap is closed),
+   *   `onFailed` hears of a layer that didn't load after {@link LAYER_ATTEMPTS} tries
+   */
+  constructor(
+    parent: Container,
+    private readonly files: FileLoader,
+    private readonly log: Logger,
+    private readonly invalidate: () => void,
+    private readonly hooks: { upload?: (t: Texture) => void; onFailed?: (id: string, error: string) => void } = {},
+  ) {
     parent.addChild(this.container);
   }
 
@@ -93,7 +110,7 @@ export class DmLayers {
     return true;
   }
 
-  private async load(s: Shown): Promise<void> {
+  private async load(s: Shown, attempt = 1): Promise<void> {
     const ref = s.layer.file;
     try {
       const blob = await this.files(ref);
@@ -115,6 +132,9 @@ export class DmLayers {
       s.sprite = sprite;
       s.bytes = Math.round(bitmap.width * bitmap.height * 4 * 4 / 3);
       s.loading = false;
+      // rv#18: upload now and close the bitmap — the picture lives on the GPU, not twice in RAM
+      this.hooks.upload?.(texture);
+      if (this.hooks.upload) bitmap.close();
       this.place(sprite, texture);
       // keep the list's order: insert by position among the loaded ones
       const ids = (this.layers ?? []).filter((l) => l.visible).map((l) => l.id);
@@ -123,8 +143,17 @@ export class DmLayers {
       this.invalidate();
       this.log.info('render', 'DM layer shown', { id: s.layer.id, w: bitmap.width, h: bitmap.height });
     } catch (e) {
+      if (this.shown.get(s.layer.id) !== s) return;
+      if (attempt < LAYER_ATTEMPTS) {
+        this.log.warn('render', 'DM layer failed — trying again', { id: s.layer.id, attempt, error: String(e) });
+        setTimeout(() => {
+          if (this.shown.get(s.layer.id) === s) void this.load(s, attempt + 1);
+        }, 2000 * attempt);
+        return;
+      }
       s.loading = false;
-      this.log.warn('render', 'DM layer failed', { id: s.layer.id, error: String(e) });
+      this.log.error('render', 'DM layer failed', { id: s.layer.id, attempts: attempt, error: String(e) });
+      this.hooks.onFailed?.(s.layer.id, String(e));
     }
   }
 
@@ -139,8 +168,16 @@ export class DmLayers {
   }
 
   private free(s: Shown): void {
-    s.sprite?.destroy();
-    s.texture?.destroy(true);
+    // qa#21: off the screen now, destroyed once a frame without it was drawn
+    const { sprite, texture } = s;
+    sprite?.removeFromParent();
+    if (sprite || texture) {
+      this.invalidate();
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (sprite && !sprite.destroyed) sprite.destroy();
+        texture?.destroy(true);
+      }));
+    }
     s.sprite = null;
     s.texture = null;
     s.bytes = 0;

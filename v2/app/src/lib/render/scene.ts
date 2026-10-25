@@ -131,7 +131,12 @@ export class TableScene {
     this.fog = new FogLayer(this.slots.fog, this.dm ? { opacity: 0.7, deep: 0.9, tints: true } : { opacity: 1, deep: 1, tints: false }, r.scheduler);
     this.doorsLayer = new DoorsLayer(this.slots.doors, this.dm, r.scheduler);
     this.tools = new ToolsLayer(this.slots.tools, this.dm);
-    this.dmLayers = this.dm ? new DmLayers(this.slots.dmLayers, files, opts.log, invalidate) : null;
+    this.dmLayers = this.dm
+      ? new DmLayers(this.slots.dmLayers, files, opts.log, invalidate, {
+        upload: (t) => r.app.renderer.texture.initSource(t.source),
+        onFailed: (id, error) => opts.onEvent?.({ type: 'layer-failed', id, error }),
+      })
+      : null;
     this.frame = this.dm ? new PlayersFrame(this.slots.dmFrame) : null;
     this.mask = this.dm ? null : new TableMask(this.slots.tableMask);
     if (opts.effects) {
