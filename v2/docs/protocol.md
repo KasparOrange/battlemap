@@ -140,6 +140,14 @@ fade}`, and `sound {beds}` when it was saved while beds played) — both optiona
 as up / none for games stored before them ([`features.md`](features.md)). Its `sound` is the
 soundscape (`on`, `master`, `shots`, `beds` ≤ 3 of `{sound, volume}`, `fxSounds`; optional, read
 as silent); one-shot sounds are live (`live.sounds`, optional, read as none) — features.md "Sound".
+**Table moments** (features.md "table moments", all optional on the wire, read as none for games
+stored before them): each `MapPlay` has `notes` (DM notes `{id, x, y, text}` in squares — the TV
+keeps them with the game but never draws them; anything handed to players goes through
+`withoutDmNotes`, which also drops their undo steps) and `spotlight` (`{target: {kind: square, col,
+row} | {kind: token, tokenId}, dim}` or null); the `Game` has `timer` (`{durationMs, remainingMs,
+startedAt, endEffect}` or null — `startedAt` on the **server's clock**, so every screen computes
+what is left with `timerLeft`), `handouts` (≤ 32 of `{id, name, kind: picture|letter, file, text}`)
+and `handoutShown` (`{id, place: edge|full, side: bottom|top|left|right}` or null).
 
 ## Commands
 
@@ -194,6 +202,13 @@ they say otherwise; without a game they are refused ("No game is open."), except
 | `scene.apply` | `id` — the scene's map on the table, its view, its effects (token-bound ones stay), map lights, fog look; a scene with `sound` starts its beds (master and one-shot volumes stay) | — | new |
 | `sound.set` | any of `on` (play / stop all with a fade; the beds stay), `master`, `shots` (one-shot layer), `beds` (`SoundBed[]` `{sound, volume}`, the whole list, ≤ 3, each sound once), `fxSounds` — the rest kept | — | new (v1's `SessionSettings.ambientSound` was never built) |
 | `sound.play` | `shot` (`SoundShot` `{id, sound, volume?, at}`, live — the last 8 kept; the TV plays each id once, not while the sound is off) | — | new |
+| `spotlight.set` | `spotlight` (`{target, dim}`, a square clamped onto the map or a token of it) or null — on the map on the table | — | new (feature idea "miniature spotlight") |
+| `timer.set` | `timer` (the whole value, made with `startTimer` / `pauseTimer` / `resetTimer` on the server's clock) or null — game-wide | — | new |
+| `handout.save` | `handout`, `index?` — adds, or replaces by id (a picture needs its `file`); ≤ 32 per game | — | new |
+| `handout.remove` | `id` (takes it off the TV if it shows) | — | new |
+| `handout.show` | `shown` (`{id, place, side}`) or null — back to the map | — | new |
+| `note.set` | `note` (clamped onto the map), `gesture?` — adds or replaces by id (edit, move); ≤ 200 per map | yes, per gesture | new |
+| `note.remove` | `id` | yes | new |
 | `history.undo` / `history.redo` | — | — | `vtt.undo` / `vtt.redo` |
 
 ## Old messages that are gone, and why

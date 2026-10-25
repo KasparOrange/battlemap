@@ -14,6 +14,7 @@ export * from './model/game.ts';
 export * from './model/root.ts';
 export * from './model/library.ts';
 export * from './model/scene.ts';
+export * from './model/moments.ts';
 export * from './model/secrets.ts';
 export * from './model/sound.ts';
 

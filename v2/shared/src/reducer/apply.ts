@@ -12,6 +12,7 @@ import { drawAdd, drawClear, drawLive, drawRemove, discSet, layersSet, measureSe
 import { doorSet, fogAll, fogApply, fogCommit, fogDiscard, fogEnable, fogPreview } from './fog.ts';
 import { historyRedo, historyUndo } from './history.ts';
 import { fxPlace, fxRemove, fxTrigger, gameRename, gameSettings, mapAdd, mapRegrid, mapRemove, mapRename, mapSwitch } from './maps.ts';
+import { handoutRemove, handoutSave, handoutShow, noteRemove, noteSet, spotlightSet, timerSet } from './moments.ts';
 import type { ApplyResult } from './result.ts';
 import { curtainSet, sceneApply, sceneOrder, sceneRemove, sceneRename, sceneSave } from './scenes.ts';
 import { soundPlay, soundSet } from './sound.ts';
@@ -69,6 +70,13 @@ export function apply(state: RootState, cmd: Command): ApplyResult {
     case 'fx.trigger': return fxTrigger(state, cmd);
     case 'game.rename': return gameRename(state, cmd);
     case 'game.settings': return gameSettings(state, cmd);
+    case 'spotlight.set': return spotlightSet(state, cmd);
+    case 'timer.set': return timerSet(state, cmd);
+    case 'handout.save': return handoutSave(state, cmd);
+    case 'handout.remove': return handoutRemove(state, cmd);
+    case 'handout.show': return handoutShow(state, cmd);
+    case 'note.set': return noteSet(state, cmd);
+    case 'note.remove': return noteRemove(state, cmd);
     case 'curtain.set': return curtainSet(state, cmd);
     case 'scene.save': return sceneSave(state, cmd);
     case 'scene.remove': return sceneRemove(state, cmd);

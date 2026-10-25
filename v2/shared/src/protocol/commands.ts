@@ -10,6 +10,7 @@ import { TemplateDisc } from '../model/disc.ts';
 import { OneShot, PlacedEffect } from '../model/effect.ts';
 import { GameSettings, MAX_CURTAIN_TEXT, Scene, TvMode } from '../model/game.ts';
 import { MapInfo, RasterGrid } from '../model/map.ts';
+import { DmNote, Handout, HandoutShown, Spotlight, Timer } from '../model/moments.ts';
 import { DmLayer, MeasureLine, Ruler, Stroke, Token } from '../model/pieces.ts';
 import { CalibrationPivot } from '../model/table.ts';
 import { SoundBeds, SoundShot, Volume } from '../model/sound.ts';
@@ -373,6 +374,68 @@ export const GameSettingsSet = v.object({
   }),
 });
 
+// ── table moments: spotlight, timer, handouts, DM notes ─────────────────────────────────────
+
+/**
+ * Puts the spotlight of the map on the table on a square or a token (the whole new value), or
+ * puts it out (null). A soft light ring under that mini; the rest of the table dims a little.
+ */
+export const SpotlightSet = v.object({
+  type: v.literal('spotlight.set'),
+  /** The spotlight, or null for none. */
+  spotlight: v.nullable(Spotlight),
+});
+
+/**
+ * Sets the countdown on the TV (the whole new value; null takes it off the TV). The companion
+ * makes the value with `startTimer` / `pauseTimer` / `resetTimer`, stamped with the server's
+ * clock, so a TV that reloads keeps counting.
+ */
+export const TimerSet = v.object({
+  type: v.literal('timer.set'),
+  /** The timer, or null for none. */
+  timer: v.nullable(Timer),
+});
+
+/** Adds a handout to the game's list (at `index`, else the end) or replaces the one with its id. */
+export const HandoutSave = v.object({
+  type: v.literal('handout.save'),
+  /** The handout. */
+  handout: Handout,
+  /** Where in the list it goes (clamped; kept in place when replacing without one). */
+  index: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+});
+
+/** Deletes a handout (and takes it off the TV if it shows). */
+export const HandoutRemove = v.object({
+  type: v.literal('handout.remove'),
+  /** The handout. */
+  id: Id,
+});
+
+/** Shows a handout on the TV — at the table's edge or as a full-screen pause — or nothing (null). */
+export const HandoutShow = v.object({
+  type: v.literal('handout.show'),
+  /** What to show, or null: back to the map. */
+  shown: v.nullable(HandoutShown),
+});
+
+/** Adds a DM note to the map on the table or replaces the one with its id (edit, move). */
+export const NoteSet = v.object({
+  type: v.literal('note.set'),
+  /** The note (clamped onto the map). */
+  note: DmNote,
+  /** Groups commands into one undo step — a drag (optional). */
+  gesture: v.optional(Id),
+});
+
+/** Deletes a DM note. */
+export const NoteRemove = v.object({
+  type: v.literal('note.remove'),
+  /** The note. */
+  id: Id,
+});
+
 // ── the curtain and scene presets ───────────────────────────────────────────────────────────
 
 /**
@@ -555,6 +618,7 @@ export const Command = v.variant('type', [
   MapAdd, MapSwitch, MapRemove, MapRename, MapRegrid,
   FxPlace, FxRemove, FxTrigger,
   GameRename, GameSettingsSet,
+  SpotlightSet, TimerSet, HandoutSave, HandoutRemove, HandoutShow, NoteSet, NoteRemove,
   CurtainSet, SceneSave, SceneRemove, SceneRename, SceneOrder, SceneApply,
   SoundSet, SoundPlay,
   AreaSave, AreaRemove, AreaReveal, SecretSave, SecretRemove, SecretFound,
@@ -584,6 +648,7 @@ export const MAP_SCOPED_COMMANDS: ReadonlySet<CommandType> = new Set<CommandType
   'measure.set', 'ruler.set', 'disc.set', 'layers.set',
   'view.mode', 'view.window', 'view.pan', 'view.rotate', 'view.free', 'view.grid',
   'map.regrid',
+  'spotlight.set', 'note.set', 'note.remove',
   'fx.place', 'fx.remove',
   'area.save', 'area.remove', 'area.reveal', 'secret.save', 'secret.remove', 'secret.found',
 ]);
