@@ -3,6 +3,8 @@
  * a build id, and in development a proxy to the server so the browser sees one origin.
  */
 import { execSync } from 'node:child_process';
+import { cpSync, createReadStream, statSync } from 'node:fs';
+import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig, type Plugin } from 'vite';
@@ -40,9 +42,45 @@ function buildJson(): Plugin {
   };
 }
 
+/** The effects library (`v2/assets/effects/`), served and shipped as `/app/effects/`. */
+const EFFECTS_DIR = here('../assets/effects');
+
+/** What of the effects library stays out of the app: build tools and the people's preview. */
+const effectsShipped = (rel: string) => !/^(tools)(\/|$)/.test(rel) && rel !== 'preview.html';
+
+/**
+ * Makes the effects library reachable by the app (package 7, docs/effects.md): in development
+ * `/app/effects/*` is read straight from `assets/effects/`; a build copies it to
+ * `dist/effects/` without `tools/` and `preview.html`.
+ */
+function effectsLibrary(): Plugin {
+  const types: Record<string, string> = { '.json': 'application/json', '.webp': 'image/webp', '.png': 'image/png', '.frag': 'text/plain', '.vert': 'text/plain' };
+  return {
+    name: 'battlemap-effects-library',
+    configureServer(server) {
+      server.middlewares.use('/app/effects/', (req, res, next) => {
+        const rel = normalize(decodeURIComponent((req.url ?? '').split('?')[0]!)).replace(/^[/\\]+/, '');
+        if (rel.startsWith('..') || !effectsShipped(rel)) return next();
+        const file = join(EFFECTS_DIR, rel);
+        try {
+          if (!statSync(file).isFile()) return next();
+        } catch {
+          return next();
+        }
+        res.setHeader('Content-Type', types[extname(file)] ?? 'application/octet-stream');
+        createReadStream(file).pipe(res);
+      });
+    },
+    writeBundle(options) {
+      const out = join(options.dir ?? here('dist'), 'effects');
+      cpSync(EFFECTS_DIR, out, { recursive: true, filter: (src) => effectsShipped(src.slice(EFFECTS_DIR.length).replace(/^[/\\]+/, '')) });
+    },
+  };
+}
+
 export default defineConfig({
   base: '/app/', // the shell serves the bundle under /app/, the server too (docs/shell.md)
-  plugins: [svelte(), buildJson()],
+  plugins: [svelte(), buildJson(), effectsLibrary()],
   resolve: { alias: { $lib: here('./src/lib') } },
   define: { __BUILD__: JSON.stringify(BUILD) },
   server: {
