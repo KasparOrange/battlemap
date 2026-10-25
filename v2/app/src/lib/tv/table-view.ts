@@ -1,35 +1,48 @@
 /**
  * The table on the TV: the renderer's players' view (`createTableView(host, { profile:
- * 'players' })` from `$lib/render`) behind TV mode's screens. This file is TV mode's only
- * contact with the renderer, so a change of its seam touches one place.
+ * 'players' })` from `$lib/render`) behind TV mode's screens, with the effects runtime in its
+ * slots and map files from the device's cache. This file is TV mode's only contact with the
+ * renderer, so a change of its seam touches one place. The view drops textures by itself on the
+ * shell's `memory` event.
  */
-import type { RootState } from '@battlemap/shared';
+import type { FileRef, RootState } from '@battlemap/shared';
+import { createEffectsRuntime } from '../effects/index.ts';
 import type { Logger } from '../log.ts';
-import { createRenderer } from '../render/pixi.ts';
+import { createTableView, type TableViewEvent } from '../render/index.ts';
 
 /** What TV mode uses of the renderer's table view. */
 export interface TvTableView {
   /** Draws this state (cheap when nothing it shows changed). */
   update(state: RootState): void;
-  /** Drops textures it can rebuild (the shell's `memory` event). */
-  dropTextures(): void;
   /** Frees everything. */
   destroy(): void;
+}
+
+/** Options of {@link openTableView}. */
+export interface TvTableViewOptions {
+  /** The logger. */
+  log: Logger;
+  /** Loads a file (the device's cache, fetched from the server when missing). */
+  files: (ref: FileRef) => Promise<Blob>;
+  /** Map loading, shown, failed; the renderer failing. */
+  onEvent: (e: TableViewEvent) => void;
 }
 
 /**
  * Starts the players' view of the table in `host`.
  *
  * @param host - the element it fills
- * @param log - the logger
- * @returns the view
+ * @param options - logger, file loader, events
+ * @returns the view (usable at once; it draws once WebGL runs)
  */
-export async function openTableView(host: HTMLElement, log: Logger): Promise<TvTableView> {
-  // Until the renderer's scene seam lands this is the bare Pixi canvas (black, render on demand).
-  const r = await createRenderer(host, { log, maxRenderHeight: 1080 });
-  return {
-    update: () => r.scheduler.invalidate(),
-    dropTextures: () => {},
-    destroy: () => r.destroy(),
-  };
+export function openTableView(host: HTMLElement, options: TvTableViewOptions): TvTableView {
+  const view = createTableView(host, {
+    profile: 'players',
+    log: options.log,
+    files: options.files,
+    effects: (slots, ctx) => createEffectsRuntime(slots, ctx),
+    onEvent: options.onEvent,
+  });
+  view.ready.catch((e: unknown) => options.onEvent({ type: 'renderer-failed', error: String(e) }));
+  return view;
 }

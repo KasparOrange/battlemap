@@ -10,10 +10,55 @@ export type Msg = Record<string, unknown> & { type: string };
 /** The server's port (as the Playwright config). */
 export const SERVER_PORT = Number(process.env.BATTLEMAP_SERVER_PORT ?? 5929);
 
-/** A picture map whose file need not exist (the TV only stores and syncs it). */
-export function testMap(id = 'm1test00001', name = 'Test cave') {
+/** A file reference as the server answers an upload. */
+export interface Ref { hash: string; ext: string; bytes: number }
+
+/** A ref to no file (the TV still stores and syncs the map; the renderer reports it missing). */
+export const MISSING: Ref = { hash: '0123456789abcdef', ext: 'png', bytes: 1000 };
+
+/**
+ * Draws a 2000 × 1200 test map in the page (stone floor, walls, a pool, grid lines every
+ * 100 px) and uploads it to the server (`POST /files?ext=png`).
+ *
+ * @param page - any page of the app (same origin as the server proxy)
+ * @returns the stored file's ref
+ */
+export async function uploadTestPicture(page: { evaluate<T>(f: () => Promise<T>): Promise<T> }): Promise<Ref> {
+  return page.evaluate(async () => {
+    const c = document.createElement('canvas');
+    c.width = 2000;
+    c.height = 1200;
+    const g = c.getContext('2d')!;
+    g.fillStyle = '#3b3530';
+    g.fillRect(0, 0, 2000, 1200);
+    for (let i = 0; i < 400; i++) {
+      g.fillStyle = `hsl(30 8% ${18 + ((i * 37) % 14)}%)`;
+      g.fillRect((i * 173) % 2000, (i * 97) % 1200, 100, 100);
+    }
+    g.fillStyle = '#1d4a5c';
+    g.beginPath();
+    g.ellipse(1400, 700, 260, 160, 0, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = '#15110e';
+    g.fillRect(0, 0, 2000, 100);
+    g.fillRect(0, 1100, 2000, 100);
+    g.fillRect(0, 0, 100, 1200);
+    g.fillRect(1900, 0, 100, 1200);
+    g.fillRect(900, 100, 100, 600);
+    g.strokeStyle = 'rgba(0,0,0,0.35)';
+    for (let x = 0; x <= 2000; x += 100) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 1200); g.stroke(); }
+    for (let y = 0; y <= 1200; y += 100) { g.beginPath(); g.moveTo(0, y); g.lineTo(2000, y); g.stroke(); }
+    const blob = await new Promise<Blob>((r) => c.toBlob((b) => r(b!), 'image/png'));
+    const res = await fetch('/files?ext=png&format=asis', { method: 'POST', body: blob });
+    const j = (await res.json()) as { hash: string; ext: string; bytes: number };
+    return { hash: j.hash, ext: j.ext, bytes: j.bytes };
+  });
+}
+
+/** A 20 × 12 picture map on `picture` (a test picture, or `MISSING`). */
+export function testMap(picture: Ref = MISSING, id = 'm1test00001', name = 'Test cave') {
   return {
-    id, name, kind: 'picture', picture: { hash: '0123456789abcdef', ext: 'png', bytes: 1000 }, tableCopy: null, geometry: null,
+    id, name, kind: 'picture', picture, tableCopy: null, geometry: null,
     grid: { x: 0, y: 0, cellW: 100, cellH: 100, cols: 20, rows: 12, pictureW: 2000, pictureH: 1200 },
     drawGrid: true, doorCount: 0, drawDoors: false, libraryId: null,
   };

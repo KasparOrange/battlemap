@@ -147,7 +147,7 @@
   .tiles {
     display: grid;
     grid-template-columns: 1.7fr 1fr;
-    gap: var(--g2);
+    gap: calc(var(--g2) * 1.5);
     min-height: 0;
     align-items: center;
   }

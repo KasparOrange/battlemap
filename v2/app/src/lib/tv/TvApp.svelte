@@ -28,6 +28,7 @@
   import { answerRequest } from './requests.ts';
   import { realPorts, requestPersistentStorage } from './seams.ts';
   import { backAction, backGate, CHROME_MS, homeBadge, OFFLINE_RED_MS, PROBLEM_MS, problemBadge, screenFor } from './screen.ts';
+  import type { TableViewEvent } from '../render/index.ts';
   import { openTableView, type TvTableView } from './table-view.ts';
   import TvBadge from './TvBadge.svelte';
   import TvBusy from './TvBusy.svelte';
@@ -187,7 +188,8 @@
   // ── the table ──────────────────────────────────────────────────────────────────────────────
 
   $effect(() => {
-    view?.update(session.state);
+    const state = session.state; // read first: `view?.update(…)` would skip it while view is null
+    view?.update(state);
   });
 
   // ── the server: badge red after a while offline, backups retried when back ────────────────
@@ -204,6 +206,16 @@
     }
   });
 
+  /** The renderer's map loading → the busy card here and on the tablet; failures → the badge. */
+  function onViewEvent(e: TableViewEvent): void {
+    if (e.type === 'map-loading') games.showBusy(`Loading “${e.name}”…`);
+    else if (e.type === 'map-shown') games.showBusy(null);
+    else if (e.type === 'map-failed') {
+      games.showBusy(null);
+      games.report(`The map could not be shown: ${e.error}`);
+    } else if (e.type === 'renderer-failed') games.report(`The table can't be drawn: ${e.error}`);
+  }
+
   /** Tells the reducer the TV's viewport (CSS px). */
   function reportViewport(): void {
     session.host.applyLocal({ type: 'table.viewport', width: Math.max(1, innerWidth), height: Math.max(1, innerHeight) });
@@ -219,9 +231,6 @@
     const stopShell = onShellEvent((detail, event) => {
       if (detail.type === 'back') {
         if (onBack()) event.preventDefault();
-      } else if (detail.type === 'memory') {
-        log.info('tv', 'Memory pressure', { level: detail.level });
-        view?.dropTextures();
       }
     });
     const shell = shellBridge();
@@ -242,12 +251,8 @@
       await refreshLists();
     });
 
-    openTableView(stage!, log)
-      .then((v) => {
-        view = v;
-        v.update(session.state);
-      })
-      .catch((e: unknown) => log.error('render', 'Table view failed', { error: String(e) }));
+    view = openTableView(stage!, { log, files: (ref) => ports.files.get(ref), onEvent: onViewEvent });
+    view.update(session.state);
 
     return () => {
       stopDpad();

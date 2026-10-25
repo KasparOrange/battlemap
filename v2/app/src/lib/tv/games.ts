@@ -548,6 +548,27 @@ export class TvGames {
     });
   }
 
+  /**
+   * Shows what the TV is busy with outside a request (the renderer loading a map), here and on
+   * the tablets (`tv.status`).
+   *
+   * @param busy - in words, or null when done
+   * @param progress - 0–1, or null when unknown
+   */
+  showBusy(busy: string | null, progress: number | null = null): void {
+    this.setStatus(busy, progress);
+  }
+
+  /**
+   * An error the TV and the DM should see (the problem badge, a `tv.notice` to every tablet).
+   *
+   * @param text - what went wrong, in words
+   */
+  report(text: string): void {
+    this.problem(text);
+    this.send({ type: 'tv.notice', level: 'error', text });
+  }
+
   // ── helpers ──────────────────────────────────────────────────────────────────────────────
 
   /**

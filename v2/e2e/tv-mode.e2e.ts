@@ -10,7 +10,7 @@
  * `TV_SHOTS=<dir>` also saves a screenshot of each screen at 1920 × 1080.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { BareCompanion, testMap } from './tv-companion.ts';
+import { BareCompanion, MISSING, testMap, uploadTestPicture, type Ref } from './tv-companion.ts';
 
 const SHOTS = process.env.TV_SHOTS ?? null;
 
@@ -35,8 +35,8 @@ async function focused(page: Page): Promise<string> {
   });
 }
 
-function newGameMsg(id: string, name: string) {
-  return { type: 'game.new', game: { id, name, createdAt: new Date().toISOString(), map: testMap() } };
+function newGameMsg(id: string, name: string, picture: Ref = MISSING) {
+  return { type: 'game.new', game: { id, name, createdAt: new Date().toISOString(), map: testMap(picture) } };
 }
 
 test('a new game comes back after a reload', async ({ page }) => {
@@ -46,7 +46,7 @@ test('a new game comes back after a reload', async ({ page }) => {
   await c.connect();
 
   const gameId = `g${Date.now().toString(36)}`.slice(0, 12);
-  c.send(newGameMsg(gameId, 'Reload test'));
+  c.send(newGameMsg(gameId, 'Reload test', await uploadTestPicture(page)));
   await expect(page.getByTestId('tv-status')).toContainText('game Reload test');
   await expect(page.getByTestId('tv-game')).toBeVisible();
   c.command({ type: 'fog.all', value: 'reveal' });
@@ -58,6 +58,9 @@ test('a new game comes back after a reload', async ({ page }) => {
   await expect(page.getByTestId('tv-status')).toContainText('open');
   await expect(page.getByTestId('tv-status')).toContainText('game Reload test');
   await expect(page.getByTestId('tv-status')).toContainText('screen game');
+  await expect(page.getByTestId('tv-busy')).toBeHidden();
+  await page.waitForTimeout(500);
+  await shot(page, 'game-revealed');
   const snap = await c.snapshot();
   const state = snap.state as { game: { id: string; maps: Record<string, { showGrid: boolean; fog: { revealed: string } }> } };
   expect(state.game.id).toBe(gameId);
@@ -98,9 +101,11 @@ test('every TV screen works with the D-pad and OK only', async ({ page }) => {
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('tv-calibration')).toBeHidden();
 
-  // a stored game, so home and the library have something to show
-  c.send(newGameMsg(`gd${Date.now().toString(36)}`.slice(0, 12), 'Dpad cave'));
+  // a stored game on a real picture, so home and the library have something to show
+  const picture = await uploadTestPicture(page);
+  c.send(newGameMsg(`gd${Date.now().toString(36)}`.slice(0, 12), 'Dpad cave', picture));
   await expect(page.getByTestId('tv-game')).toBeVisible();
+  await expect(page.getByTestId('tv-busy')).toBeHidden(); // the map has loaded
   // game: the back arrow is hidden until a remote key, then the first OK only shows it
   const arrow = page.getByRole('button', { name: 'Back to the library' });
   await expect(arrow).toBeFocused();

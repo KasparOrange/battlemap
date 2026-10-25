@@ -1,9 +1,10 @@
 <!--
-  TvCalibration — the words over the calibration pattern (design.md "Table calibration"; the
-  pattern itself — one-inch squares, the cut-off edges, the gold measuring bar — is drawn by the
-  renderer in screen space). Says what to do, shows the numbers, and offers "Done" for the
-  remote (it turns the pattern off; the tablet usually does that). The card sits in the corner
-  across from the bar's pivot so it never covers the bar.
+  TvCalibration — the remote's way out of the calibration pattern (design.md "Table
+  calibration"). The pattern itself — one-inch squares, the cut-off edges, the gold measuring
+  bar and its instructions — is drawn by the renderer in screen space; this small card only
+  names the step, shows the squares, and offers "Done" (Back does the same; the tablet usually
+  turns the pattern off). It sits in the corner across from the bar's pivot so it never covers
+  the bar.
 
   Props:
   - table: TableState — width, overscan, viewport, pivot
@@ -27,21 +28,20 @@
   const atBottom = $derived(pivot === 'topLeft' || pivot === 'topRight');
   const atLeft = $derived(pivot === 'topRight' || pivot === 'bottomRight');
   const fmt = (n: number) => (Math.round(n * 10) / 10).toString();
+  const facts = $derived(
+    [grid ? `${grid.cols} × ${grid.rows} squares` : null, `${fmt(table.widthInches)} in wide`, table.overscanPercent > 0 ? `${fmt(table.overscanPercent)} % cut off` : null]
+      .filter(Boolean)
+      .join(' · '),
+  );
 </script>
 
 <div class="calib" data-testid="tv-calibration">
   <div class="instruct" class:bottom={atBottom} class:left={atLeft}>
-    <span class="bm-eyebrow">Measure the table</span>
-    <h1 class="bm-headline">Measure the gold bar</h1>
-    <p>Hold a ruler to it and type on the tablet what it measures. The bar starts at the gold ring and stays put while the squares change.</p>
-    <div class="facts">
-      {#if grid}<span><b>{grid.cols} × {grid.rows}</b> squares</span>{/if}
-      <span><b>{fmt(table.widthInches)} in</b> picture width</span>
-      <span><b>{fmt(table.overscanPercent)} %</b> cut off at the edges</span>
+    <div class="text">
+      <span class="bm-eyebrow">Measure the table</span>
+      <span class="facts">{facts}</span>
     </div>
-    <div class="actions">
-      <Button label="Done" icon="check" data-autofocus onclick={onDone} />
-    </div>
+    <Button label="Done" icon="check" data-autofocus onclick={onDone} />
   </div>
 </div>
 
@@ -57,10 +57,9 @@
     position: absolute;
     right: 6%;
     top: 14%;
-    width: 36%;
     display: flex;
-    flex-direction: column;
-    gap: var(--g);
+    align-items: center;
+    gap: var(--g2);
     padding: var(--g2) calc(var(--g2) * 1.25);
     border-radius: var(--r);
     background: var(--m0);
@@ -78,34 +77,16 @@
     left: 6%;
   }
 
-  h1,
-  p {
-    margin: 0;
-  }
-
-  p {
-    font-size: var(--fs-body);
-    color: var(--t2);
-    line-height: var(--lh-body);
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--g) / 2);
   }
 
   .facts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--g) var(--g2);
-    padding-top: var(--g);
-    border-top: 1px solid var(--hair);
-    font-size: var(--fs-small);
-    color: var(--t2);
-  }
-
-  .facts b {
     font-family: var(--font-value);
+    font-size: var(--fs-body);
     color: var(--t);
   }
 
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-  }
 </style>
