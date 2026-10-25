@@ -85,6 +85,9 @@ export const MapPlay = v.object({
 /** One map's play state; see the schema of the same name. */
 export type MapPlay = v.InferOutput<typeof MapPlay>;
 
+/** Longest line of text on the curtain's plate. */
+export const MAX_CURTAIN_TEXT = 120;
+
 /** A game's settings (the session settings dialog). */
 export const GameSettings = v.object({
   /** How fog is drawn. */
@@ -108,6 +111,68 @@ export const GameSettings = v.object({
 /** A game's settings; see the schema of the same name. */
 export type GameSettings = v.InferOutput<typeof GameSettings>;
 
+/**
+ * The curtain (roadmap N8): while `down`, the TV holds black — or, with `plate`, a calm "next
+ * scene…" plate with the game's name and `text` — over everything, so the DM can switch maps,
+ * reveal fog and place things unseen; lifting it shows the new state in one fade. Saved with the
+ * game, so a TV that reloads mid-setup comes back behind the curtain.
+ */
+export const Curtain = v.object({
+  /** Whether the curtain is down. */
+  down: v.boolean(),
+  /** The "next scene…" plate (true) or plain black (false). */
+  plate: v.boolean(),
+  /** An optional line on the plate under the game's name ("" = none). */
+  text: v.pipe(v.string(), v.maxLength(MAX_CURTAIN_TEXT)),
+});
+/** The curtain; see the schema of the same name. */
+export type Curtain = v.InferOutput<typeof Curtain>;
+
+/**
+ * A scene preset (roadmap S2): which map of the game, how the TV frames it, its lasting effects
+ * without the token-bound ones (weather, global moods, map loops), the map lights switch and the
+ * fog look. Made by the companion from what is on the table (`captureScene`); `scene.apply`
+ * puts it back with one tap. Fog, doors, tokens and drawings are never part of a scene — they
+ * are the story so far.
+ */
+export const Scene = v.object({
+  /** Made by the companion that saved it. */
+  id: Id,
+  /** "Crypt — storm" (shown in the list). */
+  name: Name,
+  /** The map of the game it puts on the table. */
+  mapId: Id,
+  /** How the TV frames that map. */
+  view: MapView,
+  /** The map's lasting effects that are not bound to a token. */
+  effects: v.pipe(v.array(PlacedEffect), v.maxLength(64)),
+  /** The game's map lights switch (`GameSettings.mapLights`). */
+  mapLights: v.boolean(),
+  /** The fog look (`GameSettings` fogStyle, fogEdgeInset, fogFade). */
+  fog: v.object({
+    /** How fog is drawn. */
+    style: GameSettings.entries.fogStyle,
+    /** Trim revealed edges, percent of a square. */
+    edgeInset: GameSettings.entries.fogEdgeInset,
+    /** Fade squares in when revealed. */
+    fade: v.boolean(),
+  }),
+});
+/** A scene preset; see the schema of the same name. */
+export type Scene = v.InferOutput<typeof Scene>;
+
+/** Most scenes one game keeps. */
+export const MAX_SCENES = 24;
+
+/**
+ * The curtain of a game that never lowered it: up, plain black, no text.
+ *
+ * @returns a new curtain
+ */
+export function defaultCurtain(): Curtain {
+  return { down: false, plate: false, text: '' };
+}
+
 /** A game: its maps (one on the table) and its settings. */
 export const Game = v.object({
   /** Made by the companion that started it. */
@@ -126,6 +191,10 @@ export const Game = v.object({
   activeMapId: Id,
   /** Play state per map id. */
   maps: v.record(Id, MapPlay),
+  /** The curtain over the TV (games stored before it existed read as up). */
+  curtain: v.optional(Curtain, defaultCurtain),
+  /** Scene presets in the DM's order (games stored before they existed read as none). */
+  scenes: v.optional(v.pipe(v.array(Scene), v.maxLength(MAX_SCENES)), () => []),
 });
 /** A game; see the schema of the same name. */
 export type Game = v.InferOutput<typeof Game>;
@@ -193,5 +262,7 @@ export function newGame(input: NewGameInput): Game {
     mapOrder: [input.map.id],
     activeMapId: input.map.id,
     maps: { [input.map.id]: newMapPlay(input.map) },
+    curtain: defaultCurtain(),
+    scenes: [],
   };
 }

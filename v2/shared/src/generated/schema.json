@@ -997,6 +997,295 @@
               "showGrid"
             ]
           }
+        },
+        "curtain": {
+          "type": "object",
+          "properties": {
+            "down": {
+              "type": "boolean"
+            },
+            "plate": {
+              "type": "boolean"
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          "required": [
+            "down",
+            "plate",
+            "text"
+          ],
+          "default": {
+            "down": false,
+            "plate": false,
+            "text": ""
+          }
+        },
+        "scenes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "#/$defs/Id"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "mapId": {
+                "$ref": "#/$defs/Id"
+              },
+              "view": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "enum": [
+                      "table",
+                      "fit",
+                      "free"
+                    ],
+                    "type": "string"
+                  },
+                  "col": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "row": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "quarterTurns": {
+                    "enum": [
+                      0,
+                      1,
+                      2,
+                      3
+                    ],
+                    "type": "number"
+                  },
+                  "free": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "x": {
+                            "type": "number"
+                          },
+                          "y": {
+                            "type": "number"
+                          },
+                          "zoom": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "x",
+                          "y",
+                          "zoom"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "mode",
+                  "col",
+                  "row",
+                  "quarterTurns",
+                  "free"
+                ]
+              },
+              "effects": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "$ref": "#/$defs/Id"
+                    },
+                    "effect": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80
+                    },
+                    "anchor": {
+                      "oneOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "global"
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "region"
+                            },
+                            "points": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "x": {
+                                    "type": "number"
+                                  },
+                                  "y": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "x",
+                                  "y"
+                                ]
+                              },
+                              "minItems": 3,
+                              "maxItems": 256
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "points"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "point"
+                            },
+                            "x": {
+                              "type": "number"
+                            },
+                            "y": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "x",
+                            "y"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "const": "token"
+                            },
+                            "tokenId": {
+                              "$ref": "#/$defs/Id"
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "tokenId"
+                          ]
+                        }
+                      ]
+                    },
+                    "params": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string",
+                        "maxLength": 40
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string",
+                            "maxLength": 200
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    },
+                    "on": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "effect",
+                    "anchor",
+                    "params",
+                    "on"
+                  ]
+                },
+                "maxItems": 64
+              },
+              "mapLights": {
+                "type": "boolean"
+              },
+              "fog": {
+                "type": "object",
+                "properties": {
+                  "style": {
+                    "enum": [
+                      "standard",
+                      "soft",
+                      "cloud",
+                      "atmospheric"
+                    ],
+                    "type": "string"
+                  },
+                  "edgeInset": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 45
+                  },
+                  "fade": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "style",
+                  "edgeInset",
+                  "fade"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "mapId",
+              "view",
+              "effects",
+              "mapLights",
+              "fog"
+            ]
+          },
+          "maxItems": 24,
+          "default": []
         }
       },
       "required": [

@@ -8,7 +8,7 @@ import * as v from 'valibot';
 import { Cell, FileRef, Id, Int, Name, Num, Positive } from '../model/basics.ts';
 import { TemplateDisc } from '../model/disc.ts';
 import { OneShot, PlacedEffect } from '../model/effect.ts';
-import { GameSettings, TvMode } from '../model/game.ts';
+import { GameSettings, MAX_CURTAIN_TEXT, Scene, TvMode } from '../model/game.ts';
 import { MapInfo, RasterGrid } from '../model/map.ts';
 import { DmLayer, MeasureLine, Ruler, Stroke, Token } from '../model/pieces.ts';
 import { CalibrationPivot } from '../model/table.ts';
@@ -371,6 +371,70 @@ export const GameSettingsSet = v.object({
   }),
 });
 
+// ── the curtain and scene presets ───────────────────────────────────────────────────────────
+
+/**
+ * Lowers or lifts the curtain over the TV (`Game.curtain`). The TV fades to black (or the plate)
+ * and keeps showing what was there until the fade is complete; changes made behind it show only
+ * when it lifts. `plate` and `text` are kept when missing.
+ */
+export const CurtainSet = v.object({
+  type: v.literal('curtain.set'),
+  /** Down (the players see the curtain) or up. */
+  down: v.boolean(),
+  /** The "next scene…" plate (true) or plain black. */
+  plate: v.optional(v.boolean()),
+  /** The plate's line under the game's name ("" = none). */
+  text: v.optional(v.pipe(v.string(), v.maxLength(MAX_CURTAIN_TEXT))),
+});
+
+/**
+ * Saves a scene preset: a new one joins the list (at `index`, else at the end); one with a known
+ * id is replaced ("update from now"; moved to `index` when given). The companion makes the scene
+ * from the table (`captureScene`); Undo of a delete sends the old scene back at its index.
+ */
+export const SceneSave = v.object({
+  type: v.literal('scene.save'),
+  /** The scene. */
+  scene: Scene,
+  /** Where in the list it goes (clamped). */
+  index: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+});
+
+/** Deletes a scene preset (the game's fog, tokens and maps stay as they are). */
+export const SceneRemove = v.object({
+  type: v.literal('scene.remove'),
+  /** The scene. */
+  id: Id,
+});
+
+/** Renames a scene preset. */
+export const SceneRename = v.object({
+  type: v.literal('scene.rename'),
+  /** The scene. */
+  id: Id,
+  /** Its new name. */
+  name: Name,
+});
+
+/** Puts the scene presets in a new order (every id once). */
+export const SceneOrder = v.object({
+  type: v.literal('scene.order'),
+  /** The scene ids, first to last. */
+  ids: v.pipe(v.array(Id), v.maxLength(64)),
+});
+
+/**
+ * Puts a scene on the table: its map goes on the table framed as saved, its effects replace the
+ * map's (token-bound ones stay), the map lights switch and the fog look are set. Fog, doors,
+ * tokens and drawings stay as they are. No undo step (like `map.switch`).
+ */
+export const SceneApply = v.object({
+  type: v.literal('scene.apply'),
+  /** The scene. */
+  id: Id,
+});
+
 // ── history ─────────────────────────────────────────────────────────────────────────────────
 
 /** Takes the last step back. */
@@ -391,6 +455,7 @@ export const Command = v.variant('type', [
   MapAdd, MapSwitch, MapRemove, MapRename, MapRegrid,
   FxPlace, FxRemove, FxTrigger,
   GameRename, GameSettingsSet,
+  CurtainSet, SceneSave, SceneRemove, SceneRename, SceneOrder, SceneApply,
   HistoryUndo, HistoryRedo,
 ]);
 /** Any command; see the schema of the same name. */

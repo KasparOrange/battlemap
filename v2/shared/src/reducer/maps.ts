@@ -10,8 +10,13 @@ import { emptyMask } from '../geometry/mask.ts';
 import { clamp } from '../geometry/rect.ts';
 import { ok, onActiveMap, onGame, reject, type ApplyResult, type MapChange } from './result.ts';
 
-/** The state with the live measure line and stroke cleared (they belong to the old map). */
-function clearLiveTools(root: RootState): RootState {
+/**
+ * The state with the live measure line and stroke cleared (they belong to the old map).
+ *
+ * @param root - the state
+ * @returns the state without live tools
+ */
+export function clearLiveTools(root: RootState): RootState {
   if (!root.live.measure && !root.live.stroke) return root;
   return { ...root, live: { ...root.live, measure: null, stroke: null } };
 }

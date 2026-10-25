@@ -134,7 +134,10 @@ protocol: *status* = `diag.status` → `diag.report`; *prepare* = `deploy.prepar
 id a `MapPlay` — `info` (`MapInfo`: name, kind, `picture`/`tableCopy`/`geometry` file refs, the
 picture `grid`, `drawGrid`, `doorCount`, `drawDoors`, `libraryId`), `fog` (`on`, `revealed`,
 `staged`, `live`), `doorsOpen`, `tokens`, `strokes`, `layers`, `ruler`, `disc`, `effects`, `view`
-(`mode`, `col`, `row`, `quarterTurns`, `free`) and `showGrid`.
+(`mode`, `col`, `row`, `quarterTurns`, `free`) and `showGrid`. The game also holds its `curtain` (`down`, `plate`, `text`) and its `scenes` (scene presets:
+`id`, `name`, `mapId`, `view`, `effects` without token-bound ones, `mapLights`, `fog {style, edgeInset,
+fade}`) — both optional on the wire, read as up / none for games stored before them
+([`features.md`](features.md)).
 
 ## Commands
 
@@ -182,6 +185,11 @@ they say otherwise; without a game they are refused ("No game is open."), except
 | `fx.trigger` | `shot` (`OneShot`, live — the last 8 kept) | — | `vtt.triggerEffect` |
 | `game.rename` | `name` (the open game) | — | `lib.renameSession` |
 | `game.settings` | `settings` (any of `fogStyle`, `fogEdgeInset`, `fogFade`, `effects`) | — | `vtt.updateSessionSettings` |
+| `curtain.set` | `down`, `plate?`, `text?` (kept when missing; text ≤ 120) — the TV fades to black or the plate and shows changes made behind it only when it lifts | — | new (v1's 3 s fade only) |
+| `scene.save` | `scene` (`Scene`, made with `captureScene`), `index?` — adds, or replaces by id ("update from now"); ≤ 24 per game | — | new |
+| `scene.remove` / `scene.rename` | `id` / `id`, `name` | — | new |
+| `scene.order` | `ids` (every scene once, else refused) | — | new |
+| `scene.apply` | `id` — the scene's map on the table, its view, its effects (token-bound ones stay), map lights, fog look | — | new |
 | `history.undo` / `history.redo` | — | — | `vtt.undo` / `vtt.redo` |
 
 ## Old messages that are gone, and why

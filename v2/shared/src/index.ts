@@ -13,6 +13,7 @@ export * from './model/table.ts';
 export * from './model/game.ts';
 export * from './model/root.ts';
 export * from './model/library.ts';
+export * from './model/scene.ts';
 
 export * from './protocol/commands.ts';
 export * from './protocol/messages.ts';

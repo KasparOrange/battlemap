@@ -13,6 +13,7 @@ import { doorSet, fogAll, fogApply, fogCommit, fogDiscard, fogEnable, fogPreview
 import { historyRedo, historyUndo } from './history.ts';
 import { fxPlace, fxRemove, fxTrigger, gameRename, gameSettings, mapAdd, mapRegrid, mapRemove, mapRename, mapSwitch } from './maps.ts';
 import type { ApplyResult } from './result.ts';
+import { curtainSet, sceneApply, sceneOrder, sceneRemove, sceneRename, sceneSave } from './scenes.ts';
 import { tokenAdd, tokenClear, tokenMove, tokenRemove, tokenUpdate } from './tokens.ts';
 import { tableCalibrate, tableOverscan, tablePattern, tableReset, tableViewport, viewFree, viewGrid, viewMode, viewPan, viewRotate, viewWindow } from './view.ts';
 
@@ -66,6 +67,12 @@ export function apply(state: RootState, cmd: Command): ApplyResult {
     case 'fx.trigger': return fxTrigger(state, cmd);
     case 'game.rename': return gameRename(state, cmd);
     case 'game.settings': return gameSettings(state, cmd);
+    case 'curtain.set': return curtainSet(state, cmd);
+    case 'scene.save': return sceneSave(state, cmd);
+    case 'scene.remove': return sceneRemove(state, cmd);
+    case 'scene.rename': return sceneRename(state, cmd);
+    case 'scene.order': return sceneOrder(state, cmd);
+    case 'scene.apply': return sceneApply(state, cmd);
     case 'history.undo': return historyUndo(state);
     case 'history.redo': return historyRedo(state);
     default: return assertNever(cmd);
