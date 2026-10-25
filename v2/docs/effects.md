@@ -119,6 +119,11 @@ From the tabletop board's demos (`docs/mockups/effects/`, grades A cheap … E e
 sprite sheet Graphics B / Memory C / Processor A; GPU particles B / A / A (3,000 small); a shader
 over the whole screen D / A / A (a pool alone B); Lottie A / A / C (paths rebuilt each frame on the
 CPU); Rive B / A / B; video A / B / A but only 1–2 hardware decoders; GIF A / C / C.
+Trees (`tree-motion.html`, 2026-10-25, proposed): a video-made sheet of a painted crown is
+7.4 MB per tree type at 256 px — over the 6 MB loop cap below — while one still crown bent by a
+wind shader, or cut into its leaf clumps that sway (a puppet), is 0.26 MB and takes a wind the
+table can steer. Crowns and clips come from image-generation-engine (`ige`, project
+`tree-crowns`; its `docs/model.md` § Sprite sheets).
 
 What follows for the runtime:
 
