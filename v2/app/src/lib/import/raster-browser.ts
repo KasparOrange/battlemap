@@ -79,6 +79,12 @@ async function encodeAs(bitmap: ImageBitmap, type: string, quality?: number): Pr
   return blob.type === type ? blob : null;
 }
 
+/**
+ * Table copies larger than this many pixels are encoded as JPEG, not WebP (qa#10: WebP encoding
+ * is ~20× slower in the browser; the castle's 16.8 MP copy took 7.5 s, as JPEG 0.4 s).
+ */
+export const FAST_TABLE_COPY_PIXELS = 4_000_000;
+
 /** The browser engine. */
 export const browserBackend: RasterBackend = {
   async decode(blob: Blob, size?: Size): Promise<RasterImage> {
@@ -94,6 +100,12 @@ export const browserBackend: RasterBackend = {
       let blob: Blob | null;
       let ext: Encoded['ext'];
       const quality = purpose === 'thumb' ? 0.85 : purpose === 'page' ? 0.95 : 0.9;
+      if (purpose === 'table' && bitmap.width * bitmap.height > FAST_TABLE_COPY_PIXELS) {
+        // qa#10: a big table copy is JPEG — Chromium encodes 16 MP of WebP in ~7.5 s on a Mac
+        // (much longer on a tablet), JPEG in ~0.4 s, for ~13 % more bytes
+        blob = await encodeAs(bitmap, 'image/jpeg', quality);
+        if (blob) return { blob, ext: 'jpg', width: bitmap.width, height: bitmap.height };
+      }
       blob = await encodeAs(bitmap, 'image/webp', quality);
       ext = 'webp';
       if (!blob && purpose === 'page') {
