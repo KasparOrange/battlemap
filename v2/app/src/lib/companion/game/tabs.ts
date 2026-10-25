@@ -54,6 +54,12 @@ export interface TabDef {
   hasFooter?: (ctx: GameContext) => boolean;
   /** What a finger on the map does while this tab is chosen; absent = the Tokens behaviour. */
   tool?: (ctx: GameContext) => MapTool;
+  /**
+   * A DM-only layer drawn over the map while this tab is chosen (an aim, a preview). It fills the
+   * map view (same size and origin as its host, so `render/camera.ts`'s `squaresToScreen` with
+   * `ctx.camera.get()` places things) and lets pointer events through to the map.
+   */
+  overlay?: Component<TabPanelProps>;
   /** Whether a tap on a door toggles it in this tab (default true; Draw says false). */
   doors?: boolean;
   /** Called when the DM leaves this tab (cancel an armed placement, end a live circle). */

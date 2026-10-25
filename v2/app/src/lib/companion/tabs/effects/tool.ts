@@ -18,7 +18,6 @@ import { log } from '../../../log.ts';
 import { commitAim, placeSpot, toggleAuraAt } from './actions.ts';
 import { effectAt, moved } from './commands.ts';
 import { effectsLocal } from './local.svelte.ts';
-import { ensureOverlay } from './overlay.ts';
 import { aimAt, aimContains, angleTo, snapOrigin, type Aim } from './shapes.ts';
 
 /** Fx moves sent per second while dragging a placed effect. */
@@ -47,7 +46,6 @@ export function effectsTool(ctx: GameContext): MapTool {
     },
 
     tap(at) {
-      ensureOverlay(ctx);
       const e = effectsLocal.chosen;
       if (!e) {
         const hit = effectAt(ctx.map.effects, ctx.map.tokens, at);
@@ -85,7 +83,6 @@ export function effectsTool(ctx: GameContext): MapTool {
     },
 
     begin(from, now): ToolDrag | null {
-      ensureOverlay(ctx);
       const e = effectsLocal.chosen;
       if (!e) return moveSelected(ctx, from);
       if (e.group !== 'cast' && e.group !== 'area') return null;

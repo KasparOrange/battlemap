@@ -30,7 +30,6 @@
   import { isWeather, whereWords } from './commands.ts';
   import EffectTile from './EffectTile.svelte';
   import { effectsLocal, type BrowseGroup } from './local.svelte.ts';
-  import { ensureOverlay } from './overlay.ts';
   import { quickStrip } from './prefs.ts';
   import { aimAt, shapesFor, type AreaShape } from './shapes.ts';
   import WeatherSection from './WeatherSection.svelte';
@@ -61,8 +60,6 @@
 
   onMount(() => {
     void load();
-    const t = setTimeout(() => ensureOverlay(ctx), 0);
-    return () => clearTimeout(t);
   });
 
   const all = $derived(effectsLocal.catalog ?? []);
@@ -93,7 +90,6 @@
   function pick(e: PickerEffect): void {
     effectsLocal.choose(e.id);
     log.info('companion', effectsLocal.chosenId ? 'Effect armed' : 'Effect disarmed', { effect: e.id, group: e.group });
-    ensureOverlay(ctx);
   }
 
   function setGroup(id: string): void {
@@ -112,7 +108,6 @@
     const { cols, rows } = ctx.map.info.grid;
     const aim = aimAt(settings.shape, settings.feet, chosen.width ?? 5, { x: d.x, y: d.y }, d.rotation, { x: cols / 2, y: rows / 2 });
     effectsLocal.aim = { ...aim, origin: { x: d.x, y: d.y } };
-    ensureOverlay(ctx);
     log.info('companion', 'Effect aimed at the disc', { effect: chosen.id });
   }
 
@@ -124,7 +119,6 @@
     effectsLocal.selectedId = effectsLocal.selectedId === id ? null : id;
     if (effectsLocal.selectedId) effectsLocal.chosenId = null;
     effectsLocal.aim = null;
-    ensureOverlay(ctx);
   }
 </script>
 

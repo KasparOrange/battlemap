@@ -1,5 +1,5 @@
 <!--
-  AimLayer — the Effects tab's DM-only drawing over the companion's map (mounted by overlay.ts):
+  AimLayer — the Effects tab's DM-only drawing over the companion's map (the tab's `overlay`, mounted by the game screen):
   the aimed area before it is cast or placed (outline in the effect's damage colour, the squares
   it covers lightly filled, its size and square count), the area just cast fading out, and the
   outline of the selected placed effect. Pointer events pass through to the map. Redraws only

@@ -167,6 +167,11 @@
 <div class="screen" class:phone bind:clientWidth={width} data-testid="game-screen">
   <div class="map" bind:this={mapEl}>
     <MapView {ctx} tool={() => tool} doors={() => active.doors !== false} />
+    {#if active.overlay}
+      <div class="tab-overlay" data-testid="tab-overlay">
+        <active.overlay {ctx} />
+      </div>
+    {/if}
 
     <div class="corner tl" data-ctl={phone ? 'toolbar' : 'standalone'}>
       <IconButton icon="menu" label="Game menu" menu={gameMenu} onmenu={onMenu} />
@@ -266,6 +271,14 @@
     background: var(--map-ground);
     box-shadow: inset 0 0 0 1px var(--hair);
     overflow: clip;
+  }
+
+  /* a tab's DM-only layer over the map (TabDef.overlay): the map view's size, touch passes through */
+  .tab-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
   }
 
   .corner {

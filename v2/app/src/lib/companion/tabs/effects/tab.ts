@@ -7,7 +7,7 @@ import { TAB_ORDER, type TabDef } from '../../game/tabs.ts';
 import EffectsFooter from './EffectsFooter.svelte';
 import EffectsPanel from './EffectsPanel.svelte';
 import { effectsLocal } from './local.svelte.ts';
-import { dropOverlay } from './overlay.ts';
+import AimLayer from './AimLayer.svelte';
 import { effectsTool } from './tool.ts';
 
 const tab: TabDef = {
@@ -21,10 +21,10 @@ const tab: TabDef = {
   footer: EffectsFooter,
   hasFooter: () => (effectsLocal.aim !== null && effectsLocal.chosenId !== null) || effectsLocal.selectedId !== null,
   tool: effectsTool,
+  overlay: AimLayer,
   onLeave: () => {
     effectsLocal.aim = null;
     effectsLocal.selectedId = null;
-    dropOverlay();
   },
 };
 
