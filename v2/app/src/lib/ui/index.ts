@@ -21,6 +21,7 @@ export { default as Numpad } from './Numpad.svelte';
 export { default as Panel } from './Panel.svelte';
 export { default as Plane } from './Plane.svelte';
 export { default as ProgressBar } from './ProgressBar.svelte';
+export { default as SearchField } from './SearchField.svelte';
 export { default as Section } from './Section.svelte';
 export { default as Segmented } from './Segmented.svelte';
 export { default as Sheet } from './Sheet.svelte';
