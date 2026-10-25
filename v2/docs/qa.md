@@ -26,8 +26,14 @@ Run (always on your own ports, never 5884/5929):
 cd v2
 BATTLEMAP_APP_PORT=6181 BATTLEMAP_SERVER_PORT=6182 bun run e2e                      # every flow
 BATTLEMAP_APP_PORT=6181 BATTLEMAP_SERVER_PORT=6182 bun run e2e game-night harness   # QA's flows
+BATTLEMAP_E2E_SERVER=rust BATTLEMAP_APP_PORT=6181 BATTLEMAP_SERVER_PORT=6182 bun run e2e  # every server on Rust
 bun tools/bot.ts --server http://localhost:6182 --app http://localhost:6181/app/ --commands 500
 ```
+
+`BATTLEMAP_E2E_SERVER=rust` runs the shared server and every private per-test server on the Rust
+binary: the config builds `server-rs` once per run (`cargo build --release`, rustup's cargo) and
+copies it to `$TMPDIR/claude-v2-e2e-rs-<server port>/battlemap-server`, so another helper's
+rebuild can't swap it mid-run. The harness checks `/health` says the kind asked for.
 
 Results: `test-results/e2e-report-<app port>.json`; traces of failures in
 `test-results/e2e-<app port>/<test>/trace.zip` (`bunx playwright show-trace …`). The config

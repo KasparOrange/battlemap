@@ -6,6 +6,10 @@
  *
  * Pages reach a private server with `?server=<url>` (the app's config reads it), so the app's
  * Vite dev server keeps proxying to the shared one undisturbed.
+ *
+ * `BATTLEMAP_E2E_SERVER=rust` runs every server of the run — the shared one and the private ones —
+ * on the Rust binary instead of Bun. `playwright.config.ts` builds `server-rs` once per run and
+ * copies the binary to {@link rustServerBin} (so another helper's rebuild can't swap it mid-run).
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -15,6 +19,31 @@ import { join, resolve } from 'node:path';
 
 /** The v2 root (this file is `v2/e2e/support/server.ts`). */
 export const V2_DIR = resolve(import.meta.dirname, '..', '..');
+
+/** Which server the run uses: `'bun'` (default) or `'rust'` (`BATTLEMAP_E2E_SERVER=rust`). */
+export const E2E_SERVER: 'bun' | 'rust' = process.env.BATTLEMAP_E2E_SERVER === 'rust' ? 'rust' : 'bun';
+
+/**
+ * Where this run's Rust server binary lives: a private copy per shared server port
+ * (`$TMPDIR/claude-v2-e2e-rs-<port>/battlemap-server`), or `BATTLEMAP_E2E_RS_BIN` when set.
+ *
+ * @param serverPort - the run's shared server port (default: `BATTLEMAP_SERVER_PORT`, else 5929)
+ * @returns the binary's absolute path
+ */
+export function rustServerBin(serverPort = Number(process.env.BATTLEMAP_SERVER_PORT ?? 5929)): string {
+  return process.env.BATTLEMAP_E2E_RS_BIN ?? join(tmpdir(), `claude-v2-e2e-rs-${serverPort}`, 'battlemap-server');
+}
+
+/**
+ * The command that starts a server of the chosen kind: `[program, args, working folder]`.
+ *
+ * @returns Bun on `server/src/main.ts`, or the Rust binary (working folder `server-rs/`)
+ */
+function serverCommand(): [string, string[], string] {
+  return E2E_SERVER === 'rust'
+    ? [rustServerBin(), [], join(V2_DIR, 'server-rs')]
+    : ['bun', [join(V2_DIR, 'server', 'src', 'main.ts')], join(V2_DIR, 'server')];
+}
 
 /** A running private server. */
 export interface TestServer {
@@ -72,7 +101,7 @@ export async function waitHealthy(url: string, timeoutMs = 15_000): Promise<void
 }
 
 /**
- * Starts a private server.
+ * Starts a private server — Bun, or the Rust binary under `BATTLEMAP_E2E_SERVER=rust`.
  *
  * @param opts.port - a fixed port (default: a free one)
  * @param opts.dataDir - an existing data folder to use (default: a new temp folder)
@@ -89,9 +118,11 @@ export async function startTestServer(opts: { port?: number; dataDir?: string; e
   let child: ChildProcess | null = null;
 
   const launch = async () => {
-    child = spawn('bun', [join(V2_DIR, 'server', 'src', 'main.ts')], {
-      cwd: join(V2_DIR, 'server'),
-      env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', DATA_DIR: dataDir, ...opts.env },
+    const [program, args, cwd] = serverCommand();
+    child = spawn(program, args, {
+      cwd,
+      // BATTLEMAP_LOG_STDERR: the Rust server's log lines go to stderr too, for `output()`.
+      env: { ...process.env, PORT: String(port), HOST: '127.0.0.1', DATA_DIR: dataDir, BATTLEMAP_LOG_STDERR: '1', ...opts.env },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     const keep = (b: Buffer) => {

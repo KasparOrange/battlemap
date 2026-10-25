@@ -6,6 +6,7 @@
 import { fixture, fixtureGeometry, MAP_SET, topLeftRoom, uploadMap } from './support/maps.ts';
 import { expect, test } from './support/fixtures.ts';
 import { ProtoClient } from './support/proto.ts';
+import { E2E_SERVER } from './support/server.ts';
 import { activeMap, hasHook, startGame, tvState, waitSynced } from './support/table.ts';
 import { buildWallGrid, floodFill } from '../shared/src/index.ts';
 
@@ -38,6 +39,13 @@ test('fixture geometry: four rooms, door 0 joins the top two', () => {
     expect(open.length, f.key).toBe(topLeftRoom(f).length + Math.floor(f.cols / 2) * Math.ceil(f.rows / 2));
   }
   expect(fixture('castle').cols).toBe(114);
+});
+
+test('the run uses the server it was asked for (BATTLEMAP_E2E_SERVER)', async ({ privateServer, baseURL }) => {
+  // The Rust server says `server: "rust"` in /health; the Bun server has no such field.
+  const kind = async (url: string) => ((await (await fetch(`${url}/health`)).json()) as { server?: string }).server ?? 'bun';
+  expect(await kind(privateServer.url)).toBe(E2E_SERVER);
+  expect(await kind(new URL(baseURL ?? '').origin)).toBe(E2E_SERVER);
 });
 
 test('a private server restarts on its own data and the bot reconnects', async ({ privateServer }) => {

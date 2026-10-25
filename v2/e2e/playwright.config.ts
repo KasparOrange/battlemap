@@ -12,13 +12,19 @@
  * emptied at start), so games, library and files of one run never leak into the next. Tests that
  * need their own server use the `privateServer` fixture (`support/fixtures.ts`).
  *
+ * `BATTLEMAP_E2E_SERVER=rust` runs the shared server and every private one on the Rust server:
+ * `server-rs` is built once per run (`cargo build --release`, rustup's cargo first in `PATH`) and
+ * the binary copied to `$TMPDIR/claude-v2-e2e-rs-<server port>/` (`support/server.ts`
+ * `rustServerBin`), so another helper's rebuild can't change it mid-run.
+ *
  * Traces and screenshots of failures stay on disk under `$TMPDIR/claude-v2-e2e-results-<app port>/`, the JSON
  * report in `$TMPDIR/claude-v2-e2e-report-<app port>.json` (never printed);
  * open one with `bunx playwright show-trace <path>/trace.zip`.
  */
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { defineConfig } from '@playwright/test';
+import { E2E_SERVER, rustServerBin } from './support/server.ts';
 
 /** Ports: `BATTLEMAP_APP_PORT` / `BATTLEMAP_SERVER_PORT` let parallel helpers run their own pair. */
 const APP_PORT = Number(process.env.BATTLEMAP_APP_PORT ?? 5884);
@@ -33,7 +39,12 @@ const APP_ENV = { BATTLEMAP_APP_PORT: String(APP_PORT), BATTLEMAP_SERVER: `http:
 const APP_ORIGIN = `http://localhost:${DEV ? APP_PORT : SERVER_PORT}`;
 // `exec`, so the server is the process Playwright stops at the end — through `bun run` it was a
 // grandchild that outlived the run, and the next run reused it with the old build.
-const SERVER_CMD = `rm -rf "${DATA_DIR}" && cd ../server && exec bun src/main.ts`;
+const RS_BIN = rustServerBin(SERVER_PORT);
+/** Builds `server-rs` and copies the binary to the run's private path (Rust runs only). */
+const RS_BUILD_CMD = `(cd ../server-rs && PATH="/opt/homebrew/opt/rustup/bin:$PATH" cargo build --release --quiet) && mkdir -p "${dirname(RS_BIN)}" && cp ../server-rs/target/release/battlemap-server "${RS_BIN}"`;
+const SERVER_CMD = E2E_SERVER === 'rust'
+  ? `rm -rf "${DATA_DIR}" && ${RS_BUILD_CMD} && cd ../server-rs && exec "${RS_BIN}"`
+  : `rm -rf "${DATA_DIR}" && cd ../server && exec bun src/main.ts`;
 const BUILD_CMD = `rm -rf "${APP_DIR}" && (cd ../app && bunx vite build --outDir "${APP_DIR}" --logLevel warn)`;
 /** Flows that load the app's source modules (only the dev server has them). */
 const MODULE_FLOWS = /[\\/]import-[^\\/]*\.e2e\.ts$/;
@@ -69,12 +80,12 @@ export default defineConfig({
   ],
   webServer: DEV
     ? [
-        { command: SERVER_CMD, url: `http://localhost:${SERVER_PORT}/health`, env: SERVER_ENV, reuseExistingServer: true, timeout: 20_000 },
+        { command: SERVER_CMD, url: `http://localhost:${SERVER_PORT}/health`, env: SERVER_ENV, reuseExistingServer: true, timeout: E2E_SERVER === 'rust' ? 600_000 : 20_000 },
         { command: 'bun run --cwd ../app dev', url: `http://localhost:${APP_PORT}/app/`, env: APP_ENV, reuseExistingServer: true, timeout: 30_000 },
       ]
     : [
         // Build first, then serve build + server from one process; ready when the app answers.
-        { command: `${BUILD_CMD} && ${SERVER_CMD}`, url: `http://localhost:${SERVER_PORT}/app/`, env: SERVER_ENV, reuseExistingServer: REUSE, timeout: 240_000 },
+        { command: `${BUILD_CMD} && ${SERVER_CMD}`, url: `http://localhost:${SERVER_PORT}/app/`, env: SERVER_ENV, reuseExistingServer: REUSE, timeout: E2E_SERVER === 'rust' ? 600_000 : 240_000 },
         { command: 'bun run --cwd ../app dev', url: `http://localhost:${APP_PORT}/app/`, env: APP_ENV, reuseExistingServer: false, timeout: 60_000 },
       ],
 });
