@@ -56,6 +56,7 @@
         return;
       case 'map-shown':
         ctx.mapLoading = null;
+        ctx.mapShown();
         return;
       case 'map-failed':
         ctx.mapLoading = null;

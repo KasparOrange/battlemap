@@ -57,6 +57,8 @@ export class GameScreenContext implements GameContext {
   private readonly listeners = new Set<(c: Camera) => void>();
   private readonly disposers: (() => void)[] = [];
   private shownMap: string | null = null;
+  /** The DM moved the camera since the view fitted the map on the table. */
+  private movedSinceMap = false;
 
   /**
    * @param config - the page's configuration
@@ -143,7 +145,11 @@ export class GameScreenContext implements GameContext {
   attach(view: MapViewPort): void {
     this.view = view;
     this.seen = view.dmCamera();
-    this.disposers.push(view.onCameraChange((c) => this.cameraChanged(c)));
+    this.disposers.push(view.onCameraChange((c, why) => {
+      if (why === 'map') this.movedSinceMap = false;
+      else if (why === 'set') this.movedSinceMap = true;
+      this.cameraChanged(c);
+    }));
     if (this.session.view) this.draw(this.session.view);
   }
 
@@ -180,6 +186,15 @@ export class GameScreenContext implements GameContext {
    */
   setInsets(insets: Insets): void {
     this.view?.setDmInsets(insets);
+  }
+
+  /**
+   * The map picture is drawn: fit it once more unless the DM already moved. The view's first fit
+   * can run on the host's size before the screen's layout settled (phone, qa#8), so the fit is
+   * repeated on the size the map is actually shown at.
+   */
+  mapShown(): void {
+    if (!this.movedSinceMap) this.view?.fitDmCamera();
   }
 
   /** Centres the companion on what the TV shows, zoomed so all of it fits. */
