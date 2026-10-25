@@ -1,0 +1,10 @@
+{
+  "name": "battlemap-v2",
+  "private": true,
+  "type": "module",
+  "workspaces": ["shared"],
+  "scripts": {
+    "test": "bun test",
+    "check": "bun run --filter '*' check"
+  }
+}
