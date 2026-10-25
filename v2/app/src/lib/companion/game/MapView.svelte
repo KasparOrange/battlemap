@@ -11,6 +11,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { log } from '../../log.ts';
+  import { notify } from '../../ui/notice.svelte.ts';
+  import { toScreen } from '../input/camera.ts';
   import { bindPointers, MapInputController } from '../input/map-input.ts';
   import type { GameScreenContext } from './context.svelte.ts';
   import { openTableView, type TableViewHandle } from './table-view.ts';
@@ -65,7 +67,26 @@
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     measure();
-    openTableView(el, { log, fileUrl: (ref) => ctx.fileUrl(ref) })
+    if (new URL(location.href).searchParams.get('debug') === '1') {
+      // e2e hook: where a map point is on the page (client px)
+      (window as unknown as Record<string, unknown>).__bmMap = {
+        toClient: (x: number, y: number) => {
+          const r = el.getBoundingClientRect();
+          const p = toScreen(ctx.cam, ctx.viewport, { x, y });
+          return { x: r.left + p.x, y: r.top + p.y };
+        },
+        camera: () => ctx.cam,
+      };
+    }
+    openTableView(el, {
+      log,
+      fileUrl: (ref) => ctx.fileUrl(ref),
+      serverUrl: ctx.config.serverUrl,
+      onMapFailed: (error) => {
+        log.warn('companion', 'Map picture not loaded', { error });
+        notify("Couldn't load the map picture — check the connection.", { kind: 'error' });
+      },
+    })
       .then((v) => {
         if (gone) v.destroy();
         else view = v;

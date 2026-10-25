@@ -229,7 +229,6 @@ export function bindPointers(el: HTMLElement, controller: MapInputController): (
   el.addEventListener('pointermove', move);
   el.addEventListener('pointerup', up);
   el.addEventListener('pointercancel', cancel);
-  el.addEventListener('lostpointercapture', cancel);
   el.addEventListener('wheel', wheel, { passive: false });
   el.addEventListener('contextmenu', menu);
   addEventListener('keydown', key);
@@ -239,7 +238,6 @@ export function bindPointers(el: HTMLElement, controller: MapInputController): (
     el.removeEventListener('pointermove', move);
     el.removeEventListener('pointerup', up);
     el.removeEventListener('pointercancel', cancel);
-    el.removeEventListener('lostpointercapture', cancel);
     el.removeEventListener('wheel', wheel);
     el.removeEventListener('contextmenu', menu);
     removeEventListener('keydown', key);

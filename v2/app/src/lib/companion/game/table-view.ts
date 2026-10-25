@@ -40,11 +40,20 @@ export interface OpenOptions {
   log: Logger;
   /** URL of a file on the server (the sketch loads the map picture itself). */
   fileUrl: (ref: FileRef) => string;
+  /** The server's base URL (the renderer's file loader). */
+  serverUrl: string;
+  /** A map picture failed to load (the DM must hear of it). */
+  onMapFailed?: (error: string) => void;
 }
 
 /** The renderer module's shape as far as the companion uses it. */
 interface RenderModule {
-  createTableView?: (host: HTMLElement, options: { profile: 'dm' | 'players'; log: Logger }) => TableViewHandle | Promise<TableViewHandle>;
+  createTableView?: (host: HTMLElement, options: {
+    profile: 'dm' | 'players';
+    log: Logger;
+    serverUrl?: string;
+    onEvent?: (e: { type: string; error?: string }) => void;
+  }) => TableViewHandle & { ready?: Promise<void> };
 }
 
 const renderModules = import.meta.glob<RenderModule>('../../render/index.ts');
@@ -62,9 +71,22 @@ export async function openTableView(host: HTMLElement, options: OpenOptions): Pr
     try {
       const mod = await load();
       if (mod.createTableView) {
-        const view = await mod.createTableView(host, { profile: 'dm', log: options.log });
-        options.log.info('companion', 'Table view: renderer');
-        return view;
+        const view = mod.createTableView(host, {
+          profile: 'dm',
+          log: options.log,
+          serverUrl: options.serverUrl,
+          onEvent: (e) => {
+            if (e.type.includes('fail') && e.type !== 'renderer-failed') options.onMapFailed?.(e.error ?? e.type);
+          },
+        });
+        try {
+          await view.ready;
+          options.log.info('companion', 'Table view: renderer');
+          return view;
+        } catch (e) {
+          view.destroy();
+          throw e;
+        }
       }
     } catch (e) {
       options.log.error('companion', 'Renderer failed — using the sketch view', { error: String(e) });

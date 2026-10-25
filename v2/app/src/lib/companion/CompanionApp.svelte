@@ -61,6 +61,7 @@
     switch (msg.type) {
       case 'tv.status': {
         const text = typeof msg.busy === 'string' ? msg.busy : null;
+        if (!!text !== !!busy) log.info('companion', text ? 'TV busy' : 'TV ready', { text });
         busy = text ? { text, progress: typeof msg.progress === 'number' ? msg.progress : null } : null;
         return;
       }
