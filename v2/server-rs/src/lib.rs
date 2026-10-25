@@ -17,12 +17,17 @@
 //! | [`schema`] | the shared types' JSON Schema (generated from `shared/`) |
 //! | [`wire`] | every JSON type the server writes; TypeScript for the server-only ones |
 //! | [`fsx`] | atomic writes, JSON files, per-key locks, times |
+//! | [`embed`] | the server inside another program (start/stop calls, a log ring) |
+//! | `android` | the JNI glue for the Android shell (Android builds only) |
 //!
 //! See `../docs/server-rs.md`.
 
+#[cfg(target_os = "android")]
+pub mod android;
 pub mod backups;
 pub mod cleanup;
 pub mod config;
+pub mod embed;
 pub mod fetch;
 pub mod files;
 pub mod fsx;

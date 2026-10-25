@@ -6,6 +6,10 @@ description = "battlemap v2's server in Rust: relay rooms, files + Store as, sha
 license = "MIT"
 publish = false
 
+[lib]
+# rlib for the binary and the tests; cdylib = libbattlemap_server.so for the Android shell (JNI).
+crate-type = ["rlib", "cdylib"]
+
 [dependencies]
 anyhow = "1"
 axum = { version = "0.8", default-features = false, features = ["http1", "json", "query", "tokio", "ws"] }
@@ -32,6 +36,9 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", default-features = false, features = ["registry", "std", "fmt"] }
 url = "2"
 webp = { version = "0.3", default-features = false }
+
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { version = "0.21", default-features = false }
 
 [dev-dependencies]
 ts-rs = { version = "11", features = ["serde-json-impl"] }

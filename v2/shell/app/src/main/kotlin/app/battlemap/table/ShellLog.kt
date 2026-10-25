@@ -64,6 +64,15 @@ object ShellLog {
     /** A new page started loading: buffer again until it calls `takeLogs()`. */
     fun pageStarted() = synchronized(lock) { pageListening = false }
 
+    /**
+     * A line from the table server ([TableServer]): already in logcat (tag `battlemap-server`),
+     * so it only goes to the page, prefixed `server:`, with the server's own time [t].
+     */
+    fun fromServer(level: String, msg: String, t: Long) {
+        val entry = JSONObject().put("t", if (t > 0) t else System.currentTimeMillis()).put("level", level).put("msg", "server: $msg")
+        deliver(entry)
+    }
+
     private fun line(level: String, msg: String, err: Throwable?) {
         val text = if (err != null) "$msg: ${err.javaClass.simpleName}: ${err.message}" else msg
         when (level) {
@@ -76,6 +85,10 @@ object ShellLog {
             .put("t", System.currentTimeMillis())
             .put("level", level)
             .put("msg", text)
+        deliver(entry)
+    }
+
+    private fun deliver(entry: JSONObject) {
         val live = synchronized(lock) {
             if (!pageListening) {
                 buffer.addLast(entry)

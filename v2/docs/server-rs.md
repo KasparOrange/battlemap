@@ -152,29 +152,33 @@ doesn't change it). On the 2 GB box set `LOSSLESS_MAX_PIXELS` to ~8 MP and `IMAG
 VPS keeps Bun's rule (50 MP). The first version used the `jsonschema` crate and sat at 164 MB
 idle — its meta-schema machinery; the small checker in `schema.rs` replaced it.
 
-## Embedding in the shell (next wave, with LAN play)
+## Embedded in the shell (JNI, 2026-10-25)
 
-The shell (Kotlin, `shell/`) will host the table on the box for LAN play: the server listens on
-the box's Wi-Fi address, the TV page and the tablets connect to it instead of the VPS. Two ways
-to run the same Rust code inside the shell; **recommended: a JNI library with a start/stop
-API**, the bundled executable kept as the fallback.
+The shell hosts the table on the TV box for LAN play: the same server code runs inside the
+shell's process as `libbattlemap_server.so` (crate type `cdylib` next to the `rlib`).
 
-| | JNI library (`cdylib`) — recommended | Bundled executable in `jniLibs` |
-|---|---|---|
-| How | the crate also builds `libbattlemap_server.so` with three `extern "system"` functions for a Kotlin `ServerBridge`: `start(port, dataDir, appDir, build): Long` (a tokio runtime on its own threads, returns a handle), `stop(handle)` (the graceful stop above), `health(handle): String` | today's binary renamed `libbattlemap_server.so`, packed under `jniLibs/<abi>/` (`useLegacyPackaging = true` so it is extracted), started with `ProcessBuilder(nativeLibraryDir + "/libbattlemap_server.so")` and env `PORT`, `DATA_DIR` (`filesDir/server`), `APP_DIR` (the bundle), `HOME`; stopped with `Process.destroy()` (SIGTERM → graceful stop) |
-| Lifecycle | owned by a foreground `Service` (the table stays up when the WebView reloads or the screen saver runs) | the same service starts and watches the process, restarts it |
-| Android 12+ | nothing special | a child process is a "phantom process": Android may kill it under pressure or for CPU use in the background |
-| Crash | a Rust panic in a request is caught per task; an abort (out of memory) takes the shell down with it | the server dies alone; the service restarts it |
-| Memory | one process; the server's few MB show up in the shell's | its own process (RSS measured below) |
-| Logs | mwlog-rs (`HOME` = `filesDir`) plus logcat through `android_logger` | mwlog-rs; stderr to logcat by the service |
-| Work | ~100 lines of JNI glue (`jni` crate, a `[lib] crate-type = ["cdylib", "rlib"]`), a Kotlin bridge + service | packaging only, but the phantom-process risk on Google TV 12/14 |
+| Piece | What |
+|---|---|
+| `src/embed.rs` | one server per process: `start(settings, sink)` (KEY=VALUE lines, the env names of the binary + `STATE_DIR`, `HOME`, `WORKER_THREADS`) on its own tokio runtime (2 workers), `stop(grace)` (the graceful stop), `port()`, `take_logs()` — a 500-line ring of the server's info/warn/error lines (mwlog's own `mwlog_ui` lines excluded, else the page's lines would loop back through `/log`) |
+| `src/android.rs` | the JNI glue for Kotlin's `ServerBridge` (`nativeStart`, `nativeStop`, `nativePort`, `nativeTakeLogs`), panics caught, every line also to logcat (tag `battlemap-server`) |
+| `src/log.rs` `init_embedded` | mwlog with the daily files in `STATE_DIR/logs` and the ring layer; never writes to the host's stderr |
+| `shell/…/TableServer.kt`, `TableService.kt` | folders, settings and memory caps, the log pump (ring → `ShellLog` → page → MwLog), the foreground service — `shell.md` "Table server" |
 
-Either way the server code is unchanged: `battlemap_server::start(config, shipper)` returns a
-`Running` with `stop(grace)` — exactly what the JNI `start`/`stop` wrap. For LAN play the shell
-also sets `HOST=0.0.0.0`, a fixed port, and serves the bundle it already holds as `APP_DIR`;
-companions find the box by mDNS/NSD (`_battlemap._tcp`) or a QR code on the TV. Data
-(`files/`, `library.json`, `games/`) lives in the shell's `filesDir`; a later sync with the VPS
-library is its own work package.
+Build: `shell/build.sh` runs `cargo ndk -t arm64-v8a -t x86_64 -o shell/app/build/jniLibs build
+--release --lib` (`BATTLEMAP_ABIS` picks ABIs, `BATTLEMAP_NO_SERVER=1` skips). The libraries are
+9.7 MB (arm64) and 11 MB (x86_64), stored compressed in the APK (+9 MB for both).
+
+Settings on the box (`TableServer.kt`): `PORT` 5930, `HOST` 0.0.0.0, data in
+`files/server/data`, the app in `files/server/app` (the active downloaded bundle, else a copy of
+the APK's built-in one, made once per install: 501 files, 32 MB, 0.5 s on the emulator),
+`LOSSLESS_MAX_PIXELS` 8 MP, `MAX_PIXELS` 64 MP, `IMAGE_SLOTS` 1, `FETCH_SLOTS` 2, 2 workers,
+`BUILD_POLL_MS` 0, `UPSTREAM_URL` = the shell's configured server (the VPS).
+
+Measured on `bm_tv` (Android 14, 2 GB): listening 547 ms after the service started (incl. the
+first app copy); the shell process's RSS 213.6 MB with hosting off vs 222.6 MB with the table
+hosted and the TV page connected — **the server costs ~9 MB**. A JNI library can't be killed
+alone: an abort inside the server (out of memory) takes the shell with it; Rust panics in a
+request are caught per task.
 
 ## Deploy (side by side)
 

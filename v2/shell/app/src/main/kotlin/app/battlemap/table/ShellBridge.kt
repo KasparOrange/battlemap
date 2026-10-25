@@ -125,6 +125,35 @@ class ShellBridge(private val activity: MainActivity) {
     @JavascriptInterface
     fun applyStayAwake(): String = StayAwake.apply(activity).toString()
 
+    /** The table on the LAN: hosting, server, address, code, join URL (JSON, see [Lan.status]). */
+    @JavascriptInterface
+    fun lan(): String = Lan.status(activity).toString()
+
+    /**
+     * Hosts the table on this device (TV mode) or stops hosting. The page reloads so it talks
+     * to the right server.
+     */
+    @JavascriptInterface
+    fun setHostTable(on: Boolean) {
+        if (activity.settings.setHostTable(on)) activity.runOnUiThread { activity.applyHosting(reload = true) }
+    }
+
+    /** The TV page tells the shell its table id and name (for the LAN announcement). */
+    @JavascriptInterface
+    fun announceTable(tableId: String, name: String) {
+        if (activity.settings.setTable(tableId, name) && TableServer.running) Thread { LanAnnouncer.start(activity) }.start()
+    }
+
+    /** Companion: look for hosted tables on the LAN (`tables` events) or stop looking. */
+    @JavascriptInterface
+    fun discoverTables(on: Boolean) {
+        if (on) LanDiscovery.start(activity) else LanDiscovery.stop()
+    }
+
+    /** The tables found on the LAN so far (JSON array of `{service, table, name, host, port, url}`). */
+    @JavascriptInterface
+    fun lanTables(): String = LanDiscovery.list().toString()
+
     /** Starts saving a file into Downloads; returns its id (see [FileSaver]). */
     @JavascriptInterface
     fun saveBegin(name: String, mime: String): Int = activity.fileSaver.begin(name, mime)

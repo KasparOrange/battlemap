@@ -142,6 +142,8 @@ class MainActivity : ComponentActivity() {
         web?.let(::trimHttpCacheOnTv)
         applyStartMode()
         onBackPressedDispatcher.addCallback(this, backCallback)
+        Lan.onHostChanged = { main.post { if (!isDestroyed && pageUsesLocal != wantsLocal()) loadStart() } }
+        applyHosting(reload = false)
         loadStart()
         // Started by the installer after a self-update: log the result for the new page.
         if (intent?.action == ApkInstaller.ACTION_STATUS) ApkInstaller.onStatus(this, intent)
@@ -159,7 +161,24 @@ class MainActivity : ComponentActivity() {
         if (intent.getStringExtra("page") == null) settings.clearPage()
         settings.applyIntent(intent)
         applyStartMode()
+        applyHosting(reload = false)
         loadStart()
+    }
+
+    /** What the loaded page uses as its server: true = this device's table server. */
+    @Volatile
+    private var pageUsesLocal = false
+
+    /** The page should use the local table server: hosting is on and the server didn't fail. */
+    private fun wantsLocal(): Boolean = settings.hostTable && TableServer.lastError == null
+
+    /**
+     * Starts or stops the table server to match [ShellSettings.hostTable] (TV mode, default on);
+     * with [reload] the page reloads to switch servers.
+     */
+    fun applyHosting(reload: Boolean) {
+        if (settings.hostTable) TableService.startIfWanted(this, settings) else if (TableServer.running) TableService.stop(this)
+        if (reload) loadStart()
     }
 
     /** Loads the start page: the one-shot shell page, else the dev URL, else the bundled app. */
@@ -173,8 +192,10 @@ class MainActivity : ComponentActivity() {
 
     private fun startUrl(): String {
         settings.page?.let { page -> ShellSettings.pageUrl(page)?.let { return it } }
-        settings.devUrl?.let { return settings.withStartParams(it) }
-        if (bundles.hasApp()) return settings.withStartParams(Origins.APP + "index.html")
+        val local = if (wantsLocal()) "http://127.0.0.1:${TableServer.PORT}" else null
+        pageUsesLocal = local != null
+        settings.devUrl?.let { return settings.withStartParams(it, local) }
+        if (bundles.hasApp()) return settings.withStartParams(Origins.APP + "index.html", local)
         return Origins.SHELL + "index.html?reason=no-app"
     }
 
@@ -495,6 +516,7 @@ class MainActivity : ComponentActivity() {
             .put("keepAwake", keepAwake)
             .put("startOnBoot", settings.startOnBoot)
             .put("stayAwake", StayAwake.status(this))
+            .put("lan", Lan.status(this))
             .put("device", device.toJson())
             .put(
                 "display",
@@ -542,6 +564,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        Lan.onHostChanged = null
         PageEvents.attach(null)
         web?.let {
             root.removeView(it)
@@ -580,7 +603,7 @@ class MainActivity : ComponentActivity() {
         private val BACKGROUND = Color.parseColor("#0F1115")
         const val MB = 1024L * 1024L
         const val TV_HTTP_CACHE_MAX = 64 * MB
-        val EXTRAS = setOf("url", "mode", "page", "server", "boot")
+        val EXTRAS = setOf("url", "mode", "page", "server", "boot", "host")
 
         /** Dispatches the cancelable `back` event; evaluates to true when the page handled it. */
         const val BACK_SCRIPT = "(function(){try{var e=new CustomEvent('battlemapshell'," +

@@ -26,6 +26,7 @@ object Origins {
  * - `mode` — `tv`, `companion` or `auto` (persisted; auto = TV devices start as tv).
  * - `server` — the battlemap server's base URL handed to the app (persisted; `off` clears).
  * - `boot` — `on`/`off`: start into TV mode when the device boots (TV only, persisted).
+ * - `host` — `on`/`off`: host the table on this device in TV mode (default on; persisted).
  * - `page` — one of the shell pages for this launch only: `probe`, `keys` (alias `home`);
  *   a query may follow, e.g. `probe?seconds=30`.
  */
@@ -72,6 +73,48 @@ class ShellSettings(context: Context, private val device: Device) {
         return true
     }
 
+    /**
+     * Host the table on this device (the Rust server in [TableService], LAN play without
+     * internet): on by default in TV mode, never in companion mode.
+     */
+    val hostTable: Boolean get() = startMode == "tv" && prefs.getBoolean(KEY_HOST, true)
+
+    /**
+     * Turns hosting on or off (TV mode).
+     *
+     * @return true when the stored value changed.
+     */
+    fun setHostTable(on: Boolean): Boolean {
+        if (prefs.getBoolean(KEY_HOST, true) == on) return false
+        prefs.edit().putBoolean(KEY_HOST, on).apply()
+        ShellLog.info("host the table on this device: ${if (on) "on" else "off"}")
+        return true
+    }
+
+    /**
+     * The table (relay room) this TV hosts: what the page announced ([setTable]), else the
+     * app's own default for a new TV (`table-` + the first 8 characters of the device id, as
+     * `app/src/lib/config.ts` makes it).
+     */
+    val tableId: String get() = prefs.getString(KEY_TABLE, null) ?: "table-${deviceId.take(8)}"
+
+    /** The table's name as the page announced it, or null. */
+    val tableName: String? get() = prefs.getString(KEY_TABLE_NAME, null)
+
+    /**
+     * Remembers the table id and name the TV page uses (for the LAN announcement).
+     *
+     * @return true when either changed.
+     */
+    fun setTable(id: String, name: String): Boolean {
+        val cleanId = id.trim().take(64)
+        val cleanName = name.trim().take(60)
+        if (cleanId.isEmpty() || (cleanId == prefs.getString(KEY_TABLE, null) && cleanName == tableName)) return false
+        prefs.edit().putString(KEY_TABLE, cleanId).putString(KEY_TABLE_NAME, cleanName.ifEmpty { null }).apply()
+        ShellLog.info("table announced by the page: $cleanId ($cleanName)")
+        return true
+    }
+
     /** `tv` or `companion` when forced, null when automatic. */
     val modeOverride: String? get() = prefs.getString(KEY_MODE, null)
 
@@ -89,6 +132,7 @@ class ShellSettings(context: Context, private val device: Device) {
         extras.getString("url")?.let { changed = setDevUrl(it) || changed }
         extras.getString("mode")?.let { changed = setStartMode(it) || changed }
         extras.getString("server")?.let { changed = setServerUrl(it) || changed }
+        extras.getString("host")?.let { changed = setHostTable(it == "on" || it == "true" || it == "1") || changed }
         extras.getString("boot")?.let { setStartOnBoot(it == "on" || it == "true" || it == "1") }
         extras.getString("page")?.let { requested ->
             if (pageUrl(requested) != null) {
@@ -173,9 +217,11 @@ class ShellSettings(context: Context, private val device: Device) {
 
     /**
      * Adds the app's start parameters to [url] — `mode`, `device` and, when set, `server`
-     * (v2/docs/architecture.md "clients") — leaving any the URL already has.
+     * (v2/docs/architecture.md "clients") — leaving any the URL already has. With [localServer]
+     * (this TV hosts the table) `server` is that local URL and `upstream` the configured
+     * internet server (backups, library while online).
      */
-    fun withStartParams(url: String): String {
+    fun withStartParams(url: String, localServer: String? = null): String {
         val uri = Uri.parse(url)
         val builder = uri.buildUpon()
         fun add(name: String, value: String?) {
@@ -183,7 +229,12 @@ class ShellSettings(context: Context, private val device: Device) {
         }
         add("mode", startMode)
         add("device", deviceId)
-        add("server", serverUrl)
+        if (localServer != null) {
+            add("server", localServer)
+            add("upstream", serverUrl)
+        } else {
+            add("server", serverUrl)
+        }
         return builder.build().toString()
     }
 
@@ -205,6 +256,9 @@ class ShellSettings(context: Context, private val device: Device) {
         private const val KEY_SERVER = "server"
         private const val KEY_DEVICE = "deviceId"
         private const val KEY_BOOT = "startOnBoot"
+        private const val KEY_HOST = "hostTable"
+        private const val KEY_TABLE = "tableId"
+        private const val KEY_TABLE_NAME = "tableName"
 
         /**
          * Maps a page name (optionally with `?query`) to its URL on the shell origin.

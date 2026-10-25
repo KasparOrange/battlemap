@@ -63,6 +63,25 @@ pub fn init(version: &'static str) -> std::io::Result<mwlog::Guard> {
     })
 }
 
+/// Starts the logging stack for the embedded server ([`crate::embed`]): daily files under
+/// `state_dir/logs/`, plus the host's `layers` (the ring the shell drains, logcat).
+///
+/// # Errors
+/// When a global subscriber is already installed.
+pub fn init_embedded(version: &'static str, state_dir: std::path::PathBuf, layers: Vec<mwlog::BoxLayer>) -> std::io::Result<mwlog::Guard> {
+    mwlog::init(mwlog::Init {
+        app: APP,
+        tenant: "battlemap",
+        version,
+        git: option_env!("GIT_HASH"),
+        crates: &["battlemap_server", "http", "relay", "files", "library", "games", "fetch", "cleanup", "lifecycle", "upstream"],
+        tui: true, // a host process: never write to its stderr
+        state_dir: Some(state_dir),
+        layers,
+        ..Default::default()
+    })
+}
+
 /// With `BATTLEMAP_LOG_STDERR=1`, every line also goes to stderr as text (systemd's journal,
 /// the contract runner's log files) — mwlog only writes to stderr when it is a terminal.
 fn stderr_layer() -> Vec<mwlog::BoxLayer> {

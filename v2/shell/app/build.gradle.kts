@@ -60,9 +60,16 @@ android {
 
     // The shell's own pages + the probe + the web app's dist, assembled by `shellAssets` below.
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/shellAssets"))
+    // The Rust table server (libbattlemap_server.so per ABI), built by build.sh with cargo-ndk.
+    sourceSets["main"].jniLibs.srcDir(layout.buildDirectory.dir("jniLibs"))
 
     // Bundled web assets are already compressed where it matters; keep them stored so the
     // asset loader can stream them without inflating.
+    packaging {
+        // Compressed in the APK (~4 MB instead of ~10 MB per ABI), extracted at install.
+        jniLibs.useLegacyPackaging = true
+    }
+
     androidResources {
         noCompress += listOf("webp", "png", "jpg", "wasm", "woff2")
     }

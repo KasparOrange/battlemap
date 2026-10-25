@@ -40,6 +40,21 @@ case "$WHAT" in
   *) echo "usage: $0 [debug|release|all]"; exit 2 ;;
 esac
 
+# The Rust table server as a JNI library (LAN play): arm64 for the box and tablets, x86_64 for
+# x86 emulators. BATTLEMAP_ABIS="arm64-v8a" builds one; BATTLEMAP_NO_SERVER=1 skips it (the APK
+# then can't host a table — TableServer reports the missing library).
+if [ "${BATTLEMAP_NO_SERVER:-}" != 1 ]; then
+  export PATH="/opt/homebrew/opt/rustup/bin:$HOME/.cargo/bin:$PATH"
+  export ANDROID_NDK_HOME="${ANDROID_NDK_HOME:-$(ls -d "$ANDROID_HOME"/ndk/* | sort -V | tail -1)}"
+  ABI_ARGS=()
+  for abi in ${BATTLEMAP_ABIS:-arm64-v8a x86_64}; do ABI_ARGS+=(-t "$abi"); done
+  echo "building the table server (${BATTLEMAP_ABIS:-arm64-v8a x86_64})"
+  (cd "$HERE/../server-rs" && cargo ndk "${ABI_ARGS[@]}" -o "$HERE/app/build/jniLibs" build --release --lib 2>&1 | grep -E '^(error|warning: unused)|Finished' || true)
+  for abi in ${BATTLEMAP_ABIS:-arm64-v8a x86_64}; do
+    [ -f "$HERE/app/build/jniLibs/$abi/libbattlemap_server.so" ] || { echo "table server build failed for $abi"; exit 1; }
+  done
+fi
+
 if [ -f "$HERE/../app/dist/index.html" ]; then
   echo "bundling the web app from v2/app/dist"
 else

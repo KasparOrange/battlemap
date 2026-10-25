@@ -178,6 +178,22 @@ trip to Home is not sent, review #3), `download` (`started`/`saved`/`failed`, `w
   (otherwise Android blocks the start from the background and the TV lands on the launcher).
   Do both appops once on the box and the tablet.
 
+## Table server (LAN play)
+
+The TV hosts the table itself — the Rust server (`server-rs.md` "Embedded in the shell") runs
+inside the shell, so tablets on the same Wi-Fi play without internet.
+
+- **"Host the table on this TV"** (`ShellSettings.hostTable`): on by default in TV mode, never in
+  companion mode; `setHostTable(on)` from the page, adb `--es host on|off`. When on, the
+  foreground service `TableService` starts `TableServer` (port **5930** on every interface) with
+  a Wi-Fi lock and a notification ("battlemap is hosting the table"); after a boot the
+  `BootReceiver` starts it too (with start on boot on).
+- The TV page then loads with `server=http://127.0.0.1:5930&upstream=<configured server>`: its
+  relay, files and library are the box's own; `upstream` (the VPS) is for game backups while
+  online. If the server fails to start, the page reloads with the configured server.
+- Server log lines reach the page every 2 s as shell lines prefixed `server:` (→ MwLog with
+  `src=shell`), and logcat under the tag `battlemap-server`.
+
 ## Power cut, sleep, downloads
 
 - **Start on boot (TV-05):** with `setStartOnBoot(true)` (or adb `--es boot on`) the box opens
