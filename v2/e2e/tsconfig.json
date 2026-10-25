@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["bun"],
+    "typeRoots": ["../shared/node_modules/@types", "../node_modules/@types"]
+  },
+  "include": ["playwright.config.ts", "harness.e2e.ts", "game-night.e2e.ts", "devices.e2e.ts", "support", "../tools"]
+}
