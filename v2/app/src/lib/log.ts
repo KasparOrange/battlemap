@@ -12,6 +12,7 @@
 import { createBrowserLog, type BrowserLog } from 'mwlog/browser';
 import { appConfig } from './config.ts';
 import { createOutbox } from './log-outbox.ts';
+import { LogRing } from './log-ring.ts';
 import { onShellEvent, takeShellLogs } from './shell.ts';
 
 /** What every module needs from a logger (the browser forwarder has more). */
@@ -42,9 +43,18 @@ export const logOutbox = createOutbox({
   })(),
 });
 
+/**
+ * The page's last 500 log lines for the developer screen: `logRing.lines()`,
+ * `logRing.subscribe(fn)` (returns the unsubscribe), `logRing.clear()` (`log-ring.ts`).
+ */
+export const logRing = new LogRing(500);
+
 /** The logger. */
 export const log: BrowserLog = createBrowserLog({
-  send: (lines) => logOutbox.send(lines),
+  send: (lines) => {
+    logRing.push(lines);
+    return logOutbox.send(lines);
+  },
   console: Boolean(import.meta.env?.DEV),
   context: {
     build: config.build,
