@@ -7,7 +7,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { init } from 'mwlog';
 import { PROTOCOL_VERSION } from '@battlemap/shared';
-import { readConfig } from '../src/config.ts';
+import { readConfig, type RelayLimits, type ServerConfig } from '../src/config.ts';
+import type { Downloader } from '../src/fetch/download.ts';
 import { startServer, type RunningServer } from '../src/server.ts';
 
 process.env.MWLOG_DISABLE = '1';
@@ -20,30 +21,52 @@ export interface TestServer {
   base: string;
   /** Its app folder. */
   appDir: string;
+  /** Its data folder. */
+  dataDir: string;
   /** Stops it and removes the folder. */
   stop(): Promise<void>;
 }
 
+/** Settings a test may change. */
+export interface TestOptions {
+  /** A fake downloader for the link fetch (default: one that refuses, so tests never go online). */
+  download?: Downloader;
+  /** Relay limits to change. */
+  relay?: Partial<RelayLimits>;
+  /** Other settings to change. */
+  config?: Partial<ServerConfig>;
+}
+
 /**
- * Starts a server on a free port with a tiny built app.
+ * Starts a server on a free port with a tiny built app and a temp data folder.
  *
  * @param helloTimeoutMs - how long sockets may wait before hello
+ * @param opts - fake downloader, limits
  * @returns the server
  */
-export async function testServer(helloTimeoutMs = 8_000): Promise<TestServer> {
+export async function testServer(helloTimeoutMs = 8_000, opts: TestOptions = {}): Promise<TestServer> {
   const dir = mkdtempSync(join(tmpdir(), 'claude-v2-server-'));
   const appDir = join(dir, 'dist');
   mkdirSync(join(appDir, 'assets'), { recursive: true });
   writeFileSync(join(appDir, 'index.html'), '<!doctype html><title>app</title>');
   writeFileSync(join(appDir, 'assets', 'a-123.js'), 'console.info(1)');
   writeFileSync(join(appDir, 'build.json'), JSON.stringify({ build: 'test-build' }));
-  const config = { ...readConfig({ PORT: '0', HOST: '127.0.0.1' }), appDir, dataDir: join(dir, 'data'), helloTimeoutMs, buildPollMs: 0 };
+  const base = readConfig({ PORT: '0', HOST: '127.0.0.1' });
+  const dataDir = join(dir, 'data');
+  const config: ServerConfig = {
+    ...base, appDir, dataDir, helloTimeoutMs, buildPollMs: 0, cleanupEveryMs: 0, ...opts.config,
+    relay: { ...base.relay, sweepMs: 0, ...opts.relay },
+  };
   const log = init({ app: 'battlemap-v2-test', tenant: 'battlemap', console: false, hooks: false, stateDir: join(dir, 'state') });
-  const server = await startServer(config, log);
+  const offline: Downloader = async () => {
+    throw new Error('tests never go online');
+  };
+  const server = await startServer(config, log, opts.download ?? offline);
   return {
     server,
     base: `http://127.0.0.1:${server.port}`,
     appDir,
+    dataDir,
     async stop() {
       await server.stop();
       rmSync(dir, { recursive: true, force: true });
