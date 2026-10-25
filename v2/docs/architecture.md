@@ -451,3 +451,98 @@ scenario), so a run on the box is readable from MwLog afterwards.
   `http://localhost:5884/app/?mode=tv` and `…?mode=companion`, and Vite proxies `/ws`, `/log`,
   `/api`, `/files` and `/health` to the server, so the browser sees one origin. Registered in
   the launcher as `battlemap-v2`.
+
+## Work packages
+
+The next wave of helpers, one package each, working in parallel. Folders never overlap; a change
+another package's folder (or `shared/`) needs goes into the report, not into their files.
+**Not in any package** (the orchestrator's): `shared/`, `docs/architecture.md`,
+`docs/protocol.md`, the app's root (`app/package.json`, `vite.config.ts`, `main.ts`,
+`App.svelte`, the HTML pages) and the cores `app/src/lib/{config,log,log-outbox,shell}.ts`,
+`lib/net/`, `lib/state/`. Already owned elsewhere: `app/src/lib/ui/` (the kit), `shell/`,
+`assets/`. Dependencies are added by the orchestrator before the wave: `pdfjs-dist` (import),
+`fake-indexeddb` (storage tests), `sharp` (server).
+
+| # | Package | Owns | Main inputs |
+|---|---|---|---|
+| 1 | Server | `server/` | `FileRef`, `LibraryEntry`, `GameSummary`, `Game`, the relay as built |
+| 2 | Renderer | `app/src/lib/render/`, `app/src/Bench.svelte`, `app/src/bench.ts` | `RootState`, `MapPlay`, `tvView`, `TableGrid`, mask/disc/ruler geometry |
+| 3 | TV mode | `app/src/lib/tv/` | `TvSession`, `TvRequest`, storage + renderer seams |
+| 4 | Companion UI | `app/src/lib/companion/` | `CompanionSession`, `Command`, geometry helpers, renderer + import + storage seams, the kit |
+| 5 | Storage + server API | `app/src/lib/storage/`, `app/src/lib/api/` | `Game`, `TableState`, `FileRef`, `LibraryEntry`, `GameSummary` |
+| 6 | Map import | `app/src/lib/import/` | `MapInfo`, `RasterGrid`, `MapGeometry`, `geometry/raster-grid.ts` |
+| 7 | Effects runtime | `app/src/lib/effects/` | `PlacedEffect`, `OneShot`, `EffectAnchor`, the renderer's slots, `assets/` manifest |
+| 8 | QA, flows, devices | `e2e/`, `tools/` | everything, read-only |
+
+**Seams** — each package publishes these from its folder's `index.ts`, so the others code
+against them from day one (a stub that throws "not built yet" is fine at first):
+
+- renderer: `createTableView(host, { profile: 'players' | 'dm', log })` → `{ update(state), setDmCamera(c), dmCamera(), screenToSquares(p), hitTest(p) → token | door | disc | ruler | null, dropTextures(), destroy() }`;
+- storage: `games.list() / get(id) / put(game) / delete(id)`, `settings.get(key) / put(key, v)`, `files.get(ref, onProgress) → Blob` (cache by hash, fetch otherwise);
+- api: `uploadFile(blob, { ext, format }, onProgress) → FileRef`, `library.list() / add(entry) / remove(id)`, `backups.put(game) / list() / get(id)`, `fetchLink(url)`;
+- import: `importFile(file, onProgress) → { map: MapInfo, needsGrid: boolean, detection }`, plus the grid editor's maths (already in `shared/geometry/raster-grid.ts`);
+- effects: `createEffectsRuntime(slots, { profile, scheduler, log })` → `{ update(effects, shots, now), destroy() }`.
+
+**1 · Server.** Files (`POST /files?ext=&format=` hashing and converting with sharp — WebP
+quality 90 or lossless when ≤ 1.5× the lossy size, JPEG over 16383 px, "as is" — `GET
+/files/<hash>.<ext>` immutable), the shared library (`/api/library`), game backups
+(`/api/games`, latest + ten previous), link fetch (`/api/fetch`, public addresses only, Drive and
+Dropbox shares, a page's main picture — the old `/fetch` rules), thumbnails at upload, temp
+cleanup; deploy: a `bun build` bundle, a systemd unit and the Caddy site on the VPS (HTTPS,
+`/ws` upgraded), its own port next to the old 4242/9090. *Done when:* every route has `bun test`
+cases on a temp `DATA_DIR` without network, the VPS serves `https://…/app/` with `/health`
+green, and the old services still answer.
+
+**2 · Renderer.** The `TableScene` and its layers in the order of "rendering": map tiles within
+the texture budget (table density on the TV, tiles ≤ 2048/4096), the fog shader (styles, trim
+revealed edges, reveal fade, preview tint on `dm`), grid, drawings + live stroke, tokens (hidden
+ones faded on `dm`), doors (markers on `dm`, drawn leaves on AI maps), ruler, disc, measure, DM
+layers, the players' frame, the table mask and calibration pattern; the TV camera from
+`tvView`, the DM camera (pinch/pan API, clamps); hit testing; the `memory` event; the bench's
+scenes and its log lines. *Done when:* the bench runs its scenes on the Xiaomi box within the
+budgets (lines in MwLog), idle is 0 frames, pure parts (tile planning, budget, hit tests) have
+tests.
+
+**3 · TV mode.** Start, waiting ("Waiting for the tablet · table …"), library mirror, game,
+calibration pattern; D-pad focus on every control with OK; the badge rules; game requests
+answered from storage (open — also from a server backup —, new, close, delete, rename), autosave
+2 s after a saved change and flushes (switch, close, deploy, page hide), backup after each save,
+reopen the last game on start, `tv.reload`, `tv.status` while loading, `back` from the shell.
+*Done when:* Playwright covers new game → reload → same game back, D-pad-only navigation, and a
+box reset (empty storage) restores a game from the server.
+
+**4 · Companion UI.** Table picker, library (the TV's games + the shared library, Continue
+card), the game screen with the tab rail (landscape tablet) or bottom sheet (phone): Tokens, Fog
+(Brush | Room | Circle, Reveal | Hide, preview, trim), Draw, Measure (ruler, disc editor, measure
+line), Layers, View (table window, overview, arrows, whole map, rotate, TV follows), Settings
+(maps in this game, grid, calibration dialog with the pivot, overscan); gesture input
+(`companion/input/`: one finger = tool, two = camera, late finger rules, hit priority, rates);
+undo/redo; every IO with feedback via the kit. *Done when:* the companion items of
+`docs/parity.md` are wired, Playwright walks the tabs against a TV page, and it works one-handed
+on a phone and on the landscape tablet.
+
+**5 · Storage + server API.** The IndexedDB layer (database `battlemap`: `games`, `settings`,
+`files`), persistent-storage request, quota handling (logged, a notice), the file cache with
+progress, and typed clients for the server's HTTP API with progress for uploads/downloads.
+*Done when:* tested with `fake-indexeddb` and a fake server (bun test), errors and slow steps
+logged, used by TV mode and the companion.
+
+**6 · Map import.** `.dd2vtt` → picture + geometry file (walls and doors in squares, origin
+subtracted, `draw_doors`), PDF page 1 via pdf.js (lazy-loaded, ≤ 4096 px), pictures (WebP/JPEG/
+PNG), embedded grid detection (port of `lib/model/grid_detect.dart` and its tests), squares from
+the file name, the table copy (≤ 72 px per square) and the thumbnail (288 px), then the upload.
+Heavy work in a worker. *Done when:* the test map set (`docs/test-session.md`) imports with the
+right squares, the grid-detection tests pass, no main-thread task over 50 ms.
+
+**7 · Effects runtime.** The registry, anchors (global, region, point, token — hidden with its
+token), instances with `update / setParams / destroy`, diffing against `MapPlay.effects` and
+`live.shots` (each shot once, stale ones skipped), render leases, the `effects` setting, cost
+reporting; a first set from `assets/` (a torch glow, rain, a burst) to prove the slots.
+*Done when:* tests for diffing and de-duplication, and bench scenes with effects stay within the
+frame budget on the box.
+
+**8 · QA, flows, devices.** Playwright flows of a game night (port of `docs/test-session.md`:
+ten maps, several maps per game, fog, doors, tokens, disc, calibration), a scripted
+companion-as-bot for soak tests (the old bench robot's job), the bench run on the Android
+emulators and the real box through the shell, a device deploy script. *Done when:* `bun run e2e`
+runs the game night green, and a bench report from the box is in MwLog.
