@@ -28,6 +28,7 @@
   import { collectTabs, DEFAULT_TAB, type MapTool, type TabDef } from './tabs.ts';
   import { canRedo, canUndo, undoKey } from './undo.ts';
   import { hiddenTabs } from '../session-settings/settings-logic.ts';
+  import CurtainButton from '../tabs/scenes/CurtainButton.svelte';
 
   interface Props {
     /** The page's configuration. */
@@ -204,6 +205,7 @@
 
     <div class="corner tr" data-ctl={phone ? 'toolbar' : 'standalone'}>
       {#if !tvOk}<Badge text="TV not connected" icon="warning" tone="warn" />{/if}
+      <CurtainButton {ctx} />
       <IconButton
         icon="tv"
         label={tvOk ? 'The table — connected' : 'The table — not connected'}

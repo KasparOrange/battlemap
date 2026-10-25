@@ -6,7 +6,8 @@
  * for a frame only when something on screen changed.
  *
  * Layer order, bottom to top: map · fx.ground · grid · drawings · tokens · fog · doors · fx.air
- * · dmLayers · tools · dmFrame — then in screen space: tableMask · fx.screen.
+ * · dmLayers · tools · dmFrame — then in screen space: tableMask · fx.screen · curtain (TV only,
+ * `curtain-layer.ts`: while it falls the scene keeps drawing the state from before).
  */
 import { Container } from 'pixi.js';
 import {
@@ -26,6 +27,7 @@ import { TableMask } from './table-mask.ts';
 import { DM_BUDGET, effectsBudget, TV_BUDGET, type TextureBudget } from './tiles.ts';
 import { TokensLayer } from './tokens-layer.ts';
 import { ToolsLayer } from './tools-layer.ts';
+import { CurtainLayer } from './curtain-layer.ts';
 import type { CameraChange, EffectSlots, EffectsRuntime, FileLoader, TableViewOptions, ViewProfile } from './types.ts';
 
 /** The named containers of the scene, bottom to top. */
@@ -65,6 +67,12 @@ export class TableScene {
   private readonly frame: PlayersFrame | null;
   private readonly mask: TableMask | null;
   private effects: EffectsRuntime | null = null;
+  /** The TV's curtain (null on the DM's view). */
+  private readonly curtain: CurtainLayer | null;
+  /** A state that came while the curtain fell, drawn once it is down. */
+  private heldBack: RootState | null = null;
+  /** Whether the map on the table is on screen (the curtain lifts once it is). */
+  private mapReady = true;
   /** The screen's texture budget (map, and everything else). */
   readonly budget: TextureBudget;
 
@@ -126,7 +134,11 @@ export class TableScene {
       preferTableCopy: !this.dm,
       mipmaps: this.dm,
       log: opts.log,
-      onEvent: (e) => opts.onEvent?.(e),
+      onEvent: (e) => {
+        if (e.type === 'map-loading') this.mapReady = false;
+        else if (e.type === 'map-shown' || e.type === 'map-failed') this.mapReady = true;
+        opts.onEvent?.(e);
+      },
       invalidate,
       upload: (t) => r.app.renderer.texture.initSource(t.source),
     });
@@ -144,6 +156,24 @@ export class TableScene {
       : null;
     this.frame = this.dm ? new PlayersFrame(this.slots.dmFrame) : null;
     this.mask = this.dm ? null : new TableMask(this.slots.tableMask);
+    this.curtain = this.dm
+      ? null
+      : new CurtainLayer(r.app.stage, {
+        scheduler: r.scheduler,
+        log: opts.log,
+        viewport: () => this.size,
+        mapReady: () => this.mapReady || !this.map,
+        setCovered: (covered) => {
+          r.world.visible = !covered;
+          this.slots.tableMask.visible = !covered;
+          this.slots.fxScreen.visible = !covered;
+        },
+        release: () => {
+          const held = this.heldBack;
+          this.heldBack = null;
+          if (held) this.update(held);
+        },
+      });
     if (opts.effects) {
       try {
         this.effects = opts.effects(this.effectSlots(), { profile: this.profile, scheduler: r.scheduler, log: opts.log, budgetBytes: effectsBudget(budget), ...(opts.now ? { now: opts.now } : {}) });
@@ -213,6 +243,15 @@ export class TableScene {
   update(state: RootState): void {
     const prev = this.state;
     if (state === prev) return;
+    if (this.curtain) {
+      // the curtain falling keeps the old state on screen; a new game (or the first) snaps it
+      const snap = !prev || (state.game?.id ?? null) !== (this.game?.id ?? null);
+      if (this.curtain.want(state.game?.curtain ?? null, state.game?.name ?? '', snap)) {
+        this.heldBack = state;
+        return;
+      }
+      this.heldBack = null;
+    }
     this.state = state;
     const game = state.game;
     const map = game ? (game.maps[game.activeMapId] ?? null) : null;
@@ -583,6 +622,7 @@ export class TableScene {
     this.stopResize();
     this.cameraListeners.clear();
     this.effects?.destroy();
+    this.curtain?.destroy();
     this.mapLayer.destroy();
     this.grid.destroy();
     this.drawings.destroy();
