@@ -20,10 +20,17 @@
  */
 import {
   check, emptyLive, Game as GameSchema, newGame, newId, tableGrid,
-  type Command, type Game, type GameSummary, type LibraryEntry, type MapInfo, type NewGameInput, type RootState,
+  type Command, type Game, type GameSummary, type LibraryEntry, type NewGameInput, type RootState,
 } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
+import { BackupQueue } from './backup-queue.ts';
+import { gameNameFor, mergeListings, withOpenGame } from './listing.ts';
 import type { TvPorts } from './ports.ts';
+import { errorText, realTimers, withTimeout, type Timers } from './timers.ts';
+
+export { BACKUP_RETRY_MS } from './backup-queue.ts';
+export { gameNameFor, mergeListings, summarize, withOpenGame } from './listing.ts';
+export type { Timers } from './timers.ts';
 
 /** Settings key: the id of the game that was open (null after a close). */
 export const KEY_LAST_GAME = 'tv.lastGame';
@@ -32,8 +39,6 @@ export const KEY_TABLE = 'tv.table';
 
 /** Default wait after the last change before the game is saved, ms. */
 export const SAVE_DELAY_MS = 2000;
-/** Wait before a failed backup is tried again, ms. */
-export const BACKUP_RETRY_MS = 30_000;
 /** How long the server's backup list may take before the listing goes out without it, ms. */
 export const BACKUP_LIST_TIMEOUT_MS = 5000;
 
@@ -56,14 +61,6 @@ export interface HostLike {
 /** Sends a message to the room (false = not delivered). */
 export type SendFn = (msg: { type: string } & Record<string, unknown>) => boolean;
 
-/** Timer functions (tests pass fake ones). */
-export interface Timers {
-  /** Like `setTimeout`. */
-  set(fn: () => void, ms: number): unknown;
-  /** Like `clearTimeout`. */
-  clear(handle: unknown): void;
-}
-
 /** Options of {@link TvGames}. */
 export interface TvGamesOptions {
   /** The app build (for `diag.report`). */
@@ -84,93 +81,6 @@ export interface BusyStatus {
   progress: number | null;
 }
 
-const realTimers: Timers = {
-  set: (fn, ms) => setTimeout(fn, ms),
-  clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
-};
-
-/** The text of an error for logs and notices. */
-function errorText(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
-}
-
-/** A promise that rejects after `ms`. */
-function withTimeout<T>(p: Promise<T>, ms: number, timers: Timers): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const h = timers.set(() => reject(new Error(`timed out after ${ms} ms`)), ms);
-    p.then((v) => { timers.clear(h); resolve(v); }, (e: unknown) => { timers.clear(h); reject(e); });
-  });
-}
-
-/**
- * The summary a library row shows for a game.
- *
- * @param game - the game
- * @param savedAt - when it was last saved (ISO)
- * @param where - where it is stored
- * @returns the summary (no thumbnail)
- */
-export function summarize(game: Game, savedAt: string, where: GameSummary['where']): GameSummary {
-  return {
-    id: game.id, name: game.name, createdAt: game.createdAt, savedAt,
-    mapNames: game.mapOrder.map((id) => game.maps[id]?.info.name ?? '?'),
-    activeMapName: game.maps[game.activeMapId]?.info.name ?? '?',
-    thumb: null, where,
-  };
-}
-
-/**
- * Merges the device's games with the server's backups: one row per game, `both` when it is in
- * both places (the device's copy and the server's thumbnail), newest save first.
- *
- * @param local - summaries of the games on the device
- * @param remote - the server's backups, or null when the server couldn't be asked
- * @returns the merged list
- */
-export function mergeListings(local: GameSummary[], remote: GameSummary[] | null): GameSummary[] {
-  const byId = new Map<string, GameSummary>();
-  for (const g of local) byId.set(g.id, g);
-  for (const r of remote ?? []) {
-    const l = byId.get(r.id);
-    if (l) byId.set(r.id, { ...l, where: 'both', thumb: l.thumb ?? r.thumb });
-    else byId.set(r.id, { ...r, where: 'server' });
-  }
-  return [...byId.values()].sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0));
-}
-
-/**
- * Puts the open game's live names into its row (qa#9): the stored copy lags up to one autosave
- * behind, so right after a map switch it still names the previous map. A game not stored yet is
- * added on top.
- *
- * @param rows - the merged listing
- * @param open - the game on the table, or null
- * @param nowIso - its `savedAt` when it isn't stored yet
- * @returns the listing with the open game current
- */
-export function withOpenGame(rows: GameSummary[], open: Game | null, nowIso: string): GameSummary[] {
-  if (!open) return rows;
-  const i = rows.findIndex((r) => r.id === open.id);
-  if (i < 0) return [summarize(open, nowIso, 'tv'), ...rows];
-  const live = summarize(open, rows[i]!.savedAt, rows[i]!.where);
-  const out = rows.slice();
-  out[i] = { ...live, thumb: rows[i]!.thumb };
-  return out;
-}
-
-/**
- * The name of a game the TV starts by itself from a shared map (the remote's fallback).
- *
- * @param map - the map
- * @param now - the time
- * @returns e.g. "Tower floor 2 · Sun 25 Oct"
- */
-export function gameNameFor(map: MapInfo, now: Date): string {
-  const day = now.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-  return `${map.name} · ${day}`.slice(0, 120);
-}
-
-/** The TV's games: requests, autosave, backup and restore. */
 export class TvGames {
   /** What the TV is busy with right now. */
   status: BusyStatus = { busy: null, progress: null };
@@ -188,14 +98,7 @@ export class TvGames {
   private saveTimer: unknown = null;
   private saving: Promise<void> = Promise.resolve();
   private work: Promise<void> = Promise.resolve();
-  private readonly pendingBackups = new Map<string, Game>();
-  private backingUp = false;
-  /** The backup run in progress (awaited before a backup is deleted). */
-  private pushRun: Promise<void> = Promise.resolve();
-  /** Games the DM deleted: never backed up again (rv#6). */
-  private readonly deleted = new Set<string>();
-  private backupAgain = false;
-  private backupTimer: unknown = null;
+  private readonly backups: BackupQueue;
   private readonly startedAt: number;
   private readonly saveDelayMs: number;
   private readonly now: () => number;
@@ -218,6 +121,7 @@ export class TvGames {
     this.saveDelayMs = options.saveDelayMs ?? SAVE_DELAY_MS;
     this.now = options.now ?? Date.now;
     this.timers = options.timers ?? realTimers;
+    this.backups = new BackupQueue(ports.backups, log, this.timers, this.now);
     this.startedAt = this.now();
   }
 
@@ -335,71 +239,19 @@ export class TvGames {
     }
     this.savedGame = game;
     this.log.info('tv', 'Game saved', { gameId: game.id, reason, ms: this.now() - t0 });
-    this.backup(game);
+    this.backups.add(game);
   }
 
-  // ── backup ───────────────────────────────────────────────────────────────────────────────
+  // ── backup (backup-queue.ts) ─────────────────────────────────────────────────────────────
 
-  /** Queues a game for the server backup (the newest version per game wins). */
-  private backup(game: Game): void {
-    if (this.deleted.has(game.id)) return;
-    this.pendingBackups.set(game.id, game);
-    void this.pushBackups();
-  }
-
-  /** Uploads queued backups, then tries again later if something failed. */
+  /** Uploads queued backups now (the connection came back). */
   async retryBackups(): Promise<void> {
-    await this.pushBackups();
+    await this.backups.retry();
   }
 
   /** How many games wait for their backup. */
   get backupsPending(): number {
-    return this.pendingBackups.size;
-  }
-
-  private pushBackups(): Promise<void> {
-    if (this.backingUp) {
-      this.backupAgain = true;
-      return this.pushRun;
-    }
-    this.backingUp = true;
-    this.pushRun = this.pushAll();
-    return this.pushRun;
-  }
-
-  /** One backup run: every queued game, again while new ones were queued meanwhile. */
-  private async pushAll(): Promise<void> {
-    try {
-      do {
-        this.backupAgain = false;
-        for (const [id, game] of [...this.pendingBackups]) {
-          if (this.deleted.has(id)) {
-            this.pendingBackups.delete(id);
-            continue;
-          }
-          const t0 = this.now();
-          try {
-            await this.ports.backups.put(game);
-            if (this.pendingBackups.get(id) === game) this.pendingBackups.delete(id);
-            this.log.info('tv', 'Game backed up', { gameId: id, ms: this.now() - t0 });
-          } catch (e) {
-            this.log.warn('tv', 'Backup failed, will retry', { gameId: id, error: errorText(e), retryS: BACKUP_RETRY_MS / 1000 });
-            this.scheduleBackupRetry();
-            return;
-          }
-        }
-      } while (this.backupAgain);
-    } finally {
-      this.backingUp = false;
-    }
-  }
-
-  private scheduleBackupRetry(): void {
-    if (this.backupTimer !== null) return;
-    this.backupTimer = this.timers.set(() => {
-      this.backupTimer = null;
-      void this.pushBackups();
-    }, BACKUP_RETRY_MS);
+    return this.backups.size;
   }
 
   // ── requests ─────────────────────────────────────────────────────────────────────────────
@@ -523,10 +375,9 @@ export class TvGames {
   async remove(gameId: string): Promise<void> {
     // Marked first (rv#6): the close below saves, and that save must not back the game up again;
     // a backup already on its way is awaited, so the DELETE comes after it, not before.
-    this.deleted.add(gameId);
-    this.pendingBackups.delete(gameId);
+    this.backups.forget(gameId);
     if (this.host.state.game?.id === gameId) await this.close();
-    await this.pushRun;
+    await this.backups.settled();
     await this.ports.games.delete(gameId);
     this.log.info('tv', 'Game deleted', { gameId });
     if (this.ports.backups.delete) {
