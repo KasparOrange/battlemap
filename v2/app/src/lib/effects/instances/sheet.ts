@@ -11,15 +11,74 @@
  */
 import { Rectangle, Sprite, Texture, type Container } from 'pixi.js';
 import type { EffectAnchor, EffectParams } from '@battlemap/shared';
-import { nominalSquares, placementFor, type Placement } from '../anchors.ts';
+import { nominalSquares, placementFor, shapeOf, type Placement } from '../anchors.ts';
 import { estimateCost, type CostEstimate } from '../budget.ts';
 import type { EffectManifest } from '../manifest.ts';
 import { evalLayer, motionState, sheetFrame } from '../motion.ts';
 import { hexColor } from '../particle-sim.ts';
 import type { EffectBundle } from '../registry.ts';
+import { artCoverage, type FrameRect } from './coverage.ts';
 import { applyPlacement, makeRoot, numParam, pixiBlend, type CreateContext, type EffectInstance, type FrameContext } from './base.ts';
 
 const frameCache = new WeakMap<Texture, Map<string, Texture[]>>();
+const coverageCache = new Map<string, number>();
+
+/** The atlas is read at this share of its size to measure the art (cheap: a 2000 px atlas → 500 px). */
+const COVERAGE_SCALE = 0.25;
+
+/**
+ * How much of its frames a sheet's art fills at its largest ({@link artCoverage}), measured once
+ * per effect from a quarter-size copy of its atlases; 1 when it can't be read.
+ *
+ * @param bundle - the loaded effect
+ * @returns coverage in [0.6, 1]
+ */
+export function coverageOf(bundle: EffectBundle<Texture>): number {
+  const id = bundle.manifest.id;
+  const hit = coverageCache.get(id);
+  if (hit !== undefined) return hit;
+  let cov = 1;
+  try {
+    const sh = bundle.manifest.sheet!;
+    for (let ai = 0; ai < sh.atlases.length; ai++) {
+      const a = sh.atlases[ai]!;
+      const res = bundle.textures.get(a.file)?.source.resource as CanvasImageSource | undefined;
+      if (!res || typeof OffscreenCanvas === 'undefined') continue;
+      const w = Math.max(1, Math.round(a.w * COVERAGE_SCALE));
+      const h = Math.max(1, Math.round(a.h * COVERAGE_SCALE));
+      const g = new OffscreenCanvas(w, h).getContext('2d', { willReadFrequently: true });
+      if (!g) continue;
+      g.drawImage(res, 0, 0, w, h);
+      const rgba = g.getImageData(0, 0, w, h).data;
+      const alpha = new Uint8Array(w * h);
+      for (let i = 0; i < alpha.length; i++) alpha[i] = rgba[i * 4 + 3]!;
+      const frames: FrameRect[] = sh.frames
+        .filter(([fa]) => fa === ai)
+        .map(([, x, y]) => ({ x: x * COVERAGE_SCALE, y: y * COVERAGE_SCALE, w: sh.frameW * COVERAGE_SCALE, h: sh.frameH * COVERAGE_SCALE }));
+      cov = ai === 0 ? artCoverage(alpha, w, frames) : Math.max(cov, artCoverage(alpha, w, frames));
+    }
+  } catch {
+    cov = 1;
+  }
+  coverageCache.set(id, cov);
+  return cov;
+}
+
+/**
+ * A region placement fits the art's widest moment to the area, not its frame (W3-D: the
+ * fireball reached ~5 of its 8 squares).
+ *
+ * @param p - the placement (changed in place)
+ * @param anchor - where it sits
+ * @param params - its params (the region's shape)
+ * @param coverage - the art's coverage
+ */
+function fitArtToRegion(p: Placement, anchor: EffectAnchor, params: EffectParams, coverage: number): void {
+  // cones and lines are fitted from their apex / along their length, not round a centre
+  if (anchor.kind !== 'region' || coverage >= 1 || shapeOf(params) === 'cone' || shapeOf(params) === 'line') return;
+  p.sx /= coverage;
+  p.sy /= coverage;
+}
 
 /**
  * The frames of a sheet as sub-textures of its atlases (made once per loaded atlas).
@@ -93,6 +152,8 @@ class SheetInstance implements EffectInstance {
   private placement: Placement;
   private anchor: EffectAnchor;
   private opacity = 1;
+  /** How much of its frame the art fills at its largest (region placements are divided by it). */
+  private coverage = 1;
 
   constructor(private readonly c: CreateContext) {
     const m = c.bundle.manifest;
@@ -109,7 +170,9 @@ class SheetInstance implements EffectInstance {
     this.b.visible = false;
     this.root.addChild(this.a, this.b);
     this.anchor = c.anchor;
+    this.coverage = c.anchor.kind === 'region' ? coverageOf(c.bundle) : 1;
     this.placement = placementFor(m, c.anchor, c.params);
+    fitArtToRegion(this.placement, c.anchor, c.params, this.coverage);
     this.cost = estimateCost(m, undefined, this.placement.sx);
     this.setParams(c.anchor, c.params);
   }
@@ -117,7 +180,9 @@ class SheetInstance implements EffectInstance {
   setParams(anchor: EffectAnchor, params: EffectParams): void {
     const m = this.c.bundle.manifest;
     this.anchor = anchor;
+    if (anchor.kind === 'region' && this.coverage === 1) this.coverage = coverageOf(this.c.bundle);
     this.placement = placementFor(m, anchor, params);
+    fitArtToRegion(this.placement, anchor, params, this.coverage);
     sizeSprite(this.a, m, this.placement);
     sizeSprite(this.b, m, this.placement);
     const tint = tintOf(m, params);
