@@ -19,6 +19,7 @@
   import Card from '../../ui/Card.svelte';
   import Dialog from '../../ui/Dialog.svelte';
   import Field from '../../ui/Field.svelte';
+  import Icon from '../../ui/Icon.svelte';
   import IconButton from '../../ui/IconButton.svelte';
   import SearchField from '../../ui/SearchField.svelte';
   import Segmented from '../../ui/Segmented.svelte';
@@ -251,6 +252,7 @@
         </div>
       {:else if games.length === 0}
         <div class="empty">
+          <span class="empty-mark"><Icon name="map" size="36px" /></span>
           <h2 class="bm-headline">No games yet</h2>
           <p>Upload a map — a picture, a PDF or a .dd2vtt — or pick one from the shared maps to start the first game.</p>
           <div class="row">
@@ -423,6 +425,16 @@
     gap: var(--g2);
     justify-items: center;
     text-align: center;
+  }
+
+  .empty-mark {
+    display: grid;
+    place-items: center;
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 12%, var(--m1));
+    color: var(--accent-text);
   }
 
   .empty h2 {

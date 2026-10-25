@@ -105,7 +105,6 @@
               title={t.tvName || 'TV'}
               sub={t.companions > 0 ? `${t.companions} ${t.companions === 1 ? 'tablet' : 'tablets'} connected` : 'Waiting for a tablet'}
               icon="tv"
-              chevron
               selected={t.room === lastTable}
               onclick={() => onpick(t.room)}
             >
