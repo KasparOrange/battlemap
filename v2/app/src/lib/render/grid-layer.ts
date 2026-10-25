@@ -7,7 +7,7 @@
 import { Buffer, BufferUsage, Geometry, Mesh, Shader, type Container } from 'pixi.js';
 import { SQUARE } from './camera.ts';
 
-const vertex = /* glsl */ `
+const vertex = /* glsl */ `#version 300 es
 in vec2 aPosition;
 out vec2 vSq;
 uniform mat3 uProjectionMatrix;
@@ -22,7 +22,7 @@ void main() {
 }
 `;
 
-const fragment = /* glsl */ `
+const fragment = /* glsl */ `#version 300 es
 precision highp float;
 in vec2 vSq;
 out vec4 finalColor;

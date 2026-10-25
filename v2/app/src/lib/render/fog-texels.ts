@@ -5,7 +5,7 @@
  * |---|---|
  * | R | 255 = revealed, 0 = fog |
  * | G | reveal fade: extra fog 0–255 on a square being revealed (animated) |
- * | B | bits: 0–1 staged preview (1 = will be revealed, 2 = will be hidden), 2 = a fogged square touches this one (8-neighbourhood, inside the map) — the shader's fast path |
+ * | B | bits: 0–1 staged preview (1 = will be revealed, 2 = will be hidden); 2 = a fogged, 3 = a revealed square touches this one (8-neighbourhood, inside the map) — the shader's fast paths |
  * | A | atmospheric level: Chebyshev distance to the nearest revealed square, 0–4, × 63 |
  *
  * The renderer keeps one buffer per map, writes a new state's texels into a scratch buffer,
@@ -57,10 +57,12 @@ export const STAGED_REVEAL = 1;
 export const STAGED_HIDE = 2;
 /** B bit: a fogged square is among the 8 neighbours. */
 export const FOG_NEAR = 4;
+/** B bit: a revealed square is among the 8 neighbours. */
+export const REVEALED_NEAR = 8;
 
 /**
- * Sets `FOG_NEAR` in B on every square with a fogged square among its 8 neighbours (inside
- * the map). Reads R.
+ * Sets `FOG_NEAR` / `REVEALED_NEAR` in B on every square with a fogged / revealed square among
+ * its 8 neighbours (inside the map) — the shader skips its neighbour loop without them. Reads R.
  *
  * @param texels - RGBA texels
  * @param cols - map width
@@ -69,21 +71,20 @@ export const FOG_NEAR = 4;
 export function markFogEdges(texels: Uint8Array, cols: number, rows: number): void {
   for (let y = 0; y < rows; y++) {
     for (let x = 0; x < cols; x++) {
-      let near = false;
-      for (let dy = -1; dy <= 1 && !near; dy++) {
+      let fog = false;
+      let open = false;
+      for (let dy = -1; dy <= 1; dy++) {
         const yy = y + dy;
         if (yy < 0 || yy >= rows) continue;
         for (let dx = -1; dx <= 1; dx++) {
           const xx = x + dx;
           if (xx < 0 || xx >= cols || (dx === 0 && dy === 0)) continue;
-          if (texels[(yy * cols + xx) * 4] === 0) {
-            near = true;
-            break;
-          }
+          if (texels[(yy * cols + xx) * 4] === 0) fog = true;
+          else open = true;
         }
       }
       const o = (y * cols + x) * 4 + 2;
-      texels[o] = near ? texels[o]! | FOG_NEAR : texels[o]! & ~FOG_NEAR;
+      texels[o] = (texels[o]! & 3) | (fog ? FOG_NEAR : 0) | (open ? REVEALED_NEAR : 0);
     }
   }
 }

@@ -7,16 +7,14 @@
  * sees them at 45 %. Each token has an `fx` child the effects runtime may fill (it moves and
  * hides with the token).
  */
-import { BitmapText, Container, Graphics, Rectangle, Sprite, Texture, type TextStyleOptions } from 'pixi.js';
+import { BitmapText, Container, Graphics, Rectangle, Sprite, Texture } from 'pixi.js';
 import type { Token } from '@battlemap/shared';
 import { SQUARE } from './camera.ts';
+import { FONT_LABEL, FONT_NAME, GLYPH_PX, installFonts } from './fonts.ts';
 import { TOKEN_RADIUS } from './hit.ts';
 
 /** Atlas cell size in px (one square drawn at this size). */
 const CELL = 128;
-
-/** Font size the label glyphs are made at. */
-const GLYPH_PX = 64;
 
 /** Label height in squares. */
 const LABEL_SQ = 0.46;
@@ -24,20 +22,8 @@ const LABEL_SQ = 0.46;
 /** Name text height in squares. */
 const NAME_SQ = 0.24;
 
-const LABEL_STYLE: TextStyleOptions = {
-  fontFamily: 'Space Grotesk, Outfit, system-ui, sans-serif',
-  fontSize: GLYPH_PX,
-  fontWeight: 'bold',
-  fill: '#ffffff',
-  stroke: { color: '#000000', width: 8, join: 'round' },
-};
-
-const NAME_STYLE: TextStyleOptions = {
-  fontFamily: 'Outfit, system-ui, sans-serif',
-  fontSize: GLYPH_PX,
-  fontWeight: '600',
-  fill: '#ffffff',
-};
+const LABEL_STYLE = { fontFamily: FONT_LABEL, fontSize: GLYPH_PX };
+const NAME_STYLE = { fontFamily: FONT_NAME, fontSize: GLYPH_PX };
 
 /** The atlas's frames. */
 interface Atlas {
@@ -181,6 +167,7 @@ export class TokensLayer {
   }
 
   private create(t: Token): TokenView {
+    installFonts();
     this.atlas ??= makeAtlas();
     const a = this.atlas;
     const root = new Container({ label: `token ${t.id}` });

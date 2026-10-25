@@ -232,7 +232,7 @@ describe('fog texels', () => {
     const cols = 4, rows = 3;
     const out = new Uint8Array(cols * rows * 4);
     writeFogTexels({ on: true, revealed: fullMask(12), staged: null, live: null }, cols, rows, out, new Uint8Array(12));
-    for (let i = 0; i < 12; i++) expect(out[i * 4 + 2]).toBe(0);
+    for (let i = 0; i < 12; i++) expect(out[i * 4 + 2]! & FOG_NEAR).toBe(0);
   });
 
   test('changed rows: first and last differing row, null when equal', () => {
@@ -246,7 +246,7 @@ describe('fog texels', () => {
   });
 
   test('the fade starts on newly revealed squares only and ends after 500 ms', () => {
-    const cols = 4, rows = 1;
+    const cols = 4;
     const prev = new Uint8Array(16);
     prev[0] = 255;
     const next = prev.slice();

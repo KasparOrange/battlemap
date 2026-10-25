@@ -9,15 +9,23 @@
  * · dmLayers · tools · dmFrame — then in screen space: tableMask · fx.screen.
  */
 import { Container } from 'pixi.js';
-import { tvView, type Camera, type Door, type Game, type MapPlay, type Point, type RootState, type TableState, type TvView } from '@battlemap/shared';
+import {
+  tableGrid, tvView, windowSquares,
+  type Camera, type Game, type MapGeometry, type MapPlay, type Point, type Rect, type RootState, type TableState, type TvView,
+} from '@battlemap/shared';
 import { clampDmCamera, fitDmCamera, panCamera, screenToSquares, squaresToScreen, SQUARE, visibleSquares, worldTransform, zoomCameraAt, type Size } from './camera.ts';
+import { DmLayers, PlayersFrame } from './dm-layers.ts';
+import { DoorsLayer } from './doors-layer.ts';
+import { DrawingsLayer } from './drawings-layer.ts';
 import { FogLayer } from './fog-layer.ts';
 import { GridLayer } from './grid-layer.ts';
 import { hitsAt, type Hit } from './hit.ts';
 import { MapLayer } from './map-layer.ts';
 import type { TableRenderer } from './pixi.ts';
+import { TableMask } from './table-mask.ts';
 import { DM_BUDGET, TV_BUDGET } from './tiles.ts';
 import { TokensLayer } from './tokens-layer.ts';
+import { ToolsLayer } from './tools-layer.ts';
 import type { EffectSlots, EffectsRuntime, FileLoader, TableViewOptions, ViewProfile } from './types.ts';
 
 /** The named containers of the scene, bottom to top. */
@@ -37,6 +45,8 @@ export interface SceneSlots {
   fxScreen: Container;
 }
 
+const NO_SETTINGS = { fogStyle: 'standard', fogEdgeInset: 0, fogFade: true, effects: true } as const;
+
 /** The scene of one screen. */
 export class TableScene {
   /** The layer containers. */
@@ -45,8 +55,14 @@ export class TableScene {
   private readonly dm: boolean;
   private readonly mapLayer: MapLayer;
   private readonly grid: GridLayer;
-  private readonly fog: FogLayer;
+  private readonly drawings: DrawingsLayer;
   private readonly tokens: TokensLayer;
+  private readonly fog: FogLayer;
+  private readonly doorsLayer: DoorsLayer;
+  private readonly tools: ToolsLayer;
+  private readonly dmLayers: DmLayers | null;
+  private readonly frame: PlayersFrame | null;
+  private readonly mask: TableMask | null;
   private effects: EffectsRuntime | null = null;
 
   private state: RootState | null = null;
@@ -58,9 +74,9 @@ export class TableScene {
   private size: Size = { width: 1, height: 1 };
   private shakeX = 0;
   private shakeY = 0;
-  private doors: readonly Door[] = [];
-  /** DM walls debug view (drawn by the doors layer). */
-  wallsShown = false;
+  private geometry: MapGeometry | null = null;
+  private geometryKey = '';
+  private frameRect: Rect | null = null;
   private readonly stopTicker: () => void;
 
   /**
@@ -68,7 +84,7 @@ export class TableScene {
    * @param opts - profile, logger, files, effects
    * @param files - the file loader to use
    */
-  constructor(private readonly r: TableRenderer, private readonly opts: TableViewOptions, files: FileLoader) {
+  constructor(private readonly r: TableRenderer, private readonly opts: TableViewOptions, private readonly files: FileLoader) {
     this.profile = opts.profile;
     this.dm = opts.profile === 'dm';
     const world = r.world;
@@ -93,6 +109,7 @@ export class TableScene {
       fxScreen: named('fx.screen', r.app.stage),
     };
     const budget = this.dm ? DM_BUDGET : TV_BUDGET;
+    const invalidate = () => r.scheduler.invalidate();
     this.mapLayer = new MapLayer(this.slots.map, {
       files,
       budget,
@@ -101,12 +118,18 @@ export class TableScene {
       mipmaps: this.dm,
       log: opts.log,
       onEvent: (e) => opts.onEvent?.(e),
-      invalidate: () => r.scheduler.invalidate(),
+      invalidate,
       upload: (t) => r.app.renderer.texture.initSource(t.source),
     });
     this.grid = new GridLayer(this.slots.grid, this.dm ? 1 : 1.5);
+    this.drawings = new DrawingsLayer(this.slots.drawings);
     this.tokens = new TokensLayer(this.slots.tokens, this.dm);
     this.fog = new FogLayer(this.slots.fog, this.dm ? { opacity: 0.7, deep: 0.9, tints: true } : { opacity: 1, deep: 1, tints: false }, r.scheduler);
+    this.doorsLayer = new DoorsLayer(this.slots.doors, this.dm, r.scheduler);
+    this.tools = new ToolsLayer(this.slots.tools, this.dm);
+    this.dmLayers = this.dm ? new DmLayers(this.slots.dmLayers, files, opts.log, invalidate) : null;
+    this.frame = this.dm ? new PlayersFrame(this.slots.dmFrame) : null;
+    this.mask = this.dm ? null : new TableMask(this.slots.tableMask);
     if (opts.effects) {
       try {
         this.effects = opts.effects(this.effectSlots(), { profile: this.profile, scheduler: r.scheduler, log: opts.log });
@@ -175,15 +198,24 @@ export class TableScene {
     let changed = newMap;
 
     this.mapLayer.set(map?.info ?? null);
+    this.loadGeometry(map);
     if (map && game) {
       const { cols, rows } = map.info.grid;
       changed = this.grid.set(map.showGrid, cols, rows) || changed;
-      changed = this.fog.set(map.fog, cols, rows, game.settings, newMap) || changed;
+      changed = this.drawings.set(map.strokes, state.live.stroke) || changed;
       changed = this.tokens.set(map.tokens) || changed;
+      changed = this.fog.set(map.fog, cols, rows, game.settings, newMap) || changed;
+      changed = this.doorsLayer.set(this.geometry, map.info.drawDoors, map.doorsOpen, map.fog, cols, rows, newMap) || changed;
+      changed = this.tools.set(map.disc, map.ruler, state.live.measure) || changed;
+      if (this.dmLayers) changed = this.dmLayers.set(map.layers, map.info) || changed;
     } else {
       this.grid.set(false, 1, 1);
-      this.fog.set(null, 1, 1, game?.settings ?? { fogStyle: 'standard', fogEdgeInset: 0, fogFade: true, effects: true }, true);
+      this.drawings.set(null, null);
       this.tokens.set(null);
+      this.fog.set(null, 1, 1, game?.settings ?? NO_SETTINGS, true);
+      this.doorsLayer.set(null, false, [], null, 1, 1, true);
+      this.tools.set(null, null, null);
+      this.dmLayers?.set(null, null);
     }
 
     if (newMap && this.dm && map) this.dmCam = fitDmCamera(this.limits()!);
@@ -206,6 +238,30 @@ export class TableScene {
     if (changed) this.r.scheduler.invalidate();
   }
 
+  /** Loads the map's walls-and-doors file when it changes (doors, walls, door hits). */
+  private loadGeometry(map: MapPlay | null): void {
+    const ref = map?.info.geometry ?? null;
+    const key = ref ? ref.hash : '';
+    if (key === this.geometryKey) return;
+    this.geometryKey = key;
+    this.geometry = null;
+    if (!ref) return;
+    const t0 = performance.now();
+    this.files(ref)
+      .then((b) => b.text())
+      .then((text) => {
+        if (this.geometryKey !== key) return;
+        const g = JSON.parse(text) as MapGeometry;
+        if (!Array.isArray(g.doors) || !Array.isArray(g.walls)) throw new Error('not a map geometry file');
+        this.geometry = { walls: g.walls, doors: g.doors, lights: Array.isArray(g.lights) ? g.lights : [] };
+        this.opts.log.info('render', 'Geometry loaded', { doors: g.doors.length, walls: g.walls.length, ms: Math.round(performance.now() - t0) });
+        const m = this.map;
+        if (m) this.doorsLayer.set(this.geometry, m.info.drawDoors, m.doorsOpen, m.fog, m.info.grid.cols, m.info.grid.rows, true);
+        this.r.scheduler.invalidate();
+      })
+      .catch((e: unknown) => this.opts.log.warn('render', 'Geometry failed', { error: String(e), file: `${ref.hash}.${ref.ext}` }));
+  }
+
   /** The TV's view from the state (the host size stands in for a viewport not yet reported). */
   private tvViewOf(table: TableState, map: MapPlay): TvView | null {
     const t = table.viewport ? table : { ...table, viewport: this.size };
@@ -218,6 +274,13 @@ export class TableScene {
     const state = this.state;
     this.tv = map && state ? this.tvViewOf(state.table, map) : null;
     this.cam = !map ? null : this.dm ? this.dmCam : (this.tv?.camera ?? null);
+    this.frameRect = this.dm && this.tv ? playersRect(this.tv) : null;
+    if (this.mask && state) {
+      const vp = state.table.viewport ?? this.size;
+      const grid = this.tv?.grid ?? tableGrid(vp, state.table.widthInches, state.table.overscanPercent);
+      const offset = { x: (this.size.width - vp.width) / 2, y: (this.size.height - vp.height) / 2 };
+      this.mask.set(grid, state.table, !!map && map.view.mode === 'table', offset);
+    }
     this.applyCamera();
   }
 
@@ -238,6 +301,8 @@ export class TableScene {
     w.rotation = t.rotation;
     w.scale.set(t.scale);
     this.tokens.setCameraRotation(t.rotation);
+    this.tools.setCameraRotation(t.rotation);
+    this.frame?.set(this.frameRect, cam.zoom);
     const v = visibleSquares(cam, this.size);
     this.mapLayer.cull(v.x0, v.y0, v.x1, v.y1);
     this.r.scheduler.invalidate();
@@ -321,7 +386,7 @@ export class TableScene {
   hits(p: Point): Hit[] {
     const q = this.screenToSquares(p);
     if (!q || !this.map || !this.cam) return [];
-    return hitsAt({ map: this.map, doors: this.doors, dm: this.dm, zoom: this.cam.zoom, frame: null }, q);
+    return hitsAt({ map: this.map, doors: this.doorsLayer.doors, dm: this.dm, zoom: this.cam.zoom, frame: this.frameRect }, q);
   }
 
   /**
@@ -341,7 +406,7 @@ export class TableScene {
    * @param on - whether walls show
    */
   setWallsShown(on: boolean): void {
-    this.wallsShown = on;
+    this.doorsLayer.setWalls(on);
     this.r.scheduler.invalidate();
   }
 
@@ -350,7 +415,7 @@ export class TableScene {
     const map = this.mapLayer.bytes;
     const fog = this.fog.bytes;
     const tokens = this.tokens.bytes;
-    const layers = 0;
+    const layers = this.dmLayers?.bytes ?? 0;
     const effects = this.effects?.cost?.().textureBytes ?? 0;
     return { map, fog, tokens, layers, effects, total: map + fog + tokens + layers + effects };
   }
@@ -366,12 +431,15 @@ export class TableScene {
   }
 
   /**
-   * Frees what can be rebuilt; the map reloads at three quarters of its density.
+   * Frees what can be rebuilt: DM layers (reloaded on the next state), the map (reloaded at
+   * three quarters of its density).
    *
    * @returns bytes freed (roughly)
    */
   dropTextures(): number {
     const before = this.textureBytes().total;
+    this.dmLayers?.drop();
+    if (this.map) this.dmLayers?.set(this.map.layers, this.map.info);
     this.mapLayer.drop(0.75);
     this.r.scheduler.invalidate();
     return before - this.textureBytes().total;
@@ -383,7 +451,29 @@ export class TableScene {
     this.effects?.destroy();
     this.mapLayer.destroy();
     this.grid.destroy();
-    this.fog.destroy();
+    this.drawings.destroy();
     this.tokens.destroy();
+    this.fog.destroy();
+    this.doorsLayer.destroy();
+    this.tools.destroy();
+    this.dmLayers?.destroy();
+    this.frame?.destroy();
+    this.mask?.destroy();
   }
+}
+
+/**
+ * What the players see, in squares: the one-inch window in table mode, else the visible area
+ * of the TV mapped through its camera (a bounding box when turned).
+ *
+ * @param tv - the TV's view
+ * @returns the rectangle in squares
+ */
+export function playersRect(tv: TvView): Rect {
+  if (tv.layout) return windowSquares(tv.layout);
+  const v = tv.grid.visible;
+  const view = { width: tv.grid.width, height: tv.grid.height };
+  const a = screenToSquares(tv.camera, view, { x: v.x, y: v.y });
+  const b = screenToSquares(tv.camera, view, { x: v.x + v.width, y: v.y + v.height });
+  return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(b.x - a.x), height: Math.abs(b.y - a.y) };
 }

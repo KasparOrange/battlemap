@@ -1,7 +1,8 @@
 /**
- * The renderer bench's entry (bench.html). A stub for now: it starts the renderer and reports
- * whether an idle page draws frames. The renderer package fills it with scenes
- * (`?scene=big-map&fog=churn&tokens=40`) — docs/architecture.md "performance budgets".
+ * The renderer bench's entry (bench.html): mounts `Bench.svelte`, which runs the table view
+ * through named scenes (`?scene=all|big-map,…&profile=players|dm&seconds=8&fx=all|none`) and
+ * reports fps, frame times, CPU and GPU ms, draw calls, texture MB and idle frames — on screen,
+ * to the log (area `bench`) and in `window.__bench`. docs/render.md has the numbers.
  */
 import { mount } from 'svelte';
 import Bench from './Bench.svelte';

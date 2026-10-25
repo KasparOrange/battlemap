@@ -14,7 +14,7 @@ import { SQUARE } from './camera.ts';
 import { changedRows, FogFade, writeFogTexels } from './fog-texels.ts';
 import type { RenderScheduler } from './scheduler.ts';
 
-const vertex = /* glsl */ `
+const vertex = /* glsl */ `#version 300 es
 in vec2 aPosition;
 out vec2 vSq;
 uniform mat3 uProjectionMatrix;
@@ -29,7 +29,7 @@ void main() {
 }
 `;
 
-const fragment = /* glsl */ `
+const fragment = /* glsl */ `#version 300 es
 precision highp float;
 precision highp int;
 in vec2 vSq;
@@ -83,18 +83,24 @@ void main() {
     }
     if (revealed && (bits & 4) == 0) {
       a = 0.0;
+    } else if (!revealed && (bits & 8) == 0) {
+      a = 1.0;
     } else {
-      float sd = 1e3;
-      if (!revealed) sd = boxSdf(p, vec2(c) - inset, vec2(c) + 1.0 + inset);
-      if (sd - bump > -0.5 * w) {
-        for (int dy = -1; dy <= 1; dy++) {
-          for (int dx = -1; dx <= 1; dx++) {
-            ivec2 n = c + ivec2(dx, dy);
-            if (!inMap(n) || texelFetch(uFog, n, 0).r > 0.5) continue;
-            sd = min(sd, boxSdf(p, vec2(n) - inset, vec2(n) + 1.0 + inset));
-          }
+      // Signed distance to the fog's rim: outside the fog, the distance to the nearest fogged
+      // square grown by the inset; inside it, minus the distance to the nearest revealed
+      // square's core (shrunk by the inset) — so neighbouring fog squares show no seam.
+      float sdF = 1e3;
+      float dIn = 1e3;
+      for (int dy = -1; dy <= 1; dy++) {
+        for (int dx = -1; dx <= 1; dx++) {
+          ivec2 n = c + ivec2(dx, dy);
+          if (!inMap(n)) continue;
+          vec2 lo = vec2(n);
+          if (texelFetch(uFog, n, 0).r > 0.5) dIn = min(dIn, boxSdf(p, lo + inset, lo + 1.0 - inset));
+          else sdF = min(sdF, boxSdf(p, lo - inset, lo + 1.0 + inset));
         }
       }
+      float sd = sdF > 0.0 ? sdF : -max(dIn, 0.0);
       a = 1.0 - smoothstep(-0.5 * w, 0.5 * w, sd - bump);
     }
   }
