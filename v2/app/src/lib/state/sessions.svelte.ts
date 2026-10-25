@@ -7,6 +7,7 @@
  */
 import { initialRoot, type Command, type Peer, type RootState } from '@battlemap/shared';
 import type { AppConfig } from '../config.ts';
+import { attachSession } from '../debug-hook.ts';
 import { log } from '../log.ts';
 import { Connection, type ConnectionState } from '../net/connection.ts';
 import { notify } from '../ui/notice.svelte.ts';
@@ -50,6 +51,11 @@ export class TvSession {
     this.conn.onState = (s) => (this.connection = s);
     this.conn.onPeers = (peers) => (this.peers = peers);
     this.conn.onPeerMessage = (msg) => this.host.receive(msg);
+    attachSession({
+      mode: 'tv', client: config.clientId,
+      connection: () => this.connection, state: () => this.state, rev: () => this.rev,
+      epoch: () => this.host.epoch, request: (msg) => this.send(msg),
+    });
   }
 
   /** Connects to the room. */
@@ -130,6 +136,12 @@ export class CompanionSession {
     this.conn.onServerMessage = (msg) => {
       if (msg.type === 'relay.undelivered' && msg.seq !== undefined) this.client.undelivered(msg.seq);
     };
+    attachSession({
+      mode: 'companion', client: config.clientId,
+      connection: () => this.connection, state: () => this.view, rev: () => this.rev,
+      epoch: () => this.client.epoch, pending: () => this.client.pendingCount,
+      dispatch: (cmd) => this.dispatch(cmd), request: (msg) => this.request(msg),
+    });
   }
 
   /**

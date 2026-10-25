@@ -7,6 +7,7 @@
  */
 import type { FileRef, RootState } from '@battlemap/shared';
 import { createEffectsRuntime } from '../effects/index.ts';
+import { attachRenderStats } from '../debug-hook.ts';
 import type { Logger } from '../log.ts';
 import { createTableView, type TableViewEvent } from '../render/index.ts';
 
@@ -44,5 +45,6 @@ export function openTableView(host: HTMLElement, options: TvTableViewOptions): T
     onEvent: options.onEvent,
   });
   view.ready.catch((e: unknown) => options.onEvent({ type: 'renderer-failed', error: String(e) }));
+  attachRenderStats(() => view.stats()); // the test hook (`?debug=1` only)
   return view;
 }

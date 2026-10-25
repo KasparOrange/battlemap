@@ -1,6 +1,7 @@
 <!--
   App — the root of index.html: the start screen (TV or companion) when no mode is known, else
-  that mode's screen. Hosts the one notice of the app.
+  that mode's screen. Hosts the one notice of the app; with `?debug=1` records the notices for
+  the test hook (lib/debug-hook.ts).
   Props:
   - config: AppConfig — the page's configuration (lib/config.ts)
 -->
@@ -10,6 +11,8 @@
   import { log } from './lib/log.ts';
   import Button from './lib/ui/Button.svelte';
   import NoticeHost from './lib/ui/NoticeHost.svelte';
+  import { notices } from './lib/ui/notice.svelte.ts';
+  import { debugEnabled, recordNotice } from './lib/debug-hook.ts';
   import TvApp from './lib/tv/TvApp.svelte';
   import CompanionApp from './lib/companion/CompanionApp.svelte';
 
@@ -19,6 +22,14 @@
   }
 
   let { config }: Props = $props();
+
+  // The test hook (`?debug=1`) keeps the notices shown, for the e2e flows.
+  if (debugEnabled) {
+    $effect(() => {
+      const n = notices.current;
+      if (n) recordNotice(n.text, n.kind);
+    });
+  }
 
   /** Starts a mode: remembered, then the page reloads with `?mode=` so the config is fixed. */
   function pick(mode: Mode): void {
