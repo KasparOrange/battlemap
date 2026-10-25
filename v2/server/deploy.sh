@@ -23,6 +23,14 @@ BUILD="$(git -C "$V2" rev-parse --short HEAD)$(git -C "$V2" diff --quiet -- serv
 say() { printf '\033[1m== %s\033[0m\n' "$*"; }
 vps() { $SSH "$HOST" "$@"; }
 
+# Since the switch to the Rust server (docs/server-rs.md "Production switch") the Bun server is
+# the stopped fallback: deploying it would start it next to production. App updates go through
+# server-rs/deploy.sh --app; the way back to Bun is server-rs/switch.sh to-bun.
+if [[ "${BATTLEMAP_DEPLOY_BUN:-}" != 1 ]] && vps "grep -A3 '^$SITE {' /opt/victorialogs/Caddyfile | grep -q 'reverse_proxy 172.19.0.1:5930'"; then
+  echo "production runs the Rust server — use server-rs/deploy.sh --app (or BATTLEMAP_DEPLOY_BUN=1 to deploy the fallback anyway)" >&2
+  exit 3
+fi
+
 if [[ "${1:-}" != "--no-build" ]]; then
   say "build app + server ($BUILD)"
   (cd "$V2" && bun run --cwd app build >/dev/null && bun run --cwd server build >/dev/null)

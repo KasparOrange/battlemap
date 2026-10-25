@@ -56,7 +56,7 @@ fn collect_patterns(v: &Value, out: &mut HashMap<String, Regex>) {
 }
 
 /// The keywords the checker understands (anything else in a schema is a start-up error).
-const KNOWN: [&str; 22] = [
+const KNOWN: [&str; 27] = [
     "type",
     "const",
     "enum",
@@ -78,7 +78,14 @@ const KNOWN: [&str; 22] = [
     "oneOf",
     "allOf",
     "$ref",
+    // annotations — nothing to check (valibot's `optional(x, value)` writes `default`; the app
+    // fills it in, the server stores what came)
     "description",
+    "default",
+    "title",
+    "examples",
+    "$comment",
+    "deprecated",
 ];
 
 /// Refuses a schema with a keyword the checker doesn't know.

@@ -25,10 +25,12 @@ BIN="$HERE/target/$TARGET/release/battlemap-server"
 BUILD="rs-$(git -C "$V2" rev-parse --short HEAD)$(git -C "$V2" diff --quiet -- server-rs || echo -dirty)"
 BUILD_IT=1
 SNAPSHOT=0
+APP=0
 for a in "$@"; do
   case "$a" in
     --no-build) BUILD_IT=0 ;;
     --snapshot) SNAPSHOT=1 ;;
+    --app) APP=1 ;;
     *) echo "unknown option $a" >&2; exit 2 ;;
   esac
 done
@@ -40,6 +42,15 @@ if [[ $BUILD_IT == 1 ]]; then
   say "build $TARGET ($BUILD)"
   export PATH="/opt/homebrew/opt/rustup/bin:$HOME/.cargo/bin:$PATH"
   (cd "$HERE" && cargo zigbuild --release --target "$TARGET" 2>&1 | tail -3)
+fi
+if [[ $APP == 1 ]]; then
+  # The built app both servers serve (APP_DIR = ~/battlemap-v2/app); old assets stay, so open
+  # tabs keep loading; the server sees the new build.json within 10 s and tells every page.
+  say "build + copy the app to ~/$BUN_REMOTE/app"
+  (cd "$V2" && bun run --cwd app build >/dev/null)
+  test -f "$V2/app/dist/index.html"
+  vps "mkdir -p ~/$BUN_REMOTE/app"
+  rsync -az -e "$SSH" "$V2/app/dist/" "$HOST:$BUN_REMOTE/app/"
 fi
 test -x "$BIN"
 

@@ -205,6 +205,22 @@ newest per 10-minute slot, `GAME_VERSION_SLOT_MS`, the newest `GAME_VERSIONS` sl
 contract runs with 0 = by count, as Bun). Contract: `tests/upstream.contract.ts` starts a second
 Rust server with the main one as its upstream — **Rust 79 pass** (5 upstream, 2 more fixes).
 
+## Production switch
+
+`server-rs/switch.sh to-rust | to-bun | status` moves `https://battlemap.srv1189697.hstgr.cloud`
+between the two servers: it stops the active one, copies its data folder to the other (the
+other's old data stays as `data.before-<time>`), starts that one, points the Caddy site's
+`reverse_proxy` at its port (5930 Rust, 5929 Bun; the Caddyfile is backed up first, then
+validated and reloaded) and disables the old unit — stopped but installed, the fallback.
+
+**Switch back to Bun:** `v2/server-rs/switch.sh to-bun` (seconds of downtime; everything the
+Rust server took since the switch goes along).
+
+After the switch, app updates go with `server-rs/deploy.sh --app` (builds the app, rsyncs it to
+`~/battlemap-v2/app`, which both servers serve; pages hear about the new build within 10 s);
+`server/deploy.sh` refuses to run while Caddy points at 5930 (`BATTLEMAP_DEPLOY_BUN=1` deploys
+the fallback anyway).
+
 ## Deploy (side by side)
 
 `server-rs/deploy.sh [--no-build] [--snapshot]`: cross-builds the static musl binary on the Mac
