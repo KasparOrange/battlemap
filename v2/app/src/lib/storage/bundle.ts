@@ -279,7 +279,8 @@ export async function importGame(
   let doneBytes = 0;
   onProgress?.(0, total);
   for (const { ref, blob } of bundle.files) {
-    const stored = await deps.upload(blob, ref, (l) => onProgress?.(doneBytes + l, total), options.signal);
+    const answer = await deps.upload(blob, ref, (l) => onProgress?.(doneBytes + l, total), options.signal);
+    const stored: FileRef = { hash: answer.hash, ext: answer.ext, bytes: answer.bytes };
     if (stored.hash !== ref.hash || stored.ext !== ref.ext || stored.bytes !== ref.bytes) {
       remap.set(`${ref.hash}.${ref.ext}`, stored);
     }

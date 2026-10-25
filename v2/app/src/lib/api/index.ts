@@ -10,7 +10,7 @@ import { log } from '../log.ts';
 import { createApi, type Api } from './client.ts';
 
 export { createApi, DEFAULT_TIMEOUTS } from './client.ts';
-export type { Api, ApiOptions, ApiTimeouts, BackupApi, FetchedLink, LibraryApi, StoreAs, UploadOptions } from './client.ts';
+export type { Api, ApiOptions, ApiTimeouts, BackupApi, FetchedLink, LibraryApi, StoreAs, UploadOptions, UploadResult } from './client.ts';
 export { ApiError, describeError } from './errors.ts';
 export type { ApiErrorKind } from './errors.ts';
 export { DEFAULT_RETRY } from './retry.ts';

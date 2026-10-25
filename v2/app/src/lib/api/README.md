@@ -4,11 +4,11 @@ Typed client for the server's HTTP API. Import `api` (or `createApi`) from `inde
 
 | Call | Route |
 |---|---|
-| `uploadFile(blob, { ext, format, signal }, onProgress) → FileRef` | `POST /files?ext=&format=` (raw body; `asis` sends no format) |
+| `uploadFile(blob, { ext, format, signal }, onProgress) → UploadResult` (`FileRef` + width, height, thumb, originalBytes, note) | `POST /files?ext=&format=` (raw body; `asis` sends no format) |
 | `downloadFile(ref, onProgress, signal) → Blob`, `fileUrl(ref)` | `GET /files/<hash>.<ext>` |
 | `library.list() / add(entry) / remove(id)` | `GET`/`POST /api/library`, `DELETE /api/library/<id>` |
 | `backups.put(game) / list() / get(id) / delete(id)` | `PUT`/`GET`/`DELETE /api/games/<id>`, `GET /api/games` |
-| `fetchLink(url, onProgress, signal) → { blob, name, ext }` | `GET /api/fetch?url=` (a file answer, or JSON naming a stored file, or `{error}`) |
+| `fetchLink(url, onProgress, signal) → { blob, name, ext, kind }` | `GET /api/fetch?url=` → `{url, name, bytes, kind, ext}` (or 422 `{error}`), then `GET <url>` |
 
 Every call: idle timeout (no byte moved for 15 s JSON / 30 s transfers / 60 s link fetch),
 `AbortSignal`, retry with backoff 1–2–4 s on network errors, timeouts, 5xx and 429 (never on other

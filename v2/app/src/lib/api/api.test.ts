@@ -42,7 +42,7 @@ const server = Bun.serve({
       if (fail) return Response.json({ error: fail === 400 ? 'bad ext' : 'busy' }, { status: fail });
       const hasher = new Bun.CryptoHasher('sha256');
       hasher.update(buf);
-      return Response.json({ hash: hasher.digest('hex'), ext: url.searchParams.get('ext'), bytes: buf.byteLength });
+      return Response.json({ hash: hasher.digest('hex'), ext: url.searchParams.get('ext'), bytes: buf.byteLength, width: 10, height: 20, thumb: null, originalBytes: null, note: 'lossless' }, { status: 201 });
     }
     if (p.startsWith('/files/')) {
       return new Response(new Uint8Array(5000), { headers: { 'content-length': '5000' } });
@@ -70,11 +70,11 @@ const server = Bun.serve({
     }
     if (p === '/api/fetch') {
       const link = url.searchParams.get('url') ?? '';
-      if (link.includes('refuse')) return Response.json({ error: 'Only public addresses' });
-      if (link.includes('stored')) return Response.json({ file: refFor('pic', 5000), name: 'Tower.png' });
-      return new Response(new Uint8Array(1234), { headers: { 'content-type': 'image/webp', 'content-disposition': 'attachment; filename="Crypt map.webp"' } });
+      if (link.includes('refuse')) return Response.json({ error: 'Only public addresses' }, { status: 422 });
+      return Response.json({ url: '/uploads/0123456789ab.dd2vtt', name: 'Crypt map.dd2vtt', bytes: 1234, kind: 'uvtt', ext: 'dd2vtt' });
     }
-    if (p === '/slow') { await Bun.sleep(5000); return new Response('late'); }
+    if (p === '/uploads/0123456789ab.dd2vtt') return new Response(new Uint8Array(1234), { headers: { 'content-length': '1234' } });
+    if (p === '/slow') { await Bun.sleep(1000); return new Response('late'); }
     return new Response('nope', { status: 404 });
   },
 });
@@ -99,7 +99,7 @@ describe('uploads', () => {
     const blob = new Blob([new Uint8Array(300_000)], { type: 'image/png' });
     const progress: [number, number][] = [];
     const ref = await api.uploadFile(blob, { ext: 'png', format: 'webp' }, (l, t) => progress.push([l, t]));
-    expect(ref).toMatchObject({ ext: 'png', bytes: 300_000 });
+    expect(ref).toMatchObject({ ext: 'png', bytes: 300_000, width: 10, height: 20, thumb: null, originalBytes: null, note: 'lossless' });
     expect(ref.hash).toMatch(/^[0-9a-f]{64}$/);
     expect(seen[0]).toMatchObject({ method: 'POST', path: '/files', search: '?ext=png&format=webp', bytes: 300_000 });
     expect(progress[0]).toEqual([0, 300_000]);
@@ -214,20 +214,15 @@ describe('library and backups', () => {
 });
 
 describe('link fetch', () => {
-  test('a file answer: content, name from the header, kind', async () => {
+  test('the server stores the link, the device downloads that copy with progress', async () => {
     const { api } = client();
-    const got = await api.fetchLink('https://example.com/x?y=1');
+    const progress: number[] = [];
+    const got = await api.fetchLink('https://example.com/x?y=1', (l, t) => { expect(t).toBe(1234); progress.push(l); });
+    expect(got).toMatchObject({ name: 'Crypt map.dd2vtt', ext: 'dd2vtt', kind: 'uvtt' });
     expect(got.blob.size).toBe(1234);
-    expect(got.name).toBe('Crypt map.webp');
-    expect(got.ext).toBe('webp');
+    expect(progress.at(-1)).toBe(1234);
+    expect(seen.map((x) => x.path)).toEqual(['/api/fetch', '/uploads/0123456789ab.dd2vtt']);
     expect(seen[0]!.search).toBe('?url=https%3A%2F%2Fexample.com%2Fx%3Fy%3D1');
-  });
-
-  test('a stored-file answer downloads the named file', async () => {
-    const { api } = client();
-    const got = await api.fetchLink('https://example.com/stored');
-    expect(got).toMatchObject({ name: 'Tower.png', ext: 'png' });
-    expect(got.blob.size).toBe(5000);
   });
 
   test("the server's refusal comes back as its reason, not retried", async () => {

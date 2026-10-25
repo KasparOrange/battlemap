@@ -6,11 +6,11 @@
  *
  * | Call | Route |
  * |---|---|
- * | {@link Api.uploadFile} | `POST /files?ext=&format=` (raw body) → `FileRef` |
+ * | {@link Api.uploadFile} | `POST /files?ext=&format=` (raw body) → `FileRef` + width, height, thumb, originalBytes, note |
  * | {@link Api.downloadFile} | `GET /files/<hash>.<ext>` |
  * | {@link LibraryApi.list} / `add` / `remove` | `GET /api/library`, `POST /api/library`, `DELETE /api/library/<id>` |
  * | {@link BackupApi.put} / `list` / `get` / `delete` | `PUT /api/games/<id>`, `GET /api/games`, `GET /api/games/<id>`, `DELETE /api/games/<id>` |
- * | {@link Api.fetchLink} | `GET /api/fetch?url=` |
+ * | {@link Api.fetchLink} | `GET /api/fetch?url=` → `{url, name, bytes, kind, ext}`, then `GET <url>` (`/uploads/…`) |
  *
  * Answers may come bare or wrapped (`{entries: […]}`, `{file: …}`): the client unwraps both,
  * so it doesn't break when the server settles on one.
@@ -40,8 +40,24 @@ export interface FetchedLink {
   blob: Blob;
   /** A name for it (from the server, the response, or the link). */
   name: string;
-  /** Its kind when known (sniffed by the server or from the name), else null. */
-  ext: FileExt | null;
+  /** Its extension as the server sniffed it (`png`, `jpg`, `webp`, `pdf`, `dd2vtt`, `uvtt`), else from the name, else null. */
+  ext: string | null;
+  /** What it is, as the server sniffed it, or null when it didn't say. */
+  kind: 'picture' | 'pdf' | 'uvtt' | null;
+}
+
+/** What an upload answers: the stored file and what the server made of it. */
+export interface UploadResult extends FileRef {
+  /** Picture width in pixels, or null (JSON, PDF, or the server didn't say). */
+  width: number | null;
+  /** Picture height in pixels, or null. */
+  height: number | null;
+  /** The thumbnail (≤ 288 px) the server made of a picture, or null. */
+  thumb: FileRef | null;
+  /** Bytes as uploaded when the server converted it, else null. */
+  originalBytes: number | null;
+  /** What the conversion did ("lossless", "already smaller as it was"), or null. */
+  note: string | null;
 }
 
 /** The shared map library. */
@@ -78,10 +94,10 @@ export interface Api {
    * @param blob - the content
    * @param options - kind, Store-as, signal
    * @param onProgress - bytes sent so far, of the total
-   * @returns the stored file's ref (the hash is the server's)
+   * @returns the stored file's ref (the hash is the server's) with size, thumbnail and conversion note
    * @throws {ApiError}
    */
-  uploadFile(blob: Blob, options: UploadOptions, onProgress?: Progress): Promise<FileRef>;
+  uploadFile(blob: Blob, options: UploadOptions, onProgress?: Progress): Promise<UploadResult>;
   /**
    * Downloads a file by ref, with progress.
    *
@@ -148,11 +164,6 @@ const asEntry: Checker<LibraryEntry> = (x) => check(LibraryEntry, x);
 const asSummary: Checker<GameSummary> = (x) => check(GameSummary, x);
 const asGame: Checker<Game> = (x) => check(Game, x);
 
-/** Whether a text is one of the stored file kinds. */
-function isExt(x: unknown): x is FileExt {
-  return check(FileExt, x).ok;
-}
-
 /** Picks an object out of itself or `{<key>: {...}}`. */
 function unwrapOne<T>(checker: Checker<T>, body: unknown, keys: readonly string[]): T | null {
   const bare = checker(body);
@@ -166,23 +177,25 @@ function unwrapOne<T>(checker: Checker<T>, body: unknown, keys: readonly string[
   return null;
 }
 
-/** The extension a name ends in, if it is one we store. */
-function extOf(name: string): FileExt | null {
-  const m = /\.([a-z0-9]+)$/i.exec(name);
-  const e = m?.[1]?.toLowerCase();
-  if (e === 'jpeg') return 'jpg';
-  return isExt(e) ? e : null;
+/** The extension a name ends in (`jpeg` → `jpg`), lowercase, or null. */
+function extOf(name: string): string | null {
+  const e = /\.([a-z0-9]+)$/i.exec(name)?.[1]?.toLowerCase() ?? null;
+  return e === 'jpeg' ? 'jpg' : e;
 }
 
-/** The file name in a `content-disposition` header. */
-function dispositionName(header: string | null): string | null {
-  if (!header) return null;
-  const star = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(header);
-  if (star?.[1]) {
-    try { return decodeURIComponent(star[1].trim().replace(/^"|"$/g, '')); } catch { /* fall through */ }
-  }
-  const plain = /filename="?([^";]+)"?/i.exec(header);
-  return plain?.[1]?.trim() ?? null;
+/** An upload answer: the ref plus the extras the server sends (null where it sends none). */
+function uploadResult(ref: FileRef, body: unknown): UploadResult {
+  const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>;
+  const num = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null);
+  const thumb = asRef(b.thumb);
+  return {
+    ...ref,
+    width: num(b.width),
+    height: num(b.height),
+    thumb: thumb.ok ? thumb.value : null,
+    originalBytes: num(b.originalBytes),
+    note: typeof b.note === 'string' ? b.note : null,
+  };
 }
 
 /** The last path segment of a link, as a name. */
@@ -313,9 +326,10 @@ export function createApi(options: ApiOptions): Api {
             headers: { 'content-type': blob.type || 'application/octet-stream' },
             onUpload: onProgress ?? (() => {}),
           }), path);
-          const out = unwrapOne(asRef, await jsonOf(res, path), ['file', 'ref']);
-          if (!out) throw new ApiError('invalid', 'Answer is not a file ref', path, res.status);
-          return out;
+          const body = await jsonOf(res, path);
+          const ref = unwrapOne(asRef, body, ['file', 'ref']);
+          if (!ref) throw new ApiError('invalid', 'Answer is not a file ref', path, res.status);
+          return uploadResult(ref, body);
         }, policy, log, opts.signal);
         const ms = Math.round(performance.now() - t0);
         log.info('api', 'Upload done', { path, bytes: blob.size, storedBytes: ref.bytes, file: `${ref.hash}.${ref.ext}`, ms, kbps: ms > 0 ? Math.round(blob.size / ms) : null });
@@ -377,32 +391,21 @@ export function createApi(options: ApiOptions): Api {
       const t0 = performance.now();
       log.info('api', 'Link fetch …', { link: url.slice(0, 200) });
       try {
+        // 1. The server downloads the link into its uploads/ and says where it put it.
         const res = await withRetry('Link fetch', path, async () => check(await send({
-          method: 'GET', url: base + path, path, signal, idleMs: t.linkMs, onDownload: onProgress,
+          method: 'GET', url: base + path, path, signal, idleMs: t.linkMs,
         }), path), policy, log, signal);
-        const type = res.header('content-type') ?? '';
-        let out: FetchedLink;
-        if (type.includes('application/json')) {
-          // The old shape: the server stored the link's file and names where it is.
-          const body = (await jsonOf(res, path)) as { error?: unknown; url?: unknown; name?: unknown; file?: unknown; kind?: unknown };
-          if (typeof body.error === 'string') throw new ApiError('http', body.error, path, 422);
-          const name = typeof body.name === 'string' ? body.name : nameFromLink(url);
-          const ref = asRef(body.file);
-          if (ref.ok) {
-            out = { blob: await downloadFile(ref.value, onProgress, signal), name, ext: ref.value.ext };
-          } else if (typeof body.url === 'string') {
-            const rel = body.url.startsWith('http') ? new URL(body.url).pathname + new URL(body.url).search : body.url;
-            const file = await download(rel, 'Link download', 0, onProgress, signal);
-            out = { blob: file.body, name, ext: (isExt(body.kind) ? body.kind : null) ?? extOf(name) };
-          } else {
-            throw new ApiError('invalid', 'Answer names no file', path);
-          }
-        } else {
-          const name = dispositionName(res.header('content-disposition')) ?? nameFromLink(url);
-          const header = res.header('x-file-ext');
-          out = { blob: res.body, name, ext: isExt(header) ? header : extOf(name) };
-        }
-        log.info('api', 'Link fetch done', { link: url.slice(0, 200), name: out.name, ext: out.ext, bytes: out.blob.size, ms: Math.round(performance.now() - t0) });
+        const got = (await jsonOf(res, path)) as Partial<Record<'url' | 'name' | 'bytes' | 'kind' | 'ext', unknown>>;
+        if (typeof got.url !== 'string') throw new ApiError('invalid', 'Answer names no file', path);
+        const name = typeof got.name === 'string' && got.name ? got.name : nameFromLink(url);
+        const bytes = typeof got.bytes === 'number' ? got.bytes : 0;
+        const kind = got.kind === 'picture' || got.kind === 'pdf' || got.kind === 'uvtt' ? got.kind : null;
+        const ext = typeof got.ext === 'string' && got.ext ? got.ext.toLowerCase() : extOf(name);
+        // 2. This device downloads that copy (same-server path, absolute or relative).
+        const rel = got.url.startsWith('http') ? new URL(got.url).pathname + new URL(got.url).search : got.url;
+        const file = await download(rel, 'Link download', bytes, onProgress, signal);
+        const out: FetchedLink = { blob: file.body, name, ext, kind };
+        log.info('api', 'Link fetch done', { link: url.slice(0, 200), name, ext, kind, bytes: out.blob.size, ms: Math.round(performance.now() - t0) });
         return out;
       } catch (err) {
         failed('Link fetch', path, err, t0, { link: url.slice(0, 200) });
