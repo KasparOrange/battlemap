@@ -1,8 +1,9 @@
 <!--
   EffectsPanel — the Effects tab's panel (docs/effects.md "The Effects tab"), top to bottom:
-  the armed effect with its quick settings (shape, size in feet or squares, Aim first | At
+  the armed effect (its frames looping in the stage, `EffectPreview`) with its quick settings (shape, size in feet or squares, Aim first | At
   once, tint, aim at the template disc), the browser (search, Cast · Areas · Auras · Map life,
-  damage-type chips, favourites and recent, a capped grid of tiles), what is on this map (tap
+  damage-type chips, favourites and recent, a capped grid of tiles — a tile loops its frames
+  while hovered or focused), what is on this map (tap
   selects, × removes, Clear all with Undo), and Weather & mood (switches with intensity, Flash ·
   Shake · Fade). The commit row (Cancel · Cast / Remove) is EffectsFooter.
 
@@ -28,6 +29,7 @@
   import { clearAll, removeEffect } from './actions.ts';
   import { browse, damageIn, DAMAGE_COLORS, GROUPS, libraryUrl, loadCatalog, sizeWords, type PickerEffect } from './catalog.ts';
   import { isWeather, whereWords } from './commands.ts';
+  import EffectPreview from './EffectPreview.svelte';
   import EffectTile from './EffectTile.svelte';
   import { effectsLocal, type BrowseGroup } from './local.svelte.ts';
   import { quickStrip } from './prefs.ts';
@@ -135,7 +137,10 @@
   {#if chosen && settings}
     <Section title={chosen.group === 'cast' ? 'Ready to cast' : chosen.group === 'aura' ? 'Ready for a token' : 'Ready to place'} description={hint}>
       <div class="armed" data-testid="effects-armed">
-        <span class="stage"><img src={libraryUrl(chosen.thumb, LIB)} alt="" /></span>
+        <span class="stage">
+          <img src={libraryUrl(chosen.thumb, LIB)} alt="" />
+          <EffectPreview effect={chosen} lib={LIB} active scale={0.9} />
+        </span>
         <div class="who">
           <span class="title">{chosen.name}</span>
           <span class="meta">{sizeWords(chosen)}{otherSpells.length ? ` · also ${otherSpells.join(', ')}` : ''}</span>
@@ -187,13 +192,13 @@
       <div class="strip bm-scroll" use:scrollFade aria-label="Favourites and recent">
         {#each strip as s (s.id)}
           {@const e = effectsLocal.byId(s.id)}
-          {#if e}<EffectTile effect={e} compact thumbUrl={libraryUrl(e.thumb, LIB)} on={effectsLocal.chosenId === e.id} favourite={s.from === 'favourite'} onclick={() => pick(e)} />{/if}
+          {#if e}<EffectTile effect={e} compact thumbUrl={libraryUrl(e.thumb, LIB)} lib={LIB} on={effectsLocal.chosenId === e.id} favourite={s.from === 'favourite'} onclick={() => pick(e)} />{/if}
         {/each}
       </div>
     {/if}
     <div class="grid bm-scroll bm-capped" use:scrollFade data-testid="effects-grid">
       {#each shown as e (e.id)}
-        <EffectTile effect={e} thumbUrl={libraryUrl(e.thumb, LIB)} on={effectsLocal.chosenId === e.id} favourite={effectsLocal.favourites.includes(e.id)} onclick={() => pick(e)} />
+        <EffectTile effect={e} thumbUrl={libraryUrl(e.thumb, LIB)} lib={LIB} on={effectsLocal.chosenId === e.id} favourite={effectsLocal.favourites.includes(e.id)} onclick={() => pick(e)} />
       {:else}
         <p class="empty">Nothing matches “{effectsLocal.query}”.</p>
       {/each}
@@ -242,6 +247,7 @@
   }
 
   .stage {
+    position: relative;
     flex: none;
     display: grid;
     place-items: center;

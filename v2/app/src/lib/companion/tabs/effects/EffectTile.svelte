@@ -11,11 +11,14 @@
   - line: string — the line under the name (default: its size words)
   - compact: boolean — the quick strip's smaller tile
   - pressed: boolean — render as a toggle (`aria-pressed`) rather than a pick
+  - lib: string — the library's base URL; given, a sprite-sheet effect loops its frames in the
+    thumbnail while the tile is hovered or focused (`EffectPreview`)
   - onclick: () => void
 -->
 <script lang="ts">
   import Icon from '../../../ui/Icon.svelte';
   import { DAMAGE_COLORS, sizeWords, type PickerEffect } from './catalog.ts';
+  import EffectPreview from './EffectPreview.svelte';
 
   interface Props {
     /** The effect. */
@@ -34,11 +37,16 @@
     pressed?: boolean;
     /** The tile's name, when not the effect's. */
     name?: string;
+    /** The library's base URL: enables the looping preview on hover / focus. */
+    lib?: string;
     /** Picked. */
     onclick?: () => void;
   }
 
-  let { effect, thumbUrl, on = false, favourite = false, line, compact = false, pressed = false, name, onclick }: Props = $props();
+  let { effect, thumbUrl, on = false, favourite = false, line, compact = false, pressed = false, name, lib, onclick }: Props = $props();
+
+  let hovered = $state(false);
+  let focused = $state(false);
 
   const hue = $derived(effect.damage.map((d) => DAMAGE_COLORS[d]).find(Boolean) ?? null);
 </script>
@@ -54,9 +62,14 @@
   data-effect={effect.id}
   style:--hue={hue}
   {onclick}
+  onpointerenter={(e) => e.pointerType === 'mouse' && (hovered = true)}
+  onpointerleave={() => (hovered = false)}
+  onfocus={(e) => (focused = (e.currentTarget as HTMLElement).matches(':focus-visible'))}
+  onblur={() => (focused = false)}
 >
   <span class="stage">
     <img src={thumbUrl} alt="" loading="lazy" decoding="async" draggable="false" />
+    {#if lib}<EffectPreview {effect} {lib} active={hovered || focused} />{/if}
   </span>
   <span class="name">{name ?? effect.name}</span>
   {#if !compact}<span class="line">{line ?? sizeWords(effect)}</span>{/if}
@@ -86,6 +99,7 @@
   }
 
   .stage {
+    position: relative;
     display: grid;
     place-items: center;
     width: 4rem;
