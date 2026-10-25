@@ -23,7 +23,7 @@ import { hitsAt, type Hit } from './hit.ts';
 import { MapLayer } from './map-layer.ts';
 import type { TableRenderer } from './pixi.ts';
 import { TableMask } from './table-mask.ts';
-import { DM_BUDGET, TV_BUDGET } from './tiles.ts';
+import { DM_BUDGET, effectsBudget, TV_BUDGET, type TextureBudget } from './tiles.ts';
 import { TokensLayer } from './tokens-layer.ts';
 import { ToolsLayer } from './tools-layer.ts';
 import type { CameraChange, EffectSlots, EffectsRuntime, FileLoader, TableViewOptions, ViewProfile } from './types.ts';
@@ -64,6 +64,8 @@ export class TableScene {
   private readonly frame: PlayersFrame | null;
   private readonly mask: TableMask | null;
   private effects: EffectsRuntime | null = null;
+  /** The screen's texture budget (map, and everything else). */
+  readonly budget: TextureBudget;
 
   private state: RootState | null = null;
   private map: MapPlay | null = null;
@@ -113,6 +115,7 @@ export class TableScene {
       fxScreen: named('fx.screen', r.app.stage),
     };
     const budget = this.dm ? DM_BUDGET : TV_BUDGET;
+    this.budget = budget;
     const invalidate = () => r.scheduler.invalidate();
     this.mapLayer = new MapLayer(this.slots.map, {
       files,
@@ -141,7 +144,7 @@ export class TableScene {
     this.mask = this.dm ? null : new TableMask(this.slots.tableMask);
     if (opts.effects) {
       try {
-        this.effects = opts.effects(this.effectSlots(), { profile: this.profile, scheduler: r.scheduler, log: opts.log });
+        this.effects = opts.effects(this.effectSlots(), { profile: this.profile, scheduler: r.scheduler, log: opts.log, budgetBytes: effectsBudget(budget) });
       } catch (e) {
         opts.log.error('render', 'Effects runtime failed to start', { error: String(e) });
       }

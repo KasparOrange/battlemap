@@ -194,6 +194,23 @@ export interface TextureBudget {
   readonly floorPxPerSquare: number;
 }
 
+/**
+ * Of a screen's "everything else" budget, what fog, the token atlas and the glyph pages may
+ * take; the effects get the rest (`effectsBudget`).
+ */
+export const RESERVED_OTHER_BYTES = 4 * 2 ** 20;
+
+/**
+ * The effects' share of a texture budget — one budget for map tiles and effects (rv#17): the
+ * map has its own, fog/tokens/text a fixed reserve, the effects what is left of "everything else".
+ *
+ * @param b - the screen's budget
+ * @returns bytes the effects registry may hold
+ */
+export function effectsBudget(b: TextureBudget): number {
+  return Math.max(0, b.otherBytes - RESERVED_OTHER_BYTES);
+}
+
 /** The TV box: 128 MB of map, 32 MB for the rest, 2048 px tiles (smooth uploads). */
 export const TV_BUDGET: TextureBudget = { mapBytes: 128 * 2 ** 20, otherBytes: 32 * 2 ** 20, maxTile: 2048, floorPxPerSquare: 32 };
 

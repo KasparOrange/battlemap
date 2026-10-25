@@ -63,7 +63,16 @@ export interface EffectsRuntime {
 }
 
 /** Creates the effects runtime — `createEffectsRuntime` from `$lib/effects`. */
-export type EffectsFactory = (slots: EffectSlots, ctx: { profile: ViewProfile; scheduler: RenderScheduler; log: Logger }) => EffectsRuntime;
+export type EffectsFactory = (
+  slots: EffectSlots,
+  ctx: {
+    profile: ViewProfile;
+    scheduler: RenderScheduler;
+    log: Logger;
+    /** Texture bytes the effects may hold: the screen's "everything else" budget minus fog, tokens and text (rv#17). */
+    budgetBytes: number;
+  },
+) => EffectsRuntime;
 
 /** Things the view reports (show a notice, a spinner). */
 export type TableViewEvent =
@@ -107,6 +116,8 @@ export interface RenderStats {
   lastFrameMs: number;
   /** Texture bytes the renderer holds, by part. */
   textures: { map: number; fog: number; tokens: number; layers: number; effects: number; total: number };
+  /** The screen's texture budget: map, and everything else (fog, tokens, effects). */
+  budget: { map: number; other: number };
   /** Placed tokens on screen. */
   tokens: number;
   /** The map's decoded density, px per square. */

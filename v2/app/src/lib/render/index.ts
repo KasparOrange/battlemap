@@ -183,6 +183,7 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
         frames: renderer?.scheduler.frames ?? 0,
         lastFrameMs: renderer?.scheduler.lastRenderMs ?? 0,
         textures: t,
+        budget: { map: scene?.budget.mapBytes ?? 0, other: scene?.budget.otherBytes ?? 0 },
         tokens: scene?.tokenCount ?? 0,
         mapPxPerSquare: scene?.mapPxPerSquare ?? 0,
         gpu,

@@ -470,3 +470,11 @@ describe('memory pressure (rv#3)', () => {
     expect([5, 10, 15, 20, 40, 60, 80].map(isMemoryPressure)).toEqual([false, true, true, false, false, true, true]);
   });
 });
+
+describe('one texture budget (rv#17)', () => {
+  test('effects get "everything else" minus the fog/tokens/text reserve', async () => {
+    const { effectsBudget, TV_BUDGET, RESERVED_OTHER_BYTES } = await import('./tiles.ts');
+    expect(effectsBudget(TV_BUDGET)).toBe(32 * 2 ** 20 - RESERVED_OTHER_BYTES);
+    expect(TV_BUDGET.mapBytes + TV_BUDGET.otherBytes).toBe(160 * 2 ** 20);
+  });
+});

@@ -67,7 +67,7 @@ export interface EffectsRuntimeOptions {
   baseUrl?: string;
   /** A registry to use (tests, a shared one); default: made here with Pixi's loader. */
   registry?: EffectRegistry<Texture>;
-  /** Texture byte budget (default 64 MB on the TV, 96 MB on the companion). */
+  /** Texture byte budget — the renderer hands its share of the screen's budget (rv#17); default 28 MB on the TV (32 minus fog/tokens/text), 92 MB on the companion. */
   budgetBytes?: number;
   /** The quality setting at start (default `full`). */
   quality?: EffectsQuality;
@@ -180,7 +180,7 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
     opts.registry ??
     new EffectRegistry<Texture>({
       baseUrl: opts.baseUrl ?? '/app/effects/',
-      budgetBytes: opts.budgetBytes ?? (opts.profile === 'players' ? 64 : 96) * 1024 * 1024,
+      budgetBytes: opts.budgetBytes ?? (opts.profile === 'players' ? 28 : 92) * 1024 * 1024,
       log,
       ...pixiTextureIO(),
     });
