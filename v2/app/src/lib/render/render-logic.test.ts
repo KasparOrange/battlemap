@@ -255,14 +255,14 @@ describe('fog texels', () => {
     expect(fade.start(prev, next, 1000)).toBe(1);
     expect(next[5]).toBe(255);
     expect(next[1]).toBe(0);
-    const mid = fade.step(next, cols, 1250);
-    expect(mid).toEqual({ first: 0, last: 0 });
+    expect(fade.step(next, cols, 1250)).toBe(true);
+    expect([fade.first, fade.last]).toEqual([0, 0]);
     expect(next[5]).toBeGreaterThan(0);
     expect(next[5]).toBeLessThan(255);
     fade.step(next, cols, 1500);
     expect(next[5]).toBe(0);
     expect(fade.active).toBe(0);
-    expect(fade.step(next, cols, 1600)).toBeNull();
+    expect(fade.step(next, cols, 1600)).toBe(false);
   });
 });
 
@@ -393,5 +393,37 @@ describe('scheduler', () => {
     f.flush();
     expect(drawn).toBe(3);
     fast();
+  });
+});
+
+describe('tools and doors geometry', () => {
+  test('measure: 5e diagonals alternate 5 / 10 ft', async () => {
+    const { measureFeet } = await import('./tools-layer.ts');
+    expect(measureFeet({ a: { x: 0, y: 0 }, b: { x: 6, y: 0 } })).toBe(30);
+    expect(measureFeet({ a: { x: 0, y: 0 }, b: { x: 1, y: 1 } })).toBe(5);
+    expect(measureFeet({ a: { x: 0, y: 0 }, b: { x: 2, y: 2 } })).toBe(15);
+    expect(measureFeet({ a: { x: 0, y: 0 }, b: { x: 3, y: 5 } })).toBe(30); // 3 diagonals (5+10+5) + 2 straight (10)
+  });
+
+  test('dashes: cover the length in dash/gap rhythm and never stall', async () => {
+    const { dashed } = await import('./tools-layer.ts');
+    const segs: number[][] = [];
+    let at: number[] = [];
+    const g = { moveTo(x: number, y: number) { at = [x, y]; return g; }, lineTo(x: number, y: number) { segs.push([...at, x, y]); return g; } };
+    dashed(g as never, [{ x: 0, y: 0 }, { x: 10, y: 0 }], false, 2, 1);
+    expect(segs.map((s) => [s[0], s[2]])).toEqual([[0, 2], [3, 5], [6, 8], [9, 10]]);
+    segs.length = 0;
+    // far from the origin, where float steps are coarse, and with a vanishing last segment
+    dashed(g as never, [{ x: 1e6, y: 0 }, { x: 1e6 + 1000, y: 0.3 }, { x: 1e6 + 1000 + 1e-9, y: 0.3 }], false, 0.2, 0.1);
+    expect(segs.length).toBeGreaterThan(3300);
+    expect(segs.length).toBeLessThan(3400);
+  });
+
+  test('doors swing toward south-east; the squares beside a doorway', async () => {
+    const { swingSign, doorSides } = await import('./doors-layer.ts');
+    expect(swingSign({ a: { x: 0, y: 0 }, b: { x: 1, y: 0 } })).toBe(1);
+    expect(swingSign({ a: { x: 0, y: 0 }, b: { x: 0, y: 1 } })).toBe(-1);
+    expect(doorSides({ a: { x: 3, y: 2 }, b: { x: 4, y: 2 } }, 10, 10).sort((a, b) => a - b)).toEqual([13, 23]);
+    expect(doorSides({ a: { x: 0, y: 2 }, b: { x: 0, y: 3 } }, 10, 10)).toContain(-1);
   });
 });

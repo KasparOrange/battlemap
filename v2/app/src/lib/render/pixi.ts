@@ -94,7 +94,11 @@ export async function createRenderer(host: HTMLElement, opts: RendererOptions): 
 
   const world = new Container({ label: 'world' });
   app.stage.addChild(world);
-  const scheduler = new RenderScheduler(() => app.render());
+  let destroyed = false;
+  // A frame already requested when the view is destroyed must not touch the freed renderer.
+  const scheduler = new RenderScheduler(() => {
+    if (!destroyed) app.render();
+  });
 
   const observer = new ResizeObserver(() => {
     const w = Math.max(1, host.clientWidth);
@@ -116,6 +120,7 @@ export async function createRenderer(host: HTMLElement, opts: RendererOptions): 
     gpu: typeof facts.gpu === 'string' ? facts.gpu : null,
     gl: (app.renderer as unknown as { gl?: WebGL2RenderingContext }).gl ?? null,
     destroy() {
+      destroyed = true;
       observer.disconnect();
       app.destroy({ removeView: true }, { children: true, texture: true, textureSource: true });
       opts.log.info('render', 'Renderer destroyed');

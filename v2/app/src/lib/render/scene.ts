@@ -445,6 +445,17 @@ export class TableScene {
     return before - this.textureBytes().total;
   }
 
+  /**
+   * After a lost WebGL context came back: the map's bitmaps were closed after upload, so the
+   * map and the DM layers load again (same density); buffers and canvases re-upload by themselves.
+   */
+  reloadTextures(): void {
+    this.dmLayers?.drop();
+    if (this.map) this.dmLayers?.set(this.map.layers, this.map.info);
+    this.mapLayer.drop(1);
+    this.r.scheduler.invalidate();
+  }
+
   /** Frees everything. */
   destroy(): void {
     this.stopTicker();

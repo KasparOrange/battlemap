@@ -174,6 +174,10 @@ export class FogFade {
   private cells = new Int32Array(256);
   private starts = new Float64Array(256);
   private count = 0;
+  /** First row the last `step` wrote. */
+  first = 0;
+  /** Last row the last `step` wrote. */
+  last = -1;
 
   /** Squares still fading. */
   get active(): number {
@@ -210,10 +214,10 @@ export class FogFade {
    * @param texels - the buffer to write
    * @param cols - texels per row
    * @param now - the clock, ms
-   * @returns the rows written (null when nothing fades)
+   * @returns whether rows were written (then `first`…`last`); allocates nothing
    */
-  step(texels: Uint8Array, cols: number, now: number): { first: number; last: number } | null {
-    if (this.count === 0) return null;
+  step(texels: Uint8Array, cols: number, now: number): boolean {
+    if (this.count === 0) return false;
     let first = Infinity;
     let last = -1;
     let keep = 0;
@@ -236,7 +240,9 @@ export class FogFade {
       }
     }
     this.count = keep;
-    return last < 0 ? null : { first, last };
+    this.first = last < 0 ? 0 : first;
+    this.last = last;
+    return last >= 0;
   }
 
   /** Forgets every fading square (a new map, a snapshot). */

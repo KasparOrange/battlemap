@@ -149,7 +149,8 @@ export class MapLayer {
         sourceW: size.width,
         sourceH: size.height,
         wantedPxPerSquare: this.opts.wantedPxPerSquare() * this.densityFactor,
-        budgetBytes: budget.mapBytes * this.densityFactor,
+        // mipmaps add a third: plan the base level so the whole chain stays in the budget
+        budgetBytes: (budget.mapBytes * this.densityFactor) / (this.opts.mipmaps ? 4 / 3 : 1),
         floorPxPerSquare: budget.floorPxPerSquare * Math.min(1, this.densityFactor * 1.34),
         maxTile: budget.maxTile,
       });

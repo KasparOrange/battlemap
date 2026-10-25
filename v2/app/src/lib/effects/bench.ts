@@ -58,13 +58,28 @@ const global = (id: string, effect: string, params: PlacedEffect['params'] = {})
   on: true,
 });
 
-/** Twelve torches spread over the map (two rows of six). */
+/**
+ * The part of the map the TV shows: the centred 34 × 19 table window (the whole map when it is
+ * smaller). Scenes place everything in it, so the players' view sees all of it.
+ */
+function win(map: BenchMapSize): { x: number; y: number; w: number; h: number } {
+  const w = Math.min(34, map.cols);
+  const h = Math.min(19, map.rows);
+  return { x: Math.round((map.cols - w) / 2), y: Math.round((map.rows - h) / 2), w, h };
+}
+
+/** A point at fractions of the table window. */
+function spot(map: BenchMapSize, fx: number, fy: number): [number, number] {
+  const v = win(map);
+  return [v.x + v.w * fx, v.y + v.h * fy];
+}
+
+/** Twelve torches spread over the table window (two rows of six). */
 function torches(map: BenchMapSize): PlacedEffect[] {
   const out: PlacedEffect[] = [];
   for (let i = 0; i < 12; i++) {
-    const col = i % 6;
-    const row = Math.floor(i / 6);
-    out.push(at(`torch-${i}`, 'wall-torch', ((col + 0.5) * map.cols) / 6, row === 0 ? 3.5 : map.rows - 3.5));
+    const [x, y] = spot(map, ((i % 6) + 0.5) / 6, i < 6 ? 0.15 : 0.85);
+    out.push(at(`torch-${i}`, 'wall-torch', x, y));
   }
   return out;
 }
@@ -74,8 +89,7 @@ function fireballs(map: BenchMapSize, beat: number, now: number, n = 5): OneShot
   const shots: OneShot[] = [];
   for (let i = 0; i < n; i++) {
     const k = beat * n + i;
-    const x = 4 + ((k * 7.3) % Math.max(1, map.cols - 8));
-    const y = 4 + ((k * 4.1) % Math.max(1, map.rows - 8));
+    const [x, y] = spot(map, 0.12 + ((k * 0.217) % 0.76), 0.2 + ((k * 0.131) % 0.6));
     shots.push({ id: `fb-${beat}-${i}`, effect: 'fireball', anchor: { kind: 'region', points: circleRegion(x, y, 4, 16) }, params: { shape: 'circle' }, at: now });
   }
   return shots;
@@ -101,10 +115,10 @@ export const effectsBenchScenes: readonly EffectsBenchScene[] = [
     id: 'spells',
     name: 'cloudkill + spirit guardians + magic circle',
     placed: (map) => [
-      { id: 'ck', effect: 'cloudkill', anchor: { kind: 'region', points: circleRegion(map.cols * 0.25, map.rows * 0.5, 4) }, params: { shape: 'circle' }, on: true },
-      at('sg', 'spirit-guardians', map.cols * 0.55, map.rows * 0.5),
-      at('mc', 'magic-circle-indicator', map.cols * 0.8, map.rows * 0.5, { color: '#7fc8ff' }),
-      at('ca', 'circle-arcane', map.cols * 0.8, map.rows * 0.5, { size: 6 }),
+      { id: 'ck', effect: 'cloudkill', anchor: { kind: 'region', points: circleRegion(...spot(map, 0.25, 0.5), 4) }, params: { shape: 'circle' }, on: true },
+      at('sg', 'spirit-guardians', ...spot(map, 0.55, 0.5)),
+      at('mc', 'magic-circle-indicator', ...spot(map, 0.8, 0.5), { color: '#7fc8ff' }),
+      at('ca', 'circle-arcane', ...spot(map, 0.8, 0.5), { size: 6 }),
     ],
     shotEveryMs: 0,
     shots: () => [],
@@ -117,24 +131,24 @@ export const effectsBenchScenes: readonly EffectsBenchScene[] = [
       global('storm', 'rain-storm'),
       global('night', 'night'),
       global('embers', 'embers'),
-      { id: 'ck', effect: 'cloudkill', anchor: { kind: 'region', points: circleRegion(map.cols * 0.3, map.rows * 0.5, 4) }, params: { shape: 'circle' }, on: true },
-      { id: 'pool', effect: 'water-pool', anchor: { kind: 'region', points: circleRegion(map.cols * 0.7, map.rows * 0.5, 3, 12) }, params: {}, on: true },
-      { id: 'lava', effect: 'lava-pool', anchor: { kind: 'region', points: lineRegion(map.cols * 0.45, map.rows * 0.2, map.cols * 0.6, map.rows * 0.8, 2) }, params: {}, on: true },
-      at('sg', 'spirit-guardians', map.cols * 0.5, map.rows * 0.5),
-      at('ff', 'fireflies-cc0', map.cols * 0.85, map.rows * 0.3),
-      at('mc', 'magic-circle-indicator', map.cols * 0.15, map.rows * 0.3),
+      { id: 'ck', effect: 'cloudkill', anchor: { kind: 'region', points: circleRegion(...spot(map, 0.3, 0.5), 4) }, params: { shape: 'circle' }, on: true },
+      { id: 'pool', effect: 'water-pool', anchor: { kind: 'region', points: circleRegion(...spot(map, 0.7, 0.5), 3, 12) }, params: {}, on: true },
+      { id: 'lava', effect: 'lava-pool', anchor: { kind: 'region', points: lineRegion(...spot(map, 0.45, 0.2), ...spot(map, 0.6, 0.8), 2) }, params: {}, on: true },
+      at('sg', 'spirit-guardians', ...spot(map, 0.5, 0.5)),
+      at('ff', 'fireflies-cc0', ...spot(map, 0.85, 0.3)),
+      at('mc', 'magic-circle-indicator', ...spot(map, 0.15, 0.3)),
     ],
     shotEveryMs: 3000,
     shots: (map, beat, now) => [
       ...fireballs(map, beat, now, 3),
-      { id: `cone-${beat}`, effect: 'breath-fire-cone', anchor: { kind: 'region', points: coneRegion(map.cols * 0.2, map.rows * 0.8, -30, 6) }, params: { shape: 'cone' }, at: now },
-      { id: `bolt-${beat}`, effect: 'lightning-bolt', anchor: { kind: 'region', points: lineRegion(2, map.rows * 0.15, map.cols - 2, map.rows * 0.15, 1) }, params: { shape: 'line' }, at: now },
+      { id: `cone-${beat}`, effect: 'breath-fire-cone', anchor: { kind: 'region', points: coneRegion(...spot(map, 0.2, 0.8), -30, 6) }, params: { shape: 'cone' }, at: now },
+      { id: `bolt-${beat}`, effect: 'lightning-bolt', anchor: { kind: 'region', points: lineRegion(...spot(map, 0.05, 0.3), ...spot(map, 0.95, 0.3), 1) }, params: { shape: 'line' }, at: now },
     ],
   },
   {
     id: 'decals',
     name: 'still decals only (must idle at 0 frames)',
-    placed: (map) => Array.from({ length: 8 }, (_, i) => at(`rune-${i}`, 'runes-arcane', 3 + i * 3, map.rows / 2)),
+    placed: (map) => Array.from({ length: 8 }, (_, i) => at(`rune-${i}`, 'runes-arcane', ...spot(map, 0.1 + i * 0.11, 0.5))),
     shotEveryMs: 0,
     shots: () => [],
   },

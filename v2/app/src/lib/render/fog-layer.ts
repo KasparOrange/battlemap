@@ -244,8 +244,7 @@ export class FogLayer {
   private tick(now: number): void {
     if (this.uniforms.uMode[0] === 2) this.uniforms.uMode[1] = now / 1000;
     if (this.fade.active === 0) return;
-    const rows = this.fade.step(this.texels, this.cols, now);
-    if (rows) this.source!.update(rows.first * this.cols, (rows.last + 1) * this.cols);
+    if (this.fade.step(this.texels, this.cols, now)) this.source!.update(this.fade.first * this.cols, (this.fade.last + 1) * this.cols);
     if (this.fade.active === 0 && this.releaseFade) {
       this.releaseFade();
       this.releaseFade = null;

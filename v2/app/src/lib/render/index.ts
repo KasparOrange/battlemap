@@ -80,6 +80,12 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
     renderer = r;
     gpu = r.gpu;
     scene = new TableScene(r, opts, files);
+    const canvas = r.app.canvas;
+    canvas.addEventListener('webglcontextlost', () => log.warn('render', 'WebGL context lost', { profile: opts.profile }));
+    canvas.addEventListener('webglcontextrestored', () => {
+      log.info('render', 'WebGL context restored — reloading the map', { profile: opts.profile });
+      scene?.reloadTextures();
+    });
     if (pending) scene.update(pending);
     if (pendingCam) scene.setDmCamera(pendingCam);
     pending = null;

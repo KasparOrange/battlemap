@@ -287,6 +287,7 @@
         },
       });
       await view.ready;
+      if (cancelled || !host) return;
       const st = view.stats();
       gpuName = st.gpu ?? 'unknown GPU';
       w.__bench!.gpu = gpuName;

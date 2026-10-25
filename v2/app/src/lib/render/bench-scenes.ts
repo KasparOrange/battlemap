@@ -224,7 +224,12 @@ export const showcase: BenchScene = {
       strokes: strokes(3, 60, 10, 6).map((st) => ({ ...st, points: st.points.map((v, i) => v + (i % 2 ? 4 : 6)) })),
       disc: { ...classicDisc(), visible: true, x: 12, y: 8, rotation: 30 },
       ruler: { visible: true, x: 2, y: 12, rotation: 0 },
-      view: { ...m.view, mode: 'fit', quarterTurns: (Number(params?.get('turns') ?? 0) % 4) as 0 | 1 | 2 | 3 },
+      view: {
+        ...m.view,
+        mode: params?.get('zoom') ? 'free' : 'fit',
+        free: params?.get('zoom') ? { x: Number(params.get('cx') ?? 12), y: Number(params.get('cy') ?? 8), zoom: Number(params.get('zoom')) } : null,
+        quarterTurns: (Number(params?.get('turns') ?? 0) % 4) as 0 | 1 | 2 | 3,
+      },
     }));
     const style = (params?.get('fogStyle') ?? 'standard') as 'standard' | 'soft' | 'cloud' | 'atmospheric';
     const pattern = params?.get('pattern') === '1';

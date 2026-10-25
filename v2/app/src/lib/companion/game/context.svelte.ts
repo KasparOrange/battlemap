@@ -38,6 +38,10 @@ export class GameScreenContext implements GameContext {
   /** The map view's size in CSS px. */
   viewport = $state.raw<Viewport>({ width: 1, height: 1 });
 
+  /** Px at the view's bottom covered by the phone's sheet: fitting keeps the map above it. */
+  private fitBottom = 0;
+  /** The camera the last fit produced (a refit only replaces it while the DM hasn't moved). */
+  private fittedCam: Camera | null = null;
   private geometryRef: string | null = null;
   private fittedMap: string | null = null;
 
@@ -133,7 +137,24 @@ export class GameScreenContext implements GameContext {
     if (!this.session.view?.game) return;
     const { cols, rows } = this.map.info.grid;
     this.fittedMap = this.map.info.id;
-    this.setCamera(fitCamera(cols, rows, this.viewport));
+    const free = { width: this.viewport.width, height: Math.max(80, this.viewport.height - this.fitBottom) };
+    const cam = fitCamera(cols, rows, free);
+    // centre the map in the free part: shift the centre down by half the covered strip
+    this.setCamera({ ...cam, centerY: cam.centerY + (this.viewport.height - free.height) / 2 / cam.zoom });
+    this.fittedCam = this.cam;
+  }
+
+  /**
+   * The phone's sheet covers this many px of the view's bottom; a map still as fitted is refitted
+   * into the part above it.
+   *
+   * @param px - covered px (0 when the sheet is closed)
+   */
+  setFitBottom(px: number): void {
+    const v = Math.max(0, Math.round(px));
+    if (v === this.fitBottom) return;
+    this.fitBottom = v;
+    if (this.fittedCam && this.fittedCam === this.cam) this.fit();
   }
 
   /** Centres the companion on what the TV shows, zoomed so all of it fits. */

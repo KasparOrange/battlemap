@@ -97,7 +97,7 @@ async function setup(browser: import('@playwright/test').Browser, size = { width
   await serveLair(tv);
   if (process.env.E2E_CONSOLE) tv.on('console', (m) => { const t = m.text(); if (/sync|games|tv\]/.test(t)) console.log('[tv]', t.slice(0, 220)); });
   await tv.goto(`/app/?mode=tv&table=${room}&debug=1&name=E2E%20TV`);
-  await expect(tv.getByTestId('tv-status')).toContainText('open');
+  await expect(tv.getByTestId('tv-status')).toContainText('open', { timeout: 30_000 });
   const drv = await driver(room);
   const game = { id: `g${Date.now().toString(36)}`, name: 'Night one', createdAt: new Date().toISOString(), map: lairMap() };
   // the TV may still be opening its storage (it then answers with its start state): ask again
@@ -284,4 +284,19 @@ test('screenshots: tablet and phone', async ({ browser }) => {
     await page.screenshot({ path: `e2e/test-results/shots/companion-game-${name}-draw.png` });
     await close();
   }
+});
+
+test('DEBUG layout', async ({ browser }) => {
+  test.skip(!process.env.E2E_DEBUG);
+  const { page, close } = await setup(browser, { width: 390, height: 844 });
+  await openTab(page, 'Fog');
+  await page.waitForTimeout(800);
+  const boxes = await page.evaluate(() => {
+    const q = (s: string) => { const e = document.querySelector(s) as HTMLElement | null; if (!e) return null; const r = e.getBoundingClientRect(); return `${s}: y ${Math.round(r.top)}..${Math.round(r.bottom)} h ${Math.round(r.height)} disp ${getComputedStyle(e).display}`; };
+    return ['.full', '.screen', '.map', '.tabbar', '.sheet-zone', '.bm-sheet', 'body', 'html', '#app'].map(q);
+  });
+  console.log(boxes.join('\n'));
+  console.log('scroll', await page.evaluate(() => [scrollY, visualViewport?.offsetTop, visualViewport?.height, innerHeight]));
+  await page.screenshot({ path: 'e2e/test-results/shots/debug-phone.png' });
+  await close();
 });

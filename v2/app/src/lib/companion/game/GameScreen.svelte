@@ -74,6 +74,25 @@
   $effect(() => {
     ctx.phone = phone;
   });
+
+  let mapEl = $state<HTMLDivElement>();
+  let sheetZone = $state<HTMLDivElement>();
+  // phone: keep a fitted map above the sheet (measured once the sheet has moved)
+  $effect(() => {
+    void sheetOpen;
+    void detent;
+    if (!phone) {
+      ctx.setFitBottom(0);
+      return;
+    }
+    const t = setTimeout(() => {
+      const sheet = sheetZone?.querySelector<HTMLElement>('.bm-sheet');
+      if (!mapEl || !sheet) return;
+      const covered = sheetOpen ? mapEl.getBoundingClientRect().bottom - sheet.getBoundingClientRect().top : 0;
+      ctx.setFitBottom(Math.min(covered, mapEl.clientHeight * 0.6));
+    }, 380);
+    return () => clearTimeout(t);
+  });
   $effect(() => {
     void session.view;
     ctx.follow();
@@ -147,7 +166,7 @@
 <svelte:window onkeydown={onKey} />
 
 <div class="screen" class:phone bind:clientWidth={width} data-testid="game-screen">
-  <div class="map">
+  <div class="map" bind:this={mapEl}>
     <MapView {ctx} tool={() => tool} doors={() => active.doors !== false} />
 
     <div class="corner tl" data-ctl={phone ? 'toolbar' : 'standalone'}>
@@ -206,7 +225,7 @@
       </div>
     </div>
   {:else}
-    <div class="sheet-zone">
+    <div class="sheet-zone" bind:this={sheetZone}>
       <Sheet side="bottom" bind:open={sheetOpen} bind:detent title={active.title} label="Tool panel">
         {#snippet actions()}
           <IconButton icon="undo" label="Undo" variant="flat" disabled={!undoOk} onclick={undo} />
@@ -236,7 +255,7 @@
     height: 100%;
     padding: var(--g);
     background: var(--bg);
-    overflow: hidden;
+    overflow: clip; /* never scrollable: a focus or scrollIntoView must not shift the screen */
   }
 
   /* the map is a WILD ground: it keeps a hairline so it never melts into the gap */
@@ -244,10 +263,10 @@
     position: relative;
     flex: 1;
     min-width: 0;
-    overflow: hidden;
     border-radius: var(--r);
     background: var(--map-ground);
     box-shadow: inset 0 0 0 1px var(--hair);
+    overflow: clip;
   }
 
   .corner {
@@ -292,7 +311,7 @@
     border: 1.5px solid var(--hair);
     border-radius: var(--r);
     box-shadow: var(--elev-float);
-    overflow: hidden;
+    overflow: clip;
   }
 
   .panel {

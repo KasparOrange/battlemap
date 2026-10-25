@@ -151,14 +151,22 @@ test.describe('scene 0 · prep', () => {
     t.bot.send({ type: 'game.close' });
     await t.bot.until((s) => s.game === null);
     await t.tv.waitForTimeout(500);
+    // Crawl with the D-pad only: arrows around, OK on "Library" once; collect what got focus.
     const seen = new Set<string>();
-    for (let i = 0; i < 8; i++) {
+    let enteredLibrary = false;
+    const keys = ['ArrowDown', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'ArrowRight'];
+    for (let i = 0; i < 40 && !(seen.has('Remote A') && seen.has('Remote B')); i++) {
       const label = await t.tv.evaluate(() => (document.activeElement as HTMLElement | null)?.innerText?.trim() ?? '');
-      if (label) seen.add(label);
-      await t.tv.keyboard.press('ArrowDown');
+      for (const name of ['Remote A', 'Remote B']) if (label.includes(name)) seen.add(name);
+      if (!enteredLibrary && label.startsWith('Library')) {
+        enteredLibrary = true;
+        await t.tv.keyboard.press('Enter');
+        await t.tv.waitForTimeout(400);
+        continue;
+      }
+      await t.tv.keyboard.press(keys[i % keys.length]!);
     }
-    expect([...seen].join(' | ')).toContain('Remote A');
-    expect([...seen].join(' | ')).toContain('Remote B');
+    expect([...seen].sort(), 'both games reached with arrows + OK').toEqual(['Remote A', 'Remote B']);
   });
 });
 
@@ -544,14 +552,14 @@ test.describe('scene 5 · something goes wrong', () => {
       await t.bot.must({ type: 'table.calibrate', widthInches: 38 });
       await waitSynced(t);
       await privateServer.kill();
-      await expect(t.tv.getByRole('status')).toContainText(/Connecting/, { timeout: 10_000 });
+      await expect(t.tv.getByText(/Connecting to the server|No connection to the server/).first()).toBeVisible({ timeout: 10_000 });
       await t.tv.waitForTimeout(3000);
       await privateServer.restart();
       await waitTvOnline(t.tv);
       await t.bot.connect();
       const s = await waitSynced(t, 20_000);
       expect(s.state.table.widthInches, 'the TV kept its state through the outage').toBe(38);
-      await expect(t.tv.getByRole('status')).toHaveCount(0, { timeout: 15_000 }); // no chrome once all is well (a companion is there)
+      await expect(t.tv.getByText(/Connecting to the server|No connection to the server|Tablet not connected/)).toHaveCount(0, { timeout: 15_000 }); // the problem badge goes once all is well
     } finally {
       await t.close();
     }
