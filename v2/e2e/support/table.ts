@@ -190,11 +190,15 @@ export async function openTable(browser: Browser, opts: TableOptions = {}): Prom
  */
 export async function waitSynced(t: Table, timeoutMs = 10_000): Promise<Snapshot> {
   let snap: Snapshot | null = null;
+  let last = 'nothing read yet';
   await expect.poll(async () => {
     snap = await t.bot.snapshot();
     const revs = [await pageRev(t.tv), t.bot.rev, ...(await Promise.all(t.companions.map(pageRev)))];
-    return revs.every((r) => r === snap!.rev) ? 'synced' : `TV snapshot rev ${snap.rev}, pages/bot ${revs.join(',')}`;
-  }, { timeout: timeoutMs, message: 'table did not sync' }).toBe('synced');
+    last = `TV snapshot rev ${snap.rev} epoch ${snap.epoch}; TV page, bot, companions: ${revs.join(', ')}`;
+    return revs.every((r) => r === snap!.rev) ? 'synced' : last;
+  }, { timeout: timeoutMs, message: 'table did not sync' }).toBe('synced').catch((e: unknown) => {
+    throw new Error(`table did not sync — ${last}`, { cause: e });
+  });
   return snap!;
 }
 

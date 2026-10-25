@@ -12,7 +12,7 @@
  * emptied at start), so games, library and files of one run never leak into the next. Tests that
  * need their own server use the `privateServer` fixture (`support/fixtures.ts`).
  *
- * Traces and screenshots of failures stay on disk under `test-results/e2e-<app port>/`, the JSON
+ * Traces and screenshots of failures stay on disk under `$TMPDIR/claude-v2-e2e-results-<app port>/`, the JSON
  * report in `test-results/e2e-report-<app port>.json` (never printed);
  * open one with `bunx playwright show-trace <path>/trace.zip`.
  */
@@ -31,8 +31,12 @@ const SERVER_ENV = { PORT: String(SERVER_PORT), DATA_DIR, ...(DEV ? {} : { APP_D
 const APP_ENV = { BATTLEMAP_APP_PORT: String(APP_PORT), BATTLEMAP_SERVER: `http://localhost:${SERVER_PORT}` };
 /** Where pages load the app from. */
 const APP_ORIGIN = `http://localhost:${DEV ? APP_PORT : SERVER_PORT}`;
-const SERVER_CMD = `rm -rf "${DATA_DIR}" && bun run --cwd ../server start`;
+// `exec`, so the server is the process Playwright stops at the end — through `bun run` it was a
+// grandchild that outlived the run, and the next run reused it with the old build.
+const SERVER_CMD = `rm -rf "${DATA_DIR}" && cd ../server && exec bun src/main.ts`;
 const BUILD_CMD = `rm -rf "${APP_DIR}" && (cd ../app && bunx vite build --outDir "${APP_DIR}" --logLevel warn)`;
+/** Reuse a server already on the port only in dev mode — a built run always builds fresh. */
+const REUSE = DEV;
 
 export default defineConfig({
   testDir: '.',
@@ -41,7 +45,9 @@ export default defineConfig({
   expect: { timeout: 7_000 },
   // Per app port, so parallel runs of other helpers never clean or overwrite this run's results.
   reporter: [['list'], ['json', { outputFile: `../test-results/e2e-report-${APP_PORT}.json` }]],
-  outputDir: `../test-results/e2e-${APP_PORT}`,
+  // Artifacts live in the temp dir: other helpers' runs clean `test-results/` while this one is
+  // still writing its traces there (ENOENT on trace files).
+  outputDir: join(tmpdir(), `claude-v2-e2e-results-${APP_PORT}`),
   // Each test makes its own table, so files run in parallel; the TV pages draw with WebGL, so
   // not too many at once.
   workers: Number(process.env.BATTLEMAP_E2E_WORKERS ?? 2),
@@ -60,6 +66,6 @@ export default defineConfig({
       ]
     : [
         // Build first, then serve build + server from one process; ready when the app answers.
-        { command: `${BUILD_CMD} && ${SERVER_CMD}`, url: `http://localhost:${SERVER_PORT}/app/`, env: SERVER_ENV, reuseExistingServer: true, timeout: 240_000 },
+        { command: `${BUILD_CMD} && ${SERVER_CMD}`, url: `http://localhost:${SERVER_PORT}/app/`, env: SERVER_ENV, reuseExistingServer: REUSE, timeout: 240_000 },
       ],
 });

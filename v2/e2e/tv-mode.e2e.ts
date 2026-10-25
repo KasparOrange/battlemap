@@ -54,7 +54,15 @@ test('a new game comes back after a reload', async ({ page }) => {
   await expect(page.getByTestId('tv-status')).toContainText('rev 2');
   await page.waitForTimeout(2600); // the autosave runs 2 s after the last change
 
+  const t0 = Date.now();
   await page.reload();
+  // qa#11: time to the first frame with the map (the renderer's counters through the test hook).
+  await expect.poll(() => page.evaluate(() => {
+    const r = (window as unknown as { __battlemap?: { render?(): { frames: number; detail?: { textures?: { map: number } } } | null } }).__battlemap?.render?.();
+    return (r?.frames ?? 0) > 0 && (r?.detail?.textures?.map ?? 0) > 0;
+  }), { timeout: 20_000, message: 'the map never came back after the reload' }).toBe(true);
+  const firstMapFrameMs = Date.now() - t0;
+  test.info().annotations.push({ type: 'timing', description: `reload → first frame with the map: ${firstMapFrameMs} ms` });
   await expect(page.getByTestId('tv-status')).toContainText('open');
   await expect(page.getByTestId('tv-status')).toContainText('game Reload test');
   await expect(page.getByTestId('tv-status')).toContainText('screen game');

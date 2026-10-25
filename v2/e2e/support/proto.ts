@@ -236,7 +236,9 @@ export class ProtoClient {
    * @throws Error on timeout or when not connected
    */
   async request(m: Msg, replyTypes: string[], timeoutMs = 10_000): Promise<Msg> {
-    const reply = this.next((r) => replyTypes.includes(r.type), timeoutMs, replyTypes.join('|'));
+    // Only an answer addressed to this client: the TV also broadcasts listings (after a save),
+    // which may have been made before the request and so describe an older state (qa#9's flake).
+    const reply = this.next((r) => replyTypes.includes(r.type) && r.to === this.client, timeoutMs, replyTypes.join('|'));
     if (!this.send(m)) throw new Error(`${m.type}: not connected`);
     return reply;
   }
