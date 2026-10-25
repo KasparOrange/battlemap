@@ -153,6 +153,22 @@ describe('games', () => {
     expect(log.has('Stored game is broken — skipped')).toBe(true);
   });
 
+  test('rv#23: a record carries its row; an older one without lists through its game', async () => {
+    const { storage, idb, log } = setup();
+    await storage.games.put(gameWith('new'));
+    const db = await openDatabase({ idb, log });
+    const rec = await new Promise<{ summary?: { id: string } }>((r) => {
+      const q = db.transaction('games').objectStore('games').get('new');
+      q.onsuccess = () => r(q.result as { summary?: { id: string } });
+    });
+    expect(rec.summary?.id).toBe('new');
+    const tx = db.transaction('games', 'readwrite');
+    tx.objectStore('games').put({ id: 'old', savedAt: '2020-01-01T00:00:00.000Z', game: gameWith('old') });
+    await new Promise((r) => (tx.oncomplete = r));
+    db.close();
+    expect((await storage.games.list()).map((g) => g.id)).toEqual(['new', 'old']);
+  });
+
   test('quota on save frees the file cache and retries', async () => {
     const { storage, notices, log } = setup();
     await storage.files.get(refFor('f1', 300));

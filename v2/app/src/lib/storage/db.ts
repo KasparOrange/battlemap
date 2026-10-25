@@ -16,7 +16,7 @@
  *
  * @see ../../../../docs/architecture.md "persistence"
  */
-import type { FileExt, Game } from '@battlemap/shared';
+import type { FileExt, Game, GameSummary } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
 
 /** The database's name on every device. */
@@ -30,6 +30,11 @@ export interface GameRecord {
   savedAt: string;
   /** The game itself. */
   game: Game;
+  /**
+   * Its library row, written with every save so a listing needn't read and check whole games
+   * (rv#23). Records saved before it existed lack it; `list()` then summarizes the game.
+   */
+  summary?: GameSummary;
 }
 
 /** A cached file. */

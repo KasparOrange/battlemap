@@ -3,14 +3,15 @@
  * authority). A record is the whole game plus its save time — a game is small (fog masks are
  * bits, pictures are file refs), so a list reads the records whole.
  *
- * Writes store a plain JSON copy, so a Svelte `$state` proxy or a later mutation can never end
- * up in (or break) the database. Reads check every record against the shared `Game` schema; a
- * record that fails is logged and left out instead of breaking the whole list (the old app's
- * one-corrupt-entry bug, parity SN-11).
+ * Writes store the game as it is (states are plain, immutable trees); only a value IndexedDB
+ * can't clone (a Svelte `$state` proxy) is copied through JSON first. Every record carries its
+ * library row (`summary`), so a listing reads rows, not games (rv#23). Reads of a game check it
+ * against the shared `Game` schema; a record that fails is logged and left out instead of
+ * breaking the whole list (the old app's one-corrupt-entry bug, parity SN-11).
  *
  * @see ./db.ts for the schema
  */
-import { check, Game, type GameSummary } from '@battlemap/shared';
+import { check, Game, GameSummary } from '@battlemap/shared';
 import { committed, done, isQuotaError, type GameRecord } from './db.ts';
 import { FULL_TEXT, type StorageContext } from './context.ts';
 
@@ -98,8 +99,25 @@ export function createGameStore(ctx: StorageContext, options: GameStoreOptions =
   async function write(rec: GameRecord): Promise<void> {
     const db = await ctx.db();
     const tx = db.transaction('games', 'readwrite');
-    tx.objectStore('games').put(rec);
+    try {
+      tx.objectStore('games').put(rec);
+    } catch (err) {
+      if ((err as { name?: string })?.name !== 'DataCloneError') throw err;
+      log.warn('storage', 'Game is not cloneable as is — stored as a JSON copy', { gameId: rec.id });
+      tx.objectStore('games').put(JSON.parse(JSON.stringify(rec)) as GameRecord);
+    }
     await committed(tx);
+  }
+
+  /** A record's row: its stored summary when valid, else made from the checked game. */
+  function rowOf(rec: unknown): GameSummary | null {
+    const r = rec as Partial<GameRecord> | null;
+    if (r?.summary) {
+      const s = check(GameSummary, r.summary);
+      if (s.ok) return s.value;
+    }
+    const ok = checked(rec, String(r?.id ?? '?'));
+    return ok ? summarize(ok.game, ok.savedAt) : null;
   }
 
   return {
@@ -109,8 +127,8 @@ export function createGameStore(ctx: StorageContext, options: GameStoreOptions =
       const all = (await done(db.transaction('games').objectStore('games').getAll())) as unknown[];
       const rows: GameSummary[] = [];
       for (const rec of all) {
-        const ok = checked(rec, String((rec as { id?: unknown })?.id ?? '?'));
-        if (ok) rows.push(summarize(ok.game, ok.savedAt));
+        const row = rowOf(rec);
+        if (row) rows.push(row);
       }
       rows.sort((a, b) => (a.savedAt < b.savedAt ? 1 : a.savedAt > b.savedAt ? -1 : 0));
       log.debug('storage', 'Listed games', { count: rows.length, broken: all.length - rows.length, ms: Math.round(performance.now() - t0) });
@@ -133,8 +151,8 @@ export function createGameStore(ctx: StorageContext, options: GameStoreOptions =
 
     async put(game) {
       const t0 = performance.now();
-      const text = JSON.stringify(game);
-      const rec: GameRecord = { id: game.id, savedAt: now().toISOString(), game: JSON.parse(text) as Game };
+      const savedAt = now().toISOString();
+      const rec: GameRecord = { id: game.id, savedAt, game, summary: summarize(game, savedAt) };
       try {
         await write(rec);
       } catch (err) {
@@ -142,18 +160,18 @@ export function createGameStore(ctx: StorageContext, options: GameStoreOptions =
           log.error('storage', 'Game save failed', { gameId: game.id, error: String(err) });
           throw err;
         }
-        log.warn('storage', 'Game save hit the storage quota — freeing the file cache', { gameId: game.id, bytes: text.length });
+        log.warn('storage', 'Game save hit the storage quota — freeing the file cache', { gameId: game.id });
         ctx.notify(FULL_TEXT, 'warning');
         try {
           await options.freeSpace?.();
           await write(rec);
         } catch (again) {
-          log.error('storage', 'Game save failed: storage full', { gameId: game.id, bytes: text.length, error: String(again) });
+          log.error('storage', 'Game save failed: storage full', { gameId: game.id, error: String(again) });
           ctx.notify('Storage on this device is full — the game could not be saved here.', 'error');
           throw isQuotaError(again) ? new StorageFullError(`game "${game.name}"`) : again;
         }
       }
-      log.info('storage', 'Game saved', { gameId: game.id, bytes: text.length, ms: Math.round(performance.now() - t0) });
+      log.info('storage', 'Game saved', { gameId: game.id, ms: Math.round(performance.now() - t0) });
     },
 
     async delete(id) {
