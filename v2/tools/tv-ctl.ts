@@ -6,7 +6,7 @@
  *
  *   bun tools/tv-ctl.ts status  --server https://… --table table-yf6kig4q   # diag.report
  *   bun tools/tv-ctl.ts prepare …   # save now (before a deploy) → deploy.ready
- *   bun tools/tv-ctl.ts resume  …   # reopen the newest game (after a deploy or a box reset)
+ *   bun tools/tv-ctl.ts resume  …   # reopen the TV's newest game (after a deploy or a box reset)
  *   bun tools/tv-ctl.ts reload  …   # the TV saves and reloads the app (a new build)
  *   bun tools/tv-ctl.ts list    …   # the TV's games (device + server backups)
  *
@@ -63,8 +63,12 @@ async function main(cmd: Cmd, client: ProtoClient, timeoutMs: number): Promise<v
       return;
     case 'resume': {
       const listing = await client.request({ type: 'lib.list' }, ['lib.listing'], timeoutMs);
-      const games = (listing.games ?? []) as { id: string; name: string; savedAt: string }[];
-      const newest = games[0];
+      const games = (listing.games ?? []) as { id: string; name: string; savedAt: string; where?: string }[];
+      // The TV's own games first (the listing also holds other TVs' server backups — the TV
+      // home's Continue rule, qa#7), the newest of them.
+      const own = games.filter((g) => g.where !== 'server').sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+      // After a box reset the TV holds none of its own: then the newest server backup.
+      const newest = own[0] ?? games[0];
       if (!newest) throw new Error('the TV has no game to resume');
       client.send({ type: 'game.open', gameId: newest.id });
       const snap = await client.until((s) => s.game?.id === newest.id, timeoutMs);
