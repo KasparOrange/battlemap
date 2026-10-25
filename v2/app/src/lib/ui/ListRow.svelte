@@ -97,6 +97,7 @@
         display: flex;
         align-items: center;
         gap: calc(var(--g) / 2);
+        min-width: 0;
         min-height: var(--sq-row);
         padding-right: calc(var(--g) / 2);
         border-radius: var(--r-ctl);

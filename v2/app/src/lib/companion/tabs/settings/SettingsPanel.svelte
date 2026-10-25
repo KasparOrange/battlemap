@@ -237,12 +237,18 @@
 </Dialog>
 
 <style>
+  /* minmax(0, …): a long map name ellipsizes instead of pushing the badge past the panel (qa#5) */
   .rows {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 2px;
+  }
+
+  .rows > li {
+    min-width: 0;
   }
 
   .two {
@@ -252,8 +258,9 @@
   }
 
   .th {
-    width: 48px;
-    height: 36px;
+    display: block;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
     border-radius: var(--r-sm);
   }
