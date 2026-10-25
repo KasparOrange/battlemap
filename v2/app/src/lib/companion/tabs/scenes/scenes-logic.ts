@@ -146,7 +146,7 @@ export function moveScene(scenes: readonly Scene[], id: string, dir: 'up' | 'dow
  */
 export function curtainMenu(curtain: Curtain): MenuItem[] {
   return [
-    { id: 'toggle', label: curtain.down ? 'Lift the curtain' : 'Lower the curtain', icon: curtain.down ? 'reveal' : 'hide', description: curtain.down ? 'The players see the table again, in one fade' : 'The TV fades out until you lift it' },
+    { id: 'toggle', label: curtain.down ? 'Lift the curtain' : 'Lower the curtain', icon: curtain.down ? 'curtain-lift' : 'curtain', description: curtain.down ? 'The players see the table again, in one fade' : 'The TV fades out until you lift it' },
     { id: 'black', label: 'Black', icon: 'moon', checked: !curtain.plate, description: 'Nothing but black', divider: true },
     { id: 'plate', label: 'Next scene plate', icon: 'candle', checked: curtain.plate, description: 'The game’s name, your line, a slow glow' },
     { id: 'text', label: 'Plate text…', icon: 'edit', description: curtain.text ? `“${curtain.text}”` : 'A line under the game’s name', divider: true },

@@ -70,10 +70,10 @@
 </script>
 
 {#if curtain.down && !ctx.phone}
-  <span data-testid="curtain-badge"><Badge text={curtain.plate ? 'Curtain down · plate' : 'Curtain down'} icon="hide" /></span>
+  <span data-testid="curtain-badge"><Badge text={curtain.plate ? 'Curtain down · plate' : 'Curtain down'} icon="curtain" /></span>
 {/if}
 <IconButton
-  icon="hide"
+  icon={curtain.down ? 'curtain-lift' : 'curtain'}
   label={curtain.down ? 'Lift the curtain (hold for more)' : 'Lower the curtain (hold for more)'}
   on={curtain.down}
   {menu}

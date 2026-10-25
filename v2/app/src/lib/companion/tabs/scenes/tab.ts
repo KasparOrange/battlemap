@@ -16,7 +16,7 @@ const tab: TabDef = {
   id: 'scenes',
   label: 'Scenes',
   title: 'Scenes',
-  icon: 'star',
+  icon: 'scene',
   group: 'panels',
   order: TAB_ORDER.view + 5,
   panel: ScenesPanel,
