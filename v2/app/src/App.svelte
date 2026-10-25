@@ -13,8 +13,9 @@
   import NoticeHost from './lib/ui/NoticeHost.svelte';
   import { notices } from './lib/ui/notice.svelte.ts';
   import { debugEnabled, recordNotice } from './lib/debug-hook.ts';
-  import TvApp from './lib/tv/TvApp.svelte';
-  import CompanionApp from './lib/companion/CompanionApp.svelte';
+  // Each mode is its own chunk: the TV box never loads the companion's code and vice versa.
+  const loadTv = () => import('./lib/tv/TvApp.svelte');
+  const loadCompanion = () => import('./lib/companion/CompanionApp.svelte');
 
   interface Props {
     /** The page's configuration. */
@@ -42,9 +43,9 @@
 </script>
 
 {#if config.mode === 'tv'}
-  <TvApp />
+  {#await loadTv() then { default: TvApp }}<TvApp />{/await}
 {:else if config.mode === 'companion'}
-  <CompanionApp />
+  {#await loadCompanion() then { default: CompanionApp }}<CompanionApp />{/await}
 {:else}
   <main class="start">
     <h1>battlemap</h1>

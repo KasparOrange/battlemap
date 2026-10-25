@@ -42,9 +42,10 @@ table mask and `fx.screen`, so it covers flashes and weather too.
     TV that reloads mid-setup comes back behind the curtain.
 - Render on demand holds: a lease only while it fades or waits to rise; black that just stands
   there draws no frames; the plate draws 15 a second.
-- **The remote's Back** keeps working as before (the curtain is drawn in the canvas and takes no
-  keys): Back closes the game to the library. The curtain is saved with the game, so a game
-  reopened from the TV is still behind it until the tablet lifts it (see limits).
+- **The remote's Back** with the curtain down lifts it first (so a TV whose tablet died is never
+  stuck behind it); the next Back closes the game as before. The curtain is saved with the game,
+  so a game reopened from the TV is still behind it until it is lifted. While it is down the
+  TV's busy card stays hidden too — nothing names the map being prepared.
 
 **Protocol.** `Game.curtain {down, plate, text}` (saved; optional on the wire, games stored
 before it read as up / black / no text). One command, `curtain.set {down, plate?, text?}` —
@@ -54,11 +55,6 @@ explicit values, `plate` and `text` kept when missing, no undo step, not map-sco
 **Limits.**
 
 - The DM's view shows no curtain (the badge says so); the tablet sees everything as always.
-- With the tablet dead and the curtain down the TV can't lift it by itself: Back closes the game,
-  and reopening it shows the curtain again. Asked of the TV owner: "Back with the curtain down
-  lifts it first" (one more step in `tv/screen.ts` `backAction`).
-- The TV's busy card ("Loading …", a spinner) still shows over the curtain while the new map
-  loads — it names the map. Harmless at a table, but a spoiler purist would hide it.
 - The plate text is upright for one side of the table (the TV lies flat).
 
 ## Scene presets (roadmap S2)

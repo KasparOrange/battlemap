@@ -20,6 +20,9 @@
 import { checkServerMessage, parseJson, PROTOCOL_VERSION, SERVER_MESSAGE_TYPES, type Peer, type Role, type ServerMessage } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
 
+/** How often the watchdog ticks; a tick later than this by more than `stallMs` is a stall. */
+const WATCH_MS = 1_000;
+
 /** Where the connection is. */
 export type ConnectionState =
   /** Not started. */
@@ -141,7 +144,7 @@ export class Connection {
     globalThis.document?.addEventListener('visibilitychange', this.onVisible);
     globalThis.addEventListener?.('online', this.onOnline);
     this.lastTick = Date.now();
-    this.watchTimer ??= setInterval(() => this.watch(), 1_000);
+    this.watchTimer ??= setInterval(() => this.watch(), WATCH_MS);
     this.start('start');
   }
 
@@ -279,9 +282,9 @@ export class Connection {
   /** Every second: stalls, silence, nothing else. */
   private watch(): void {
     const now = Date.now();
-    const gap = now - this.lastTick;
+    const late = now - this.lastTick - WATCH_MS; // how much later than planned this tick came
     this.lastTick = now;
-    if (gap > this.t.stallMs) this.log.warn('net', 'Event loop stalled (or app paused)', { stallMs: gap });
+    if (late > this.t.stallMs) this.log.warn('net', 'Event loop stalled (or app paused)', { stallMs: late });
     if (this.state === 'open' && now - this.lastDataAt > this.t.silentMs) this.forceReconnect('no data');
   }
 
