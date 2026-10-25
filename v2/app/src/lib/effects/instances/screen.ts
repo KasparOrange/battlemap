@@ -1,11 +1,14 @@
 /**
  * Built-in screen one-shots that need no art from the library: `screen-shake` (the world
- * shakes, through the renderer's `shake`) and `screen-flash` (a colour flash over the whole
- * screen that fades out). Params: `duration` s (default 0.6 / 0.5), `amplitude` px (shake,
- * default 12), `color` (flash, default white), `opacity` (flash peak, default 0.8).
+ * shakes, through the renderer's `shake`), `screen-flash` (a colour flash over the whole
+ * screen that fades out) and `screen-fade` (the screen fades to a colour, holds, and comes
+ * back — a scene change). Params: `duration` s (default 0.6 / 0.5 / 2.5), `amplitude` px
+ * (shake, default 12), `color` (flash default white, fade default black), `opacity` (flash
+ * peak 0.8, fade 1), `fadeIn` / `fadeOut` s (fade, default 0.6 / 0.8).
  *
  * @see ../runtime.ts — these ids are handled before the registry is asked
  */
+import { fadeCover, fadePhases, type FadePhases } from './envelope.ts';
 import { Graphics, type Container } from 'pixi.js';
 import type { EffectParams } from '@battlemap/shared';
 import type { CostEstimate } from '../budget.ts';
@@ -13,7 +16,7 @@ import { hexColor } from '../particle-sim.ts';
 import { makeRoot, numParam, type EffectInstance, type FrameContext } from './base.ts';
 
 /** The built-in effect ids. */
-export const BUILTIN_EFFECTS = ['screen-shake', 'screen-flash'] as const;
+export const BUILTIN_EFFECTS = ['screen-shake', 'screen-flash', 'screen-fade'] as const;
 
 /**
  * Whether an effect id is built in.
@@ -33,7 +36,7 @@ export function isBuiltin(id: string): boolean {
  * @returns seconds
  */
 export function builtinSeconds(id: string, params: EffectParams): number {
-  return numParam(params, 'duration', id === 'screen-shake' ? 0.6 : 0.5);
+  return numParam(params, 'duration', id === 'screen-shake' ? 0.6 : id === 'screen-fade' ? 2.5 : 0.5);
 }
 
 const NO_COST: CostEstimate = { drawCalls: 0, textureBytes: 0, fillSquares: 0, particles: 0 };
@@ -123,6 +126,51 @@ class FlashInstance implements EffectInstance {
   }
 }
 
+/** The screen fades to a colour, holds, and comes back (W3-D's Fade button). */
+class FadeInstance implements EffectInstance {
+  readonly root: Container = makeRoot('screen-fade');
+  readonly cost: CostEstimate = { drawCalls: 1, textureBytes: 0, fillSquares: 34 * 19, particles: 0 };
+  readonly animates = true;
+  private readonly quad = new Graphics();
+  private phases: FadePhases;
+  private peak = 1;
+  private color = 0;
+  private w = 0;
+  private h = 0;
+
+  constructor(params: EffectParams) {
+    this.phases = fadePhases(0);
+    this.setParams(null, params);
+    this.root.addChild(this.quad);
+  }
+
+  setParams(_a: unknown, params: EffectParams): void {
+    this.phases = fadePhases(builtinSeconds('screen-fade', params), numParam(params, 'fadeIn', 0.6), numParam(params, 'fadeOut', 0.8));
+    this.peak = numParam(params, 'opacity', 1);
+    this.color = hexColor(typeof params.color === 'string' ? params.color : '#000000');
+    this.w = 0;
+  }
+
+  update(t: number, _dt: number, ctx: FrameContext): boolean {
+    const p = this.phases;
+    if (t >= p.fadeIn + p.hold + p.fadeOut) {
+      this.root.visible = false;
+      return false;
+    }
+    if (ctx.screenW !== this.w || ctx.screenH !== this.h) {
+      this.w = ctx.screenW;
+      this.h = ctx.screenH;
+      this.quad.clear().rect(0, 0, this.w, this.h).fill({ color: this.color });
+    }
+    this.root.alpha = this.peak * fadeCover(t, p);
+    return true;
+  }
+
+  destroy(): void {
+    this.root.destroy({ children: true });
+  }
+}
+
 /**
  * Makes a built-in instance.
  *
@@ -132,5 +180,6 @@ class FlashInstance implements EffectInstance {
  * @returns the instance
  */
 export function createBuiltin(id: string, params: EffectParams, shake?: (dx: number, dy: number) => void): EffectInstance {
-  return id === 'screen-shake' ? new ShakeInstance(params, shake) : new FlashInstance(params);
+  if (id === 'screen-shake') return new ShakeInstance(params, shake);
+  return id === 'screen-fade' ? new FadeInstance(params) : new FlashInstance(params);
 }
