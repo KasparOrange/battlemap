@@ -73,8 +73,59 @@ export function takeShellLogs(): ShellLogLine[] {
   }
 }
 
+/** Bytes per bridge call when saving a file (base64 grows it by a third). */
+const SAVE_CHUNK = 512 * 1024;
+
 /**
- * Listens to the shell's events (`back`, `log`, `apk`, `bundle`, `memory`).
+ * Saves a file the app made (a game export, a log) where the user can find it: inside the
+ * Android shell into the device's Downloads folder (streamed over the bridge — WebView can't
+ * download `blob:` URLs), in a browser through a normal `<a download>` click.
+ *
+ * @param blob - the bytes
+ * @param name - the file name, e.g. `Session 1.battlemap`
+ * @returns where it went (`"Downloads/<name>"` in the shell, `"browser"` elsewhere)
+ * @throws Error when the shell refuses the file or a write fails
+ */
+export async function saveFile(blob: Blob, name: string): Promise<string> {
+  const bridge = shellBridge();
+  if (!bridge) {
+    const url = URL.createObjectURL(blob);
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      a.click();
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    }
+    return 'browser';
+  }
+  const id = bridge.saveBegin(name, blob.type);
+  const done = new Promise<string>((resolve, reject) => {
+    const stop = onShellEvent((d) => {
+      if (d.type !== 'download' || d.id !== id || d.state === 'started') return;
+      stop();
+      if (d.state === 'saved') resolve(d.where ?? `Downloads/${name}`);
+      else reject(new Error(d.error ?? 'saving failed'));
+    });
+  });
+  try {
+    for (let at = 0; at < blob.size; at += SAVE_CHUNK) {
+      const bytes = new Uint8Array(await blob.slice(at, at + SAVE_CHUNK).arrayBuffer());
+      let text = '';
+      for (let i = 0; i < bytes.length; i += 32_768) text += String.fromCharCode(...bytes.subarray(i, i + 32_768));
+      if (!bridge.saveChunk(id, btoa(text))) throw new Error('the shell stopped taking the file');
+    }
+  } catch (e) {
+    bridge.saveAbort(id);
+    throw e;
+  }
+  bridge.saveEnd(id);
+  return done;
+}
+
+/**
+ * Listens to the shell's events (`back`, `log`, `apk`, `bundle`, `memory`, `download`, …).
  *
  * @param handler - gets each event's detail and the event (call `preventDefault()` on a handled `back`)
  * @returns a function that stops listening

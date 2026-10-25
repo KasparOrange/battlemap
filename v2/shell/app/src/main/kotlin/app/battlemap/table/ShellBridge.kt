@@ -111,6 +111,36 @@ class ShellBridge(private val activity: MainActivity) {
         activity.settings.setServerUrl(url)
     }
 
+    /** Start into TV mode when the device boots (TV devices only; opt-in). */
+    @JavascriptInterface
+    fun setStartOnBoot(on: Boolean) {
+        activity.settings.setStartOnBoot(on)
+    }
+
+    /**
+     * Writes the box's stay-awake settings now (needs the adb grant of WRITE_SECURE_SETTINGS).
+     *
+     * @return the status JSON (`granted`, `ok`, `settings`, `wrong`, `applied`).
+     */
+    @JavascriptInterface
+    fun applyStayAwake(): String = StayAwake.apply(activity).toString()
+
+    /** Starts saving a file into Downloads; returns its id (see [FileSaver]). */
+    @JavascriptInterface
+    fun saveBegin(name: String, mime: String): Int = activity.fileSaver.begin(name, mime)
+
+    /** Appends a base64 chunk; false = stop sending (unknown id or write failed). */
+    @JavascriptInterface
+    fun saveChunk(id: Int, base64: String): Boolean = activity.fileSaver.chunk(id, base64)
+
+    /** Finishes the file: moves it into Downloads (`download` event). */
+    @JavascriptInterface
+    fun saveEnd(id: Int): Boolean = activity.fileSaver.end(id)
+
+    /** Drops an unfinished file. */
+    @JavascriptInterface
+    fun saveAbort(id: Int) = activity.fileSaver.abort(id)
+
     /** Forces the start mode: "tv", "companion" or "auto". Takes effect on the next start. */
     @JavascriptInterface
     fun setStartMode(mode: String) {

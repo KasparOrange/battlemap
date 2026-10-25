@@ -79,7 +79,8 @@ export function wsUrlFor(serverUrl: string): string {
 function guessName(): string {
   const ua = globalThis.navigator?.userAgent ?? '';
   const info = shellInfo();
-  if (info) return `${info.device.manufacturer} ${info.device.model}`.trim();
+  // The owner's name for the device (Android's "Device name", qa#19); older shells lack it.
+  if (info) return info.device.name || `${info.device.manufacturer} ${info.device.model}`.trim();
   if (/iPhone/.test(ua)) return 'iPhone';
   if (/iPad/.test(ua)) return 'iPad';
   if (/Android/.test(ua)) return 'Android device';

@@ -42,9 +42,15 @@ export interface ShellInfo {
   immersive: boolean;
   /** Screen kept on. */
   keepAwake: boolean;
+  /** TV devices: the app starts into TV mode when the device boots (opt-in, `setStartOnBoot`). */
+  startOnBoot: boolean;
+  /** The box's stay-awake settings (TV-01): written at every TV-mode start once adb granted the permission. */
+  stayAwake: StayAwakeStatus;
   device: {
     manufacturer: string;
     model: string;
+    /** The name the owner gave the device (Android's "Device name"), else its Bluetooth name, else manufacturer + model. */
+    name: string;
     /** Android API level, e.g. 34. */
     sdk: number;
     /** Android version, e.g. "14". */
@@ -65,6 +71,20 @@ export interface ShellInfo {
     modeHeightPx: number;
     refreshRate: number;
   };
+}
+
+/** The box's stay-awake settings (see `StayAwake.kt`). */
+export interface StayAwakeStatus {
+  /** adb granted WRITE_SECURE_SETTINGS (`pm grant app.battlemap.table android.permission.WRITE_SECURE_SETTINGS`). */
+  granted: boolean;
+  /** Every setting has its stay-awake value. */
+  ok: boolean;
+  /** Current values, e.g. `{"secure attentive_timeout": -1}` (null = unset). */
+  settings: Record<string, number | null>;
+  /** The settings that don't have their stay-awake value. */
+  wrong: string[];
+  /** Written by this call (only from `applyStayAwake`). */
+  applied?: string[];
 }
 
 /** One shell log line (from `takeLogs()` or a `log` event). */
@@ -109,6 +129,18 @@ export interface BattlemapShell {
   setServerUrl(url: string): void;
   /** Force the start mode ("tv", "companion") or detect it again ("auto"). Next start. */
   setStartMode(mode: 'tv' | 'companion' | 'auto'): void;
+  /** TV devices: start into TV mode when the device boots (after a power cut). Opt-in. */
+  setStartOnBoot(on: boolean): void;
+  /** Write the box's stay-awake settings now; returns {@link StayAwakeStatus} as JSON. */
+  applyStayAwake(): string;
+  /** Start saving a file into the device's Downloads; returns its id. Use `saveFile()` in `app/src/lib/shell.ts`. */
+  saveBegin(name: string, mime: string): number;
+  /** Append a base64 chunk (≤ 512 kB of bytes); false = stop. */
+  saveChunk(id: number, base64: string): boolean;
+  /** Finish the file (a `download` event says where it went). */
+  saveEnd(id: number): boolean;
+  /** Drop an unfinished file. */
+  saveAbort(id: number): void;
 }
 
 /** `detail` of a `battlemapshell` event, by `type`. */
@@ -133,8 +165,20 @@ export type ShellEvent =
       version?: string;
       error?: string;
     }
-  /** Android asked to free memory (ComponentCallbacks2 level; ≥ 10 = running low). */
-  | { type: 'memory'; level: number };
+  /** Android asked to free memory — only real pressure is sent: 10 (running low), 15 (critical),
+   *  60/80 (in the background, about to be killed). The "UI hidden" level is not. */
+  | { type: 'memory'; level: number }
+  /** A file saved into Downloads (`saveFile`, or a `<a download href=blob:…>` click). */
+  | {
+      type: 'download';
+      id: number;
+      state: 'started' | 'saved' | 'failed';
+      name: string;
+      bytes?: number;
+      /** Where it went, e.g. "Downloads/game.battlemap". */
+      where?: string;
+      error?: string;
+    };
 
 declare global {
   interface Window {

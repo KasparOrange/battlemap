@@ -25,6 +25,7 @@ object Origins {
  * - `url` — load the web app from this URL instead of the bundle (persisted; `off` clears).
  * - `mode` — `tv`, `companion` or `auto` (persisted; auto = TV devices start as tv).
  * - `server` — the battlemap server's base URL handed to the app (persisted; `off` clears).
+ * - `boot` — `on`/`off`: start into TV mode when the device boots (TV only, persisted).
  * - `page` — one of the shell pages for this launch only: `probe`, `keys` (alias `home`);
  *   a query may follow, e.g. `probe?seconds=30`.
  */
@@ -49,6 +50,28 @@ class ShellSettings(context: Context, private val device: Device) {
         }
     }
 
+    /**
+     * Start into TV mode when the device boots (after a power cut the box would otherwise sit
+     * on its home screen — parity TV-05). Opt-in, TV devices only; [BootReceiver] reads it.
+     */
+    val startOnBoot: Boolean get() = device.isTv && prefs.getBoolean(KEY_BOOT, false)
+
+    /**
+     * Turns [startOnBoot] on or off. Ignored (false) on devices that aren't TVs.
+     *
+     * @return true when the stored value changed.
+     */
+    fun setStartOnBoot(on: Boolean): Boolean {
+        if (!device.isTv) {
+            ShellLog.warn("start on boot is for TV devices only")
+            return false
+        }
+        if (prefs.getBoolean(KEY_BOOT, false) == on) return false
+        prefs.edit().putBoolean(KEY_BOOT, on).apply()
+        ShellLog.info("start on boot ${if (on) "on" else "off"}")
+        return true
+    }
+
     /** `tv` or `companion` when forced, null when automatic. */
     val modeOverride: String? get() = prefs.getString(KEY_MODE, null)
 
@@ -66,6 +89,7 @@ class ShellSettings(context: Context, private val device: Device) {
         extras.getString("url")?.let { changed = setDevUrl(it) || changed }
         extras.getString("mode")?.let { changed = setStartMode(it) || changed }
         extras.getString("server")?.let { changed = setServerUrl(it) || changed }
+        extras.getString("boot")?.let { setStartOnBoot(it == "on" || it == "true" || it == "1") }
         extras.getString("page")?.let { requested ->
             if (pageUrl(requested) != null) {
                 page = requested
@@ -180,6 +204,7 @@ class ShellSettings(context: Context, private val device: Device) {
         private const val KEY_MODE = "mode"
         private const val KEY_SERVER = "server"
         private const val KEY_DEVICE = "deviceId"
+        private const val KEY_BOOT = "startOnBoot"
 
         /**
          * Maps a page name (optionally with `?query`) to its URL on the shell origin.

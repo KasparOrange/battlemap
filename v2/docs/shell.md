@@ -21,7 +21,10 @@ Code: `v2/shell/` — Kotlin, Gradle, dependencies `androidx.webkit` and `androi
 | `…/BundleStore.kt` | serves the web app (built-in or downloaded bundle), bundle updates, rollback |
 | `…/ApkInstaller.kt` | in-app APK updates |
 | `…/ShellLog.kt`, `PageEvents.kt` | logcat + log lines and events to the page |
-| `…/Device.kt`, `Downloader.kt` | device facts; HTTP download with progress |
+| `…/Device.kt`, `Downloader.kt` | device facts (incl. the owner's device name); HTTP download with progress |
+| `…/BootReceiver.kt` | start into TV mode after the device boots (opt-in, TV only) |
+| `…/StayAwake.kt` | the box's stay-awake settings (energy saver, screensaver, sleep) |
+| `…/FileSaver.kt` | files the page saves (`saveFile`, blob downloads) → Downloads |
 | `bridge.d.ts` | **the typed contract** of the bridge and its events (import it in the app) |
 | `pages/index.html` | the shell's own page: key log, checks, buttons (shown when no app is bundled) |
 | `probe/probe.html` | the WebGL probe (below) |
@@ -48,7 +51,23 @@ v2/shell/build.sh debug      # or: release
   included): an APK signed with another key can't update the installed app ("signatures do not
   match" — only an uninstall, which wipes the app's data, gets past that).
 - Debug builds turn on WebView remote debugging (`chrome://inspect`, or `tools/webview.ts`).
-- No R8/minify (the APK is ~2 MB; minifying would need keep rules for the bridge).
+- No R8/minify (the shell's own code is ~2 MB; minifying would need keep rules for the bridge).
+
+### APK size (qa#25) — effects stay inside
+
+| Part | Size |
+|---|---|
+| the shell (code, AndroidX, resources) | ~2 MB |
+| the web app's code (`dist/assets`) | ~3 MB |
+| the effects library (`dist/effects`, 150 effects) | ~31 MB |
+| **debug/release APK with the app** | **~33–35 MB** |
+
+Decided 2026-10-25: **the effects stay in the APK.** The box must draw effects with no internet
+(LAN play at a friend's), and its table server serves the same bundle to browser companions; an
+APK install is rare (once per shell change, seconds over Wi-Fi), the box has 8 GB of storage.
+What does get updated often — the web bundle zip — can leave `effects/` out when it didn't
+change. Revisit if the effects library grows past ~100 MB (then: download packs into app
+storage on first start, served by the asset loader from there).
 
 ## Install and start
 
@@ -68,6 +87,7 @@ Intent extras (adb `--es name value`):
 | `url` | load the app from this URL instead of the bundle, e.g. `http://localhost:5173/` (Vite, after `adb reverse tcp:5173 tcp:5173`) or `http://<Mac's LAN IP>:5173/`; `off` = bundle again. Release builds accept only local-network hosts (private IPv4, Tailscale 100.64/10, `localhost`, `*.local`, `*.ts.net`) | yes |
 | `mode` | `tv`, `companion`, `auto` (TV devices → tv) | yes |
 | `server` | server base URL handed to the app as `server=`; `off` = the app's default | yes |
+| `boot` | `on`/`off`: start into TV mode when the device boots (TV devices only) | yes |
 | `page` | `probe` or `keys` (the shell page) for this launch only; a query may follow: `"'probe?seconds=30'"` | no |
 
 The same settings are reachable from the app through the bridge (`setDevUrl`, `setStartMode`,
@@ -112,11 +132,18 @@ Exact types: `shell/bridge.d.ts`. All calls are synchronous; long jobs answer wi
 | `setDevUrl(url)` | load from a dev server from now on (`""` = bundle) |
 | `setServerUrl(url)` | the `server=` start parameter (`""` = app default) |
 | `setStartMode(mode)` | `tv`, `companion` or `auto`, from the next start |
+| `setStartOnBoot(on)` | TV only: start into TV mode when the device boots (off by default) |
+| `applyStayAwake(): string` | write the box's stay-awake settings now (status JSON, also in `info().stayAwake`) |
+| `saveBegin(name, mime)` / `saveChunk(id, b64)` / `saveEnd(id)` / `saveAbort(id)` | save a file into Downloads — use the app's `saveFile(blob, name)` (`app/src/lib/shell.ts`) |
+
+`info().device.name` is the owner's name for the device (Android's *Device name*, else its
+Bluetooth name, else manufacturer + model — qa#19); the app uses it as the table's name.
 
 Events: `window.addEventListener('battlemapshell', e => …)`, `e.detail.type` is one of
 `back` (cancelable — see below), `log`, `apk` (`downloading`/`installing`/`waiting-for-user`/`done`/`failed`),
-`bundle` (`downloading`/`ready`/`failed`), `memory` (Android asked to free memory: drop textures
-and caches; `level ≥ 10` = running low).
+`bundle` (`downloading`/`ready`/`failed`), `memory` (real memory pressure only — level 10
+running low, 15 critical, 60/80 in the background; the "UI hidden" level 20 that comes with every
+trip to Home is not sent, review #3), `download` (`started`/`saved`/`failed`, `where`).
 
 ## Back and the remote
 
@@ -150,6 +177,24 @@ and caches; `level ≥ 10` = running low).
   the overlay permission once: `adb shell appops set app.battlemap.table SYSTEM_ALERT_WINDOW allow`
   (otherwise Android blocks the start from the background and the TV lands on the launcher).
   Do both appops once on the box and the tablet.
+
+## Power cut, sleep, downloads
+
+- **Start on boot (TV-05):** with `setStartOnBoot(true)` (or adb `--es boot on`) the box opens
+  battlemap in TV mode after it boots; the game reopens as on every start. Android 10+ allows
+  that start only with the overlay grant (`appops set app.battlemap.table SYSTEM_ALERT_WINDOW
+  allow`, the same one the APK updates need).
+- **Stay awake (TV-01):** keep-screen-on isn't enough on Google TV (its energy saver counts only
+  remote keys and sleeps after 4 h). Once per box: `adb shell pm grant app.battlemap.table
+  android.permission.WRITE_SECURE_SETTINGS`; from then on every TV-mode start writes
+  `secure attentive_timeout -1`, `secure sleep_timeout -1`, screensaver off,
+  `global stay_on_while_plugged_in 7`, `system screen_off_timeout` max (v1's deploy settings).
+  `info().stayAwake` says what is still wrong. Not reachable from an app: HDMI-CEC "standby on
+  sleep" (`cmd hdmi_control cec_setting set tv_send_standby_on_sleep 0` by adb, once).
+- **Downloads:** WebView can't download `blob:` URLs. `saveFile(blob, name)` streams the bytes
+  over the bridge (512 kB chunks) into Downloads (MediaStore on Android 10+, the app's external
+  `Download` folder on 8–9); a plain `<a download href="blob:…">` click is caught by the download
+  listener and streamed the same way (the name then comes from the URL, so prefer `saveFile`).
 
 ## Robustness and memory
 
@@ -224,5 +269,4 @@ question is purely the Mali-G310's fill rate (map sampling + the 11-tap fog pass
 - The probe on the real box (the gate) — the command above.
 - The TV-hosted LAN relay (`architecture.md`: "the TV's shell will host a one-room version")
   isn't in the shell yet.
-- Downloads started by the page (`<a download>`, blob URLs) do nothing in the WebView yet.
 - Fire TV: untested; Fire OS 7+ (Android 9+) should work (minSdk 26), its WebView version decides WebGL2.

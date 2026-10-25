@@ -3,7 +3,8 @@
      (bundled in assets, served on https://appassets.androidplatform.net/app/). Same APK on
      Google TV / Android TV, Fire TV (no Google Play services needed) and tablets/phones.
      See v2/docs/shell.md. -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -13,6 +14,13 @@
          starts from the background otherwise). Granted once per device by adb:
          appops set app.battlemap.table SYSTEM_ALERT_WINDOW allow — see docs/shell.md. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- Start into TV mode after a power cut (opt-in, BootReceiver). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Declared so adb can grant it once (pm grant …): the box's stay-awake settings (StayAwake). -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Android 8–9: saving downloads into the app's external folder needs nothing; 10+ MediaStore. -->
 
     <!-- TV: listed in the leanback launcher; no touchscreen required (TV boxes have none). -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -43,5 +51,11 @@
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <receiver android:name=".BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

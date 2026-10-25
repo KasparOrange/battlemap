@@ -61,6 +61,10 @@ class MainActivity : ComponentActivity() {
     lateinit var settings: ShellSettings
         private set
 
+    /** Saves the page's files (blob downloads) into Downloads. */
+    lateinit var fileSaver: FileSaver
+        private set
+
     /** The web app's files (built-in or downloaded bundle). */
     lateinit var bundles: BundleStore
         private set
@@ -101,12 +105,14 @@ class MainActivity : ComponentActivity() {
         device = Device.detect(this)
         settings = ShellSettings(this, device)
         bundles = BundleStore(this)
+        fileSaver = FileSaver(this)
         ShellLog.info(
             "shell ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}${if (BuildConfig.DEBUG) ", debug" else ""}) " +
                 "on ${device.manufacturer} ${device.model}, Android ${device.release} (sdk ${device.sdk}), " +
                 "webview ${device.webViewVersion}, tv=${device.isTv}, fireTv=${device.isFireTv}",
         )
         settings.applyIntent(intent)
+        if (intent?.getBooleanExtra(EXTRA_BOOT, false) == true) ShellLog.info("started after the device booted (start on boot)")
         if (device.isTv) requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
 
         val shellAssets = WebViewAssetLoader.AssetsPathHandler(this)
@@ -172,10 +178,16 @@ class MainActivity : ComponentActivity() {
         return Origins.SHELL + "index.html?reason=no-app"
     }
 
-    /** Immersive always; keep-awake in TV mode only (the tablet's own timeout rules). */
+    /**
+     * Immersive always; keep-awake in TV mode only (the tablet's own timeout rules). TV mode on a
+     * TV device also writes the box's stay-awake settings when adb granted the permission
+     * ([StayAwake], parity TV-01).
+     */
     private fun applyStartMode() {
         setImmersiveBars(true)
-        setKeepAwake(settings.startMode == "tv")
+        val tv = settings.startMode == "tv"
+        setKeepAwake(tv)
+        if (tv && device.isTv) Thread({ StayAwake.apply(this) }, "stay-awake").start()
     }
 
     // ---- WebView ---------------------------------------------------------------------------
@@ -205,6 +217,7 @@ class MainActivity : ComponentActivity() {
         w.addJavascriptInterface(ShellBridge(this), "BattlemapShell")
         w.webViewClient = ShellClient()
         w.webChromeClient = ShellChrome()
+        w.setDownloadListener { url, _, contentDisposition, mime, _ -> onDownload(w, url, contentDisposition, mime) }
         root.addView(w, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         w.requestFocus()
         web = w
@@ -339,6 +352,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * A download the page started: a `blob:`/`data:` URL is read by the page itself and streamed
+     * to [FileSaver] (WebView can't fetch blobs natively); an http(s) URL opens outside.
+     */
+    private fun onDownload(w: WebView, url: String, contentDisposition: String?, mime: String?) {
+        if (url.startsWith("blob:") || url.startsWith("data:")) {
+            val name = android.webkit.URLUtil.guessFileName(url, contentDisposition, mime)
+                .let { if (it.startsWith("downloadfile") || it.isBlank()) "battlemap-download" else it }
+            ShellLog.info("download of a ${url.substringBefore(':')} URL — streaming it as $name")
+            w.evaluateJavascript(blobScript(url, name, mime ?: ""), null)
+        } else {
+            openExternal(url)
+        }
+    }
+
     // ---- Back and keys -----------------------------------------------------------------------
 
     /**
@@ -465,6 +493,8 @@ class MainActivity : ComponentActivity() {
             .put("bundle", bundles.toJson())
             .put("immersive", immersive)
             .put("keepAwake", keepAwake)
+            .put("startOnBoot", settings.startOnBoot)
+            .put("stayAwake", StayAwake.status(this))
             .put("device", device.toJson())
             .put(
                 "display",
@@ -495,11 +525,19 @@ class MainActivity : ComponentActivity() {
         super.onPause()
     }
 
+    /**
+     * Android asks to free memory. Only real pressure reaches the page as a `memory` event
+     * (review #3): `RUNNING_LOW` (10) and `RUNNING_CRITICAL` (15) while visible, `MODERATE` (60)
+     * and `COMPLETE` (80) while in the background. `UI_HIDDEN` (20) — sent every time the app
+     * merely goes to the background — and the mild levels 5 and 40 are logged only.
+     */
     @Suppress("DEPRECATION")
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        ShellLog.info("trim memory, level $level")
-        if (level >= TRIM_MEMORY_RUNNING_LOW && level != TRIM_MEMORY_UI_HIDDEN) web?.clearCache(false)
+        val pressure = isMemoryPressure(level)
+        ShellLog.info("trim memory, level $level${if (pressure) "" else " (not forwarded)"}")
+        if (!pressure) return
+        web?.clearCache(false)
         PageEvents.emit("memory", JSONObject().put("level", level))
     }
 
@@ -517,11 +555,32 @@ class MainActivity : ComponentActivity() {
         "text/plain", "utf-8", 404, "Not Found", emptyMap(), ByteArrayInputStream(ByteArray(0)),
     )
 
-    private companion object {
-        val BACKGROUND = Color.parseColor("#0F1115")
+    companion object {
+        /** Intent extra set by [BootReceiver]: this start came from the device booting. */
+        const val EXTRA_BOOT = "app.battlemap.table.BOOT"
+
+        /**
+         * True for the trim levels that mean real memory pressure (see [onTrimMemory]).
+         */
+        @Suppress("DEPRECATION")
+        fun isMemoryPressure(level: Int): Boolean =
+            level == TRIM_MEMORY_RUNNING_LOW || level == TRIM_MEMORY_RUNNING_CRITICAL || level >= TRIM_MEMORY_MODERATE
+
+        /** JS that reads a blob/data [url] and streams it to `BattlemapShell.saveChunk` (512 kB slices). */
+        fun blobScript(url: String, name: String, mime: String): String {
+            val q = { v: String -> JSONObject.quote(v) }
+            return "(async function(){var S=window.BattlemapShell;var id=-1;try{" +
+                "var b=await (await fetch(${q(url)})).blob();id=S.saveBegin(${q(name)},${q(mime)}||b.type||'');" +
+                "for(var o=0;o<b.size;o+=524288){var u=new Uint8Array(await b.slice(o,o+524288).arrayBuffer());" +
+                "var s='';for(var i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));" +
+                "if(!S.saveChunk(id,btoa(s)))return;}S.saveEnd(id);}catch(e){if(id>=0)S.saveAbort(id);" +
+                "console.error('blob download failed: '+e);}})()"
+        }
+
+        private val BACKGROUND = Color.parseColor("#0F1115")
         const val MB = 1024L * 1024L
         const val TV_HTTP_CACHE_MAX = 64 * MB
-        val EXTRAS = setOf("url", "mode", "page", "server")
+        val EXTRAS = setOf("url", "mode", "page", "server", "boot")
 
         /** Dispatches the cancelable `back` event; evaluates to true when the page handled it. */
         const val BACK_SCRIPT = "(function(){try{var e=new CustomEvent('battlemapshell'," +
