@@ -37,6 +37,21 @@ export interface TableRenderer {
   readonly gpu: string | null;
   /** The WebGL context (the bench counts draw calls on it), null on another backend. */
   readonly gl: WebGL2RenderingContext | null;
+  /**
+   * Reads the host's size now and resizes the canvas when it differs from the last one — for a
+   * fit that must not wait for the ResizeObserver (which reports only after the next layout).
+   * Cheap when nothing changed; it reads layout, so call it at fit time, not per frame.
+   *
+   * @returns whether the size changed
+   */
+  syncSize(): boolean;
+  /**
+   * Calls `cb` right after every resize (from the ResizeObserver or {@link syncSize}), before
+   * the next frame — the scene refits a fitted camera there.
+   *
+   * @returns the unsubscribe
+   */
+  onResize(cb: () => void): () => void;
   /** Stops observing, frees the GPU. */
   destroy(): void;
 }
@@ -100,17 +115,32 @@ export async function createRenderer(host: HTMLElement, opts: RendererOptions): 
     if (!destroyed) app.render();
   });
 
-  const observer = new ResizeObserver(() => {
+  const resizeListeners = new Set<() => void>();
+  let lastW = width;
+  let lastH = height;
+  // The size the canvas has; init read it before `await app.init`, so the host may have changed
+  // since (a phone layout settling) — syncSize() below catches that before the first fit.
+  const syncSize = (): boolean => {
     const w = Math.max(1, host.clientWidth);
     const h = Math.max(1, host.clientHeight);
+    if (w === lastW && h === lastH) return false;
+    lastW = w;
+    lastH = h;
     app.renderer.resolution = resolutionFor(h, globalThis.devicePixelRatio || 1, opts);
     app.renderer.resize(w, h);
+    opts.log.debug('render', 'Resized', { width: w, height: h });
+    for (const cb of resizeListeners) cb();
     scheduler.invalidate();
+    return true;
+  };
+  const observer = new ResizeObserver(() => {
+    syncSize();
   });
   observer.observe(host);
 
+  syncSize();
   const facts = gpuFacts(app);
-  opts.log.info('render', 'Renderer ready', { ms: Math.round(performance.now() - t0), width, height, resolution, ...facts });
+  opts.log.info('render', 'Renderer ready', { ms: Math.round(performance.now() - t0), width: lastW, height: lastH, resolution: app.renderer.resolution, ...facts });
   scheduler.invalidate();
 
   return {
@@ -119,7 +149,13 @@ export async function createRenderer(host: HTMLElement, opts: RendererOptions): 
     world,
     gpu: typeof facts.gpu === 'string' ? facts.gpu : null,
     gl: (app.renderer as unknown as { gl?: WebGL2RenderingContext }).gl ?? null,
+    syncSize,
+    onResize(cb) {
+      resizeListeners.add(cb);
+      return () => resizeListeners.delete(cb);
+    },
     destroy() {
+      resizeListeners.clear();
       destroyed = true;
       observer.disconnect();
       app.destroy({ removeView: true }, { children: true, texture: true, textureSource: true });

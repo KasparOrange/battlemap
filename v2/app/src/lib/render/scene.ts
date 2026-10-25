@@ -85,6 +85,7 @@ export class TableScene {
   private geometryKey = '';
   private frameRect: Rect | null = null;
   private readonly stopTicker: () => void;
+  private readonly stopResize: () => void;
 
   /**
    * @param r - the renderer (canvas, loop, world container)
@@ -151,6 +152,7 @@ export class TableScene {
       }
     }
     this.stopTicker = r.scheduler.onFrame(() => this.checkSize());
+    this.stopResize = r.onResize(() => this.checkSize()); // a fitted camera refits before the next frame
     this.size = this.hostSize();
   }
 
@@ -242,6 +244,9 @@ export class TableScene {
       this.dmLayers?.set(null, null);
     }
 
+    // The first fit reads the host's size now: the ResizeObserver reports a settling layout only
+    // after the next layout, and a fit on the older size looked half as wide on a phone (qa#8).
+    if (newMap && this.dm) this.r.syncSize();
     if (newMap && this.dm && map) this.dmCam = this.fittedCam = fitDmCamera(this.limits()!);
     if (newMap || state.table !== prev?.table || map?.view !== prevMap?.view) {
       this.placeCamera(newMap ? 'map' : 'state');
@@ -460,6 +465,7 @@ export class TableScene {
 
   /** The DM's camera shows the whole map. */
   fitDmCamera(): void {
+    this.r.syncSize();
     const lim = this.limits();
     if (!this.dm || !lim) return;
     this.dmCam = this.fittedCam = fitDmCamera(lim, this.dmCam?.quarterTurns ?? 0);
@@ -574,6 +580,7 @@ export class TableScene {
   /** Frees everything. */
   destroy(): void {
     this.stopTicker();
+    this.stopResize();
     this.cameraListeners.clear();
     this.effects?.destroy();
     this.mapLayer.destroy();
