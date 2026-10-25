@@ -5,9 +5,9 @@
  * @see ../../../../docs/architecture.md "work packages" (seams), "effects runtime"
  */
 import type { Container } from 'pixi.js';
-import type { Camera, FileRef, OneShot, PlacedEffect, Point } from '@battlemap/shared';
+import type { Camera, FileRef, MapGeometry, OneShot, PlacedEffect, Point } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
-import type { Size } from './camera.ts';
+import type { Insets, Size } from './camera.ts';
 import type { Hit } from './hit.ts';
 import type { MapLoadEvent } from './map-layer.ts';
 import type { RenderScheduler } from './scheduler.ts';
@@ -66,7 +66,20 @@ export interface EffectsRuntime {
 export type EffectsFactory = (slots: EffectSlots, ctx: { profile: ViewProfile; scheduler: RenderScheduler; log: Logger }) => EffectsRuntime;
 
 /** Things the view reports (show a notice, a spinner). */
-export type TableViewEvent = MapLoadEvent | { type: 'renderer-failed'; error: string } | { type: 'textures-dropped'; level: number; freedMb: number };
+export type TableViewEvent =
+  | MapLoadEvent
+  | { type: 'renderer-failed'; error: string }
+  | { type: 'textures-dropped'; level: number; freedMb: number }
+  | { type: 'geometry-loaded'; doors: number; walls: number; lights: number }
+  | { type: 'geometry-failed'; error: string }
+  | { type: 'layer-failed'; id: string; error: string };
+
+/**
+ * Why the camera in use changed: `map` a new map was fitted, `fit` `fitDmCamera()`, `set` a
+ * caller's `setDmCamera`/`panBy`/`zoomAt`, `resize` the host or the panels changed, `state` the
+ * TV's camera followed the state.
+ */
+export type CameraChange = 'map' | 'fit' | 'set' | 'resize' | 'state';
 
 /** Options of `createTableView`. */
 export interface TableViewOptions {
@@ -102,38 +115,74 @@ export interface RenderStats {
   gpu: string | null;
 }
 
-/** The table view: one per screen. */
+/**
+ * The table view: one per screen.
+ *
+ * **Camera — this view is its one owner** (rv#8). On the DM profile it fits every new map by
+ * itself (into the host minus `setDmInsets`), clamps every camera it is given with
+ * `clampDmCamera`, refits on a resize while the camera is still the fitted one, and tells
+ * `onCameraChange` listeners after every change. The companion keeps no camera of its own: a
+ * gesture reads `dmCamera()`, computes the next one with the pure helpers of `render/camera.ts`
+ * (`panCamera`, `zoomCameraAt`, `pinchCamera`) and hands it to `setDmCamera` — or calls
+ * `panBy`/`zoomAt` directly. On the TV the camera is the state's (`tvView`); the DM setters do
+ * nothing there.
+ *
+ * **Hit testing — `hits`/`hitTest` are the one** (`render/hit.ts`, rv#32): host CSS px in,
+ * highest priority first, with the doors of the geometry file this view loaded.
+ */
 export interface TableView {
   /** Resolves when the renderer is running (rejects when WebGL can't start). */
   readonly ready: Promise<void>;
   /** Draws a state (cheap when little changed — reference checks per part). */
   update(state: import('@battlemap/shared').RootState): void;
-  /** Sets the DM's camera (clamped); `dm` profile only. */
+  /** Sets the DM's camera (clamped); `dm` profile only. Kept until ready. */
   setDmCamera(c: Camera): void;
   /** The DM's camera now (null before a map). */
   dmCamera(): Camera | null;
   /** Pans the DM's camera by a finger movement in screen px. */
   panBy(dx: number, dy: number): void;
-  /** Zooms the DM's camera by a factor around a screen point. */
+  /** Zooms the DM's camera by a factor around a host point (CSS px). */
   zoomAt(factor: number, at: Point): void;
-  /** The DM's camera shows the whole map again. */
+  /** The DM's camera shows the whole map again (in the free part of the host). */
   fitDmCamera(): void;
+  /**
+   * Host px covered by the companion's panels; fitting uses what is left. Refits when the camera
+   * is still the fitted one, else only clamps.
+   */
+  setDmInsets(insets: Insets): void;
   /** The camera in use (TV's from the state, or the DM's). */
   camera(): Camera | null;
+  /**
+   * Listens to changes of the camera in use (after clamping). Called synchronously.
+   *
+   * @returns a function that stops listening
+   */
+  onCameraChange(cb: (camera: Camera, why: CameraChange) => void): () => void;
+  /** The host size in CSS px (what screen points are relative to). */
+  viewport(): Size;
   /** A host point (CSS px) → squares; null without a camera. */
   screenToSquares(p: Point): Point | null;
   /** Squares → a host point (CSS px); null without a camera. */
   squaresToScreen(p: Point): Point | null;
-  /** The highest-priority thing under a host point, or null. */
+  /** The highest-priority thing under a host point (CSS px), or null. */
   hitTest(p: Point): Hit | null;
-  /** Everything under a host point, highest priority first. */
+  /** Everything under a host point (CSS px), highest priority first. */
   hits(p: Point): Hit[];
+  /** The active map's walls, doors and lights (from its geometry file), null until loaded. */
+  geometry(): MapGeometry | null;
+  /** DM: the token drawn with a selection ring (device-local), null for none. */
+  setSelectedToken(id: string | null): void;
   /** DM: the master eye of the DM layers (device-local, default on). */
   setDmLayersShown(on: boolean): void;
   /** DM: the walls debug view (device-local, default off). */
   setWallsShown(on: boolean): void;
-  /** Frees every texture it can rebuild (Android is low on memory); the map reloads leaner. */
-  dropTextures(): void;
+  /**
+   * Frees every texture it can rebuild (Android is low on memory); the map reloads leaner and
+   * gets its full density back with the next map or once the pressure is gone.
+   *
+   * @param level - the shell's trim level, for the log (0 when asked by hand)
+   */
+  dropTextures(level?: number): void;
   /** Numbers for the bench. */
   stats(): RenderStats;
   /** The render loop (bench, effects). Null until ready. */

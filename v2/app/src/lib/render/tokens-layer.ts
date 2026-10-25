@@ -93,6 +93,8 @@ export class TokensLayer {
   private atlas: Atlas | null = null;
   private tokens: readonly Token[] | null = null;
   private faceRotation = 0;
+  private selectedId: string | null = null;
+  private selection: Graphics | null = null;
 
   /**
    * @param parent - the scene's tokens slot
@@ -152,7 +154,40 @@ export class TokensLayer {
       v.root.destroy({ children: true });
       this.views.delete(id);
     }
+    this.placeSelection();
     return true;
+  }
+
+  /**
+   * DM: the token drawn with a gold selection ring (on top of every token).
+   *
+   * @param id - the token's id, or null for none
+   * @returns whether anything changed
+   */
+  setSelected(id: string | null): boolean {
+    if (id === this.selectedId) return false;
+    this.selectedId = id;
+    this.placeSelection();
+    return true;
+  }
+
+  /** Puts the selection ring on the selected token, or hides it. */
+  private placeSelection(): void {
+    const v = this.selectedId ? this.views.get(this.selectedId) : undefined;
+    if (!v) {
+      if (this.selection) this.selection.visible = false;
+      return;
+    }
+    if (!this.selection) {
+      const r = (TOKEN_RADIUS + 0.09) * SQUARE;
+      this.selection = new Graphics({ label: 'selection' })
+        .circle(0, 0, r).stroke({ color: 0x000000, width: 0.1 * SQUARE, alpha: 0.6 })
+        .circle(0, 0, r).stroke({ color: 0xd4a537, width: 0.06 * SQUARE });
+    }
+    const ring = this.selection;
+    ring.visible = true;
+    ring.position.copyFrom(v.root.position);
+    if (ring.parent !== this.container || this.container.getChildIndex(ring) !== this.container.children.length - 1) this.container.addChild(ring);
   }
 
   /**
@@ -218,6 +253,8 @@ export class TokensLayer {
 
   /** Frees every token and the atlas. */
   destroy(): void {
+    this.selection?.destroy();
+    this.selection = null;
     for (const v of this.views.values()) v.root.destroy({ children: true });
     this.views.clear();
     this.atlas?.destroy();

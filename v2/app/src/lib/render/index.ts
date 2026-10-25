@@ -12,22 +12,34 @@
  * const sq = view.screenToSquares({ x, y });
  * const hit = view.hitTest({ x, y });       // { kind: 'token', id } | { kind: 'door', index } | …
  * view.panBy(dx, dy); view.zoomAt(1.1, { x, y });
+ * view.setDmCamera(pinchCamera(start, view.viewport(), a0, b0, a1, b1));
+ * view.setDmInsets({ top: 0, right: 360, bottom: 0, left: 0 }); // the side panel
+ * const stop = view.onCameraChange((cam, why) => …);   // the camera's one owner is this view
  * ```
+ *
+ * **One camera owner, one hit test** (rv#8, rv#32): the DM camera lives here (maths in
+ * `camera.ts`: pure, importable under `bun test`); the companion keeps none of its own. Hit tests
+ * are `hits`/`hitTest` (`hit.ts`). See `TableView` in `types.ts` for the contract.
  *
  * @see ../../../../docs/architecture.md "rendering", "work packages" (seams)
  * @see ../../../../docs/render.md for how it is built and what it costs
  */
 import type { Camera, FileRef, Point, RootState } from '@battlemap/shared';
+import type { Insets } from './camera.ts';
 import { onShellEvent } from '../shell.ts';
 import type { Hit } from './hit.ts';
 import { createRenderer, type TableRenderer } from './pixi.ts';
 import { TableScene } from './scene.ts';
-import type { FileLoader, RenderStats, TableView, TableViewOptions } from './types.ts';
+import type { CameraChange, FileLoader, RenderStats, TableView, TableViewOptions } from './types.ts';
 
-export type { EffectSlots, EffectsFactory, EffectsRuntime, FileLoader, RenderStats, TableView, TableViewEvent, TableViewOptions, ViewProfile } from './types.ts';
-export type { Hit } from './hit.ts';
-export type { DmCamera, Size } from './camera.ts';
-export { SQUARE, clampDmCamera, fitDmCamera, panCamera, screenToSquares, squaresToScreen, zoomCameraAt } from './camera.ts';
+export type { CameraChange, EffectSlots, EffectsFactory, EffectsRuntime, FileLoader, RenderStats, TableView, TableViewEvent, TableViewOptions, ViewProfile } from './types.ts';
+export type { Hit, HitInput } from './hit.ts';
+export { hitsAt, GRAB_PX } from './hit.ts';
+export type { DmCamera, DmLimits, Insets, Size } from './camera.ts';
+export {
+  SQUARE, DM_MAX_ZOOM, DM_MIN_FIT_FACTOR, FIT_MARGIN_PX, NO_INSETS,
+  clampDmCamera, fitDmCamera, fitZoomFor, panCamera, pinchCamera, sameCamera, screenToSquares, squaresToScreen, visibleSquares, zoomCameraAt,
+} from './camera.ts';
 export type { RenderScheduler } from './scheduler.ts';
 
 /**
@@ -59,6 +71,9 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
   let scene: TableScene | null = null;
   let pending: RootState | null = null;
   let pendingCam: Camera | null = null;
+  let pendingInsets: Insets | null = null;
+  let pendingSelected: string | null | undefined;
+  const pendingListeners = new Set<(c: Camera, why: CameraChange) => void>();
   let destroyed = false;
   let gpu: string | null = null;
   const stopShell = opts.listenToShell === false ? () => {} : onShellEvent((e) => {
@@ -86,8 +101,11 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
       log.info('render', 'WebGL context restored — reloading the map', { profile: opts.profile });
       scene?.reloadTextures();
     });
+    for (const l of pendingListeners) scene.onCameraChange(l);
+    if (pendingInsets) scene.setDmInsets(pendingInsets);
     if (pending) scene.update(pending);
     if (pendingCam) scene.setDmCamera(pendingCam);
+    if (pendingSelected !== undefined) scene.setSelectedToken(pendingSelected);
     pending = null;
     pendingCam = null;
   });
@@ -96,7 +114,7 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
     opts.onEvent?.({ type: 'renderer-failed', error: String(e) });
   });
 
-  const view: TableView & { dropTextures(level?: number): void } = {
+  const view: TableView = {
     ready,
     get scheduler() {
       return renderer?.scheduler ?? null;
@@ -113,6 +131,24 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
     panBy: (dx, dy) => scene?.panBy(dx, dy),
     zoomAt: (f, at) => scene?.zoomAt(f, at),
     fitDmCamera: () => scene?.fitDmCamera(),
+    setDmInsets(insets) {
+      if (scene) scene.setDmInsets(insets);
+      else pendingInsets = insets;
+    },
+    onCameraChange(cb) {
+      if (scene) return scene.onCameraChange(cb);
+      pendingListeners.add(cb);
+      return () => {
+        pendingListeners.delete(cb);
+        scene?.onCameraChange(cb)();
+      };
+    },
+    viewport: () => scene?.viewport() ?? { width: host.clientWidth || 1, height: host.clientHeight || 1 },
+    geometry: () => scene?.mapGeometry() ?? null,
+    setSelectedToken(id) {
+      if (scene) scene.setSelectedToken(id);
+      else pendingSelected = id;
+    },
     camera: () => scene?.camera() ?? null,
     screenToSquares: (p: Point) => scene?.screenToSquares(p) ?? null,
     squaresToScreen: (p: Point) => scene?.squaresToScreen(p) ?? null,

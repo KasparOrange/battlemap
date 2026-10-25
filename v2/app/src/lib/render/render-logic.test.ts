@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { classicDisc, discToMap, knobLocal, emptyMask, fullMask, maskFromCells, type FogState, type MapPlay, type RasterGrid, type Token } from '@battlemap/shared';
-import { clampDmCamera, fitDmCamera, panCamera, screenToSquares, squaresToScreen, visibleSquares, zoomCameraAt, DM_MAX_ZOOM } from './camera.ts';
+import { clampDmCamera, fitDmCamera, panCamera, pinchCamera, sameCamera, screenToSquares, squaresToScreen, visibleSquares, zoomCameraAt, DM_MAX_ZOOM, FIT_MARGIN_PX } from './camera.ts';
 import { planDecode, planTiles } from './tiles.ts';
 import { imageSize } from './image-size.ts';
 import { atmosphericLevels, changedRows, FogFade, FOG_NEAR, STAGED_HIDE, STAGED_REVEAL, writeFogTexels } from './fog-texels.ts';
@@ -73,7 +73,7 @@ describe('camera', () => {
     const lim = { cols: 40, rows: 30, view };
     const fit = fitDmCamera(lim);
     expect(fit.centerX).toBe(20);
-    expect(fit.zoom).toBeCloseTo((1080 * 0.96) / 30);
+    expect(fit.zoom).toBeCloseTo((1080 - 2 * FIT_MARGIN_PX) / 30);
     const out = clampDmCamera({ ...fit, zoom: 1 }, lim);
     expect(out.zoom).toBeCloseTo(fit.zoom * 0.5);
     expect(clampDmCamera({ ...fit, zoom: 9999 }, lim).zoom).toBe(DM_MAX_ZOOM);
@@ -81,6 +81,42 @@ describe('camera', () => {
     expect(off.centerX).toBe(0);
     expect(off.centerY).toBe(30);
     expect(clampDmCamera(fit, lim)).toBe(fit);
+  });
+
+  test('a map whose fit is above the maximum zoom keeps its fit', () => {
+    const lim = { cols: 2, rows: 1, view };
+    const fit = fitDmCamera(lim);
+    expect(fit.zoom).toBeGreaterThan(DM_MAX_ZOOM);
+    expect(clampDmCamera(fit, lim)).toBe(fit);
+  });
+
+  test('fit with panels: the map is centred in the free part', () => {
+    const insets = { top: 0, right: 600, bottom: 200, left: 0 };
+    const lim = { cols: 40, rows: 30, view, insets };
+    const fit = fitDmCamera(lim);
+    expect(fit.zoom).toBeCloseTo(Math.min((1920 - 600 - 48) / 40, (1080 - 200 - 48) / 30));
+    const mid = squaresToScreen(fit, view, { x: 20, y: 15 });
+    expect(mid.x).toBeCloseTo((1920 - 600) / 2);
+    expect(mid.y).toBeCloseTo((1080 - 200) / 2);
+    const turned = fitDmCamera(lim, 1);
+    const mid2 = squaresToScreen(turned, view, { x: 20, y: 15 });
+    expect(mid2.x).toBeCloseTo((1920 - 600) / 2);
+    expect(mid2.y).toBeCloseTo((1080 - 200) / 2);
+  });
+
+  test('pinch keeps the square under the fingers and scales with their distance', () => {
+    const cam = { centerX: 10, centerY: 8, zoom: 50, quarterTurns: 1 };
+    const a0 = { x: 800, y: 500 }, b0 = { x: 1000, y: 500 };
+    const a1 = { x: 700, y: 600 }, b1 = { x: 1100, y: 600 };
+    const under = screenToSquares(cam, view, { x: 900, y: 500 });
+    const p = pinchCamera(cam, view, a0, b0, a1, b1);
+    expect(p.zoom).toBeCloseTo(100);
+    const now = screenToSquares(p, view, { x: 900, y: 600 });
+    expect(now.x).toBeCloseTo(under.x, 9);
+    expect(now.y).toBeCloseTo(under.y, 9);
+    expect(sameCamera(cam, { ...cam })).toBe(true);
+    expect(sameCamera(cam, p)).toBe(false);
+    expect(sameCamera(null, cam)).toBe(false);
   });
 });
 

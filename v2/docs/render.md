@@ -13,10 +13,13 @@ from `lib/render/index.ts` returns a `TableView` at once; `ready` resolves when 
 | Member | What |
 |---|---|
 | `update(state)` | draws a `RootState`; each part is diffed by reference, so a command that touched the tokens re-does the tokens only |
-| `setDmCamera(c)`, `dmCamera()`, `panBy(dx, dy)`, `zoomAt(f, at)`, `fitDmCamera()` | the DM's own camera (centre in squares, px per square, quarter turns), clamped to zoom `[fit × 0.5, 400]` and a centre on the map; ignored on the TV |
-| `camera()` | the camera in use (the TV's comes from the state: `tvView`) |
+| `setDmCamera(c)`, `dmCamera()`, `panBy(dx, dy)`, `zoomAt(f, at)`, `fitDmCamera()`, `setDmInsets({top,right,bottom,left})` | **the one owner of the DM camera** (rv#8): centre in squares, px per square, quarter turns; clamped to zoom `[fit × 0.5, max(400, fit)]` and a centre on the map; fits every new map by itself into the host minus the panels' insets (24 px margin), refits on a resize while still fitted; ignored on the TV. Gestures use the pure `panCamera` / `zoomCameraAt` / `pinchCamera` of `camera.ts` (importable under `bun test`) and hand the result to `setDmCamera` |
+| `onCameraChange(cb)` | `(camera, why: 'map'\|'fit'\|'set'\|'resize'\|'state')` after every change of the camera in use; returns the unsubscribe |
+| `camera()`, `viewport()` | the camera in use (the TV's comes from the state: `tvView`), the host size in CSS px |
 | `screenToSquares(p)`, `squaresToScreen(p)` | host CSS px ↔ map squares |
-| `hitTest(p)`, `hits(p)` | `{kind:'disc', part:'knob'\|'move'}`, `ruler`, `{kind:'token', id}`, `{kind:'door', index}`, `frame` — priority order of `architecture.md` "input"; at least 22 px of grab room |
+| `hitTest(p)`, `hits(p)` | **the one hit test** (rv#32, `hit.ts`, pure `hitsAt` exported): `{kind:'disc', part:'knob'\|'move'}`, `ruler`, `{kind:'token', id}`, `{kind:'door', index}`, `frame` — priority order of `architecture.md` "input"; at least 22 px of grab room |
+| `geometry()` | the active map's walls, doors, lights (schema-checked), null until loaded — the companion needs no second fetch (rv#19) |
+| `setSelectedToken(id)` | DM: a gold selection ring on that token (rv#20) |
 | `setDmLayersShown(on)`, `setWallsShown(on)` | device-local DM switches (master eye, walls debug) |
 | `dropTextures()` | frees what can be rebuilt; the map reloads at ¾ density. Called by itself on the shell's `memory` event (level ≥ 10) |
 | `stats()` | frames, last frame ms, texture bytes by part, tokens, map density, GPU name |
@@ -27,7 +30,7 @@ from `lib/render/index.ts` returns a `TableView` at once; `ready` resolves when 
 `appassets…`), so TV mode and the companion must pass one of the two.
 
 **Events** (`onEvent`): `map-loading`, `map-shown {ms, pxPerSquare, tiles, bytes}`, `map-failed`,
-`renderer-failed`, `textures-dropped` — for the notice or spinner the IO rule asks for.
+`renderer-failed`, `textures-dropped`, `geometry-loaded`, `geometry-failed`, `layer-failed {id, error}` — for the notice or spinner the IO rule asks for.
 
 **Effects slots** (`EffectSlots`, handed to `effects(slots, {profile, scheduler, log})` —
 `createEffectsRuntime` from `$lib/effects`): `ground` (under the fog), `air` (above it),

@@ -10,10 +10,10 @@
  */
 import { Container } from 'pixi.js';
 import {
-  tableGrid, tvView, windowSquares,
+  check, MapGeometry as MapGeometrySchema, tableGrid, tvView, windowSquares,
   type Camera, type Game, type MapGeometry, type MapPlay, type Point, type Rect, type RootState, type TableState, type TvView,
 } from '@battlemap/shared';
-import { clampDmCamera, fitDmCamera, panCamera, screenToSquares, squaresToScreen, SQUARE, visibleSquares, worldTransform, zoomCameraAt, type Size } from './camera.ts';
+import { clampDmCamera, fitDmCamera, NO_INSETS, panCamera, sameCamera, screenToSquares, squaresToScreen, SQUARE, visibleSquares, worldTransform, zoomCameraAt, type Insets, type Size } from './camera.ts';
 import { DmLayers, PlayersFrame } from './dm-layers.ts';
 import { DoorsLayer } from './doors-layer.ts';
 import { DrawingsLayer } from './drawings-layer.ts';
@@ -26,7 +26,7 @@ import { TableMask } from './table-mask.ts';
 import { DM_BUDGET, TV_BUDGET } from './tiles.ts';
 import { TokensLayer } from './tokens-layer.ts';
 import { ToolsLayer } from './tools-layer.ts';
-import type { EffectSlots, EffectsRuntime, FileLoader, TableViewOptions, ViewProfile } from './types.ts';
+import type { CameraChange, EffectSlots, EffectsRuntime, FileLoader, TableViewOptions, ViewProfile } from './types.ts';
 
 /** The named containers of the scene, bottom to top. */
 export interface SceneSlots {
@@ -70,7 +70,11 @@ export class TableScene {
   private game: Game | null = null;
   private tv: TvView | null = null;
   private dmCam: Camera | null = null;
+  /** The camera the last fit gave (a resize refits while `dmCam` is still this one). */
+  private fittedCam: Camera | null = null;
+  private insets: Insets = NO_INSETS;
   private cam: Camera | null = null;
+  private readonly cameraListeners = new Set<(c: Camera, why: CameraChange) => void>();
   private size: Size = { width: 1, height: 1 };
   private shakeX = 0;
   private shakeY = 0;
@@ -175,8 +179,19 @@ export class TableScene {
     const s = this.r.app.screen;
     if (s.width === this.size.width && s.height === this.size.height) return;
     this.size = this.hostSize();
-    if (this.dmCam && this.map) this.dmCam = clampDmCamera(this.dmCam, this.limits()!);
-    this.placeCamera();
+    this.reframeDm();
+    this.placeCamera('resize');
+  }
+
+  /** After the host or the panels changed: refit a still-fitted DM camera, else clamp it. */
+  private reframeDm(): void {
+    const lim = this.limits();
+    if (!this.dm || !this.dmCam || !lim) return;
+    if (this.fittedCam && this.dmCam === this.fittedCam) {
+      this.dmCam = this.fittedCam = fitDmCamera(lim, this.dmCam.quarterTurns);
+    } else {
+      this.dmCam = clampDmCamera(this.dmCam, lim);
+    }
   }
 
   /**
@@ -218,9 +233,9 @@ export class TableScene {
       this.dmLayers?.set(null, null);
     }
 
-    if (newMap && this.dm && map) this.dmCam = fitDmCamera(this.limits()!);
+    if (newMap && this.dm && map) this.dmCam = this.fittedCam = fitDmCamera(this.limits()!);
     if (newMap || state.table !== prev?.table || map?.view !== prevMap?.view) {
-      this.placeCamera();
+      this.placeCamera(newMap ? 'map' : 'state');
       changed = true;
     }
 
@@ -251,16 +266,26 @@ export class TableScene {
       .then((b) => b.text())
       .then((text) => {
         if (this.geometryKey !== key) return;
-        const g = JSON.parse(text) as MapGeometry;
-        if (!Array.isArray(g.doors) || !Array.isArray(g.walls)) throw new Error('not a map geometry file');
-        this.geometry = { walls: g.walls, doors: g.doors, lights: Array.isArray(g.lights) ? g.lights : [] };
-        this.opts.log.info('render', 'Geometry loaded', { doors: g.doors.length, walls: g.walls.length, ms: Math.round(performance.now() - t0) });
+        const parsed = check(MapGeometrySchema, JSON.parse(text));
+        if (!parsed.ok) throw new Error(`not a map geometry file: ${parsed.error}`);
+        const g = parsed.value;
+        this.geometry = g;
+        this.opts.log.info('render', 'Geometry loaded', { doors: g.doors.length, walls: g.walls.length, lights: g.lights.length, ms: Math.round(performance.now() - t0) });
+        this.opts.onEvent?.({ type: 'geometry-loaded', doors: g.doors.length, walls: g.walls.length, lights: g.lights.length });
         const m = this.map;
         if (m) this.doorsLayer.set(this.geometry, m.info.drawDoors, m.doorsOpen, m.fog, m.info.grid.cols, m.info.grid.rows, true);
+        this.onGeometry();
         this.r.scheduler.invalidate();
       })
-      .catch((e: unknown) => this.opts.log.warn('render', 'Geometry failed', { error: String(e), file: `${ref.hash}.${ref.ext}` }));
+      .catch((e: unknown) => {
+        if (this.geometryKey !== key) return;
+        this.opts.log.warn('render', 'Geometry failed', { error: String(e), file: `${ref.hash}.${ref.ext}` });
+        this.opts.onEvent?.({ type: 'geometry-failed', error: String(e) });
+      });
   }
+
+  /** The geometry arrived: things drawn from it (map lights) follow. */
+  private onGeometry(): void {}
 
   /** The TV's view from the state (the host size stands in for a viewport not yet reported). */
   private tvViewOf(table: TableState, map: MapPlay): TvView | null {
@@ -268,12 +293,28 @@ export class TableScene {
     return tvView(t, map);
   }
 
-  /** Works out the camera for the profile and puts it on the world. */
-  private placeCamera(): void {
+  /**
+   * Works out the camera for the profile, puts it on the world and tells the listeners when it
+   * changed.
+   *
+   * @param why - the cause, for the listeners
+   */
+  private placeCamera(why: CameraChange): void {
     const map = this.map;
     const state = this.state;
     this.tv = map && state ? this.tvViewOf(state.table, map) : null;
+    const before = this.cam;
     this.cam = !map ? null : this.dm ? this.dmCam : (this.tv?.camera ?? null);
+    const cam = this.cam;
+    if (cam && !sameCamera(before, cam)) {
+      for (const l of this.cameraListeners) {
+        try {
+          l(cam, why);
+        } catch (e) {
+          this.opts.log.error('render', 'Camera listener failed', { error: String(e) });
+        }
+      }
+    }
     this.frameRect = this.dm && this.tv ? playersRect(this.tv) : null;
     if (this.mask && state) {
       const vp = state.table.viewport ?? this.size;
@@ -309,8 +350,51 @@ export class TableScene {
   }
 
   /** DM camera limits for the map on the table, or null. */
-  private limits(): { cols: number; rows: number; view: Size } | null {
-    return this.map ? { cols: this.map.info.grid.cols, rows: this.map.info.grid.rows, view: this.size } : null;
+  private limits(): { cols: number; rows: number; view: Size; insets: Insets } | null {
+    return this.map ? { cols: this.map.info.grid.cols, rows: this.map.info.grid.rows, view: this.size, insets: this.insets } : null;
+  }
+
+  /**
+   * Listens to changes of the camera in use.
+   *
+   * @param cb - called with the new camera and the cause
+   * @returns a function that stops listening
+   */
+  onCameraChange(cb: (c: Camera, why: CameraChange) => void): () => void {
+    this.cameraListeners.add(cb);
+    return () => this.cameraListeners.delete(cb);
+  }
+
+  /**
+   * DM: host px covered by panels; a fitted camera refits into what is left.
+   *
+   * @param insets - covered px per side
+   */
+  setDmInsets(insets: Insets): void {
+    const i = this.insets;
+    if (i.top === insets.top && i.right === insets.right && i.bottom === insets.bottom && i.left === insets.left) return;
+    this.insets = { top: insets.top, right: insets.right, bottom: insets.bottom, left: insets.left };
+    this.reframeDm();
+    this.placeCamera('resize');
+  }
+
+  /** @returns the host size in CSS px */
+  viewport(): Size {
+    return this.size;
+  }
+
+  /** @returns the active map's geometry, or null until loaded */
+  mapGeometry(): MapGeometry | null {
+    return this.geometry;
+  }
+
+  /**
+   * DM: the token with the selection ring.
+   *
+   * @param id - the token's id, or null
+   */
+  setSelectedToken(id: string | null): void {
+    if (this.dm && this.tokens.setSelected(id)) this.r.scheduler.invalidate();
   }
 
   /**
@@ -318,11 +402,13 @@ export class TableScene {
    *
    * @param c - the camera
    */
-  setDmCamera(c: Camera): void {
+  setDmCamera(c: Camera, why: CameraChange = 'set'): void {
     if (!this.dm) return;
     const lim = this.limits();
-    this.dmCam = lim ? clampDmCamera(c, lim) : c;
-    this.placeCamera();
+    const next = lim ? clampDmCamera(c, lim) : c;
+    if (this.dmCam && sameCamera(this.dmCam, next)) return;
+    this.dmCam = next;
+    this.placeCamera(why);
   }
 
   /** @returns the DM's camera, or null */
@@ -353,7 +439,9 @@ export class TableScene {
   /** The DM's camera shows the whole map. */
   fitDmCamera(): void {
     const lim = this.limits();
-    if (this.dm && lim) this.setDmCamera(fitDmCamera(lim, this.dmCam?.quarterTurns ?? 0));
+    if (!this.dm || !lim) return;
+    this.dmCam = this.fittedCam = fitDmCamera(lim, this.dmCam?.quarterTurns ?? 0);
+    this.placeCamera('fit');
   }
 
   /** @returns the camera in use, or null */
@@ -459,6 +547,7 @@ export class TableScene {
   /** Frees everything. */
   destroy(): void {
     this.stopTicker();
+    this.cameraListeners.clear();
     this.effects?.destroy();
     this.mapLayer.destroy();
     this.grid.destroy();
