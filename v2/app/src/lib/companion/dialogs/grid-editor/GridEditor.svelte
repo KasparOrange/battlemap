@@ -1,18 +1,15 @@
 <!--
   GridEditor — "Fit the grid": a full-screen editor that lays battlemap's squares exactly onto
   a picture map (parity §18). The picture with the grid over it fills the canvas (outside the
-  grid dimmed); the side panel (below the canvas on narrow screens) holds the tools:
+  grid dimmed); the tools sit in the side panel (below the canvas on narrow screens):
+  Look · Move · Stretch · 2 corners · Known length, square size to 0.01 px, position nudges,
+  squares across, edge squares, corner jumps, start over, line colour (`EditorPanel.svelte`).
+  Undo / redo (200 steps, a drag is one) and a magnifier above the finger while dragging.
 
-  - Look (only moves the view) · Move (slide the grid) · Stretch (top-left stays, the grabbed
-    line follows) · 2 corners (mark two grid corners, counts guessed, least squares) · Known
-    length (a line over a door or a scale bar, in squares or feet — for maps with no grid);
-  - square size to 0.01 px (½ and × 2, square squares), position nudges by 1 / 0.1 px,
-    squares across, edge squares, corner jumps to check the fit, start over, line colour;
-  - undo / redo (200 steps, a drag is one), a magnifier above the finger while dragging.
-
-  Fingers: a one-finger touch edits; a second finger reverts what the first did and the touch
-  pans / pinches the view. Wheel zooms at the cursor. Keys: arrows nudge (Shift ×10), + / −
-  change the size by 0.01 (Shift 0.1). Leaving with changes asks first.
+  Fingers (`gestures.ts`): one finger edits; a second finger takes back what the first did and
+  the touch pans / pinches the view. Wheel zooms at the cursor. Keys: arrows nudge (Shift ×10),
+  + / − change the size by 0.01 (Shift 0.1), Ctrl Z / Ctrl Shift Z. Leaving with changes asks.
+  Drawing is `paint.ts`, the maths `editor-logic.ts`; this file holds the state and the stage.
 
   Props:
   - open: boolean (bindable) · src: string — the picture · start: RasterGrid — the grid to edit
@@ -21,23 +18,16 @@
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
-  import {
-    acrossWidth, gridCorner, hasPartialEdges, isSquareGrid, recountGrid, stretched, withCell, wholeGrid,
-    type Point, type RasterGrid,
-  } from '@battlemap/shared';
+  import { hasPartialEdges, isSquareGrid, withCell, type Point, type RasterGrid } from '@battlemap/shared';
   import { log } from '../../../log.ts';
   import Button from '../../../ui/Button.svelte';
   import Dialog from '../../../ui/Dialog.svelte';
   import IconButton from '../../../ui/IconButton.svelte';
-  import NumberStepper from '../../../ui/NumberStepper.svelte';
-  import Section from '../../../ui/Section.svelte';
-  import Segmented from '../../../ui/Segmented.svelte';
-  import ToggleSwitch from '../../../ui/ToggleSwitch.svelte';
   import { notify } from '../../../ui/notice.svelte.ts';
-  import {
-    fitView, fromCorners, fromLength, GridHistory, jumpView, moved, positionText, readout, toPicture, toScreen, zoomAt,
-    type EditorTool, type EditorView, type Jump, type LengthUnitKind,
-  } from './editor-logic.ts';
+  import EditorPanel from './EditorPanel.svelte';
+  import { fitView, GridHistory, jumpView, moved, readout, TOOL_HINTS, zoomAt, type EditorTool, type EditorView, type Jump } from './editor-logic.ts';
+  import { EditorGestures, sameGrid } from './gestures.ts';
+  import { LENS_PX, paintLens, paintScene, type EditorScene } from './paint.ts';
 
   interface Props {
     /** Shown or not. */
@@ -62,15 +52,6 @@
 
   let { open = $bindable(), src, start, detected = null, tool: startTool = 'fit', table = null, applyLabel = 'Apply', onapply, onclose }: Props = $props();
 
-  const LINE_COLOURS = ['#00e5ff', '#ff2bd6', '#ffea00', '#76ff03'];
-  const TOOL_HINTS: Record<EditorTool, string> = {
-    look: 'Drag to move the view, pinch or scroll to zoom. Nothing changes.',
-    move: 'Drag anywhere to slide the grid over the picture.',
-    stretch: 'The top-left corner stays. Grab a line far from it and drag it onto the picture’s line.',
-    corners: 'Tap a grid corner, then one far away. The counts between them are guessed — check them.',
-    length: 'Drag a line over something of known size: a door is one square, or a scale bar.',
-  };
-
   // svelte-ignore state_referenced_locally
   const history = new GridHistory(start);
   // svelte-ignore state_referenced_locally
@@ -88,11 +69,8 @@
   let view = $state.raw<EditorView>({ scale: 1, ox: 0, oy: 0 });
   let markA = $state.raw<Point | null>(null);
   let markB = $state.raw<Point | null>(null);
-  let lengthAmount = $state(1);
-  let lengthUnit = $state<LengthUnitKind>('squares');
-  let askLeave = $state(false);
-  let nudgeStep = $state(1);
   let magnifier = $state.raw<{ at: Point; pic: Point } | null>(null);
+  let askLeave = $state(false);
 
   let canvas: HTMLCanvasElement | undefined = $state();
   let lens: HTMLCanvasElement | undefined = $state();
@@ -102,16 +80,8 @@
 
   const changed = $derived(undoable || redoable ? !sameGrid(grid, start) : false);
   const info = $derived(readout(grid, table));
-  const cornerResult = $derived(markA && markB ? fromCorners(grid, markA, markB, square, partial) : null);
-  const lengthResult = $derived(
-    markA && markB ? fromLength(markA, markB, lengthAmount, lengthUnit, grid.pictureW, grid.pictureH, table, partial) : null,
-  );
-  const linePx = $derived(markA && markB ? Math.hypot(markB.x - markA.x, markB.y - markA.y) : 0);
 
-  function sameGrid(a: RasterGrid, b: RasterGrid): boolean {
-    return a.cols === b.cols && a.rows === b.rows && Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.y - b.y) < 1e-6 &&
-      Math.abs(a.cellW - b.cellW) < 1e-6 && Math.abs(a.cellH - b.cellH) < 1e-6;
-  }
+  // ── history ──────────────────────────────────────────────────────────────
 
   /** Makes a grid current as one undo step. */
   function commit(next: RasterGrid): void {
@@ -120,11 +90,6 @@
       undoable = history.canUndo;
       redoable = history.canRedo;
     }
-  }
-
-  /** Shows a grid during a drag without making a step. */
-  function preview(next: RasterGrid): void {
-    grid = next;
   }
 
   function undo(): void {
@@ -139,6 +104,62 @@
     redoable = history.canRedo;
   }
 
+  const clearMarks = () => (markA = markB = null);
+
+  // ── fingers: the gestures read and write the editor's state through this host ──
+
+  const gestures = new EditorGestures({
+    get tool() { return tool; },
+    get grid() { return grid; },
+    get view() { return view; },
+    set view(v) { view = v; },
+    get square() { return square; },
+    get markA() { return markA; },
+    set markA(p) { markA = p; },
+    get markB() { return markB; },
+    set markB(p) { markB = p; },
+    get magnifier() { return magnifier; },
+    set magnifier(m) { magnifier = m; },
+    preview: (g) => (grid = g),
+    settle: (before) => {
+      const result = grid;
+      grid = before;
+      commit(result);
+    },
+    hint: (text) => notify(text, { kind: 'info' }),
+  });
+
+  /** A pointer's position in canvas CSS px. */
+  function local(e: PointerEvent | WheelEvent): Point {
+    const r = canvas!.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function onwheel(e: WheelEvent): void {
+    e.preventDefault();
+    view = zoomAt(view, e.deltaY > 0 ? 0.9 : 1.1, local(e));
+  }
+
+  function onkeydown(e: KeyboardEvent): void {
+    const t = e.target as HTMLElement;
+    if (t.closest('input, textarea')) return;
+    const k = e.shiftKey ? 10 : 1;
+    const nudge: Record<string, [number, number]> = { ArrowLeft: [-k, 0], ArrowRight: [k, 0], ArrowUp: [0, -k], ArrowDown: [0, k] };
+    if (nudge[e.key] && !t.closest('[role="radiogroup"], [role="slider"]')) {
+      e.preventDefault();
+      const [dx, dy] = nudge[e.key]!;
+      commit(moved(grid, dx, dy));
+    } else if (e.key === '+' || e.key === '=' || e.key === '-') {
+      e.preventDefault();
+      const d = (e.key === '-' ? -1 : 1) * (e.shiftKey ? 0.1 : 0.01);
+      commit(withCell(grid, grid.cellW + d, grid.cellH + d));
+    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+    }
+  }
+
   // ── drawing ──────────────────────────────────────────────────────────────
 
   let frame = 0;
@@ -148,12 +169,25 @@
     frame = requestAnimationFrame(() => {
       frame = 0;
       draw();
-      drawLens();
     });
   }
 
+  /** Draws the canvas and, while dragging, the magnifier. */
+  function draw(): void {
+    const ctx = canvas?.getContext('2d');
+    if (!ctx || !canvas) return;
+    const { w, h } = cssSize();
+    const scene: EditorScene = { image, grid, tool, markA, markB, colour, bold };
+    const dpr = canvas.width / Math.max(1, w);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    paintScene(ctx, scene, view, w, h, false);
+    if (lens && magnifier) paintLens(lens, scene, magnifier.pic);
+  }
+
   $effect(() => {
-    // Redraw whenever what is drawn changes.
+    // redraw whenever what is drawn changes
     void [grid, view, markA, markB, colour, bold, tool, imageReady, magnifier];
     invalidate();
   });
@@ -166,7 +200,10 @@
       imageReady = true;
       untrack(() => fitWhole());
     };
-    img.onerror = () => notify("Couldn't show the picture.", { kind: 'error' });
+    img.onerror = () => {
+      log.warn('companion', 'Grid editor picture not shown', { src });
+      notify("Couldn't show the picture.", { kind: 'error' });
+    };
     img.src = src;
     return () => {
       img.onload = null;
@@ -209,286 +246,12 @@
     view = jumpView(grid, j, w, h);
   }
 
-  /** Draws picture, dim outside, lines and marks. */
-  function draw(): void {
-    const ctx = canvas?.getContext('2d');
-    if (!ctx || !canvas) return;
-    const dpr = canvas.width / Math.max(1, cssSize().w);
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    paint(ctx, view, cssSize().w, cssSize().h, false);
+  function zoomBy(f: number): void {
+    const { w, h } = cssSize();
+    view = zoomAt(view, f, { x: w / 2, y: h / 2 });
   }
 
-  /** Paints the scene with a view onto a context of `w × h` CSS px. */
-  function paint(ctx: CanvasRenderingContext2D, v: EditorView, w: number, h: number, inLens: boolean): void {
-    ctx.save();
-    ctx.translate(v.ox, v.oy);
-    ctx.scale(v.scale, v.scale);
-    ctx.imageSmoothingEnabled = v.scale < 2;
-    if (image) ctx.drawImage(image, 0, 0, grid.pictureW, grid.pictureH);
-    ctx.restore();
-
-    // dim outside the grid
-    const tl = toScreen(v, { x: grid.x, y: grid.y });
-    const br = toScreen(v, gridCorner(grid, grid.cols, grid.rows));
-    ctx.fillStyle = 'rgba(0,0,0,0.67)';
-    ctx.beginPath();
-    ctx.rect(0, 0, w, h);
-    ctx.rect(tl.x, br.y, br.x - tl.x, tl.y - br.y);
-    ctx.fill('evenodd');
-
-    // lines, only those on screen
-    const cw = grid.cellW * v.scale;
-    const ch = grid.cellH * v.scale;
-    const sx = cw < 3 ? Math.ceil(3 / cw) : 1;
-    const sy = ch < 3 ? Math.ceil(3 / ch) : 1;
-    const c0 = Math.max(0, Math.floor(-tl.x / cw));
-    const c1 = Math.min(grid.cols, Math.ceil((w - tl.x) / cw));
-    const r0 = Math.max(0, Math.floor(-tl.y / ch));
-    const r1 = Math.min(grid.rows, Math.ceil((h - tl.y) / ch));
-    ctx.beginPath();
-    for (let c = c0 - (c0 % sx); c <= c1; c += sx) {
-      const x = Math.round(tl.x + c * cw) + 0.5;
-      ctx.moveTo(x, Math.max(0, tl.y));
-      ctx.lineTo(x, Math.min(h, br.y));
-    }
-    for (let r = r0 - (r0 % sy); r <= r1; r += sy) {
-      const y = Math.round(tl.y + r * ch) + 0.5;
-      ctx.moveTo(Math.max(0, tl.x), y);
-      ctx.lineTo(Math.min(w, br.x), y);
-    }
-    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
-    ctx.lineWidth = bold ? 4 : 3;
-    ctx.stroke();
-    ctx.strokeStyle = LINE_COLOURS[colour]!;
-    ctx.lineWidth = bold ? 2 : 1;
-    ctx.stroke();
-
-    // marks and the measured line
-    if (!inLens || tool === 'corners' || tool === 'length') {
-      const marks = [markA, markB].filter((m): m is Point => m !== null);
-      if (tool === 'length' && markA && markB) {
-        const a = toScreen(v, markA);
-        const b = toScreen(v, markB);
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-        ctx.strokeStyle = '#e3b45e';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-      }
-      if (tool === 'corners' || tool === 'length') {
-        for (const m of marks) {
-          const p = toScreen(v, m);
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, inLens ? 6 : 9, 0, Math.PI * 2);
-          ctx.strokeStyle = '#1a1306';
-          ctx.lineWidth = 4;
-          ctx.stroke();
-          ctx.strokeStyle = '#e3b45e';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-        }
-      }
-    }
-  }
-
-  /** The magnifier: ~1.5 squares around the finger, crosshair. */
-  function drawLens(): void {
-    const ctx = lens?.getContext('2d');
-    if (!ctx || !lens || !magnifier) return;
-    const size = 170;
-    const dpr = Math.min(2, devicePixelRatio || 1);
-    if (lens.width !== size * dpr) {
-      lens.width = size * dpr;
-      lens.height = size * dpr;
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, size, size);
-    const scale = size / (3 * Math.max(grid.cellW, grid.cellH));
-    const v: EditorView = { scale, ox: size / 2 - magnifier.pic.x * scale, oy: size / 2 - magnifier.pic.y * scale };
-    paint(ctx, v, size, size, true);
-    ctx.strokeStyle = '#e3b45e';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(size / 2, size / 2 - 12);
-    ctx.lineTo(size / 2, size / 2 + 12);
-    ctx.moveTo(size / 2 - 12, size / 2);
-    ctx.lineTo(size / 2 + 12, size / 2);
-    ctx.stroke();
-  }
-
-  // ── fingers ──────────────────────────────────────────────────────────────
-
-  const pointers = new Map<number, Point>();
-  /** The gesture in progress. */
-  let gesture: {
-    kind: 'tool' | 'view';
-    startGrid: RasterGrid;
-    startPic: Point;
-    startScreen: Point;
-    moved: boolean;
-    dragMark: 'a' | 'b' | 'new' | null;
-    startView: EditorView;
-    pinch: { d: number; mid: Point } | null;
-  } | null = null;
-
-  function local(e: PointerEvent): Point {
-    const r = canvas!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
-  }
-
-  function twoFinger(): { d: number; mid: Point } {
-    const [a, b] = [...pointers.values()];
-    return { d: Math.hypot(b!.x - a!.x, b!.y - a!.y), mid: { x: (a!.x + b!.x) / 2, y: (a!.y + b!.y) / 2 } };
-  }
-
-  function nearMark(p: Point): 'a' | 'b' | null {
-    for (const [id, m] of [['a', markA], ['b', markB]] as const) {
-      if (!m) continue;
-      const s = toScreen(view, m);
-      if (Math.hypot(s.x - p.x, s.y - p.y) <= 36) return id;
-    }
-    return null;
-  }
-
-  function onpointerdown(e: PointerEvent): void {
-    canvas?.setPointerCapture(e.pointerId);
-    const p = local(e);
-    pointers.set(e.pointerId, p);
-    if (pointers.size === 1) {
-      const pic = toPicture(view, p);
-      gesture = {
-        kind: tool === 'look' || e.button === 1 || e.button === 2 ? 'view' : 'tool',
-        startGrid: grid, startPic: pic, startScreen: p, moved: false, startView: view, pinch: null,
-        dragMark: tool === 'corners' || tool === 'length' ? nearMark(p) ?? 'new' : null,
-      };
-    } else if (gesture) {
-      // A second finger: undo what the first did, the touch now moves the view.
-      if (gesture.kind === 'tool') {
-        preview(gesture.startGrid);
-        magnifier = null;
-      }
-      gesture = { ...gesture, kind: 'view', startView: view, pinch: twoFinger() };
-    }
-  }
-
-  function onpointermove(e: PointerEvent): void {
-    if (!pointers.has(e.pointerId) || !gesture) return;
-    const p = local(e);
-    pointers.set(e.pointerId, p);
-    if (!gesture.moved && Math.hypot(p.x - gesture.startScreen.x, p.y - gesture.startScreen.y) < 4) return;
-    gesture.moved = true;
-    if (gesture.kind === 'view') {
-      if (gesture.pinch && pointers.size >= 2) {
-        const now = twoFinger();
-        let v = zoomAt(gesture.startView, now.d / Math.max(1, gesture.pinch.d), gesture.pinch.mid);
-        v = { ...v, ox: v.ox + now.mid.x - gesture.pinch.mid.x, oy: v.oy + now.mid.y - gesture.pinch.mid.y };
-        view = v;
-      } else {
-        view = { ...gesture.startView, ox: gesture.startView.ox + p.x - gesture.startScreen.x, oy: gesture.startView.oy + p.y - gesture.startScreen.y };
-      }
-      return;
-    }
-    const pic = toPicture(view, p);
-    magnifier = { at: p, pic };
-    switch (tool) {
-      case 'move':
-        preview(moved(gesture.startGrid, pic.x - gesture.startPic.x, pic.y - gesture.startPic.y));
-        break;
-      case 'stretch':
-        preview(stretched(gesture.startGrid, gesture.startPic, pic, square));
-        break;
-      case 'corners':
-      case 'length':
-        if (gesture.dragMark === 'a') markA = pic;
-        else if (gesture.dragMark === 'b') markB = pic;
-        else if (tool === 'length') {
-          markA = gesture.startPic;
-          markB = pic;
-        }
-        break;
-    }
-  }
-
-  function onpointerup(e: PointerEvent): void {
-    if (!pointers.delete(e.pointerId) || !gesture) return;
-    if (pointers.size > 0) return;
-    const g = gesture;
-    gesture = null;
-    magnifier = null;
-    if (g.kind !== 'tool') return;
-    if (tool === 'move' || tool === 'stretch') {
-      if (tool === 'stretch' && g.moved && sameGrid(grid, g.startGrid)) {
-        notify('Start the stretch on a line farther from the top-left corner.', { kind: 'info' });
-      }
-      const result = grid;
-      grid = g.startGrid;
-      commit(result);
-      return;
-    }
-    if (!g.moved && (tool === 'corners' || tool === 'length')) {
-      // A tap places marks: first, second, then starts over.
-      if (g.dragMark === 'a' || g.dragMark === 'b') return;
-      if (!markA || (markA && markB)) {
-        markA = g.startPic;
-        markB = null;
-      } else markB = g.startPic;
-    }
-  }
-
-  function onwheel(e: WheelEvent): void {
-    e.preventDefault();
-    const r = canvas!.getBoundingClientRect();
-    view = zoomAt(view, e.deltaY > 0 ? 0.9 : 1.1, { x: e.clientX - r.left, y: e.clientY - r.top });
-  }
-
-  function onkeydown(e: KeyboardEvent): void {
-    const t = e.target as HTMLElement;
-    if (t.closest('input, textarea')) return;
-    const k = e.shiftKey ? 10 : 1;
-    const nudge: Record<string, [number, number]> = { ArrowLeft: [-k, 0], ArrowRight: [k, 0], ArrowUp: [0, -k], ArrowDown: [0, k] };
-    if (nudge[e.key] && !t.closest('[role="radiogroup"], [role="slider"]')) {
-      e.preventDefault();
-      const [dx, dy] = nudge[e.key]!;
-      commit(moved(grid, dx, dy));
-    } else if (e.key === '+' || e.key === '=' || e.key === '-') {
-      e.preventDefault();
-      const d = (e.key === '-' ? -1 : 1) * (e.shiftKey ? 0.1 : 0.01);
-      commit(withCell(grid, grid.cellW + d, grid.cellH + d));
-    } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
-      e.preventDefault();
-      if (e.shiftKey) redo();
-      else undo();
-    }
-  }
-
-  // ── panel actions ────────────────────────────────────────────────────────
-
-  function setSize(w: number, h: number): void {
-    commit(withCell(grid, w, square ? w : h));
-  }
-
-  function useCorners(): void {
-    if (!cornerResult?.grid) return;
-    commit(cornerResult.grid);
-    notify(`Grid: ${cornerResult.grid.cols} × ${cornerResult.grid.rows} squares of ${cornerResult.grid.cellW.toFixed(2)} px`, { kind: 'success' });
-    markA = markB = null;
-  }
-
-  function useLength(): void {
-    if (!lengthResult?.grid) return;
-    commit(lengthResult.grid);
-    square = true;
-    notify(`Squares of ${lengthResult.grid.cellW.toFixed(2)} px — ${lengthResult.grid.cols} × ${lengthResult.grid.rows} on the table.`, { kind: 'success' });
-    markA = markB = null;
-  }
-
-  function setPartial(on: boolean): void {
-    partial = on;
-    commit(recountGrid(grid, on));
-  }
+  // ── leaving ──────────────────────────────────────────────────────────────
 
   function apply(): void {
     log.info('companion', 'Grid fitted', { cols: grid.cols, rows: grid.rows, cellW: grid.cellW, cellH: grid.cellH, x: grid.x, y: grid.y });
@@ -499,14 +262,6 @@
     if (changed) askLeave = true;
     else onclose();
   }
-
-  const toolOptions = [
-    { id: 'look', label: 'Look', icon: 'view' as const },
-    { id: 'move', label: 'Move', icon: 'pan' as const },
-    { id: 'stretch', label: 'Stretch', icon: 'fullscreen' as const },
-    { id: 'corners', label: 'Corners', icon: 'grid' as const },
-    { id: 'length', label: 'Length', icon: 'measure' as const },
-  ];
 </script>
 
 <Dialog {open} title="Fit the grid" icon="grid" size="full" onclose={requestClose}>
@@ -516,10 +271,13 @@
       <canvas
         bind:this={canvas}
         aria-label="The picture with the grid. {TOOL_HINTS[tool]}"
-        {onpointerdown}
-        {onpointermove}
-        {onpointerup}
-        onpointercancel={onpointerup}
+        onpointerdown={(e) => {
+          canvas?.setPointerCapture(e.pointerId);
+          gestures.down(e.pointerId, local(e), e.button);
+        }}
+        onpointermove={(e) => gestures.move(e.pointerId, local(e))}
+        onpointerup={(e) => gestures.up(e.pointerId)}
+        onpointercancel={(e) => gestures.up(e.pointerId)}
         {onwheel}
         oncontextmenu={(e) => e.preventDefault()}
       ></canvas>
@@ -527,8 +285,8 @@
         <canvas
           class="lens"
           bind:this={lens}
-          style:left="{magnifier.at.x - 85}px"
-          style:top="{Math.max(0, magnifier.at.y - 40 - 170)}px"
+          style:left="{magnifier.at.x - LENS_PX / 2}px"
+          style:top="{Math.max(0, magnifier.at.y - 40 - LENS_PX)}px"
           aria-hidden="true"
         ></canvas>
       {/if}
@@ -536,8 +294,8 @@
         <IconButton icon="undo" label="Undo" disabled={!undoable} onclick={undo} />
         <IconButton icon="redo" label="Redo" disabled={!redoable} onclick={redo} />
         <span class="gap"></span>
-        <IconButton icon="minus" label="Zoom out" onclick={() => (view = zoomAt(view, 1 / 1.5, { x: cssSize().w / 2, y: cssSize().h / 2 }))} />
-        <IconButton icon="add" label="Zoom in" onclick={() => (view = zoomAt(view, 1.5, { x: cssSize().w / 2, y: cssSize().h / 2 }))} />
+        <IconButton icon="minus" label="Zoom out" onclick={() => zoomBy(1 / 1.5)} />
+        <IconButton icon="add" label="Zoom in" onclick={() => zoomBy(1.5)} />
         <IconButton icon="fit" label="Whole picture" onclick={fitWhole} />
       </div>
       <div class="readout" aria-live="polite">
@@ -546,118 +304,21 @@
     </div>
 
     <aside class="panel bm-scroll">
-      <Section title="Tool" description={TOOL_HINTS[tool]}>
-        <Segmented label="Tool" options={toolOptions} bind:value={tool as string} layout="tile" block onchange={() => (markA = markB = null)} />
-      </Section>
-
-      {#if tool === 'corners'}
-        <Section title="Two corners">
-          <p class="note" class:warn={cornerResult?.warn}>{cornerResult ? cornerResult.text : markA ? 'Now tap a corner far away.' : 'Tap a grid corner on the picture.'}</p>
-          <div class="row">
-            <Button label="Clear marks" icon="close" variant="flat" disabled={!markA} onclick={() => (markA = markB = null)} />
-            <Button label="Use these corners" icon="check" disabled={!cornerResult?.grid} onclick={useCorners} />
-          </div>
-        </Section>
-      {:else if tool === 'length'}
-        <Section title="Known length">
-          <p class="note">{markA && markB ? `The line is ${linePx.toFixed(1)} px long. It is:` : 'Drag a line on the picture.'}</p>
-          <div class="row">
-            <NumberStepper
-              label="Length"
-              hideLabel
-              bind:value={lengthAmount}
-              min={lengthUnit === 'feet' ? 2.5 : 0.5}
-              max={lengthUnit === 'feet' ? 2000 : 400}
-              steps={lengthUnit === 'feet' ? [5, 10, 25, 50] : [0.5, 1, 5, 10]}
-              decimals={1}
-            />
-          </div>
-          <Segmented
-            label="Unit"
-            block
-            bind:value={lengthUnit as string}
-            options={[{ id: 'squares', label: 'Squares' }, { id: 'feet', label: 'Feet', hint: '5 per square' }]}
-            onchange={(id) => (lengthAmount = id === 'feet' ? 5 : 1)}
-          />
-          {#if lengthResult}<p class="note" class:warn={lengthResult.warn}>{lengthResult.text}</p>{/if}
-          <Button label="Use this length" icon="check" block disabled={!lengthResult?.grid} onclick={useLength} />
-        </Section>
-      {/if}
-
-      <Section title="Square size">
-        {#if square}
-          <NumberStepper label="Side" value={grid.cellW} min={4} max={2000} steps={[0.01, 0.1, 1, 5]} decimals={2} unit="px" onchange={(v) => setSize(v, v)} />
-        {:else}
-          <NumberStepper label="Width" value={grid.cellW} min={4} max={2000} steps={[0.01, 0.1, 1, 5]} decimals={2} unit="px" onchange={(v) => setSize(v, grid.cellH)} />
-          <NumberStepper label="Height" value={grid.cellH} min={4} max={2000} steps={[0.01, 0.1, 1, 5]} decimals={2} unit="px" onchange={(v) => commit(withCell(grid, grid.cellW, v))} />
-        {/if}
-        <div class="row">
-          <Button label="½ size" variant="flat" onclick={() => commit(withCell(grid, grid.cellW / 2, grid.cellH / 2))} />
-          <Button label="× 2 size" variant="flat" onclick={() => commit(withCell(grid, grid.cellW * 2, grid.cellH * 2))} />
-        </div>
-        <ToggleSwitch
-          label="Square squares"
-          bind:checked={square}
-          onchange={(on) => on && commit(withCell(grid, (grid.cellW + grid.cellH) / 2, (grid.cellW + grid.cellH) / 2))}
-        />
-      </Section>
-
-      <Section title="Position" description={positionText(grid)}>
-        <div class="nudge">
-          <Segmented label="Step" value={String(nudgeStep)} onchange={(id) => (nudgeStep = Number(id))} options={[{ id: '1', label: '1 px' }, { id: '0.1', label: '0.1 px' }]} />
-          <span class="arrows" data-ctl="compact">
-            <IconButton icon="arrow-left" label="Left {nudgeStep} px" onclick={() => commit(moved(grid, -nudgeStep, 0))} />
-            <IconButton icon="arrow-up" label="Up {nudgeStep} px" onclick={() => commit(moved(grid, 0, -nudgeStep))} />
-            <IconButton icon="arrow-down" label="Down {nudgeStep} px" onclick={() => commit(moved(grid, 0, nudgeStep))} />
-            <IconButton icon="arrow-right" label="Right {nudgeStep} px" onclick={() => commit(moved(grid, nudgeStep, 0))} />
-          </span>
-        </div>
-        <Button label="Lines on the picture edge" icon="fit" variant="flat" onclick={() => commit({ ...grid, x: 0, y: 0 })} />
-      </Section>
-
-      <Section title="Squares">
-        <NumberStepper label="Across the whole width" value={grid.cols} min={1} max={400} onchange={(n) => commit(acrossWidth(grid, n, square, partial))} />
-        <Segmented
-          label="Edge squares"
-          block
-          value={partial ? 'partial' : 'whole'}
-          onchange={(id) => setPartial(id === 'partial')}
-          options={[{ id: 'whole', label: 'Whole only' }, { id: 'partial', label: 'Include partial' }]}
-        />
-      </Section>
-
-      <Section title="Check the fit" description="Jump to a corner: the lines must sit on the picture’s lines there too.">
-        <div class="jumps">
-          <Button label="Top left" variant="flat" size="compact" onclick={() => jump('topLeft')} />
-          <Button label="Top right" variant="flat" size="compact" onclick={() => jump('topRight')} />
-          <Button label="Centre" variant="flat" size="compact" onclick={() => jump('center')} />
-          <Button label="Bottom left" variant="flat" size="compact" onclick={() => jump('bottomLeft')} />
-          <Button label="Bottom right" variant="flat" size="compact" onclick={() => jump('bottomRight')} />
-          <Button label="Whole" variant="flat" size="compact" onclick={() => jump('whole')} />
-        </div>
-      </Section>
-
-      <Section title="On the table" description={info.table}>
-        {#if info.skew}<p class="note warn">{info.skew}</p>{/if}
-      </Section>
-
-      <Section title="More" collapsible open={false}>
-        <div class="row">
-          <Button label="Line colour" icon="color" variant="flat" onclick={() => (colour = (colour + 1) % LINE_COLOURS.length)}>
-            <span class="swatch" style:background={LINE_COLOURS[colour]}></span>
-          </Button>
-          <Button label="Bold lines" variant="flat" on={bold} onclick={() => (bold = !bold)} />
-        </div>
-        {#if detected}
-          <Button label="Start over: detected {detected.cols} × {detected.rows}" icon="sync" variant="flat" onclick={() => commit(detected)} />
-        {/if}
-        <Button
-          label="Start over: whole picture, {grid.cols} across"
-          icon="sync"
-          variant="flat"
-          onclick={() => commit(wholeGrid(grid.cols, Math.max(1, Math.round((grid.pictureH * grid.cols) / grid.pictureW)), grid.pictureW, grid.pictureH))}
-        />
-      </Section>
+      <EditorPanel
+        {grid}
+        {table}
+        {detected}
+        bind:tool
+        bind:square
+        bind:partial
+        bind:colour
+        bind:bold
+        {markA}
+        {markB}
+        oncommit={commit}
+        onjump={jump}
+        onclearmarks={clearMarks}
+      />
     </aside>
   </div>
 
@@ -760,51 +421,5 @@
     flex-direction: column;
     gap: var(--g2);
     padding-right: calc(var(--g) / 2);
-  }
-
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--g);
-  }
-
-  .row > :global(*) {
-    flex: 1;
-  }
-
-  .nudge {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--g);
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .arrows {
-    display: flex;
-    gap: calc(var(--g) / 2);
-  }
-
-  .jumps {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: calc(var(--g) / 2);
-  }
-
-  .note {
-    margin: 0;
-    font-size: var(--fs-small);
-    color: var(--t2);
-  }
-
-  .note.warn {
-    color: var(--warn);
-  }
-
-  .swatch {
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    box-shadow: 0 0 0 1px var(--hair-strong);
   }
 </style>
