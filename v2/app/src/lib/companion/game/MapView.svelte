@@ -61,8 +61,7 @@
         ctx.mapLoading = e.name;
         return;
       case 'map-shown':
-        ctx.mapLoading = null;
-        ctx.mapShown();
+        ctx.mapLoading = null; // the view fits a new map by itself, on the host's real size
         return;
       case 'map-failed':
         ctx.mapLoading = null;
