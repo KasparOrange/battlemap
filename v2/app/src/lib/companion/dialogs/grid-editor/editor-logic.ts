@@ -294,3 +294,12 @@ export function readout(g: RasterGrid, table: { cols: number; rows: number } | n
 export function positionText(g: RasterGrid): string {
   return `x ${n2(g.x)} · y ${n2(g.y)}`;
 }
+
+/** One sentence per tool, under the tool tiles and in the canvas's label. */
+export const TOOL_HINTS: Record<EditorTool, string> = {
+  look: 'Drag to move the view, pinch or scroll to zoom. Nothing changes.',
+  move: 'Drag anywhere to slide the grid over the picture.',
+  stretch: 'The top-left corner stays. Grab a line far from it and drag it onto the picture’s line.',
+  corners: 'Tap a grid corner, then one far away. The counts between them are guessed — check them.',
+  length: 'Drag a line over something of known size: a door is one square, or a scale bar.',
+};
