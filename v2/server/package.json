@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "battlemap v2: relay rooms, the built app, files, library, backups and the log forward — Bun.",
+  "description": "battlemap v2: relay rooms, the built app, files, library, backups and the log forward \u2014 Bun.",
   "scripts": {
     "dev": "bun --watch src/main.ts",
     "start": "bun src/main.ts",
-    "build": "bun build src/main.ts --target bun --outfile dist/server.js",
+    "build": "bun build src/main.ts --target bun --external sharp --outfile dist/server.js && bun build scripts/import-v1-library.ts --target bun --external sharp --outfile dist/import-v1-library.js",
     "check": "tsc --noEmit -p tsconfig.json",
-    "test": "bun test"
+    "test": "bun test",
+    "deploy": "./deploy.sh"
   },
   "dependencies": {
     "@battlemap/shared": "workspace:*",
