@@ -73,6 +73,8 @@ export type EffectsFactory = (
     log: Logger;
     /** Texture bytes the effects may hold: the screen's "everything else" budget minus fog, tokens and text (rv#17). */
     budgetBytes: number;
+    /** The clock shots are aged by (the view's `now` option), epoch ms. */
+    now?: () => number;
   },
 ) => EffectsRuntime;
 
@@ -108,6 +110,12 @@ export interface TableViewOptions {
   onEvent?: (e: TableViewEvent) => void;
   /** Whether to drop textures on the shell's `memory` event (default true). */
   listenToShell?: boolean;
+  /**
+   * The clock one-shots are aged by, epoch ms — pass `Connection.serverNow()` so a shot stamped
+   * by the companion with the server's clock plays once and in time on the TV (rv#16: device
+   * clocks differ). Default `Date.now`.
+   */
+  now?: () => number;
 }
 
 /** Numbers for the bench and diagnostics. */

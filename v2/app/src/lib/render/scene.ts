@@ -144,7 +144,7 @@ export class TableScene {
     this.mask = this.dm ? null : new TableMask(this.slots.tableMask);
     if (opts.effects) {
       try {
-        this.effects = opts.effects(this.effectSlots(), { profile: this.profile, scheduler: r.scheduler, log: opts.log, budgetBytes: effectsBudget(budget) });
+        this.effects = opts.effects(this.effectSlots(), { profile: this.profile, scheduler: r.scheduler, log: opts.log, budgetBytes: effectsBudget(budget), ...(opts.now ? { now: opts.now } : {}) });
       } catch (e) {
         opts.log.error('render', 'Effects runtime failed to start', { error: String(e) });
       }
@@ -252,7 +252,7 @@ export class TableScene {
       const prevOn = !!prevGame?.settings.effects && !!prevMap;
       if (newMap || map?.effects !== prevMap?.effects || state.live.shots !== prev?.live.shots || map?.tokens !== prevMap?.tokens || on !== prevOn) {
         try {
-          this.effects.update(on ? map!.effects : [], on ? state.live.shots : [], Date.now());
+          this.effects.update(on ? map!.effects : [], on ? state.live.shots : [], (this.opts.now ?? Date.now)());
         } catch (e) {
           this.opts.log.error('render', 'Effects update failed', { error: String(e) });
         }
