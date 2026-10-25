@@ -29,6 +29,8 @@ holds only what is open.
 - import: upload only after the squares dialog is confirmed (W3-B2 request; W3-C done).
 - Effects browser: small looping previews instead of stills.
 - Bench run on the emulator and, when reachable, the box.
+- renderer: the first fit on a phone uses a too-small host size (the companion refits after the first draw as a workaround).
+- e2e: a game-night run wrote under another helper's ports (6411/6412) — check the harness respects `BATTLEMAP_*_PORT`.
 
 ## Plan B for the TV renderer
 
