@@ -7,7 +7,7 @@
   TV's own progress (`tv.status`); the game screen takes over when the TV's snapshot has a game.
 
   Props:
-  - session: CompanionSession — the joined table · config: AppConfig (unused, kept for the router)
+  - session: CompanionSession — the joined table
   - onchangetable: () => void — "Change table" in the menu
 -->
 <script lang="ts">
@@ -26,15 +26,13 @@
   import { notify } from '../../ui/notice.svelte.ts';
   import MapImport from '../dialogs/MapImport.svelte';
   import { defaultGameName, gameMeta, groupGames } from './library-logic.ts';
-  import './app-services.ts';
+  import { peerMessage } from '../frame/peer-message.ts';
   import { services } from './services.ts';
   import SharedLibrary from './SharedLibrary.svelte';
 
   interface Props {
     /** The joined table's session. */
     session: CompanionSession;
-    /** The page's configuration (the router passes it). */
-    config?: unknown;
     /** Back to the table picker. */
     onchangetable?: () => void;
   }
@@ -80,10 +78,10 @@
   });
 
   $effect(() => {
-    const m = session.lastMessage;
+    const m = peerMessage(session.lastMessage);
     if (!m) return;
     if (m.type === 'lib.listing') {
-      games = (m.games as GameSummary[]) ?? [];
+      games = m.games;
       log.info('companion', 'Games listed', { count: games.length });
     } else if (m.type === 'tv.notice') {
       endOpening(); // the app shows the notice itself

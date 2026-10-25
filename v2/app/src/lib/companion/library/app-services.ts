@@ -1,8 +1,8 @@
 /**
  * The app's `CompanionServices`, on its seams: `$lib/api` (files, shared library, link fetch),
  * `$lib/import` (examine + upload a map, regrid it), `$lib/storage` (settings, the file cache).
- * Only the list of tables is a plain fetch (the API client has no call for it). Importing this
- * module registers it as the default (`setServicesFactory`).
+ * Only the list of tables is a plain fetch (the API client has no call for it). The companion's
+ * root installs it (`setServices(appServices())`); importing this module does nothing by itself.
  */
 import type { FileRef, LibraryEntry, MapInfo } from '@battlemap/shared';
 import { api } from '../../api/index.ts';
@@ -10,7 +10,7 @@ import { importFile, type ImportResult } from '../../import/index.ts';
 import { log } from '../../log.ts';
 import { files, settings } from '../../storage/index.ts';
 import {
-  setServicesFactory, type CompanionServices, type GridFinding, type MapChoices, type PreparedMap, type ProgressFn, type StoreAs, type TableRow,
+  type CompanionServices, type GridFinding, type MapChoices, type PreparedMap, type ProgressFn, type StoreAs, type TableRow,
 } from './services.ts';
 import { nameFromFile } from './library-logic.ts';
 
@@ -119,4 +119,3 @@ export function appServices(): CompanionServices {
   };
 }
 
-setServicesFactory(() => appServices());

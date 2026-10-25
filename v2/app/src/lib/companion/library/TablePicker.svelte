@@ -17,7 +17,6 @@
   import Badge from '../../ui/Badge.svelte';
   import Spinner from '../../ui/Spinner.svelte';
   import { notify } from '../../ui/notice.svelte.ts';
-  import './app-services.ts';
   import { services, type TableRow } from './services.ts';
 
   interface Props {

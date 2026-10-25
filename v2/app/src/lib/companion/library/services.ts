@@ -1,12 +1,15 @@
 /**
  * The IO the library, the dialogs and the tabs of this package need — one interface, so the
  * screens never care who implements it. `app-services.ts` implements it on the app's seams
- * (`$lib/api`, `$lib/import`, `$lib/storage`); tests pass fakes through `setServices`.
+ * (`$lib/api`, `$lib/import`, `$lib/storage`); the companion's root (`CompanionApp.svelte`) installs it once with
+ * `setServices(appServices())` before any screen mounts, tests pass fakes the same way. No module
+ * installs anything as a side effect of being imported (rv#33).
  */
 import type { FileRef, LibraryEntry, MapGeometry, MapInfo, MapKind, RasterGrid } from '@battlemap/shared';
 
-/** How the server stores an uploaded picture ("Store as"). `asis` keeps the bytes. */
-export type StoreAs = 'webp' | 'jpeg' | 'png' | 'asis';
+import type { StoreAs } from '../../api/index.ts';
+
+export type { StoreAs };
 
 /** Progress of a long step: a fraction 0–1 (null = unknown), what happens, an optional readout. */
 export type ProgressFn = (fraction: number | null, label: string, detail?: string) => void;
@@ -115,25 +118,14 @@ export interface CompanionServices {
 }
 
 let current: CompanionServices | null = null;
-let factory: (() => CompanionServices) | null = null;
 
 /**
- * Installs the implementation (the app at start, tests with fakes).
+ * Installs the implementation (the companion's root at start, tests with fakes).
  *
- * @param s - the services, or null to fall back to the factory again
+ * @param s - the services, or null to remove them
  */
 export function setServices(s: CompanionServices | null): void {
   current = s;
-}
-
-/**
- * Registers how the default implementation is made (done once by `app-services.ts`, so this
- * module stays free of it for tests).
- *
- * @param make - builds the default services
- */
-export function setServicesFactory(make: () => CompanionServices): void {
-  factory = make;
 }
 
 /**
@@ -143,7 +135,6 @@ export function setServicesFactory(make: () => CompanionServices): void {
  * @throws {Error} when nothing was installed
  */
 export function services(): CompanionServices {
-  if (!current && factory) current = factory();
   if (!current) throw new Error('Companion services are not installed.');
   return current;
 }
