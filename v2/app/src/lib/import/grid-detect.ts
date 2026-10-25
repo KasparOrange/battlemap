@@ -254,17 +254,47 @@ export function detectFromLuminance(lb: LuminanceBuilder): GridDetection | null 
   const ox = phase(px, cell);
   const oy = phase(py, cell);
   const cellPx = cell * scale;
-  const tol = EDGE_TOLERANCE;
-  const whole = (offset: number, length: number): number => {
-    const o = offset * scale;
-    const start = o <= tol * cellPx || cellPx - o <= tol * cellPx ? 0 : o;
-    // A last square short by less than the tolerance still counts.
-    return Math.floor((length - start) / cellPx + tol);
-  };
-  const cols = whole(ox, lb.width);
-  const rows = whole(oy, lb.height);
+  const cols = wholeSquares(ox * scale, cellPx, lb.width);
+  const rows = wholeSquares(oy * scale, cellPx, lb.height);
   if (cols < 2 || rows < 2) return null;
   return { cellPx, offsetX: ox * scale, offsetY: oy * scale, strength, cols, rows, pictureW: lb.width, pictureH: lb.height };
+}
+
+/**
+ * Whole squares from the first line at `offset` to the end of `length` px, with the original's
+ * tolerances (a first line hair after the edge is the edge; a last square short by less than
+ * `EDGE_TOLERANCE` still counts).
+ *
+ * @param offset - first line, px
+ * @param cellPx - square side, px
+ * @param length - picture side, px
+ * @returns the count
+ */
+export function wholeSquares(offset: number, cellPx: number, length: number): number {
+  const tol = EDGE_TOLERANCE;
+  const start = offset <= tol * cellPx || cellPx - offset <= tol * cellPx ? 0 : offset;
+  return Math.floor((length - start) / cellPx + tol);
+}
+
+/**
+ * A detection made on a scaled copy of a picture, in the picture's own pixels (the importer's
+ * `scaled` plan for pictures too big to decode whole).
+ *
+ * @param d - the detection on the copy
+ * @param pictureW - the picture's width
+ * @param pictureH - its height
+ * @returns the detection on the picture, or null when the counts come out under 2
+ */
+export function rescaleDetection(d: GridDetection, pictureW: number, pictureH: number): GridDetection | null {
+  const rx = pictureW / d.pictureW;
+  const ry = pictureH / d.pictureH;
+  const cellPx = (d.cellPx * (rx + ry)) / 2;
+  const offsetX = d.offsetX * rx;
+  const offsetY = d.offsetY * ry;
+  const cols = wholeSquares(offsetX, cellPx, pictureW);
+  const rows = wholeSquares(offsetY, cellPx, pictureH);
+  if (cols < 2 || rows < 2) return null;
+  return { ...d, cellPx, offsetX, offsetY, cols, rows, pictureW, pictureH };
 }
 
 /**
