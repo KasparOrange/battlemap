@@ -26,6 +26,8 @@ interface Outcome {
   thumb?: boolean;
   uploads?: string[];
   steps?: string[];
+  /** Uploads made before `upload` (must be 0: a cancelled import leaves nothing). */
+  uploadsWhileReading?: number;
   ms?: number;
   longTasks: number[];
   log: string[];
@@ -73,14 +75,17 @@ async function importInPage(page: Page, path: string): Promise<Outcome> {
     };
     const t0 = performance.now();
     try {
-      const r = await runImport(file, (p: { step: string }) => {
+      const onStep = (p: { step: string }) => {
         if (steps.at(-1) !== p.step) steps.push(p.step);
-      }, deps);
+      };
+      const r = await runImport(file, onStep, deps);
+      const before = uploads.length; // reading uploads nothing; the squares dialog's confirm does
+      const { map, thumb } = await r.upload({ grid: r.draft.grid, drawGrid: r.draft.drawGrid }, onStep);
       await new Promise((res) => setTimeout(res, 100)); // let the observer deliver
       obs.disconnect();
       return {
-        ok: true, kind: r.map.kind, cols: r.map.grid.cols, rows: r.map.grid.rows, gridOrigin: r.gridOrigin, drawGrid: r.map.drawGrid,
-        doorCount: r.map.doorCount, tableCopy: r.map.tableCopy !== null, thumb: r.thumb !== null, uploads, steps,
+        ok: true, kind: map.kind, cols: map.grid.cols, rows: map.grid.rows, gridOrigin: r.gridOrigin, drawGrid: map.drawGrid,
+        doorCount: map.doorCount, tableCopy: map.tableCopy !== null, thumb: thumb !== null, uploads, steps, uploadsWhileReading: before,
         ms: Math.round(performance.now() - t0), longTasks, log,
       };
     } catch (e) {
@@ -94,6 +99,7 @@ async function importInPage(page: Page, path: string): Promise<Outcome> {
 function report(name: string, o: Outcome): void {
   process.stdout.write(`${name}: ${JSON.stringify({ ...o, log: o.log.filter((l) => !l.startsWith('debug')) })}\n`);
   expect(o.ok, o.error).toBe(true);
+  expect(o.uploadsWhileReading, 'nothing is uploaded before the squares are confirmed').toBe(0);
   expect(Math.max(0, ...o.longTasks), `long tasks ${o.longTasks.join(', ')}`).toBeLessThanOrEqual(50);
 }
 

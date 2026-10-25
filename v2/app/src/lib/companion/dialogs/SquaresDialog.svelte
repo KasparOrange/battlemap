@@ -128,11 +128,9 @@
       <p class="fit">On the table: {grid.cols} × {grid.rows} in, {fitText(grid, table)}.</p>
     </Section>
 
-    {#if !prepared.formatChosen}
-      <Section title="Store as" description={STORE_AS_HINTS[format]}>
-        <Segmented label="Store as" options={STORE_AS_OPTIONS} bind:value={format} block />
-      </Section>
-    {/if}
+    <Section title="Store as" description={STORE_AS_HINTS[format]}>
+      <Segmented label="Store as" options={STORE_AS_OPTIONS} bind:value={format} block />
+    </Section>
   </div>
 
   {#snippet footer()}
@@ -169,14 +167,7 @@
   }
 
   @media (max-width: 520px) {
-    .pic {
-    margin: 0;
-    display: grid;
-    gap: var(--g);
-    justify-items: center;
-  }
-
-  .two {
+    .two {
       grid-template-columns: 1fr;
     }
   }

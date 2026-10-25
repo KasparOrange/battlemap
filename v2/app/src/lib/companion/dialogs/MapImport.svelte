@@ -1,9 +1,10 @@
 <!--
   MapImport — getting one map in, from a picked file or a fetched link to a map ready for a
-  game: read and examine it (progress), the squares dialog, the grid editor when asked, the
-  upload with "Store as" (progress in the dialog's footer), then the map joins the shared
-  library (every device upload does, parity UP-10) and `ondone` gets it. Failures show as
-  notices and end the flow; nothing is half-added.
+  game: read and examine it (progress — nothing goes to the server yet), the squares dialog, the
+  grid editor when asked, then — only once the squares are confirmed — the upload with "Store
+  as" (progress in the dialog's footer); the map joins the shared library (every device upload
+  does, parity UP-10) and `ondone` gets it. A cancelled import leaves nothing on the server.
+  Failures show as notices; a failed upload can be tried again from the same dialog.
 
   Mount it with a `file`; it opens itself and calls `ondone` or `oncancel` exactly once.
 
@@ -50,24 +51,10 @@
   function finish(map: MapInfo | null): void {
     if (finished) return;
     finished = true;
-    if (!map && prepared) noteLeftovers(prepared);
+    if (!map && prepared) log.info('companion', 'Import cancelled — nothing was uploaded', { file: prepared.fileName });
     releasePrepared(prepared);
     if (map) ondone(map);
     else oncancel();
-  }
-
-  /**
-   * A cancelled import leaves the files "prepare" already uploaded on the server (rv#22, kept
-   * knowingly: the store is content-addressed, so picking the same file again reuses them and
-   * costs no second upload). Logged, so a leftover can be traced.
-   */
-  function noteLeftovers(p: PreparedMap): void {
-    const handle = p.handle as { map?: MapInfo } | undefined;
-    const m = handle?.map;
-    log.info('companion', 'Import cancelled — its uploaded files stay on the server', {
-      file: p.fileName, picture: m?.picture.hash ?? null, tableCopy: m?.tableCopy?.hash ?? null,
-      geometry: m?.geometry?.hash ?? null, thumb: p.thumb?.hash ?? null,
-    });
   }
 
   onMount(() => {
@@ -99,10 +86,10 @@
     uploading = { value: 0, label: 'Uploading' };
     const t0 = performance.now();
     try {
-      const map = await services().uploadMap(prepared, choices, (value, label, detail) => (uploading = { value, label, detail }));
+      const { map, thumb } = await services().uploadMap(prepared, choices, (value, label, detail) => (uploading = { value, label, detail }));
       uploading = { value: null, label: 'Adding it to the shared library' };
       const entry: LibraryEntry = {
-        map: { ...map, libraryId: map.id }, thumb: prepared.thumb, addedAt: new Date().toISOString(),
+        map: { ...map, libraryId: map.id }, thumb, addedAt: new Date().toISOString(),
         originalBytes: prepared.picture.size, note: null,
       };
       try {

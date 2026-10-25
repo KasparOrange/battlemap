@@ -1,16 +1,17 @@
 /**
  * The app's `CompanionServices`, on its seams: `$lib/api` (files, shared library, link fetch),
- * `$lib/import` (examine + upload a map, regrid it), `$lib/storage` (settings, the file cache).
+ * `$lib/import` (examine a map, upload it once the squares are confirmed), `$lib/storage` (settings, the file cache).
  * Only the list of tables is a plain fetch (the API client has no call for it). The companion's
  * root installs it (`setServices(appServices())`); importing this module does nothing by itself.
  */
-import type { FileRef, LibraryEntry, MapInfo } from '@battlemap/shared';
+import type { FileRef, LibraryEntry } from '@battlemap/shared';
 import { api } from '../../api/index.ts';
 import { importFile, type ImportResult } from '../../import/index.ts';
 import { log } from '../../log.ts';
 import { files, settings } from '../../storage/index.ts';
 import {
   type CompanionServices, type GridFinding, type MapChoices, type PreparedMap, type ProgressFn, type StoreAs, type TableRow,
+  type UploadedMap,
 } from './services.ts';
 import { nameFromFile } from './library-logic.ts';
 
@@ -24,7 +25,7 @@ function mbOf(loaded: number, total: number): string {
 
 /** What the import found, in this package's words. */
 function findingOf(r: ImportResult): GridFinding {
-  const g = r.map.grid;
+  const g = r.draft.grid;
   switch (r.gridOrigin) {
     case 'detected':
       return {
@@ -54,22 +55,28 @@ export function appServices(): CompanionServices {
     },
 
     async prepareMap(file: File, onProgress: ProgressFn): Promise<PreparedMap> {
-      const format = await this.getSetting<StoreAs>('storeAs', 'asis');
-      const r = await importFile(file, (p) => onProgress(p.fraction, p.label.replace(/…$/, '')), { format });
-      const pic = r.map.grid;
+      // nothing is uploaded here: a cancelled squares dialog leaves nothing on the server
+      const r = await importFile(file, (p) => onProgress(p.fraction, p.label.replace(/…$/, '')));
+      const d = r.draft;
+      const pic = d.grid;
       return {
-        fileName: file.name, name: nameFromFile(file.name), kind: r.map.kind,
-        picture: r.pictureBlob, pictureExt: r.map.picture.ext === 'jpg' || r.map.picture.ext === 'webp' ? r.map.picture.ext : 'png',
+        fileName: file.name, name: nameFromFile(file.name), kind: d.kind,
+        picture: r.pictureBlob, pictureExt: d.pictureExt === 'jpg' || d.pictureExt === 'webp' ? d.pictureExt : 'png',
         pictureW: pic.pictureW, pictureH: pic.pictureH, previewUrl: URL.createObjectURL(r.pictureBlob),
-        geometry: null, grid: r.map.grid, drawGrid: r.map.drawGrid, finding: findingOf(r),
-        needsGrid: r.needsGrid && r.gridOrigin === 'default', formatChosen: true, thumb: r.thumb, handle: r,
+        geometry: null, grid: d.grid, drawGrid: d.drawGrid, finding: findingOf(r),
+        needsGrid: r.needsGrid && r.gridOrigin === 'default', handle: r,
       };
     },
 
-    async uploadMap(p: PreparedMap, c: MapChoices, onProgress: ProgressFn): Promise<MapInfo> {
+    async uploadMap(p: PreparedMap, c: MapChoices, onProgress: ProgressFn): Promise<UploadedMap> {
       const r = p.handle as ImportResult;
-      const map = await r.regrid(c.grid, c.drawGrid, (x) => onProgress(x.fraction, x.label.replace(/…$/, '')));
-      return { ...map, name: c.name };
+      const t0 = performance.now();
+      const { map, thumb } = await r.upload({ grid: c.grid, drawGrid: c.drawGrid, format: c.format }, (x) => {
+        const label = x.label.replace(/…$/, '');
+        onProgress(x.fraction, label, x.step === 'upload' ? `${Math.round(x.fraction * 100)} %` : undefined);
+      });
+      log.info('companion', 'Map files uploaded', { name: c.name, format: c.format, ms: Math.round(performance.now() - t0) });
+      return { map: { ...map, name: c.name }, thumb };
     },
 
     async uploadFile(blob: Blob, opts: { ext: FileRef['ext']; format: StoreAs }, onProgress: ProgressFn): Promise<FileRef> {

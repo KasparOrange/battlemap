@@ -31,10 +31,9 @@ export interface GridFinding {
 }
 
 /**
- * A picked file read and examined, before the DM settled the squares. The app's import already
- * uploads picture, geometry, table copy and thumbnail while preparing (so "Upload and play" is
- * quick); a cancelled import leaves them on the server, where the next pick of the same file
- * reuses them (content-addressed). Accepted knowingly (rv#22); `MapImport` logs the leftovers.
+ * A picked file read and examined, before the DM settled the squares. Nothing is on the server
+ * yet: `uploadMap` sends picture, geometry, table copy and thumbnail once the squares dialog is
+ * confirmed, so a cancelled import leaves nothing behind (rv#22).
  */
 export interface PreparedMap {
   /** The picked file's name ("cave_40x30.webp"). */
@@ -63,11 +62,6 @@ export interface PreparedMap {
   finding: GridFinding;
   /** True when no grid is known and the DM should measure one. */
   needsGrid: boolean;
-  /** True when the picture is already uploaded (with the remembered "Store as"), so the
-   * squares dialog can't offer another format. */
-  formatChosen: boolean;
-  /** The 288 px thumbnail for the library entry, when one was made. */
-  thumb: FileRef | null;
   /** The implementation's own handle (the import result). */
   handle?: unknown;
 }
@@ -82,6 +76,14 @@ export interface MapChoices {
   drawGrid: boolean;
   /** How the server stores the picture. */
   format: StoreAs;
+}
+
+/** A map on the server after `uploadMap`. */
+export interface UploadedMap {
+  /** The map, ready for a game. */
+  map: MapInfo;
+  /** Its 288 px thumbnail for the library entry, or null. */
+  thumb: FileRef | null;
 }
 
 /** A table the server knows (`GET /api/tables`). */
@@ -100,8 +102,8 @@ export interface CompanionServices {
   listTables(): Promise<TableRow[]>;
   /** Reads and examines a picked file (`.dd2vtt`, PDF, picture). Throws a readable `Error`. */
   prepareMap(file: File, onProgress: ProgressFn): Promise<PreparedMap>;
-  /** Uploads a prepared map with the DM's choices; returns the map ready for a game. */
-  uploadMap(prepared: PreparedMap, choices: MapChoices, onProgress: ProgressFn): Promise<MapInfo>;
+  /** Uploads a prepared map with the DM's choices (the first upload of its files); returns the map ready for a game and its thumbnail. */
+  uploadMap(prepared: PreparedMap, choices: MapChoices, onProgress: ProgressFn): Promise<UploadedMap>;
   /** Uploads one file (a DM layer). */
   uploadFile(blob: Blob, opts: { ext: FileRef['ext']; format: StoreAs }, onProgress: ProgressFn): Promise<FileRef>;
   /** The shared library, as stored. */

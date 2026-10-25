@@ -2,7 +2,7 @@
 /**
  * Tests of the main-thread pipeline with a fake worker (the real `prepare.ts` jobs on the sharp
  * engine where they matter, canned results elsewhere) and a fake upload: what gets uploaded,
- * the `MapInfo`, progress, logging, errors and `regrid`. Run: `bun test` in app/.
+ * that nothing goes up before `upload`, the `MapInfo`, progress, logging, errors, a changed grid. Run: `bun test` in app/.
  */
 import { describe, expect, test } from 'bun:test';
 import { check, MapInfo, wholeGrid, type FileRef } from '@battlemap/shared';
@@ -86,26 +86,32 @@ function dd2vtt(png: Uint8Array, cols: number, rows: number, ppg: number): strin
 }
 
 describe('runImport', () => {
-  test.skipIf(!backend)('a .dd2vtt: picture, geometry, table copy and thumbnail uploaded, a valid MapInfo', async () => {
+  test.skipIf(!backend)('a .dd2vtt: nothing uploaded until upload; then picture, geometry, table copy and thumbnail, a valid MapInfo', async () => {
     const png = await gridPng(1000, 600, 100); // 10 × 6 squares of 100 px → a 72 px table copy
     const file = new File([dd2vtt(png, 10, 6, 100)], 'Crypt_level.dd2vtt');
     const up = fakeUpload();
     const d = deps({ upload: up.upload });
     const progress: ImportProgress[] = [];
     const r = await runImport(file, (p) => progress.push(p), d);
-    expect(check(MapInfo, r.map).ok).toBe(true);
-    expect(r.map).toMatchObject({ name: 'Crypt level', kind: 'uvtt', doorCount: 1, drawDoors: true, drawGrid: true, libraryId: null });
-    expect([r.map.grid.cols, r.map.grid.rows, r.map.grid.cellW]).toEqual([10, 6, 100]);
+    expect(up.calls).toEqual([]); // reading uploads nothing (a cancelled dialog leaves nothing)
+    expect(r.draft).toMatchObject({ name: 'Crypt level', kind: 'uvtt', doorCount: 1, drawDoors: true, drawGrid: true });
     expect(r.needsGrid).toBe(false);
-    expect(up.calls.map((c) => c.ext)).toEqual(['png', 'json', 'webp', 'webp']);
-    expect(r.map.geometry).not.toBeNull();
-    expect(r.map.tableCopy).not.toBeNull();
-    expect(r.thumb).not.toBeNull();
-    // Progress: steps in order, the fraction never goes back, ends at 1.
+    // Reading progress: in order, never back, ends at 1.
     const fr = progress.map((p) => p.fraction);
     expect(fr).toEqual([...fr].sort((a, b) => a - b));
     expect(fr.at(-1)).toBeCloseTo(1, 5);
-    expect(progress.at(-1)!.label).toBe('Uploading the map…');
+    expect(d.log.lines.some((l) => l.msg === 'Map read')).toBe(true);
+
+    const sent: ImportProgress[] = [];
+    const { map, thumb } = await r.upload({ grid: r.draft.grid, drawGrid: r.draft.drawGrid }, (p) => sent.push(p));
+    expect(check(MapInfo, map).ok).toBe(true);
+    expect(map).toMatchObject({ name: 'Crypt level', kind: 'uvtt', doorCount: 1, drawDoors: true, drawGrid: true, libraryId: null });
+    expect([map.grid.cols, map.grid.rows, map.grid.cellW]).toEqual([10, 6, 100]);
+    expect(up.calls.map((c) => c.ext)).toEqual(['png', 'json', 'webp', 'webp']);
+    expect(map.geometry).not.toBeNull();
+    expect(map.tableCopy).not.toBeNull();
+    expect(thumb).not.toBeNull();
+    expect(sent.at(-1)).toMatchObject({ step: 'upload', label: 'Uploading the map…', fraction: 1 });
     // One summary line with the timings.
     const done = d.log.lines.find((l) => l.msg === 'Map imported')!;
     expect(done.props).toMatchObject({ kind: 'uvtt', squares: '10x6', gridOrigin: 'uvtt', doors: 1, walls: 1 });
@@ -115,24 +121,24 @@ describe('runImport', () => {
   test.skipIf(!backend)('a picture: the drawn grid found, the format only for the picture, the squares to check', async () => {
     const file = new File([await gridPng(800, 640, 40) as Uint8Array<ArrayBuffer>], 'cave.png');
     const up = fakeUpload();
-    const r = await runImport(file, undefined, deps({ upload: up.upload }), { format: 'webp' });
+    const r = await runImport(file, undefined, deps({ upload: up.upload }));
     expect(r.needsGrid).toBe(true);
     expect(r.gridOrigin).toBe('detected');
-    expect([r.map.grid.cols, r.map.grid.rows]).toEqual([20, 16]);
-    expect(r.map.drawGrid).toBe(false);
+    expect([r.draft.grid.cols, r.draft.grid.rows]).toEqual([20, 16]);
+    expect(r.draft.drawGrid).toBe(false);
     expect(r.note).toContain('Found a drawn grid: 20 × 16 squares of 40 px');
+    expect(up.calls).toEqual([]);
+    const { map } = await r.upload({ grid: r.draft.grid, drawGrid: false, format: 'webp' });
     expect(up.calls.map((c) => c.format)).toEqual(['webp', undefined]); // picture, thumbnail (40 px squares: no table copy)
-    expect(r.map.tableCopy).toBeNull();
+    expect(map.tableCopy).toBeNull();
   });
 
-  test.skipIf(!backend)('regrid: same density keeps the copy, a coarser grid makes a new one', async () => {
+  test.skipIf(!backend)('upload with other squares: same density keeps the copy, a coarser grid makes a new one', async () => {
     const file = new File([await gridPng(800, 640, 40) as Uint8Array<ArrayBuffer>], 'cave.png');
     const up = fakeUpload();
     const d = deps({ upload: up.upload });
     const r = await runImport(file, undefined, d);
-    const same = await r.regrid(r.map.grid, r.map.drawGrid);
-    expect(same).toBe(r.map);
-    const moved = await r.regrid({ ...r.map.grid, x: 1 }, true);
+    const moved = (await r.upload({ grid: { ...r.draft.grid, x: 1 }, drawGrid: true })).map;
     expect(moved.grid.x).toBe(1);
     expect(moved.drawGrid).toBe(true);
     expect(d.jobs).toEqual(['picture']); // no copy needed for 40 px squares
@@ -142,10 +148,12 @@ describe('runImport', () => {
       d.jobs.push(job.op);
       return copyJob;
     }) as ImportDeps['work'];
-    const coarse = await r.regrid(wholeGrid(8, 6, 800, 640), true);
+    const before = up.calls.length;
+    const coarse = (await r.upload({ grid: wholeGrid(8, 6, 800, 640), drawGrid: true })).map;
     expect(d.jobs).toEqual(['picture', 'tableCopy']);
     expect(coarse.tableCopy).not.toBeNull();
-    expect(r.map).toBe(coarse);
+    // picture and thumbnail went up in the first try already: only the new copy goes now
+    expect(up.calls.length - before).toBe(1);
   });
 
   test('a PDF goes through pdf.js, then the worker', async () => {
@@ -164,8 +172,8 @@ describe('runImport', () => {
       }) as ImportDeps['work'],
     });
     const r = await runImport(new File(['%PDF-1.7\n...'], 'Dungeon.pdf'), undefined, d);
-    expect(r.map.kind).toBe('picture');
-    expect(r.map.name).toBe('Dungeon');
+    expect(r.draft.kind).toBe('picture');
+    expect(r.draft.name).toBe('Dungeon');
     expect(d.log.lines.some((l) => l.msg === 'PDF page 1 rendered' && l.props!['pages'] === 3)).toBe(true);
   });
 
@@ -187,10 +195,15 @@ describe('runImport', () => {
     expect((broken as ImportError).code).toBe('corrupt');
   });
 
-  test.skipIf(!backend)('an upload that fails says so', async () => {
+  test.skipIf(!backend)('an upload that fails says so, and a second try works', async () => {
     const file = new File([await gridPng(200, 200, 40) as Uint8Array<ArrayBuffer>], 'room.png');
-    const err = await runImport(file, undefined, deps({ upload: fakeUpload(true).upload })).catch((e: unknown) => e);
+    const down = fakeUpload(true);
+    const d = deps({ upload: down.upload });
+    const r = await runImport(file, undefined, d);
+    const err = await r.upload({ grid: r.draft.grid, drawGrid: true }).catch((e: unknown) => e);
     expect((err as ImportError).code).toBe('upload');
     expect((err as Error).message).toBe('Upload failed — check the connection and try again.');
+    d.upload = fakeUpload().upload;
+    expect(check(MapInfo, (await r.upload({ grid: r.draft.grid, drawGrid: true })).map).ok).toBe(true);
   });
 });

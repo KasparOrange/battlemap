@@ -1,11 +1,12 @@
 /**
  * The main-thread half of an import: check the file, render a PDF's first page, hand the rest to
- * the worker, upload what it made (picture, geometry, table copy, thumbnail), build the
- * `MapInfo`, report progress in steps and log the import. Its collaborators come in as
+ * the worker; then — only when the DM confirmed the squares (`ImportResult.upload`) — upload
+ * what it made (picture, geometry, table copy, thumbnail) and build the `MapInfo`. Progress in
+ * steps, every phase logged. Its collaborators come in as
  * `ImportDeps`, so tests run it with a fake worker and a fake upload; `index.ts` wires the
  * real ones.
  */
-import { check, gridsClose, MapInfo, newId, type FileRef, type RasterGrid } from '@battlemap/shared';
+import { check, MapInfo, newId, type FileRef, type RasterGrid } from '@battlemap/shared';
 import type { Api, StoreAs } from '../api/index.ts';
 import type { Logger } from '../log.ts';
 import { ImportError, asImportError } from './errors.ts';
@@ -47,10 +48,50 @@ const WEIGHTS: Record<FileKind, Partial<Record<ImportStep, number>>> = {
   pdf: { pdf: 4, decode: 2, detect: 2, 'table-copy': 2, thumb: 1, upload: 4 },
 };
 
-/** The result of an import. */
-export interface ImportResult {
+/** The map as the import read it, before anything is uploaded. */
+export interface MapDraft {
+  /** The name from the file ("Crypt level"). */
+  name: string;
+  /** `uvtt` for `.dd2vtt`/`.uvtt`, `picture` for pictures and PDF pages. */
+  kind: MapInfo['kind'];
+  /** The squares (`.dd2vtt`: exact; pictures: the first guess). */
+  grid: RasterGrid;
+  /** Whether battlemap draws grid lines. */
+  drawGrid: boolean;
+  /** Doors of a `.dd2vtt` (0 for pictures). */
+  doorCount: number;
+  /** Whether battlemap draws the doors. */
+  drawDoors: boolean;
+  /** The picture's extension as read (a PDF page: its WebP / PNG). */
+  pictureExt: FileRef['ext'];
+}
+
+/** What the upload of a prepared import made. */
+export interface UploadedMap {
   /** The map, uploaded, ready for `map.add` or a library entry. */
   map: MapInfo;
+  /** The 288 px thumbnail on the server (ours, else the server's), or null. */
+  thumb: FileRef | null;
+}
+
+/** The squares and format the DM settled on, for {@link ImportResult.upload}. */
+export interface UploadChoice {
+  /** Where the squares lie (same picture). */
+  grid: RasterGrid;
+  /** Whether battlemap draws grid lines. */
+  drawGrid: boolean;
+  /** The server's "Store as" for the picture (default: the import's `format`, else as is). */
+  format?: StoreAs;
+}
+
+/**
+ * The result of an import: everything is read and examined, **nothing is uploaded yet** — a
+ * cancelled squares dialog leaves nothing on the server. {@link ImportResult.upload} sends the
+ * files with the squares the DM chose.
+ */
+export interface ImportResult {
+  /** The map as read (name, kind, first-guess squares). */
+  draft: MapDraft;
   /** Whether the DM should check the squares (pictures and PDFs: yes; `.dd2vtt`: no). */
   needsGrid: boolean;
   /** The drawn grid found in a picture, or null. */
@@ -59,21 +100,19 @@ export interface ImportResult {
   gridOrigin: GridOrigin;
   /** What the squares dialog says about them ("Found a drawn grid: …"), or null. */
   note: string | null;
-  /** The 288 px thumbnail for the library entry, or null when it couldn't be made. */
-  thumb: FileRef | null;
-  /** The original picture, kept for the grid editor (the PDF page as PNG). */
+  /** The original picture, kept for previews and the grid editor (the PDF page as WebP / PNG). */
   pictureBlob: Blob;
   /**
-   * The same map with the squares the DM chose. Makes a new table copy (in a worker) and
-   * uploads it when the new grid needs another density; otherwise only the grid changes.
+   * Uploads the map with the squares the DM chose: picture (with `format`), geometry, table copy
+   * (remade in the worker first when the chosen squares need another density) and thumbnail.
+   * Files that went up in an earlier, failed try are not sent again.
    *
-   * @param grid - the new grid (same picture)
-   * @param drawGrid - whether battlemap draws grid lines
-   * @param onProgress - progress of the copy and its upload
-   * @returns the updated map (also kept as `map`)
-   * @throws ImportError when the copy or its upload fails
+   * @param choice - squares, grid lines, "Store as"
+   * @param onProgress - progress of a remade copy and of the upload
+   * @returns the uploaded map and its thumbnail
+   * @throws ImportError (`upload`) when an upload fails — calling again retries
    */
-  regrid(grid: RasterGrid, drawGrid: boolean, onProgress?: (p: ImportProgress) => void): Promise<MapInfo>;
+  upload(choice: UploadChoice, onProgress?: (p: ImportProgress) => void): Promise<UploadedMap>;
 }
 
 /** Options of `importFile`. */
@@ -96,10 +135,16 @@ export interface ImportDeps {
   now(): number;
 }
 
-/** A small reporter that turns steps into a weighted overall fraction. */
-function progressOf(kind: FileKind, onProgress?: (p: ImportProgress) => void) {
-  const weights = WEIGHTS[kind];
-  const total = Object.values(weights).reduce((a, b) => a + b, 0);
+/**
+ * A small reporter that turns steps into a weighted overall fraction.
+ *
+ * @param kind - the file kind (its step weights)
+ * @param onProgress - gets each report
+ * @param only - the steps this phase runs (reading: all but the upload; uploading: copy + upload)
+ */
+function progressOf(kind: FileKind, onProgress: ((p: ImportProgress) => void) | undefined, only: ImportStep[] | null = null) {
+  const weights = Object.fromEntries(Object.entries(WEIGHTS[kind]).filter(([s]) => (only ? only.includes(s as ImportStep) : s !== 'upload'))) as Partial<Record<ImportStep, number>>;
+  const total = Object.values(weights).reduce((a, b) => a + b, 0) || 1;
   const done = new Set<ImportStep>();
   let current: ImportStep | null = null;
   const sumDone = () => [...done].reduce((a, s) => a + (weights[s] ?? 0), 0);
@@ -113,14 +158,24 @@ function progressOf(kind: FileKind, onProgress?: (p: ImportProgress) => void) {
   };
 }
 
+/** Whether two grids of the same picture need the same table copy (within 2 % in width). */
+function sameDensity(a: RasterGrid, b: RasterGrid): boolean {
+  const before = tableCopyPlan(a);
+  const after = tableCopyPlan(b);
+  if (!before || !after) return !before && !after;
+  return Math.abs(before.width - after.width) / before.width < 0.02;
+}
+
 /**
- * Imports a map file: `.dd2vtt` / `.uvtt`, PDF (page 1) or picture.
+ * Reads a map file — `.dd2vtt` / `.uvtt`, PDF (page 1) or picture — and makes its files (picture,
+ * geometry, table copy, thumbnail) **without uploading anything**: the result's `upload` sends
+ * them once the DM settled the squares, so a cancelled import leaves nothing on the server.
  *
  * @param file - the picked file (its `name` decides the kind, checked against the content)
- * @param onProgress - progress in steps
+ * @param onProgress - progress of the reading steps (ends at 1 before the upload)
  * @param deps - the worker, pdf.js, the upload, the logger
- * @param options - `format` for the picture's upload
- * @returns the uploaded map and what the squares dialog needs
+ * @param options - `format`: the default "Store as" for the picture's upload
+ * @returns the draft map, what the squares dialog needs, and `upload`
  * @throws ImportError with a message for the DM (unsupported, empty, too big, damaged, PDF,
  *   picture, upload, internal)
  */
@@ -159,90 +214,111 @@ export async function runImport(
     }
     for (const w of prepared.warnings) deps.log.warn('import', 'Import warning', { name, warning: w });
 
-    onStep('upload');
-    const tu = deps.now();
-    const files = [prepared.picture, prepared.geometry, prepared.tableCopy, prepared.thumb].filter((f): f is PreparedFile => f !== null);
-    const totalBytes = files.reduce((a, f) => a + f.blob.size, 0) || 1;
-    let sent = 0;
-    let serverThumb: FileRef | null = null;
-    const put = async (f: PreparedFile, format?: StoreAs): Promise<FileRef> => {
-      try {
-        const res = await deps.upload(f.blob, { ext: f.ext, format }, (loaded) => progress.step('upload', (sent + Math.min(loaded, f.blob.size)) / totalBytes));
-        sent += f.blob.size;
-        if (f === prepared.picture && res.thumb) serverThumb = plainRef(res.thumb);
-        return plainRef(res);
-      } catch (e) {
-        throw asImportError(e, 'upload', 'Upload failed — check the connection and try again.');
-      }
-    };
-    const picture = await put(prepared.picture, options.format);
-    const geometry = prepared.geometry ? await put(prepared.geometry) : null;
-    const tableCopy = prepared.tableCopy ? await put(prepared.tableCopy) : null;
-    let thumb: FileRef | null = null;
-    if (prepared.thumb) {
-      try {
-        thumb = await put(prepared.thumb);
-      } catch (e) {
-        deps.log.warn('import', 'Thumbnail upload failed', { name, error: String(e) });
-      }
-    }
-    thumb ??= serverThumb;
-    const uploadMs = Math.round(deps.now() - tu);
+    progress.step(lastStep, 1); // reading is done: the bar is full before the squares dialog
+    const prepareMs = Math.round(deps.now() - t0);
+    deps.log.info('import', 'Map read', {
+      name, kind, bytes: file.size, ms: prepareMs,
+      timings: { ...prepared.timings, ...(pdfMs !== undefined ? { pdf: pdfMs } : {}) },
+      squares: `${prepared.grid.cols}x${prepared.grid.rows}`, gridOrigin: prepared.gridOrigin,
+      detection: describeDetection(prepared.detection),
+      picture: `${prepared.picture.width}x${prepared.picture.height} ${prepared.picture.ext}`,
+      tableCopy: prepared.tableCopy ? `${prepared.tableCopy.width}x${prepared.tableCopy.height} ${prepared.tableCopy.ext}` : null,
+      ...(prepared.counts ?? {}), pages: pageCount,
+    });
 
-    let map: MapInfo = checkedMap({
-      id: newId(),
+    const draft: MapDraft = {
       name: mapNameFromFile(name),
       kind: prepared.kind,
-      picture,
-      tableCopy,
-      geometry,
       grid: prepared.grid,
       drawGrid: prepared.drawGrid,
       doorCount: prepared.counts?.doors ?? 0,
       drawDoors: prepared.drawDoors,
-      libraryId: null,
-    });
+      pictureExt: prepared.picture.ext,
+    };
+    /** Uploads that went through, per file and format (a retry doesn't send them again). */
+    const sentFiles = new Map<PreparedFile, Map<string, { ref: FileRef; serverThumb: FileRef | null }>>();
+    /** The table copy for a grid density, once made (the prepared one is for the first guess). */
+    let copyFor: { grid: RasterGrid; file: PreparedFile | null } = { grid: prepared.grid, file: prepared.tableCopy };
 
-    deps.log.info('import', 'Map imported', {
-      name, kind, bytes: file.size, ms: Math.round(deps.now() - t0),
-      timings: { ...prepared.timings, ...(pdfMs !== undefined ? { pdf: pdfMs } : {}), upload: uploadMs },
-      squares: `${map.grid.cols}x${map.grid.rows}`, gridOrigin: prepared.gridOrigin,
-      detection: describeDetection(prepared.detection),
-      picture: `${prepared.picture.width}x${prepared.picture.height} ${prepared.picture.ext}`,
-      tableCopy: prepared.tableCopy ? `${prepared.tableCopy.width}x${prepared.tableCopy.height} ${prepared.tableCopy.ext}` : null,
-      ...(prepared.counts ?? {}), pages: pageCount, uploadedBytes: totalBytes,
-    });
-
-    const pictureBlob = prepared.picture.blob;
     const result: ImportResult = {
-      map,
+      draft,
       needsGrid: prepared.kind === 'picture',
       detection: prepared.detection,
       gridOrigin: prepared.gridOrigin,
       note: prepared.note,
-      thumb,
-      pictureBlob,
-      async regrid(grid, drawGrid, onRegridProgress) {
-        if (gridsClose(grid, map.grid) && drawGrid === map.drawGrid) return map;
-        const before = tableCopyPlan(map.grid);
-        const after = tableCopyPlan(grid);
-        const sameCopy = (!before && !after) || (before && after && Math.abs(before.width - after.width) / before.width < 0.02);
-        let copy = map.tableCopy;
-        if (!sameCopy) {
-          const p = progressOf('picture', onRegridProgress);
-          const t = deps.now();
-          const made = await deps.work<PreparedFile | null>({ op: 'tableCopy', picture: pictureBlob, grid }, (s) => p.step(s));
-          p.step('upload');
-          copy = made ? plainRef(await deps.upload(made.blob, { ext: made.ext }, (loaded, total) => p.step('upload', total > 0 ? loaded / total : 0)).catch((e: unknown) => {
-            throw asImportError(e, 'upload', 'Upload failed — check the connection and try again.');
-          })) : null;
-          deps.log.info('import', 'Table copy remade for the new grid', {
-            name, squares: `${grid.cols}x${grid.rows}`, copy: made ? `${made.width}x${made.height}` : null, ms: Math.round(deps.now() - t),
+      pictureBlob: prepared.picture.blob,
+      async upload(choice, onUploadProgress) {
+        const tu = deps.now();
+        const grid = choice.grid;
+        const format = choice.format ?? options.format;
+        // the chosen squares may need a copy of another density than the first guess had
+        const remake = !sameDensity(copyFor.grid, grid);
+        const p = progressOf(kind === 'uvtt' ? 'uvtt' : 'picture', onUploadProgress, remake ? ['table-copy', 'upload'] : ['upload']);
+        if (remake) {
+          const tc = deps.now();
+          const made = await deps.work<PreparedFile | null>({ op: 'tableCopy', picture: prepared.picture.blob, grid }, (s) => p.step(s));
+          copyFor = { grid, file: made };
+          deps.log.info('import', 'Table copy remade for the chosen squares', {
+            name, squares: `${grid.cols}x${grid.rows}`, copy: made ? `${made.width}x${made.height}` : null, ms: Math.round(deps.now() - tc),
           });
         }
-        map = checkedMap({ ...map, grid, drawGrid, tableCopy: copy });
-        result.map = map;
-        return map;
+        const files = [prepared.picture, prepared.geometry, copyFor.file, prepared.thumb].filter((f): f is PreparedFile => f !== null);
+        const totalBytes = files.reduce((a, f) => a + f.blob.size, 0) || 1;
+        let sent = 0;
+        p.step('upload', 0);
+        const put = async (f: PreparedFile, fmt?: StoreAs): Promise<{ ref: FileRef; serverThumb: FileRef | null }> => {
+          const key = fmt ?? '';
+          const known = sentFiles.get(f)?.get(key);
+          if (known) {
+            sent += f.blob.size;
+            return known;
+          }
+          try {
+            const res = await deps.upload(f.blob, { ext: f.ext, format: fmt }, (loaded) => p.step('upload', (sent + Math.min(loaded, f.blob.size)) / totalBytes));
+            sent += f.blob.size;
+            const done = { ref: plainRef(res), serverThumb: res.thumb ? plainRef(res.thumb) : null };
+            if (!sentFiles.has(f)) sentFiles.set(f, new Map());
+            sentFiles.get(f)!.set(key, done);
+            return done;
+          } catch (e) {
+            throw asImportError(e, 'upload', 'Upload failed — check the connection and try again.');
+          }
+        };
+        const pic = await put(prepared.picture, format);
+        const geometry = prepared.geometry ? (await put(prepared.geometry)).ref : null;
+        const tableCopy = copyFor.file ? (await put(copyFor.file)).ref : null;
+        let thumb: FileRef | null = null;
+        if (prepared.thumb) {
+          try {
+            thumb = (await put(prepared.thumb)).ref;
+          } catch (e) {
+            deps.log.warn('import', 'Thumbnail upload failed', { name, error: String(e) });
+          }
+        }
+        thumb ??= pic.serverThumb;
+        p.step('upload', 1);
+        const map = checkedMap({
+          id: newId(),
+          name: draft.name,
+          kind: draft.kind,
+          picture: pic.ref,
+          tableCopy,
+          geometry,
+          grid,
+          drawGrid: choice.drawGrid,
+          doorCount: draft.doorCount,
+          drawDoors: draft.drawDoors,
+          libraryId: null,
+        });
+        const uploadMs = Math.round(deps.now() - tu);
+        deps.log.info('import', 'Map imported', {
+          name, kind, bytes: file.size, ms: prepareMs + uploadMs,
+          timings: { ...prepared.timings, ...(pdfMs !== undefined ? { pdf: pdfMs } : {}), upload: uploadMs },
+          squares: `${grid.cols}x${grid.rows}`, gridOrigin: prepared.gridOrigin, format: format ?? 'asis',
+          tableCopy: copyFor.file ? `${copyFor.file.width}x${copyFor.file.height} ${copyFor.file.ext}` : null,
+          ...(prepared.counts ?? {}), pages: pageCount, uploadedBytes: totalBytes,
+        });
+        return { map, thumb };
       },
     };
     return result;
