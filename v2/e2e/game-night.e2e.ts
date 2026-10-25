@@ -133,16 +133,6 @@ async function expectSamePicture(before: Buffer, after: Buffer, message: string)
   expect(after.equals(before), message).toBe(true);
 }
 
-/**
- * Whether a page still answers (a page whose main thread hangs never does) — within 4 s.
- *
- * @param page - the page
- * @returns false when it hangs
- */
-async function answers(page: Table['tv']): Promise<boolean> {
-  return Promise.race([page.evaluate(() => true), new Promise<boolean>((r) => setTimeout(() => r(false), 4000))]);
-}
-
 // ── scene 0 · prep ──────────────────────────────────────────────────────────────────────────
 
 test.describe('scene 0 · prep', () => {
@@ -481,6 +471,7 @@ test.describe('scene 4 · up the tower', () => {
   });
 
   test('the library lists the game under the map on the table; reopening keeps both maps', async ({ table: t }) => {
+    test.setTimeout(120_000);
     await needs(t, 'tvStorage');
     const ground = await gameOn(t, 'towerGround', 'Tower night');
     const upper = await uploadMap(t.serverUrl, 'towerUpper');
@@ -492,13 +483,15 @@ test.describe('scene 4 · up the tower', () => {
     expect(row?.activeMapName).toBe(upper.info.name);
     expect(row?.mapNames).toEqual([ground.info.name, upper.info.name]);
 
+    // The companion's first WebGL view takes 13–20 s under software rendering: let it finish
+    // before the close, or the reopen lands on a page that is still starting (W4-C).
+    await expect(t.companions[0]!.getByTestId('game-screen')).toBeVisible({ timeout: 45_000 });
     t.bot.send({ type: 'game.close' });
     await t.bot.until((s) => s.game === null, 10_000);
     t.bot.send({ type: 'game.open', gameId });
     const s = await t.bot.until((x) => x.game?.id === gameId, 10_000);
     expect(s.game!.mapOrder).toEqual([ground.info.id, upper.info.id]);
     expect(revealedCount(activeMap(s))).toBe(11 * 11);
-    test.fixme(!(await answers(t.companions[0]!)), 'the companion page hangs (main thread blocked) after game.close + game.open — companion package');
     await companionMatchesTv(t);
   });
 

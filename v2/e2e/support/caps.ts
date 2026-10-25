@@ -15,7 +15,7 @@ export interface Caps {
   library: boolean;
   /** `GET /api/games` answers (server backups). */
   backups: boolean;
-  /** The TV answers `game.open` from storage instead of "can't do yet" (TV + storage packages). */
+  /** The TV answers `lib.list` from storage instead of "can't do yet" (TV + storage packages). */
   tvStorage: boolean;
   /** The TV page exposes `window.__battlemap` (orchestrator's cores). */
   tvHook: boolean;
@@ -44,16 +44,17 @@ async function routeExists(url: string, init?: RequestInit): Promise<boolean> {
 }
 
 /**
- * Whether the TV answers `game.open` with storage: an unknown game id must come back as a notice
- * that is *not* the skeleton's "can't do yet" (or as a listing / snapshot).
+ * Whether the TV answers library requests from its storage: `lib.list` must come back as a
+ * listing, not as the skeleton's "can't do … yet" notice. (It probed with `game.open` of an
+ * unknown id before, which put up the TV's "neither on the TV nor on the server" badge.)
  *
  * @param t - the table
  * @returns true when the TV has storage-backed requests
  */
 async function tvAnswersOpen(t: Table): Promise<boolean> {
   try {
-    const reply = await t.bot.request({ type: 'game.open', gameId: 'e2e-no-such-game' }, ['tv.notice', 'lib.listing', 'sync.snapshot', 'tv.status'], 3000);
-    return !(reply.type === 'tv.notice' && /can't do .* yet/.test(String(reply.text)));
+    const reply = await t.bot.request({ type: 'lib.list' }, ['lib.listing', 'tv.notice'], 3000);
+    return reply.type === 'lib.listing';
   } catch {
     return false;
   }
