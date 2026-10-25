@@ -1,8 +1,19 @@
-# battlemap v2 — server
+# battlemap v2 — server (Bun, legacy fallback)
 
-**Since 2026-10-25 production runs the Rust server** (`server-rs.md` "Production switch"); this
-Bun server is the stopped, installed fallback (`server-rs/switch.sh to-bun`), and
-`server/deploy.sh` refuses to run while Caddy points at the Rust server.
+**One server: Rust.** Production (since 2026-10-25), LAN play on the TV box and the e2e suite
+(default since W5) all run `server-rs/` (`server-rs.md`). This Bun server in `server/` is the
+**legacy fallback**: installed and stopped on the VPS (`server-rs/switch.sh to-bun`), runnable in
+e2e only by name (`BATTLEMAP_E2E_SERVER=bun bun run e2e`); `server/deploy.sh` refuses to run while
+Caddy points at the Rust server.
+
+**Not ported here, on purpose:** the five review fixes only the Rust server has — rv#5 (pixel
+limit before decoding), rv#7 (the 200 MB body cap as documented), rv#26 (bounded memory:
+streamed uploads, image and fetch slots), rv#27 (id checks), rv#30 (version slots). Each is a
+rewrite of a hot path the Rust server already proves, and every hour spent on a server nothing
+runs is an hour not spent on the table; a switch back to Bun is an emergency step for hours, not
+a place to live. qa#27 (two commands lost in the Bun soak) is moot for the same reason — the Rust
+soak loses none. If Bun ever has to run longer than a day, port rv#5 and rv#7 first (they guard
+the process against one hostile upload).
 
 The Bun server in `server/`: the relay, the file store, the shared map library, game backups,
 the link fetch, the log forward and the built app. Dumb on purpose — it never interprets a game

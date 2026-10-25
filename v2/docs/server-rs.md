@@ -3,7 +3,7 @@
 `server-rs/` is the server ported to Rust (roadmap N13): one binary for the VPS and, next, the
 TV box's Android shell, so the box itself can host the table for LAN play (S13). Same routes,
 limits and data layout as the Bun server (`server.md`); the black-box suite in
-`server-contract/` checks both. The Bun server keeps running as production until the switch.
+`server-contract/` checks both. **It is the one server:** production since 2026-10-25, LAN play on the box, and the e2e suite's default (W5; `BATTLEMAP_E2E_SERVER=bun` for the legacy Bun fallback, `server.md`).
 
 ## Layout
 

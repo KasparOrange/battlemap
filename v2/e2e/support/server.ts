@@ -7,9 +7,10 @@
  * Pages reach a private server with `?server=<url>` (the app's config reads it), so the app's
  * Vite dev server keeps proxying to the shared one undisturbed.
  *
- * `BATTLEMAP_E2E_SERVER=rust` runs every server of the run — the shared one and the private ones —
- * on the Rust binary instead of Bun. `playwright.config.ts` builds `server-rs` once per run and
- * copies the binary to {@link rustServerBin} (so another helper's rebuild can't swap it mid-run).
+ * Every server of the run — the shared one and the private ones — is the **Rust** binary, the
+ * server production and LAN play run (W5, one server). `playwright.config.ts` builds `server-rs`
+ * once per run and copies the binary to {@link rustServerBin} (so another helper's rebuild can't
+ * swap it mid-run). `BATTLEMAP_E2E_SERVER=bun` runs the legacy Bun fallback (`server/`) instead.
  */
 import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -20,8 +21,11 @@ import { join, resolve } from 'node:path';
 /** The v2 root (this file is `v2/e2e/support/server.ts`). */
 export const V2_DIR = resolve(import.meta.dirname, '..', '..');
 
-/** Which server the run uses: `'bun'` (default) or `'rust'` (`BATTLEMAP_E2E_SERVER=rust`). */
-export const E2E_SERVER: 'bun' | 'rust' = process.env.BATTLEMAP_E2E_SERVER === 'rust' ? 'rust' : 'bun';
+/**
+ * Which server the run uses: `'rust'` (default — what production and the TV box run) or `'bun'`
+ * (`BATTLEMAP_E2E_SERVER=bun`, the legacy fallback in `server/`, only when asked for by name).
+ */
+export const E2E_SERVER: 'bun' | 'rust' = process.env.BATTLEMAP_E2E_SERVER === 'bun' ? 'bun' : 'rust';
 
 /**
  * Where this run's Rust server binary lives: a private copy per shared server port
@@ -37,7 +41,7 @@ export function rustServerBin(serverPort = Number(process.env.BATTLEMAP_SERVER_P
 /**
  * The command that starts a server of the chosen kind: `[program, args, working folder]`.
  *
- * @returns Bun on `server/src/main.ts`, or the Rust binary (working folder `server-rs/`)
+ * @returns the Rust binary (working folder `server-rs/`), or Bun on `server/src/main.ts`
  */
 function serverCommand(): [string, string[], string] {
   return E2E_SERVER === 'rust'
@@ -101,7 +105,7 @@ export async function waitHealthy(url: string, timeoutMs = 15_000): Promise<void
 }
 
 /**
- * Starts a private server — Bun, or the Rust binary under `BATTLEMAP_E2E_SERVER=rust`.
+ * Starts a private server — the Rust binary, or Bun under `BATTLEMAP_E2E_SERVER=bun`.
  *
  * @param opts.port - a fixed port (default: a free one)
  * @param opts.dataDir - an existing data folder to use (default: a new temp folder)

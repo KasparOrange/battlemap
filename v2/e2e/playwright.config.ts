@@ -12,10 +12,11 @@
  * emptied at start), so games, library and files of one run never leak into the next. Tests that
  * need their own server use the `privateServer` fixture (`support/fixtures.ts`).
  *
- * `BATTLEMAP_E2E_SERVER=rust` runs the shared server and every private one on the Rust server:
- * `server-rs` is built once per run (`cargo build --release`, rustup's cargo first in `PATH`) and
- * the binary copied to `$TMPDIR/claude-v2-e2e-rs-<server port>/` (`support/server.ts`
+ * The shared server and every private one are the **Rust** server (the one production and LAN
+ * play run): `server-rs` is built once per run (`cargo build --release`, rustup's cargo first in
+ * `PATH`) and the binary copied to `$TMPDIR/claude-v2-e2e-rs-<server port>/` (`support/server.ts`
  * `rustServerBin`), so another helper's rebuild can't change it mid-run.
+ * `BATTLEMAP_E2E_SERVER=bun` runs the legacy Bun fallback (`server/`) instead.
  *
  * Traces and screenshots of failures stay on disk under `$TMPDIR/claude-v2-e2e-results-<app port>/`, the JSON
  * report in `$TMPDIR/claude-v2-e2e-report-<app port>.json` (never printed);
