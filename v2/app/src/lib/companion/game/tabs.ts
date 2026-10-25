@@ -174,6 +174,8 @@ export interface GameContext {
    * @returns false when it wasn't sent — a notice already says why
    */
   dispatch(cmd: Command): boolean;
+  /** The server's clock, epoch ms — stamp one-shots with it so the TV ages them right (rv#16). */
+  serverNow(): number;
   /** A new gesture id: every command of one stroke or drag carries the same one (one undo step). */
   newGesture(): string;
   /** Chooses a tab (opens the panel). */

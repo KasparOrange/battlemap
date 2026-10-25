@@ -121,6 +121,7 @@ export function fakeContext(state: RootState = stateWithGame()): FakeContext {
       return true;
     },
     newGesture: () => newId(),
+    serverNow: () => Date.now(),
     selectTab: () => {},
     fileUrl: (ref) => `http://test/files/${ref.hash}.${ref.ext}`,
     setState: (s) => (current = s),

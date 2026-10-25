@@ -16,6 +16,7 @@
   import { log } from '../../log.ts';
   import type { TableView, TableViewEvent } from '../../render/index.ts';
   import { files } from '../../storage/index.ts';
+  import { wallsDebug } from '../session-settings/walls-debug.svelte.ts';
   import Spinner from '../../ui/Spinner.svelte';
   import { notify } from '../../ui/notice.svelte.ts';
   import { bindPointers, MapInputController } from '../input/map-input.ts';
@@ -46,6 +47,9 @@
   });
   $effect(() => {
     view?.setDmLayersShown(ctx.showDmLayers);
+  });
+  $effect(() => {
+    view?.setWallsShown(wallsDebug.on);
   });
 
   /** What the view reports: loading card, walls for the fog tools, failures as notices. */
@@ -114,6 +118,7 @@
         log,
         files: (ref) => files.get(ref),
         effects: (slots, c) => createEffectsRuntime(slots, c),
+        now: () => ctx.serverNow(), // one-shots are stamped with the server's clock
         onEvent,
       });
       try {

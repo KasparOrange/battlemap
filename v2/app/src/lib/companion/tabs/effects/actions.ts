@@ -30,7 +30,7 @@ export function commitAim(ctx: GameContext, aim: Aim | null = effectsLocal.aim):
   const { tint } = effectsLocal.settingsFor(e);
   const squares = coveredSquares(aim, ctx.map.info.grid.cols, ctx.map.info.grid.rows).length;
   if (e.once) {
-    const shot = shotFor(e, aim, newId(), Date.now(), tint);
+    const shot = shotFor(e, aim, newId(), ctx.serverNow(), tint); // the server's clock (rv#16)
     if (!ctx.dispatch({ type: 'fx.trigger', shot })) return false;
     log.info('companion', 'Effect cast', { effect: e.id, shape: aim.shape, feet: aim.feet, squares, x: aim.origin.x, y: aim.origin.y });
   } else {
@@ -151,7 +151,7 @@ export function setWeather(ctx: GameContext, e: PickerEffect, on: boolean, perce
  * @param kind - which
  */
 export function screenButton(ctx: GameContext, kind: ScreenKind): void {
-  if (ctx.dispatch({ type: 'fx.trigger', shot: screenShot(kind, newId(), Date.now()) })) log.info('companion', 'Screen effect', { kind });
+  if (ctx.dispatch({ type: 'fx.trigger', shot: screenShot(kind, newId(), ctx.serverNow()) })) log.info('companion', 'Screen effect', { kind });
 }
 
 /** Notice options whose Undo puts effects back. */

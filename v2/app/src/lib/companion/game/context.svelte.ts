@@ -109,6 +109,11 @@ export class GameScreenContext implements GameContext {
     return this.session.dispatch(cmd);
   }
 
+  /** @inheritdoc */
+  serverNow(): number {
+    return this.session.conn.serverNow();
+  }
+
   /** @returns a new gesture id */
   newGesture(): string {
     return newId();
