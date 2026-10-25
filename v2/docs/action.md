@@ -10,7 +10,8 @@ holds only what is open.
 | 1 | architecture + shared + scaffold, parity inventory + roadmap, fluent kit, effects library (150), Android shell + WebGL probe | done |
 | 2 | server (live: `https://battlemap.srv1189697.hstgr.cloud/app/`), storage + API, map import, TV mode | done |
 | 2 | renderer, companion game/tools (4a), companion library/tabs (4b), effects runtime, QA harness | ~80–90 %, cut off by the session limit; work committed (`33b2d8a`) |
-| 2.5 | integration pass (test hook, whole suite, game night, emulators → bug list in `qa.md`) + read-only code review (`review.md`) | running |
+| 2.5 | integration pass (test hook; e2e 44 pass / 8 fail; soak 2,900 commands converge; 25 bugs in `qa.md`) + code review (0 blockers, 8 major in `review.md`) + Rust server (contract 72/72, VPS port 5930 side by side) | done |
+| 3 | W3-A core/TV/harness · W3-B1 companion game + map tabs · W3-B2 companion frame, library, dialogs, settings, developer screen · W3-C renderer, effects runtime, import, torch glow · W3-D Effects tab · W3-E shell, embedded Rust server, LAN play, VPS switch to Rust | running (ownership in each brief; camera + hit tests owned by the renderer) |
 
 ## Next
 
