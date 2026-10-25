@@ -92,8 +92,10 @@
     const m = peerMessage(session.lastMessage);
     if (!m) return;
     if (m.type === 'lib.listing') {
-      games = m.games;
-      log.info('companion', 'Games listed', { count: games.length });
+      // never read `games` here: each check makes a new array, so a tracked read re-ran this forever
+      const listed = m.games;
+      games = listed;
+      log.info('companion', 'Games listed', { count: listed.length });
     } else if (m.type === 'tv.notice') {
       endOpening(); // the app shows the notice itself
     }

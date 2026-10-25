@@ -10,6 +10,7 @@
   - open: boolean · session: CompanionSession | null (null on the table picker) · onclose: () => void
 -->
 <script lang="ts">
+  import { untrack } from 'svelte';
   import type { Level } from 'mwlog/browser';
   import { appConfig } from '../../config.ts';
   import { log, logOutbox } from '../../log.ts';
@@ -65,7 +66,7 @@
   });
 
   $effect(() => {
-    if (open) refresh();
+    if (open) untrack(refresh);
   });
 
   $effect(() => {
@@ -264,6 +265,10 @@
   .line .t,
   .line .p {
     color: var(--t3);
+  }
+
+  .line .p {
+    margin-left: 0.6em;
   }
 
   .line .a {
