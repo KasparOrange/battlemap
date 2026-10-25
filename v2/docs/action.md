@@ -30,6 +30,8 @@ holds only what is open.
 - Effects browser: small looping previews instead of stills.
 - Bench run on the emulator and, when reachable, the box.
 - renderer: the first fit on a phone uses a too-small host size (the companion refits after the first draw as a workaround).
+- companion table picker: list `discoverLanTables()` when `canDiscoverLan()`, else a code field (`decodeLanCode` → `joinTable`); run `checkServerChoice()` once after the companion boots (W3-E's LAN API in `config.ts`).
+- e2e: the full run against the Rust server: 23 of 25 failures pass with emulators off and one worker; two app-timing failures left.
 - e2e: a game-night run wrote under another helper's ports (6411/6412) — check the harness respects `BATTLEMAP_*_PORT`.
 
 ## Plan B for the TV renderer
@@ -61,6 +63,9 @@ The Xiaomi box and the Tab A11+ stand at Juri's (Tailscale `battlemap-table`, of
 there — `shell.md` has the one-line command.
 
 ## Open for Konrad
+
+- Production (`battlemap.srv1189697.hstgr.cloud`) runs on the Rust server since 2026-10-25;
+  switch back with `server-rs/switch.sh to-bun`. At Juri's: the nine steps in `shell.md` "At Juri's".
 
 - Old v1 services on the VPS (dev_server 4242, relay 9090) don't start by themselves after a
   reboot (they were down since 2026-10-16 until the server helper restarted them).
