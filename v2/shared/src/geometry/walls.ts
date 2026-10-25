@@ -2,11 +2,13 @@
  * Walls as blocked square edges, and the flood fills of the Room and Circle reveals (port of
  * `lib/game/wall_grid.dart`, same rules, same tests).
  *
- * Wall polylines are cut into the edges they cross; a closed door blocks its edges like a wall,
+ * Wall polylines are cut into the steps between square centres they cross (so walls off the grid
+ * lines block too — qa#2); a closed door blocks its edges like a wall,
  * an open door removes them (so a wall drawn across a doorway opens with the door). Doors are
  * processed in index order after all walls, exactly as the old app did.
  */
 import type { MapGeometry } from '../model/map.ts';
+import type { Point } from '../model/basics.ts';
 
 /** Edge bit: the square's top edge is blocked. */
 export const NORTH = 1;
@@ -27,11 +29,28 @@ export interface WallGrid {
   readonly blocked: Uint8Array;
 }
 
-const EPS = 1e-6;
+/**
+ * How far the lattice of square centres is nudged off the half-square lines, in squares. A wall
+ * that runs exactly through square centres (or a wall corner sitting exactly on a step) would
+ * otherwise be a tie; the nudge breaks every tie the same way for both sides of an edge. Far
+ * below any real wall precision, far above floating-point noise on maps of a few hundred squares.
+ */
+const NUDGE_X = 3.1e-6;
+const NUDGE_Y = 1.7e-6;
 
 /**
  * Calls `emit(col, row, edge)` for every square edge the segment (x0, y0)–(x1, y1) blocks, in
  * squares. Squares outside the map are skipped.
+ *
+ * The rule: stepping from a square to its neighbour means walking from one square centre to the
+ * other; the step is blocked when that walk crosses the segment. So a wall blocks wherever it
+ * lies — on a grid line or in the middle of a row, as Dungeondraft draws them (`y = 4.876`) —
+ * and a closed wall outline can never be left by any sequence of steps. A wall that lies on a
+ * grid line blocks exactly the edges it covers, as the old app's rule did.
+ *
+ * The walk is a short line on the lattice of (nudged) centres, so the segment crosses each
+ * vertical step line `x = col + ½` at most once and each horizontal one `y = row + ½` at most
+ * once: the cost is the segment's length in squares.
  */
 function segmentEdges(
   x0: number, y0: number, x1: number, y1: number, cols: number, rows: number,
@@ -43,60 +62,48 @@ function segmentEdges(
   };
   const dx = x1 - x0;
   const dy = y1 - y0;
-  if (Math.sqrt(dx * dx + dy * dy) < EPS) return;
-
-  // Along a horizontal grid line: block the north/south edges of every column it spans.
-  if (Math.abs(dy) < EPS) {
-    const iy = Math.round(y0);
-    if (Math.abs(y0 - iy) < EPS) {
-      const colStart = Math.ceil(Math.min(x0, x1));
-      const colEnd = Math.floor(Math.max(x0, x1) - EPS);
-      for (let col = colStart; col <= colEnd; col++) {
-        if (col < 0 || col >= cols) continue;
-        add(col, iy - 1, SOUTH);
-        add(col, iy, NORTH);
-      }
-      return;
-    }
-  }
-  // Along a vertical grid line: block the east/west edges of every row it spans.
-  if (Math.abs(dx) < EPS) {
-    const ix = Math.round(x0);
-    if (Math.abs(x0 - ix) < EPS) {
-      const rowStart = Math.ceil(Math.min(y0, y1));
-      const rowEnd = Math.floor(Math.max(y0, y1) - EPS);
-      for (let row = rowStart; row <= rowEnd; row++) {
-        if (row < 0 || row >= rows) continue;
-        add(ix - 1, row, EAST);
-        add(ix, row, WEST);
-      }
-      return;
-    }
-  }
-  // Any other segment: every vertical grid line it crosses …
-  {
+  // North–south steps of column `col` run along x = col + ½ (nudged), from one row's centre to
+  // the next; the segment crosses that line once, at height y.
+  if (dx !== 0) {
     const xMin = Math.min(x0, x1);
     const xMax = Math.max(x0, x1);
-    for (let ix = Math.ceil(xMin); ix <= Math.floor(xMax); ix++) {
-      if (Math.abs(ix - xMin) < EPS || Math.abs(ix - xMax) < EPS) continue; // its own ends
-      const row = Math.floor(y0 + ((ix - x0) * dy) / dx);
-      if (row < 0 || row >= rows) continue;
-      add(ix - 1, row, EAST);
-      add(ix, row, WEST);
+    for (let col = Math.ceil(xMin - 0.5 - NUDGE_X); col + 0.5 + NUDGE_X <= xMax; col++) {
+      const x = col + 0.5 + NUDGE_X;
+      if (x < xMin) continue;
+      const y = y0 + ((x - x0) * dy) / dx;
+      const row = Math.floor(y - 0.5 - NUDGE_Y); // the step from `row` down to `row + 1`
+      add(col, row, SOUTH);
+      add(col, row + 1, NORTH);
     }
   }
-  // … and every horizontal grid line.
-  {
+  // East–west steps of row `row` run along y = row + ½ (nudged).
+  if (dy !== 0) {
     const yMin = Math.min(y0, y1);
     const yMax = Math.max(y0, y1);
-    for (let iy = Math.ceil(yMin); iy <= Math.floor(yMax); iy++) {
-      if (Math.abs(iy - yMin) < EPS || Math.abs(iy - yMax) < EPS) continue;
-      const col = Math.floor(x0 + ((iy - y0) * dx) / dy);
-      if (col < 0 || col >= cols) continue;
-      add(col, iy - 1, SOUTH);
-      add(col, iy, NORTH);
+    for (let row = Math.ceil(yMin - 0.5 - NUDGE_Y); row + 0.5 + NUDGE_Y <= yMax; row++) {
+      const y = row + 0.5 + NUDGE_Y;
+      if (y < yMin) continue;
+      const x = x0 + ((y - y0) * dx) / dy;
+      const col = Math.floor(x - 0.5 - NUDGE_X); // the step from `col` right to `col + 1`
+      add(col, row, EAST);
+      add(col + 1, row, WEST);
     }
   }
+}
+
+/**
+ * A door's segment, stretched about its middle to at least one square long. A narrower door
+ * might cross no step at all and so could never open; at one square it crosses at least one.
+ */
+function doorSpan(a: Point, b: Point): [number, number, number, number] {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const len = Math.sqrt(dx * dx + dy * dy);
+  if (len >= 1 || len === 0) return [a.x, a.y, b.x, b.y];
+  const k = 0.5 / len;
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  return [mx - dx * k, my - dy * k, mx + dx * k, my + dy * k];
 }
 
 /**
@@ -123,7 +130,8 @@ export function buildWallGrid(cols: number, rows: number, geometry: MapGeometry,
   const open = new Set(openDoors);
   geometry.doors.forEach((door, index) => {
     const isOpen = open.has(index);
-    segmentEdges(door.a.x, door.a.y, door.b.x, door.b.y, cols, rows, (col, row, edge) => {
+    const [x0, y0, x1, y1] = doorSpan(door.a, door.b);
+    segmentEdges(x0, y0, x1, y1, cols, rows, (col, row, edge) => {
       if (isOpen) blocked[row * cols + col]! &= ~edge;
       else blocked[row * cols + col]! |= edge;
     });

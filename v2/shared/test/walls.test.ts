@@ -118,3 +118,84 @@ describe('floodFillWithin (Circle reveal)', () => {
     expect(cells).toContain(2);
   });
 });
+
+/** A map's walls and doors as extracted from a real `.dd2vtt` of the test set (`test/maps/`). */
+interface MapFixture {
+  source: string;
+  cols: number;
+  rows: number;
+  walls: [number, number][][];
+  doors: [number, number, number, number][];
+}
+
+async function realMap(name: string): Promise<{ m: MapFixture; g: MapGeometry }> {
+  const m = (await Bun.file(new URL(`./maps/${name}.json`, import.meta.url)).json()) as MapFixture;
+  return { m, g: geo(m.walls.map((l) => l.map(([x, y]) => P(x, y))), m.doors) };
+}
+
+/** Cell indices of the rectangle cols c0..c1 × rows r0..r1 (inclusive). */
+function rect(cols: number, c0: number, r0: number, c1: number, r1: number): Set<number> {
+  const out = new Set<number>();
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) out.add(r * cols + c);
+  return out;
+}
+
+describe('walls off the grid lines (qa#2, Dungeondraft walls sit mid-square)', () => {
+  test('a horizontal wall inside a row blocks the steps across it', () => {
+    const g = buildWallGrid(3, 3, geo([[P(0, 1.4), P(3, 1.4)]]), []);
+    // Centres of row 0 (y = 0.5) and row 1 (1.5) lie on opposite sides of y = 1.4.
+    expect(new Set(floodFill(g, 0))).toEqual(new Set([0, 1, 2]));
+  });
+
+  test('a box drawn off the grid holds exactly the squares whose centres are inside', () => {
+    const g = buildWallGrid(6, 6, geo([[P(0.7, 0.7), P(4.2, 0.7), P(4.2, 3.9), P(0.7, 3.9), P(0.7, 0.7)]]), []);
+    expect(new Set(floodFill(g, 2 * 6 + 2))).toEqual(rect(6, 1, 1, 3, 3));
+  });
+
+  test('a short door still opens (stretched to a square)', () => {
+    const m = geo([[P(0, 1.3), P(1.2, 1.3)], [P(1.8, 1.3), P(3, 1.3)]], [[1.2, 1.3, 1.8, 1.3]]);
+    expect(floodFill(buildWallGrid(3, 3, m, []), 0).length).toBe(3);
+    expect(floodFill(buildWallGrid(3, 3, m, [0]), 0).length).toBe(9);
+  });
+
+  test('vampire lair: each room reveals itself only', async () => {
+    const { m, g } = await realMap('vampire-lair');
+    const at = (c: number, r: number) => r * m.cols + c;
+    const shut = buildWallGrid(m.cols, m.rows, g, []);
+    const top = rect(m.cols, 4, 1, 9, 6); // x 3.71–10.03, y 0.67–6.99
+    const side = rect(m.cols, 1, 2, 3, 4); // x 0.55–3.71, y 1.73–4.88
+    const hallWest = rect(m.cols, 2, 7, 11, 12); // x 1.6–12.13, y 6.99–13.31
+    const hallEast = rect(m.cols, 12, 7, 17, 12); // x 12.13–18.45
+    expect(new Set(floodFill(shut, at(7, 3)))).toEqual(top);
+    expect(new Set(floodFill(shut, at(2, 3)))).toEqual(side);
+    expect(new Set(floodFill(shut, at(5, 9)))).toEqual(hallWest);
+    expect(new Set(floodFill(shut, at(15, 9)))).toEqual(hallEast);
+    // Door 0 joins the side room to the top room; doors 2 + 3 (the double door) the top room to
+    // the hall; door 4 the hall's two halves.
+    expect(new Set(floodFill(buildWallGrid(m.cols, m.rows, g, [0]), at(7, 3)))).toEqual(new Set([...top, ...side]));
+    expect(new Set(floodFill(buildWallGrid(m.cols, m.rows, g, [3]), at(7, 3)))).toEqual(new Set([...top, ...hallWest]));
+    expect(new Set(floodFill(buildWallGrid(m.cols, m.rows, g, [4]), at(5, 9)))).toEqual(new Set([...hallWest, ...hallEast]));
+  });
+
+  test('vampire lair: the Circle stays inside the top room', async () => {
+    const { m, g } = await realMap('vampire-lair');
+    const top = rect(m.cols, 4, 1, 9, 6);
+    const cells = floodFillWithin(buildWallGrid(m.cols, m.rows, g, []), 3 * m.cols + 8, 6);
+    expect(cells.length).toBeGreaterThan(20);
+    for (const c of cells) expect(top.has(c)).toBe(true);
+  });
+
+  test('castle (114 × 64, 2142 walls): rooms stay closed, and it is fast', async () => {
+    const { m, g } = await realMap('castle');
+    const t0 = performance.now();
+    const grid = buildWallGrid(m.cols, m.rows, g, []);
+    const outside = floodFill(grid, 0);
+    const t = performance.now() - t0;
+    expect(t).toBeLessThan(16);
+    const room = floodFill(grid, 20 * m.cols + 60);
+    expect(room.length).toBeGreaterThan(4);
+    expect(room.length).toBeLessThan(200);
+    const out = new Set(outside);
+    for (const c of room) expect(out.has(c)).toBe(false);
+  });
+});
