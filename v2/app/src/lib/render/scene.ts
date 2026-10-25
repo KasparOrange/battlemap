@@ -10,7 +10,7 @@
  */
 import { Container } from 'pixi.js';
 import {
-  check, MapGeometry as MapGeometrySchema, tableGrid, tvView, windowSquares,
+  check, defaultSettings, MapGeometry as MapGeometrySchema, tableGrid, tvView, windowSquares,
   type Camera, type Game, type MapGeometry, type MapPlay, type Point, type Rect, type RootState, type TableState, type TvView,
 } from '@battlemap/shared';
 import { clampDmCamera, fitDmCamera, NO_INSETS, panCamera, sameCamera, screenToSquares, squaresToScreen, SQUARE, visibleSquares, worldTransform, zoomCameraAt, type Insets, type Size } from './camera.ts';
@@ -45,7 +45,8 @@ export interface SceneSlots {
   fxScreen: Container;
 }
 
-const NO_SETTINGS = { fogStyle: 'standard', fogEdgeInset: 0, fogFade: true, effects: true } as const;
+/** The settings the fog layer gets while no game is open (follows every new settings field). */
+const NO_SETTINGS = defaultSettings();
 
 /** The scene of one screen. */
 export class TableScene {
