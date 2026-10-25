@@ -2,7 +2,8 @@
  * battlemap's grid lines over a map without its own: one quad, one fragment shader that draws
  * lines of a fixed width in **screen px** at any zoom (the old app's 0.5-world-px lines were a
  * tenth of a pixel on the table) and fades them out when squares get smaller than a few px, so
- * a zoomed-out map shows no moiré.
+ * a zoomed-out map shows no moiré. Each line is two-toned — a dark core with a faint light rim —
+ * so it reads on a dark cave and a parchment map alike.
  */
 import { Buffer, BufferUsage, Geometry, Mesh, Shader, type Container } from 'pixi.js';
 import { SQUARE } from './camera.ts';
@@ -27,17 +28,22 @@ precision highp float;
 in vec2 vSq;
 out vec4 finalColor;
 uniform vec4 uGrid;
-uniform vec4 uColor; // rgb (straight), unused
+uniform vec4 uColor; // the core's rgb (straight); the rim is white
 void main() {
   vec2 fw = max(fwidth(vSq), vec2(1e-5));
   vec2 f = fract(vSq);
   vec2 dpx = min(f, 1.0 - f) / fw;          // distance to the nearest line, px per axis
   float d = min(dpx.x, dpx.y);
   float hw = uGrid.z * 0.5;
-  float a = 1.0 - smoothstep(hw - 0.5, hw + 0.5, d);
+  // Two tones, so the lines read on any map: a dark core, and a faint light rim of one px on
+  // each side that shows on dark maps where the core alone would vanish.
+  float core = 1.0 - smoothstep(hw - 0.5, hw + 0.5, d);
+  float rim = (1.0 - smoothstep(hw + 0.5, hw + 1.5, d)) - core;
   float pxPerSq = 1.0 / max(fw.x, fw.y);
-  a *= smoothstep(3.0, 8.0, pxPerSq) * uGrid.w;
-  finalColor = vec4(uColor.rgb * a, a);
+  float k = smoothstep(3.0, 8.0, pxPerSq) * uGrid.w;
+  float ac = core * k;
+  float ar = rim * k * 0.45 * (1.0 - ac);
+  finalColor = vec4(uColor.rgb * ac + vec3(ar), ac + ar);
 }
 `;
 

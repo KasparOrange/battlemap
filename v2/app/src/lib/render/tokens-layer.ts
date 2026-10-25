@@ -93,6 +93,8 @@ export class TokensLayer {
   private atlas: Atlas | null = null;
   private tokens: readonly Token[] | null = null;
   private faceRotation = 0;
+  /** TV: each label's extra turn toward its nearest table edge, by map position in squares (null: upright on screen). */
+  private facing: ((x: number, y: number) => number) | null = null;
   private selectedId: string | null = null;
   private readonly keep = new Set<string>();
   private selection: Graphics | null = null;
@@ -200,7 +202,23 @@ export class TokensLayer {
   setCameraRotation(rotation: number): void {
     if (rotation === this.faceRotation) return;
     this.faceRotation = rotation;
-    for (const v of this.views.values()) v.face.rotation = -rotation;
+    for (const v of this.views.values()) v.face.rotation = this.faceOf(v.token);
+  }
+
+  /**
+   * TV: turns every label toward the table edge nearest to its token (`label-facing.ts`); call
+   * again after the camera moved. Null keeps labels upright on screen (the DM's view).
+   *
+   * @param facing - a token centre in squares → its label's extra turn in radians, or null
+   */
+  setFacing(facing: ((x: number, y: number) => number) | null): void {
+    this.facing = facing;
+    for (const v of this.views.values()) v.face.rotation = this.faceOf(v.token);
+  }
+
+  /** A token's label turn: upright on screen, plus its edge turn on the TV. */
+  private faceOf(t: Token): number {
+    return -this.faceRotation + (this.facing ? this.facing(t.col + 0.5, t.row + 0.5) : 0);
   }
 
   private create(t: Token): TokenView {
@@ -218,7 +236,7 @@ export class TokensLayer {
     const disc = sprite(a.disc);
     const ring = sprite(a.ring);
     const face = new Container({ label: 'face' });
-    face.rotation = -this.faceRotation;
+    face.rotation = this.faceOf(t);
     const label = new BitmapText({ text: '', style: LABEL_STYLE, anchor: 0.5 });
     label.scale.set((LABEL_SQ * SQUARE) / GLYPH_PX);
     const pill = new Graphics();
@@ -236,6 +254,7 @@ export class TokensLayer {
     const old = v.token;
     v.token = t;
     v.root.position.set((t.col + 0.5) * SQUARE, (t.row + 0.5) * SQUARE);
+    if (this.facing && (old.col !== t.col || old.row !== t.row)) v.face.rotation = this.faceOf(t);
     v.root.alpha = t.hidden ? 0.45 : 1;
     if (first || old.color !== t.color) v.disc.tint = t.color;
     if (first || old.label !== t.label) v.label.text = t.label;

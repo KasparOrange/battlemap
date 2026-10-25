@@ -13,7 +13,7 @@ from `lib/render/index.ts` returns a `TableView` at once; `ready` resolves when 
 | Member | What |
 |---|---|
 | `update(state)` | draws a `RootState`; each part is diffed by reference, so a command that touched the tokens re-does the tokens only |
-| `setDmCamera(c)`, `dmCamera()`, `panBy(dx, dy)`, `zoomAt(f, at)`, `fitDmCamera()`, `setDmInsets({top,right,bottom,left})` | **the one owner of the DM camera** (rv#8): centre in squares, px per square, quarter turns; clamped to zoom `[fit × 0.5, max(400, fit)]` and a centre on the map; fits every new map by itself into the host minus the panels' insets (24 px margin), refits on a resize while still fitted; ignored on the TV. Gestures use the pure `panCamera` / `zoomCameraAt` / `pinchCamera` of `camera.ts` (importable under `bun test`) and hand the result to `setDmCamera` |
+| `setDmCamera(c)`, `dmCamera()`, `panBy(dx, dy)`, `zoomAt(f, at)`, `fitDmCamera()`, `setDmInsets({top,right,bottom,left})` | **the one owner of the DM camera** (rv#8): centre in squares, px per square, quarter turns; clamped to zoom `[fit × 0.5, max(400, fit)]` and a centre on the map; fits every new map by itself into the host minus the panels' insets (24 px margin), refits on a resize while still fitted; ignored on the TV. The fit reads the host's size at fit time (`TableRenderer.syncSize`) and resizes reach the scene at once (`onResize`), not on the next frame — a phone layout that settles after the first draw can't leave a small fit (qa#8) Gestures use the pure `panCamera` / `zoomCameraAt` / `pinchCamera` of `camera.ts` (importable under `bun test`) and hand the result to `setDmCamera` |
 | `onCameraChange(cb)` | `(camera, why: 'map'\|'fit'\|'set'\|'resize'\|'state')` after every change of the camera in use; returns the unsubscribe |
 | `camera()`, `viewport()` | the camera in use (the TV's comes from the state: `tvView`), the host size in CSS px |
 | `screenToSquares(p)`, `squaresToScreen(p)` | host CSS px ↔ map squares |
@@ -49,16 +49,16 @@ centre × 64, rotation = quarter turns, scale = zoom ÷ 64).
 |---|---|---|
 | map | `map-layer.ts` | #0B0B0B under the map rect, picture tiles; culled to the view |
 | fx.ground | (effects) | |
-| grid | `grid-layer.ts` | one quad, one shader: lines of 1.5 px (TV) / 1 px (DM) at any zoom, faded out below 8 px per square |
+| grid | `grid-layer.ts` | one quad, one shader: lines of 1.5 px (TV) / 1 px (DM) at any zoom, two-toned (dark core, faint light rim — reads on dark and light maps), faded out below 8 px per square |
 | drawings | `drawings-layer.ts` | 32 strokes per `Graphics` (a new stroke re-tessellates one chunk), live stroke at 70 % |
-| tokens | `tokens-layer.ts` | shadow / disc / ring sprites from one generated atlas (tinted), bitmap-font label 0.46 sq bold outlined, name pill 0.24 sq, upright on screen; hidden: left out (TV) / 45 % (DM); `fx` child per token |
+| tokens | `tokens-layer.ts` | shadow / disc / ring sprites from one generated atlas (tinted), bitmap-font label 0.46 sq bold outlined, name pill 0.24 sq (fonts without kerning tables: 155 ms less per start); DM upright on screen, **TV turned toward the nearest table edge** (`label-facing.ts`: players sit on every side); hidden: left out (TV) / 45 % (DM); `fx` child per token |
 | fog | `fog-layer.ts`, `fog-texels.ts` | one quad, one shader, RGBA8 texture of one texel per square |
 | doors | `doors-layer.ts` | DM markers; drawn leaves (`drawDoors`) with swing; TV shows a drawn door only next to a revealed square; walls debug (DM) |
 | fx.air | (effects) | |
 | dmLayers | `dm-layers.ts` | DM only, laid with the map's grid scaled to the layer, ≤ 4096 px, freed when hidden |
 | tools | `tools-layer.ts` | disc (tessellated once per look; move/turn = transform), measure line, ruler |
 | dmFrame | `dm-layers.ts` (`PlayersFrame`) | DM only: what the TV shows, gold, with a grip; widths in screen px |
-| tableMask | `table-mask.ts` | screen space, TV only: #111111 outside the window in table mode; the calibration pattern in any view |
+| tableMask | `table-mask.ts` | screen space, TV only: #111111 outside the window in table mode; the calibration pattern in any view (its words are TV mode's card, `TvCalibration.svelte`) |
 | fx.screen | (effects) | screen space |
 
 ## Map pictures
@@ -128,6 +128,19 @@ defensively until the shared schema has the field). The scene hands
 (uncapped, or at most `maxFps` through a timer); `onFrame` tickers (fog fade, door swings,
 cloud drift, the bench) run before each render. The view invalidates only when a layer reports
 a change or the camera moved. Idle = 0 frames. Leases that animate on their own: cloud fog (20 fps, only while the fog layer shows — rv#4) and map lights at full quality (30 fps, only with the switch on).
+
+## TV start time (qa#11)
+
+`tv/boot-timing.ts` marks the start's steps as User Timing marks (`bm:script`, `mounted`,
+`booted`, `renderer`, `map-loading`, `map-shown`, `frame`; ms since navigation) and logs one
+line, area `perf`, at the first frame with the map (with the map's fetch / decode / upload ms).
+2026-10-25, Mac, headless Chromium + SwiftShader, built app, map in the device cache, machine
+load 25–35: reload → first map frame **0.4–0.9 s typical** (script 30 · renderer +150–400 ·
+boot (IndexedDB) +150–550 · map +100–300 · frame +1–70); outliers of 2–6 s were IndexedDB reads
+of the cached map (fetchMs 2–3.7 s for 71 KB) under the machine load. Cut: kerning tables of the
+three bitmap fonts (155 ms of `measureText`), one storage round trip at boot. Still open: the
+first render's shader links (~50–140 ms in SwiftShader), the TV loading the companion's code
+(`App.svelte` imports both modes statically).
 
 ## Bench
 

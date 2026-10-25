@@ -62,6 +62,20 @@
   let { last, loading, badge, tableName, tableId, build, lan, thumbUrl, onContinue, onLibrary, onMeasure, onReload, onTakeOver }: Props = $props();
 
   const qr = $derived(lan ? lanQrUrl(lan) : null);
+
+  let hero: HTMLDivElement | undefined = $state();
+  let library: HTMLButtonElement | undefined = $state();
+  let offered = '';
+  // The game list arrives after the screen showed (focus on Library then): once a game to
+  // continue appears, Continue takes the focus — unless the remote already moved it elsewhere.
+  $effect(() => {
+    const id = last?.id ?? '';
+    if (!id || id === offered) return;
+    offered = id;
+    const active = document.activeElement;
+    if (active && active !== document.body && active !== library) return;
+    hero?.querySelector<HTMLButtonElement>('button')?.focus();
+  });
   const meta = $derived(last ? [last.activeMapName, ago(last.savedAt, Date.now()), last.where === 'server' ? 'on the server' : ''].filter(Boolean).join(' · ') : '');
 </script>
 
@@ -75,7 +89,7 @@
   </header>
 
   <div class="tiles">
-    <div class="hero">
+    <div class="hero" bind:this={hero}>
       {#if last}
         <Card title={last.name} {meta} prominent aspect="16 / 8" image={last.thumb ? thumbUrl(last.thumb) : undefined} onclick={onContinue}>
           {#snippet badges()}<Badge text="Continue" icon="play" tone="accent" />{/snippet}
@@ -93,7 +107,7 @@
       {/if}
     </div>
     <div class="side">
-      <button type="button" class="tile" data-focus-grow data-autofocus={last ? undefined : true} onclick={onLibrary}>
+      <button type="button" class="tile" data-focus-grow data-autofocus={last ? undefined : true} bind:this={library} onclick={onLibrary}>
         <Icon name="library" size="2rem" />
         <span class="t">Library</span>
         <span class="s">Games and shared maps</span>

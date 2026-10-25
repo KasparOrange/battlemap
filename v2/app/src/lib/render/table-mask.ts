@@ -3,9 +3,10 @@
  * the window of whole one-inch squares is painted #111111 — never a cut square at the edge) and
  * the calibration pattern (drawn in any view, also without a game): the window dimmed, the
  * overscan strips red with a blue line round what the set shows, the inch grid, a gold window
- * outline, the measuring bar from its fixed pivot, and two caption lines on a dark plate.
+ * outline and the measuring bar from its fixed pivot. Its words are TV mode's card
+ * (`tv/TvCalibration.svelte`), crisp DOM text instead of a canvas caption over the grid lines.
  */
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { barInches, barRunsRight, pivotPoint, type TableGrid, type TableState } from '@battlemap/shared';
 
 /** The TV's mask and calibration pattern. */
@@ -14,18 +15,11 @@ export class TableMask {
   readonly container = new Container({ label: 'table-mask' });
   private readonly mask = new Graphics({ label: 'mask' });
   private readonly pattern = new Graphics({ label: 'calibration' });
-  private readonly caption: Text;
-  private readonly plate = new Graphics({ label: 'caption-plate' });
   private key = '';
 
   /** @param parent - the scene's tableMask slot */
   constructor(parent: Container) {
-    this.caption = new Text({
-      text: '',
-      style: { fontFamily: 'Outfit, system-ui, sans-serif', fontSize: 22, fill: '#ffffff', align: 'center', lineHeight: 30, wordWrap: true, wordWrapWidth: 1200 },
-      anchor: { x: 0.5, y: 0 },
-    });
-    this.container.addChild(this.mask, this.pattern, this.plate, this.caption);
+    this.container.addChild(this.mask, this.pattern);
     parent.addChild(this.container);
   }
 
@@ -44,8 +38,6 @@ export class TableMask {
     this.key = key;
     this.mask.clear();
     this.pattern.clear();
-    this.plate.clear();
-    this.caption.visible = false;
     if (!grid) return true;
     this.container.position.set(offset.x, offset.y);
     const win = grid.window;
@@ -102,27 +94,10 @@ export class TableMask {
     }
     g.circle(p.x, p.y, 0.3 * ppi).stroke({ width: 3, color: 0xd4a24a });
     g.moveTo(p.x, p.y - 0.45 * ppi).lineTo(p.x, p.y + 0.45 * ppi).stroke({ width: 2, color: 0xd4a24a });
-    // captions
-    const cm = (inches * 2.54).toFixed(1);
-    const cut = grid.overscanPercent > 0 ? ` · ${round1(grid.overscanPercent)} % cut off each edge` : '';
-    this.caption.text =
-      `Ruler's zero on the gold ring — it stays put. The bar should be exactly ${inches} in (${cm} cm). Type what you measure into the tablet.\n` +
-      `${grid.cols} × ${grid.rows} squares of 1 inch · picture ${round1(grid.widthInches)} × ${round1(heightIn)} in${cut} · the blue line should show on all four edges`;
-    this.caption.style.wordWrapWidth = Math.max(300, win.width - 40);
-    const top = pivot === 'topLeft' || pivot === 'topRight';
-    const y = top ? win.y + win.height - this.caption.height - 24 : win.y + 24;
-    this.caption.position.set(win.x + win.width / 2, y);
-    this.caption.visible = true;
-    const w = this.caption.width + 32;
-    this.plate.roundRect(win.x + win.width / 2 - w / 2, y - 10, w, this.caption.height + 20, 10).fill({ color: 0x000000, alpha: 0.8 });
   }
 
   /** Frees everything. */
   destroy(): void {
     this.container.destroy({ children: true });
   }
-}
-
-function round1(x: number): string {
-  return (Math.round(x * 10) / 10).toString();
 }

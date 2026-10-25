@@ -26,6 +26,7 @@ import type { TableRenderer } from './pixi.ts';
 import { TableMask } from './table-mask.ts';
 import { DM_BUDGET, effectsBudget, TV_BUDGET, type TextureBudget } from './tiles.ts';
 import { TokensLayer } from './tokens-layer.ts';
+import { edgeFacing } from './label-facing.ts';
 import { ToolsLayer } from './tools-layer.ts';
 import { CurtainLayer } from './curtain-layer.ts';
 import type { CameraChange, EffectSlots, EffectsRuntime, FileLoader, TableViewOptions, ViewProfile } from './types.ts';
@@ -213,6 +214,12 @@ export class TableScene {
   private hostSize(): Size {
     const s = this.r.app.screen;
     return { width: Math.max(1, s.width), height: Math.max(1, s.height) };
+  }
+
+  /** TV: a token centre (squares) → its label's turn toward the nearest table edge, for this camera. */
+  private labelFacing(cam: Camera): (x: number, y: number) => number {
+    const size = this.size;
+    return (x, y) => edgeFacing(squaresToScreen(cam, size, { x, y }), size);
   }
 
   /** Before each frame: a resized host re-places the camera. */
@@ -408,6 +415,7 @@ export class TableScene {
     w.rotation = t.rotation;
     w.scale.set(t.scale);
     this.tokens.setCameraRotation(t.rotation);
+    if (!this.dm) this.tokens.setFacing(this.labelFacing(cam));
     this.tools.setCameraRotation(t.rotation);
     this.frame?.set(this.frameRect, cam.zoom);
     const v = visibleSquares(cam, this.size);
