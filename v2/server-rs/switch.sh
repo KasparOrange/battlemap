@@ -10,6 +10,7 @@
 #                                 data.before-<time>), start + enable Bun, point Caddy at 5929,
 #                                 stop + disable Rust
 #   server-rs/switch.sh status    which port Caddy uses, both units, /health over HTTPS
+#   server-rs/switch.sh caddy N   only point Caddy at port N (repair)
 #
 # The data copy keeps every backup, library entry and file the active server took since the
 # last switch. The old v1 services (4242, 9090) are only checked, never touched.
@@ -28,10 +29,23 @@ caddy_to() { # $1 = port
   vps "bash -s" <<CADDY
 set -e
 sudo -n cp $CADDYFILE $CADDYFILE.bak-\$(date +%Y%m%d%H%M%S)
-sudo -n sed -i '/^$SITE {/,/^}/ s#reverse_proxy 172.19.0.1:[0-9]*#reverse_proxy 172.19.0.1:$1#' $CADDYFILE
+# Rewritten in place (tee), not by sed -i: the file is bind-mounted into the Caddy container
+# as a single file, and sed -i's new inode would never reach the container.
+TMP=\$(mktemp)
+sed '/^$SITE {/,/^}/ s#reverse_proxy 172.19.0.1:[0-9]*#reverse_proxy 172.19.0.1:$1#' $CADDYFILE > "\$TMP"
+sudo -n tee $CADDYFILE < "\$TMP" >/dev/null
+unlink "\$TMP"
 grep -A3 '^$SITE {' $CADDYFILE
 sudo -n docker exec caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile >/dev/null
-sudo -n docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile
+sudo -n docker exec caddy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile 2>&1 | grep -iE 'error' || true
+# A file replaced by a new inode (an editor, sed -i) is invisible in the container until the
+# container restarts (2026-10-25: 3 minutes of 502). Restart Caddy (~2 s for every site) then.
+if ! sudo -n docker exec caddy grep -A3 '^$SITE {' /etc/caddy/Caddyfile | grep -q "172.19.0.1:$1"; then
+  echo "caddy still sees the old file — restarting the caddy container"
+  sudo -n docker restart caddy >/dev/null
+  sleep 3
+fi
+sudo -n docker exec caddy grep -A3 '^$SITE {' /etc/caddy/Caddyfile | grep reverse_proxy | sed 's/^/caddy sees: /'
 CADDY
 }
 
@@ -70,5 +84,6 @@ case "${1:-}" in
     checks
     ;;
   status) checks ;;
+  caddy) caddy_to "${2:?port}"; checks ;;   # only re-point Caddy (repair)
   *) echo "usage: $0 to-rust | to-bun | status" >&2; exit 2 ;;
 esac

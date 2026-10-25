@@ -1,5 +1,9 @@
 # battlemap v2 — server
 
+**Since 2026-10-25 production runs the Rust server** (`server-rs.md` "Production switch"); this
+Bun server is the stopped, installed fallback (`server-rs/switch.sh to-bun`), and
+`server/deploy.sh` refuses to run while Caddy points at the Rust server.
+
 The Bun server in `server/`: the relay, the file store, the shared map library, game backups,
 the link fetch, the log forward and the built app. Dumb on purpose — it never interprets a game
 (`architecture.md` rule 3). Production: **https://battlemap.srv1189697.hstgr.cloud/app/**

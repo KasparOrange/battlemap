@@ -213,6 +213,20 @@ other's old data stays as `data.before-<time>`), starts that one, points the Cad
 `reverse_proxy` at its port (5930 Rust, 5929 Bun; the Caddyfile is backed up first, then
 validated and reloaded) and disables the old unit — stopped but installed, the fallback.
 
+**Switched 2026-10-25 ~19:48:** production runs the Rust server (`rs-3719941`, 12 MB RSS vs
+Bun's 67 MB). Before: the full `bun run e2e` against a local Rust server (dev mode, app 6451,
+server 6452) — 39 pass / 20 fail with both emulators running beside it; the server's log had no
+error, only "event loop stalled" lines from starved pages; the 20 re-run with one worker and the
+emulators off: 23 of 25 pass, the two left (`game-night` "several maps", a PDF long-task budget)
+are app/test timing, not the server (`qa.md` lists the same family). Private per-test servers in
+`e2e/support/server.ts` still start the Bun server. After: `/health` and `/app/` over HTTPS,
+the soak bot with a headless TV page over WSS (152 commands, 1 reconnect, 3/3 convergence,
+round trip p50 50 ms / p95 124 ms; its test game deleted again), v1's 4242 and 9090 untouched.
+**3 minutes of 502 during the switch:** the Caddyfile is bind-mounted into the container as a
+single file, and `sed -i` gave the host file a new inode the container never saw; fixed by
+restarting the `caddy` container. `switch.sh` now rewrites the file in place and restarts
+Caddy only when the container still sees the old port.
+
 **Switch back to Bun:** `v2/server-rs/switch.sh to-bun` (seconds of downtime; everything the
 Rust server took since the switch goes along).
 
@@ -228,8 +242,8 @@ the fallback anyway).
 data on the first deploy (`~/battlemap-v2/data` → `~/battlemap-v2-rs/data`; `--snapshot` takes a
 new one), writes and restarts the systemd unit **`battlemap-v2-rs`** (port **5930**, the Bun
 server's built app in `~/battlemap-v2/app`), checks `/health` and prints both servers' RSS.
-Caddy and the Bun unit `battlemap-v2` are not touched; the Rust server is reachable at
-`http://72.62.88.197:5930`. Logs: `journalctl -u battlemap-v2-rs`, MwLog app `battlemap-v2-rs`.
+Caddy and the Bun unit `battlemap-v2` are not touched (since the switch, Caddy points at 5930 —
+"Production switch"); the Rust server is also reachable at `http://72.62.88.197:5930`. Logs: `journalctl -u battlemap-v2-rs`, MwLog app `battlemap-v2-rs`.
 
 First deploy (2026-10-25): data snapshot 37 MB, `/health` ok with 15 library maps, the
 library JSON byte-identical to the Bun server's, thumbnails served, a WebSocket hello welcomed.
