@@ -69,6 +69,7 @@
         if (open && !dialog.open) {
             closing = false;
             dialog.showModal();
+            focusStart(dialog);
         } else if (!open && dialog.open && !closing) {
             // let the leave animation run, then really close
             closing = true;
@@ -84,6 +85,17 @@
             else el.addEventListener('animationend', done, { once: true });
         }
     });
+
+    /**
+     * Where the focus starts: a control marked `data-autofocus` / `autofocus` inside, else the
+     * dialog itself — never the × (the browser's pick), which then showed its "Close" tooltip
+     * over the title (qa#22). The D-pad's first press moves on from the dialog (`spatial.ts`).
+     */
+    function focusStart(el: HTMLDialogElement) {
+        const start = el.querySelector<HTMLElement>('.body [data-autofocus], .body [autofocus], footer [data-autofocus], footer [autofocus]');
+
+        (start ?? el).focus({ preventScroll: true });
+    }
 
     function onCancel(e: Event) {
         e.preventDefault();
@@ -102,6 +114,7 @@
     class="bm-dialog {size}"
     class:closing
     aria-labelledby={titleId}
+    tabindex="-1"
     oncancel={onCancel}
     onclick={onBackdrop}
 >
@@ -150,6 +163,10 @@
     .full {
         width: calc(100vw - 2 * var(--g2));
         height: calc(100dvh - 2 * var(--g2));
+    }
+
+    .bm-dialog:focus {
+        outline: none;
     }
 
     .bm-dialog::backdrop {

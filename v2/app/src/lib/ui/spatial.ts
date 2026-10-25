@@ -149,7 +149,7 @@ export function pickInDirection<T>(from: DOMRect, candidates: { item: T; rect: D
 export function moveFocus(dir: Direction, from: HTMLElement | null = document.activeElement as HTMLElement | null): boolean {
     const scope = activeScope();
 
-    if (!from || from === document.body || !scope.contains(from)) return focusFirst(scope);
+    if (!from || from === document.body || from === scope || !scope.contains(from)) return focusFirst(scope);
 
     const fromRect = from.getBoundingClientRect();
     const candidates = focusables(scope)
