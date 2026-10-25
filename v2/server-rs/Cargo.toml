@@ -23,6 +23,7 @@ image = { version = "0.25", default-features = false, features = ["png", "jpeg",
 mime_guess = "2"
 mwlog = { path = "../../../mwlog-rs" }
 percent-encoding = "2"
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 regex = "1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-webpki-roots", "stream"] }
 serde = { version = "1", features = ["derive"] }

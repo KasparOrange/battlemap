@@ -3,7 +3,7 @@
  * server doesn't: checked only with `CONTRACT_FIXES=1` (run.ts sets it for `--target rust`).
  */
 import { describe, expect, test } from 'bun:test';
-import { BASE, FIXES, MAIN, upload } from '../lib.ts';
+import { BASE, FIXES, MAIN, call, gameOn, mapOn, picture, upload } from '../lib.ts';
 
 /** A PNG that is only a header claiming `w × h` pixels (a decompression bomb's first bytes). */
 function pngHeader(w: number, h: number): Uint8Array {
@@ -46,5 +46,27 @@ describe.skipIf(!FIXES)('review fixes', () => {
     const res = await fetch(`${BASE}/files`, { method: 'POST', body: new Uint8Array(MAIN.maxUploadBytes + 1) });
     expect(res.status).toBe(413);
     expect(((await res.json()) as { error: string }).error).toContain('over 2 MB');
+  });
+
+  test('#27 any shared Id is a game id: a v1-style id with spaces and dots round-trips', async () => {
+    const pic = (await upload(await picture(100, 83))).body;
+    const id = 'Old game: 1.v1';
+    const path = `/api/games/${encodeURIComponent(id)}`;
+    const put = await call('PUT', path, gameOn(id, mapOn('m1', pic)));
+    expect(put.status).toBe(200);
+    expect(put.body.id).toBe(id);
+    expect((await call('GET', path)).body.id).toBe(id);
+    expect(((await call('GET', '/api/games')).body.games as { id: string }[]).some((g) => g.id === id)).toBe(true);
+    expect((await call('GET', `/api/games/${'x'.repeat(65)}`)).status).toBe(400);
+    expect((await fetch(`${BASE}${path}`, { method: 'DELETE' })).status).toBe(204);
+  });
+
+  test('a QR code of a join address as SVG; no upstream on a plain server', async () => {
+    const res = await fetch(`${BASE}/api/qr.svg?text=${encodeURIComponent('http://192.168.1.42:5930/app/?mode=companion')}`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('image/svg+xml');
+    expect(await res.text()).toContain('<svg');
+    expect((await fetch(`${BASE}/api/qr.svg`)).status).toBe(400);
+    expect((await fetch(`${BASE}/api/upstream`)).status).toBe(404);
   });
 });

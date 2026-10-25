@@ -5,7 +5,7 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { GameSummary, LibraryEntry } from '../../shared/src/index.ts';
-import { BASE, DATA_DIR, MAIN, call, gameOn, mapOn, picture, sleep, upload } from '../lib.ts';
+import { FIXES, BASE, DATA_DIR, MAIN, call, gameOn, mapOn, picture, sleep, upload } from '../lib.ts';
 
 /** POSTs a library entry. */
 async function post(body: unknown): Promise<{ status: number; body: { entry: LibraryEntry; added: boolean; error?: string } }> {
@@ -173,7 +173,7 @@ describe('/api/games', () => {
     const other = await putGame('g-two', gameOn('g-three', mapOn('m1', pic)));
     expect(other.status).toBe(400);
     expect(other.body.error).toContain('g-three');
-    expect((await call('GET', '/api/games/a.b')).status).toBe(400);
+    if (!FIXES) expect((await call('GET', '/api/games/a.b')).status).toBe(400); // Rust takes any shared Id (review #27)
     expect((await call('GET', `/api/games/${'x'.repeat(65)}`)).status).toBe(400);
     expect((await call('GET', '/api/games/x/versions/more')).status).toBe(400);
     expect((await call('GET', '/api/games/x/other')).status).toBe(404);

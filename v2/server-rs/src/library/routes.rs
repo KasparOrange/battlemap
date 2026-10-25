@@ -24,7 +24,13 @@ use crate::wire::{LibraryList, LibraryPut, LibraryRemoved, MapInfoView};
 pub async fn collection(State(state): State<Shared>, req: Request) -> Response {
     match *req.method() {
         Method::GET => match state.library.list().await {
-            Ok(entries) => ok(&LibraryList { entries }),
+            Ok(mut entries) => {
+                if let Some(up) = &state.upstream {
+                    entries.extend(up.library_extra(&entries).await);
+                    entries.sort_by(|a, b| b.added_at.cmp(&a.added_at));
+                }
+                ok(&LibraryList { entries })
+            }
             Err(e) => internal("library", &e),
         },
         Method::POST => {
@@ -71,7 +77,16 @@ pub async fn item(State(state): State<Shared>, req: Request) -> Response {
     match *req.method() {
         Method::GET => match state.library.get(&id).await {
             Ok(Some(entry)) => ok(&entry),
-            Ok(None) => refuse(StatusCode::NOT_FOUND, "no such map in the shared library"),
+            Ok(None) => {
+                let mirrored = match &state.upstream {
+                    Some(up) => up.library_extra(&[]).await.into_iter().find(|e| e.id() == id),
+                    None => None,
+                };
+                match mirrored {
+                    Some(entry) => ok(&entry),
+                    None => refuse(StatusCode::NOT_FOUND, "no such map in the shared library"),
+                }
+            }
             Err(e) => internal("library", &e),
         },
         Method::DELETE => match state.library.remove(&id).await {

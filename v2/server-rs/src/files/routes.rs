@@ -53,6 +53,14 @@ pub async fn get_file(State(state): State<Shared>, req: Request) -> Response {
     };
     let path = state.files.dir.join(&name);
     let ext = m.get(2).map_or("", |e| e.as_str());
+    if let (Some(up), Some(file_ext)) = (&state.upstream, FileExt::parse(ext))
+        && !tokio::fs::try_exists(&path).await.unwrap_or(false)
+    {
+        let hash = m.get(1).map_or("", |h| h.as_str());
+        if let Err(e) = up.pull_file(&state, hash, file_ext).await {
+            tracing::debug!(target: "upstream", file = %name, error = format!("{e:#}"), "Not pulled from upstream");
+        }
+    }
     serve(path, ext, "public, max-age=31536000, immutable", req).await
 }
 

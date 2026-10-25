@@ -43,6 +43,8 @@ pub fn router(state: Shared) -> Router {
         .route("/health", any(health))
         .route("/log", post(crate::log::browser_log))
         .route("/api/tables", get(tables))
+        .route("/api/upstream", get(upstream_status))
+        .route("/api/qr.svg", get(qr_svg))
         .route("/ws", get(crate::relay::socket::upgrade))
         .route("/files", post(crate::files::routes::upload))
         .route("/files/{*name}", get(crate::files::routes::get_file))
@@ -64,6 +66,38 @@ pub fn router(state: Shared) -> Router {
             refuse(StatusCode::INTERNAL_SERVER_ERROR, "server error")
         }))
         .with_state(state)
+}
+
+/// `GET /api/upstream`: the LAN table server's link to its internet server
+/// ([`crate::upstream::UpstreamStatus`]), or 404 on a server without one.
+async fn upstream_status(State(state): State<Shared>) -> Response {
+    match &state.upstream {
+        Some(up) => ok(&up.status()),
+        None => refuse(StatusCode::NOT_FOUND, "this server has no upstream"),
+    }
+}
+
+/// `GET /api/qr.svg?text=…`: a QR code of `text` (≤ 1000 characters) as SVG — the TV home shows
+/// the join address of its LAN table with it (no QR library in the app, works offline).
+async fn qr_svg(axum::extract::Query(q): axum::extract::Query<std::collections::HashMap<String, String>>) -> Response {
+    let Some(text) = q.get("text").filter(|t| !t.is_empty() && t.len() <= 1000) else {
+        return refuse(StatusCode::BAD_REQUEST, "text= (1–1000 characters) is needed");
+    };
+    let dark = q.get("dark").filter(|c| c.len() <= 7 && c.starts_with('#')).map_or("#000000", String::as_str);
+    let light = q.get("light").filter(|c| c.len() <= 7 && c.starts_with('#')).map_or("#ffffff", String::as_str);
+    match qrcode::QrCode::with_error_correction_level(text.as_bytes(), qrcode::EcLevel::M) {
+        Ok(code) => {
+            let svg = code
+                .render::<qrcode::render::svg::Color>()
+                .min_dimensions(256, 256)
+                .dark_color(qrcode::render::svg::Color(dark))
+                .light_color(qrcode::render::svg::Color(light))
+                .quiet_zone(true)
+                .build();
+            ([(header::CONTENT_TYPE, "image/svg+xml"), (header::CACHE_CONTROL, "public, max-age=3600")], svg).into_response()
+        }
+        Err(e) => refuse(StatusCode::BAD_REQUEST, format!("no QR code for that: {e}")),
+    }
 }
 
 async fn not_found() -> Response {

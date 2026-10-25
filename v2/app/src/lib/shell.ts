@@ -5,9 +5,9 @@
  *
  * @see ../../../docs/shell.md for what the shell does with each call
  */
-import type { BattlemapShell, ShellEvent, ShellInfo, ShellLogLine } from '../../../shell/bridge.d.ts';
+import type { BattlemapShell, LanStatus, LanTable, ShellEvent, ShellInfo, ShellLogLine } from '../../../shell/bridge.d.ts';
 
-export type { ShellEvent, ShellInfo, ShellLogLine };
+export type { LanStatus, LanTable, ShellEvent, ShellInfo, ShellLogLine };
 
 let cachedInfo: ShellInfo | null | undefined;
 

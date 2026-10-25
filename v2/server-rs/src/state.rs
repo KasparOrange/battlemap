@@ -12,6 +12,7 @@ use crate::files::store::FileStore;
 use crate::files::upload::ImageWork;
 use crate::library::Library;
 use crate::relay::Relay;
+use crate::upstream::Upstream;
 
 /// The shared state (behind an [`Arc`], see [`Shared`]).
 pub struct AppState {
@@ -37,6 +38,8 @@ pub struct AppState {
     pub started_ms: u64,
     /// The log shipper (for `/log` and `/health`).
     pub shipper: mwlog::Shipper,
+    /// The internet server above this table server (LAN play), when `UPSTREAM_URL` is set.
+    pub upstream: Option<Upstream>,
 }
 
 /// The state as the routes take it.

@@ -113,7 +113,7 @@ tables, the app, CORS, 405s, cleanup at start and on its timer, new-build broadc
 `library-games`, `relay`, `relay-limits` (tight), `fetch` (mock upstream + SSRF: literal,
 after-DNS and redirected loopback/private addresses never reach the mock), `fixes` (Rust only).
 
-Results (2026-10-25): **Bun 70 pass, 2 skipped (the fixes); Rust 72 pass.**
+Results (2026-10-25): **Bun 70 pass, 2 skipped (the fixes); Rust 79 pass** (with `fixes` #27 + QR and `upstream`; Bun skips both).
 
 ## Platforms
 
@@ -179,6 +179,31 @@ first app copy); the shell process's RSS 213.6 MB with hosting off vs 222.6 MB w
 hosted and the TV page connected — **the server costs ~9 MB**. A JNI library can't be killed
 alone: an abort inside the server (out of memory) takes the shell with it; Rust panics in a
 request are caught per task.
+
+## LAN play: the table server and its upstream (2026-10-25)
+
+`UPSTREAM_URL` makes a server a **table server** under an internet server (`src/upstream.rs`;
+the shell sets it to its configured server, the VPS). Without it nothing changes. With it:
+
+| What | How |
+|---|---|
+| library | `GET /api/library[/<id>]` = local ∪ the upstream's (local id wins); the mirror is kept in `upstream.json`, so it lists offline too |
+| library files | prefetched after every sync (thumbs + every `FileRef` in each mirrored map) up to `UPSTREAM_PREFETCH_MAX_BYTES` (2 GiB): one online start of the box and a game night elsewhere has every library map |
+| other files | `GET /files/<hash>.<ext>` the table lacks → fetched from upstream, hash-checked, stored, served |
+| game backups | `PUT` here stores as usual, then pushes upstream 3 s later (with the files the game names that upstream lacks — HEAD, then `POST /files?format=asis`); `DELETE` here is repeated upstream; `GET /api/games` lists upstream's backups too, `GET /api/games/<id>` falls back to upstream. Offline, pushes and deletes wait for the next sync (`pushed`/`deletes` in `upstream.json`) |
+| logs | `POST /log` with no MwLog credentials (devices never hold them) is forwarded upstream; 503 when that fails, so the page's outbox keeps the batch |
+| status | `GET /api/upstream` → `{url, online, lastSyncAt, lastError, libraryMirrored, gamesMirrored, filesPulled, gamesPushed, logsForwarded}` (404 without upstream) |
+| sync | at start, every `UPSTREAM_SYNC_MS` (10 min) and 3 s after a local save/delete |
+
+Not synced: the relay (rooms are the box's own), and maps added to the box's library on the
+LAN (they stay on the box; pushing a LAN library to the VPS is its own work package).
+
+Also new on every server: `GET /api/qr.svg?text=…[&dark=#…&light=#…]` (a QR code as SVG — the
+TV home's join code, drawn offline). And the review fixes #27 (any shared `Id`, 1–64
+characters, is a game id; unusual ids get the folder `~<hex>`) and #30 (versions by age: the
+newest per 10-minute slot, `GAME_VERSION_SLOT_MS`, the newest `GAME_VERSIONS` slots kept; the
+contract runs with 0 = by count, as Bun). Contract: `tests/upstream.contract.ts` starts a second
+Rust server with the main one as its upstream — **Rust 79 pass** (5 upstream, 2 more fixes).
 
 ## Deploy (side by side)
 

@@ -84,6 +84,8 @@ const mainEnv = {
   FETCH_TIMEOUT_MS: String(MAIN.fetchTimeoutMs),
   CLEANUP_EVERY_MS: String(MAIN.cleanupEveryMs),
   BUILD_POLL_MS: String(MAIN.buildPollMs),
+  // versions by count only, as the Bun server keeps them (the Rust default is one per 10 min, review #30)
+  GAME_VERSION_SLOT_MS: '0',
 };
 const t = TIGHT_LIMITS;
 const tightEnv = {
@@ -169,7 +171,7 @@ try {
   const test = spawn({
     cmd: ['bun', 'test', '--timeout', '20000', ...files],
     cwd: import.meta.dir,
-    env: { ...process.env, SERVER_URL: mainUrl, SERVER_TIGHT_URL: tightUrl, DATA_DIR: mainData, APP_DIR: appDir, MOCK_PORT: String(mockPort), CONTRACT_FIXES: target === 'rust' ? '1' : '0' },
+    env: { ...process.env, SERVER_URL: mainUrl, SERVER_TIGHT_URL: tightUrl, DATA_DIR: mainData, APP_DIR: appDir, MOCK_PORT: String(mockPort), CONTRACT_FIXES: target === 'rust' ? '1' : '0', SERVER_BIN: target === 'rust' ? bin : '', TABLE_PORT: String(port + 300) },
     stdout: 'inherit',
     stderr: 'inherit',
   });

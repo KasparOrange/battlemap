@@ -194,6 +194,74 @@ inside the shell, so tablets on the same Wi-Fi play without internet.
 - Server log lines reach the page every 2 s as shell lines prefixed `server:` (→ MwLog with
   `src=shell`), and logcat under the tag `battlemap-server`.
 
+### How companions find the table
+
+| Companion | How | What the app uses (`app/src/lib/config.ts`) |
+|---|---|---|
+| Android tablet/phone in the shell | mDNS: the TV announces `_battlemap._tcp` (name = the TV's device name, TXT `table`, `name`, `v`); the shell browses with NSD | `discoverLanTables(cb)` → `[{service, table, name, url}]`, then `joinTable(url, table)` |
+| any browser | the TV home shows a **short code** (Crockford base32 of the IPv4: 4 characters on `192.168.x.y`, e.g. `192.168.1.42` → `009A`; 7 otherwise; `-<port>` if not 5930) and a **QR code** of the join URL (`http://<box>:5930/app/?mode=companion&table=…`) — the box serves its own copy of the app, so the browser companion runs entirely from the box | `decodeLanCode(text)` (code, IP, `ip:port`, host or URL) → `joinTable(url, table)`; in a browser on the https VPS page that navigates to the box's `http://` app (an https page can't open `ws://`) |
+
+`joinTable` remembers per table which server it lives on; the next start goes there again.
+`checkServerChoice()` (call once after boot, companion): if the remembered LAN server doesn't
+answer but the internet one does, the page reloads onto the internet server for this load
+(`?lan=off`). TV side: `lanJoinInfo()` → `{hosting, code, url, joinUrl, qrSvgUrl, error}` (the QR
+is an SVG from the box's own server, `/api/qr.svg`), `onLanChange(cb)` for updates;
+`readConfig` tells the shell the table id + name to announce (`announceTable`). The relay
+protocol is the same on both servers.
+
+Bridge: `lan()` (status JSON: hosting, server `{running, port, localUrl, upstream, error, rssKb}`,
+address, url, code, tableId, joinUrl, announced), `setHostTable(on)`, `announceTable(id, name)`,
+`discoverTables(on)`, `lanTables()`; events `lan` and `tables`; `info().lan`.
+
+### Checked on the emulators (2026-10-25)
+
+`bm_tv` hosted with its configured server dead (`http://10.0.2.2:6999` — no VPS, no internet
+server at all): the table server listened 0.5 s after start, the TV page joined it on
+`127.0.0.1:5930`, `/api/upstream` said offline. Through it: the soak bot (`tools/bot.ts --server
+http://127.0.0.1:15930 --table <tv table> --tv none`) played 129 commands with 2 reconnects,
+4/4 convergence checks equal; the `bm_tablet` companion (shell, `server=http://10.0.2.2:15930`)
+joined, got the game, sent fog commands that the TV applied (rev 127 → 130, none pending); a
+Chromium companion opened from the box's own app (`http://localhost:15930/app/…`, the QR path)
+joined and played too. NSD: the TV found its own announcement (`Juris`, `table-9d322e2b`,
+`10.0.2.15:5930`). With a local stand-in for the VPS as upstream (`http://10.0.2.2:6460`): online,
+3 games and their 12 files pushed, 13 log batches forwarded. Start on boot (`--es boot on`,
+overlay grant) after `adb reboot`: the receiver ran 0.8 s after boot completed, the server
+listened 1.5 s after, the activity opened in TV mode and the table was announced 4 s after.
+
+**Emulator-only:** each emulator has its own virtual network (10.0.2.15 behind a NAT), so
+emulators can't see each other: no mDNS between them, and the tablet reaches the TV's server
+only through the Mac — `adb -s <tv> forward tcp:15930 tcp:5930`, then the tablet uses
+`http://10.0.2.2:15930` (10.0.2.2 = the Mac). On a real Wi-Fi none of that is needed.
+
+### At Juri's: the real box + Tab A11+ (offline today — the steps)
+
+Through latrine (a session's own adb can't reach the Wi-Fi); serials `xiaomi` and the tablet's.
+
+1. Build: `cd v2/app && bun run build`, then `v2/shell/build.sh release` (both ABIs; or
+   `BATTLEMAP_ABIS=arm64-v8a` for a smaller APK — both devices are arm64).
+2. Install on both, keeping data: `latrine android install v2/shell/build/battlemap-0.1.0-release.apk xiaomi`
+   (and the tablet).
+3. Once per box: `latrine android shell "pm grant app.battlemap.table android.permission.WRITE_SECURE_SETTINGS" xiaomi`,
+   `… "appops set app.battlemap.table SYSTEM_ALERT_WINDOW allow" xiaomi`,
+   `… "appops set app.battlemap.table REQUEST_INSTALL_PACKAGES allow" xiaomi`,
+   `… "cmd hdmi_control cec_setting set tv_send_standby_on_sleep 0" xiaomi`.
+4. Start the box in TV mode with hosting and start-on-boot, the VPS as upstream:
+   `latrine android shell "am start -S -n app.battlemap.table/.MainActivity --es mode tv --es host on --es boot on --es server https://battlemap.srv1189697.hstgr.cloud" xiaomi`.
+   While the box is online it mirrors the VPS library and prefetches its maps (watch
+   `latrine android log "Synced with upstream" 5 xiaomi`).
+5. Check: `latrine android shell "curl -s http://127.0.0.1:5930/health" xiaomi` (or from the
+   tablet's browser `http://<box ip>:5930/health`); the TV home shows the code + QR (once the TV
+   home has them — see the requests in the wave report).
+6. Tablet: start the shell in companion mode; it finds the table by mDNS (once the picker shows
+   LAN tables), or type the box's code. Without that UI yet:
+   `am start -S -n app.battlemap.table/.MainActivity --es mode companion --es server http://<box ip>:5930`.
+7. The offline test: pull the router's WAN cable (or the box's upstream off: `--es server
+   http://10.255.255.1`), play a short game — TV + tablet keep working; plug back in, and within
+   10 min the game is on the VPS (`/api/games`).
+8. Power cut: unplug the box, plug it in — battlemap opens in TV mode by itself with the game.
+9. Memory: `latrine android shell "dumpsys meminfo app.battlemap.table | head -30" xiaomi` during
+   play; the server is ~9 MB of the shell process.
+
 ## Power cut, sleep, downloads
 
 - **Start on boot (TV-05):** with `setStartOnBoot(true)` (or adb `--es boot on`) the box opens

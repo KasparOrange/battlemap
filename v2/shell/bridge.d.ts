@@ -46,6 +46,8 @@ export interface ShellInfo {
   startOnBoot: boolean;
   /** The box's stay-awake settings (TV-01): written at every TV-mode start once adb granted the permission. */
   stayAwake: StayAwakeStatus;
+  /** The table on the LAN (hosting on this TV, its address and code). */
+  lan: LanStatus;
   device: {
     manufacturer: string;
     model: string;
@@ -85,6 +87,53 @@ export interface StayAwakeStatus {
   wrong: string[];
   /** Written by this call (only from `applyStayAwake`). */
   applied?: string[];
+}
+
+/** The table this device hosts on the LAN (`BattlemapShell.lan()`, `lan` events; `Lan.kt`). */
+export interface LanStatus {
+  /** "Host the table on this TV" is on (TV mode; default on). */
+  hosting: boolean;
+  server: {
+    running: boolean;
+    /** 5930 */
+    port: number;
+    /** `http://127.0.0.1:5930` while running. */
+    localUrl: string | null;
+    /** The internet server it syncs with (the VPS). */
+    upstream: string | null;
+    /** Why it couldn't start. */
+    error: string | null;
+    startedAt: number;
+    startMs: number;
+    /** The shell process's resident memory in kB (WebView host + server). */
+    rssKb: number;
+  };
+  /** This device's LAN IPv4 address, null without a network. */
+  address: string | null;
+  /** `http://<address>:5930` */
+  url: string | null;
+  /** The short code for `url` (4 characters on 192.168.x.y; `decodeLanCode` in config.ts). */
+  code: string | null;
+  /** The relay room this TV hosts. */
+  tableId: string;
+  tableName: string | null;
+  /** Opens the box's own copy of the app as a companion of this table — put it in the QR code. */
+  joinUrl: string | null;
+  /** The mDNS name the table is announced under, null when not announced. */
+  announced: string | null;
+}
+
+/** A table found on the LAN by mDNS (`tables` events, `lanTables()`). */
+export interface LanTable {
+  /** The mDNS service name (the TV's name). */
+  service: string;
+  /** The relay room, null for an announcement without it. */
+  table: string | null;
+  name: string;
+  host: string;
+  port: number;
+  /** `http://<host>:<port>` — the table server's base URL. */
+  url: string;
 }
 
 /** One shell log line (from `takeLogs()` or a `log` event). */
@@ -133,6 +182,16 @@ export interface BattlemapShell {
   setStartOnBoot(on: boolean): void;
   /** Write the box's stay-awake settings now; returns {@link StayAwakeStatus} as JSON. */
   applyStayAwake(): string;
+  /** The LAN table: JSON {@link LanStatus}. */
+  lan(): string;
+  /** TV mode: host the table on this device (default on) or not; the page reloads onto the right server. */
+  setHostTable(on: boolean): void;
+  /** TV mode: the table id and name to announce on the LAN. */
+  announceTable(tableId: string, name: string): void;
+  /** Companion: look for tables on the LAN (`tables` events) or stop. */
+  discoverTables(on: boolean): void;
+  /** The tables found so far: JSON array of {@link LanTable}. */
+  lanTables(): string;
   /** Start saving a file into the device's Downloads; returns its id. Use `saveFile()` in `app/src/lib/shell.ts`. */
   saveBegin(name: string, mime: string): number;
   /** Append a base64 chunk (≤ 512 kB of bytes); false = stop. */
@@ -168,6 +227,10 @@ export type ShellEvent =
   /** Android asked to free memory — only real pressure is sent: 10 (running low), 15 (critical),
    *  60/80 (in the background, about to be killed). The "UI hidden" level is not. */
   | { type: 'memory'; level: number }
+  /** Hosting started, stopped or failed; the announcement changed. */
+  | ({ type: 'lan' } & LanStatus)
+  /** The LAN tables found changed (the whole list). */
+  | { type: 'tables'; tables: LanTable[] }
   /** A file saved into Downloads (`saveFile`, or a `<a download href=blob:…>` click). */
   | {
       type: 'download';

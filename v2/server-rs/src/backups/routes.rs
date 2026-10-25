@@ -16,7 +16,7 @@ use axum::http::{HeaderValue, Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use percent_encoding::percent_decode_str;
 
-use super::{BackupError, GAME_ID};
+use super::{BackupError, valid_game_id};
 use crate::fsx::now_ms;
 use crate::http::internal;
 use crate::http::respond::{BodyError, ok, over, read_body, refuse};
@@ -29,7 +29,13 @@ pub async fn collection(State(state): State<Shared>, req: Request) -> Response {
         return refuse(StatusCode::METHOD_NOT_ALLOWED, "GET");
     }
     match state.backups.list().await {
-        Ok(games) => ok(&GameList { games }),
+        Ok(mut games) => {
+            if let Some(up) = &state.upstream {
+                games.extend(up.games_extra(&games).await);
+                games.sort_by(|a, b| b.saved_at.cmp(&a.saved_at));
+            }
+            ok(&GameList { games })
+        }
         Err(e) => internal("games", &e),
     }
 }
@@ -42,8 +48,8 @@ pub async fn item(State(state): State<Shared>, Query(q): Query<HashMap<String, S
     let sub = parts.next();
     let more = parts.next().is_some();
     let id = percent_decode_str(raw_id).decode_utf8().map(|s| s.to_string()).unwrap_or_default();
-    if !GAME_ID.is_match(&id) || more {
-        return refuse(StatusCode::BAD_REQUEST, "game ids are 1–64 letters, digits, _ or -");
+    if !valid_game_id(&id) || more {
+        return refuse(StatusCode::BAD_REQUEST, "game ids are 1–64 characters");
     }
     match sub {
         Some("versions") => {
@@ -65,9 +71,18 @@ pub async fn item(State(state): State<Shared>, Query(q): Query<HashMap<String, S
         Method::DELETE => match state.backups.remove(&id, now_ms()).await {
             Ok(true) => {
                 tracing::info!(target: "games", id = %id, "Backup deleted");
+                if let Some(up) = &state.upstream {
+                    up.deleted(&id).await;
+                }
                 StatusCode::NO_CONTENT.into_response()
             }
-            Ok(false) => refuse(StatusCode::NOT_FOUND, "no backup of that game"),
+            Ok(false) => match &state.upstream {
+                Some(up) => {
+                    up.deleted(&id).await;
+                    StatusCode::NO_CONTENT.into_response()
+                }
+                None => refuse(StatusCode::NOT_FOUND, "no backup of that game"),
+            },
             Err(e) => internal("games", &e),
         },
         _ => refuse(StatusCode::METHOD_NOT_ALLOWED, "GET, PUT or DELETE"),
@@ -85,6 +100,9 @@ async fn put(state: &Shared, id: &str, req: Request) -> Response {
     match state.backups.put(&state.files, &state.library, id, &bytes, now_ms()).await {
         Ok(summary) => {
             tracing::info!(target: "games", id, name = %summary.name, maps = summary.map_names.len(), bytes = bytes.len(), ms = t0.elapsed().as_millis() as u64, "Backed up");
+            if let Some(up) = &state.upstream {
+                up.poke();
+            }
             ok(&summary)
         }
         Err(BackupError::Bad(reason)) => {
@@ -108,7 +126,23 @@ async fn get(state: &Shared, id: &str, at: Option<&str>) -> Response {
             h.insert("access-control-expose-headers", HeaderValue::from_static("x-saved-at"));
             res
         }
-        Ok(None) => refuse(StatusCode::NOT_FOUND, "no backup of that game"),
+        Ok(None) => match state.upstream.as_ref() {
+            Some(up) => match up.game(id, at).await {
+                Some((saved, body)) => {
+                    let mut res = body.into_response();
+                    let h = res.headers_mut();
+                    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
+                    h.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+                    if let Some(v) = saved.and_then(|s| HeaderValue::from_str(&s).ok()) {
+                        h.insert("x-saved-at", v);
+                    }
+                    h.insert("access-control-expose-headers", HeaderValue::from_static("x-saved-at"));
+                    res
+                }
+                None => refuse(StatusCode::NOT_FOUND, "no backup of that game"),
+            },
+            None => refuse(StatusCode::NOT_FOUND, "no backup of that game"),
+        },
         Err(e) => internal("games", &e),
     }
 }

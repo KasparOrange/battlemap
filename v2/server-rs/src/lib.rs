@@ -17,6 +17,7 @@
 //! | [`schema`] | the shared types' JSON Schema (generated from `shared/`) |
 //! | [`wire`] | every JSON type the server writes; TypeScript for the server-only ones |
 //! | [`fsx`] | atomic writes, JSON files, per-key locks, times |
+//! | [`upstream`] | LAN play: the internet server above a table server (mirror, pull, push, log forward) |
 //! | [`embed`] | the server inside another program (start/stop calls, a log ring) |
 //! | `android` | the JNI glue for the Android shell (Android builds only) |
 //!
@@ -37,6 +38,7 @@ pub mod log;
 pub mod relay;
 pub mod schema;
 pub mod state;
+pub mod upstream;
 pub mod wire;
 
 use std::net::SocketAddr;
@@ -123,13 +125,17 @@ pub async fn start(config: Config, shipper: mwlog::Shipper) -> Result<Running> {
         files: FileStore::new(&config.data_dir),
         images: ImageWork::new(config.image_slots, config.max_pixels, config.lossless_max_pixels),
         library: library::Library::new(&config.data_dir),
-        backups: backups::Backups::new(&config.data_dir, config.game_versions),
+        backups: backups::Backups::new(&config.data_dir, config.game_versions, config.game_version_slot_ms),
         relay: relay.clone(),
         fetcher,
         fetch_slots: Arc::new(Semaphore::new(config.fetch_slots)),
         build: build.clone(),
         started_ms: fsx::now_ms(),
         shipper,
+        upstream: match &config.upstream_url {
+            Some(u) => Some(upstream::Upstream::new(u, &config.data_dir, config.upstream_prefetch_max_bytes).await?),
+            None => None,
+        },
         config,
     });
     let c = &state.config;
@@ -179,6 +185,10 @@ pub async fn start(config: Config, shipper: mwlog::Shipper) -> Result<Running> {
         }));
     }
     timers.push(tokio::spawn(log::summaries()));
+    if let Some(u) = &state.upstream {
+        tracing::info!(target: "lifecycle", upstream = %u.base, sync_s = c.upstream_sync.as_secs(), "Upstream set (LAN table server)");
+        timers.push(tokio::spawn(upstream::Upstream::run(state.clone(), c.upstream_sync)));
+    }
 
     let listener = tokio::net::TcpListener::bind((c.host, c.port))
         .await

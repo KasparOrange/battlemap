@@ -35,6 +35,46 @@ use crate::wire::{FileRef, GameSummary, GameView, VersionInfo};
 /// Game ids the server stores (they become folder names).
 pub static GAME_ID: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[0-9A-Za-z_-]{1,64}$").expect("valid pattern"));
 
+/// Whether `id` is a game id the server takes: the shared `Id` rule (1–64 characters, any),
+/// minus control characters (review #27 — an imported v1 id like `"Old game 1"` must not be
+/// refused and retried forever).
+pub fn valid_game_id(id: &str) -> bool {
+    let n = id.chars().count();
+    (1..=64).contains(&n) && !id.chars().any(char::is_control)
+}
+
+/// The folder name of a game: the id itself when it is plain (`GAME_ID`), else `~` + its
+/// UTF-8 bytes in hex (no path tricks, no case clashes on case-insensitive disks).
+pub fn folder_name(id: &str) -> String {
+    if GAME_ID.is_match(id) { id.to_string() } else { format!("~{}", hex::encode(id.as_bytes())) }
+}
+
+/// The default version slot (`GAME_VERSION_SLOT_MS`): review #30 — the TV saves every few
+/// seconds, so versions by count alone covered seconds of play. The newest version per
+/// 10-minute slot is kept, the slots past the newest `GAME_VERSIONS` go (≈ the last 100 minutes
+/// of play at least, longer across sessions).
+pub const VERSION_SLOT_MS: u64 = 10 * 60 * 1000;
+
+/// Which previous versions (`ms` stamps, any order) to delete: all but the newest one per
+/// `slot_ms` slot (0 = every version is its own slot), and every slot past the newest `keep`.
+pub fn versions_to_drop(stamps: &[u64], keep: usize, slot_ms: u64) -> Vec<u64> {
+    let mut sorted = stamps.to_vec();
+    sorted.sort_unstable_by(|a, b| b.cmp(a));
+    let mut slots_seen = 0usize;
+    let mut last_slot: Option<u64> = None;
+    let mut drop = Vec::new();
+    for ms in sorted {
+        let slot = if slot_ms == 0 { ms } else { ms / slot_ms };
+        if last_slot == Some(slot) || slots_seen >= keep {
+            drop.push(ms);
+            continue;
+        }
+        last_slot = Some(slot);
+        slots_seen += 1;
+    }
+    drop
+}
+
 /// A backup the server refuses (400), with the reason.
 #[derive(Debug, thiserror::Error)]
 pub enum BackupError {
@@ -66,6 +106,7 @@ pub struct Backups {
     dir: PathBuf,
     trash: PathBuf,
     keep: usize,
+    slot_ms: u64,
     lock: KeyedLock,
     /// Checks of big games at once (each holds the parsed game in memory).
     checks: Semaphore,
@@ -75,11 +116,12 @@ pub struct Backups {
 
 impl Backups {
     /// Backups in `<data_dir>/games`, `keep` previous versions each.
-    pub fn new(data_dir: &Path, keep: usize) -> Self {
+    pub fn new(data_dir: &Path, keep: usize, slot_ms: u64) -> Self {
         Self {
             dir: data_dir.join("games"),
             trash: data_dir.join("trash"),
             keep,
+            slot_ms,
             lock: KeyedLock::default(),
             checks: Semaphore::new(2),
             count: Mutex::new(None),
@@ -87,7 +129,7 @@ impl Backups {
     }
 
     fn folder(&self, id: &str) -> PathBuf {
-        self.dir.join(id)
+        self.dir.join(folder_name(id))
     }
 
     /// Stores a game as its latest backup; the one before becomes a previous version.
@@ -134,7 +176,7 @@ impl Backups {
         text.push(b'}');
         write_atomic(&latest, text).await?;
         write_atomic(&folder.join("summary.json"), serde_json::to_vec(&summary).context("summary")?).await?;
-        for ms in self.previous(&folder).await.into_iter().skip(self.keep) {
+        for ms in versions_to_drop(&self.previous(&folder).await, self.keep, self.slot_ms) {
             let _ = tokio::fs::remove_file(folder.join(format!("{ms}.json"))).await;
         }
         if !had && let Some(n) = self.count.lock().await.as_mut() {
@@ -164,7 +206,7 @@ impl Backups {
         };
         while let Some(entry) = dir.next_entry().await.context("list games")? {
             let name = entry.file_name().to_string_lossy().to_string();
-            if !GAME_ID.is_match(&name) {
+            if !GAME_ID.is_match(&name) && !name.starts_with('~') {
                 continue;
             }
             if let Ok(Some(s)) = read_json_file::<GameSummary>(&entry.path().join("summary.json")).await {
@@ -260,7 +302,7 @@ impl Backups {
             return Ok(false);
         }
         tokio::fs::create_dir_all(&self.trash).await.context("mkdir trash")?;
-        tokio::fs::rename(&folder, self.trash.join(format!("game-{id}-{now_ms}")))
+        tokio::fs::rename(&folder, self.trash.join(format!("game-{}-{now_ms}", folder_name(id))))
             .await
             .context("move to the trash")?;
         if let Some(n) = self.count.lock().await.as_mut() {
@@ -319,4 +361,30 @@ async fn summarize(files: &FileStore, library: &Library, game: &GameView, saved_
         thumb,
         where_: "server".into(),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ids_and_folders() {
+        assert!(valid_game_id("g-1") && valid_game_id("Old game: 1.v1") && !valid_game_id("") && !valid_game_id(&"x".repeat(65)) && !valid_game_id("a\nb"));
+        assert_eq!(folder_name("g-1"), "g-1");
+        assert_eq!(folder_name("a.b"), "~612e62");
+        assert_eq!(folder_name("../x"), "~2e2e2f78");
+    }
+
+    #[test]
+    fn versions_by_slot() {
+        let min = 60_000;
+        // saves every 30 s for an hour: one per 10-minute slot survives, newest first
+        let stamps: Vec<u64> = (0..120).map(|i| 1_000 * min + i * 30_000).collect();
+        let drop = versions_to_drop(&stamps, 10, VERSION_SLOT_MS);
+        let kept: Vec<u64> = stamps.iter().copied().filter(|s| !drop.contains(s)).collect();
+        assert_eq!(kept.len(), 6, "{kept:?}"); // the hour fills 6 slots
+        assert!(kept.contains(stamps.last().unwrap()));
+        // by count only
+        assert_eq!(versions_to_drop(&stamps, 10, 0).len(), 110);
+    }
 }

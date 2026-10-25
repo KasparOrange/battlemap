@@ -20,6 +20,10 @@
 //! | `IMAGE_SLOTS` | 2 | pictures decoded / encoded at once |
 //! | `FETCH_SLOTS` | 4 | link fetches at once (more are refused, 429) |
 //! | `RELAY_*` | see [`RelayLimits`] | the relay's limits |
+//! | `GAME_VERSION_SLOT_MS` | 600000 | one kept version per slot (0 = by count only) |
+//! | `UPSTREAM_URL` | — | the internet server above a table server (LAN play, [`crate::upstream`]) |
+//! | `UPSTREAM_SYNC_MS` | 600000 | how often the table server syncs with its upstream |
+//! | `UPSTREAM_PREFETCH_MAX_BYTES` | 2 GiB | library files prefetched from upstream at most |
 //! | `BATTLEMAP_SERVER_BUILD` | `dev` | this server's build, for `/health` |
 //! | `BATTLEMAP_FETCH_TEST_ADDR` | — | tests only: names under `.test` resolve to this address |
 
@@ -94,6 +98,14 @@ pub struct Config {
     pub max_entry_bytes: u64,
     /// Previous versions kept per game backup.
     pub game_versions: usize,
+    /// One kept version per slot of this many ms (0 = keep by count only).
+    pub game_version_slot_ms: u64,
+    /// The internet server above this one (LAN play), no trailing slash.
+    pub upstream_url: Option<String>,
+    /// How often to sync with the upstream.
+    pub upstream_sync: Duration,
+    /// Library files prefetched from the upstream at most, bytes.
+    pub upstream_prefetch_max_bytes: u64,
     /// Link fetch: time allowed per socket operation.
     pub fetch_timeout: Duration,
     /// Link fetch: redirects followed at most.
@@ -186,6 +198,19 @@ impl Config {
             max_game_bytes: num("MAX_GAME_BYTES", 25 * 1024 * 1024)?,
             max_entry_bytes: 1024 * 1024,
             game_versions: num("GAME_VERSIONS", 10)? as usize,
+            game_version_slot_ms: num("GAME_VERSION_SLOT_MS", crate::backups::VERSION_SLOT_MS)?,
+            upstream_url: match get("UPSTREAM_URL") {
+                None => None,
+                Some(u) => {
+                    let parsed = url::Url::parse(u.trim()).with_context(|| format!("UPSTREAM_URL={u} is not a URL"))?;
+                    if !matches!(parsed.scheme(), "http" | "https") {
+                        bail!("UPSTREAM_URL={u} is not http(s)");
+                    }
+                    Some(u.trim().trim_end_matches('/').to_string())
+                }
+            },
+            upstream_sync: ms("UPSTREAM_SYNC_MS", 600_000)?,
+            upstream_prefetch_max_bytes: num("UPSTREAM_PREFETCH_MAX_BYTES", 2 * 1024 * 1024 * 1024)?,
             fetch_timeout: ms("FETCH_TIMEOUT_MS", 30_000)?,
             fetch_max_redirects: 5,
             upload_max_age_days: 7,

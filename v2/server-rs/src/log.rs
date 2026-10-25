@@ -133,6 +133,20 @@ pub async fn browser_log(
     let Ok(batch) = serde_json::from_slice::<Value>(&text) else {
         return refuse_batch(StatusCode::BAD_REQUEST, "not a JSON batch", text.len() as u64);
     };
+    // A table server on the LAN holds no MwLog credentials: its upstream ships the batch. When
+    // that fails the page's outbox keeps the batch (503) and tries again later.
+    if !state.shipper.is_active()
+        && let Some(up) = &state.upstream
+    {
+        let ct = headers.get(axum::http::header::CONTENT_TYPE).and_then(|v| v.to_str().ok());
+        return match up.forward_log(text.into(), ct).await {
+            Ok(()) => StatusCode::NO_CONTENT.into_response(),
+            Err(e) => {
+                tracing::debug!(target: "upstream", error = format!("{e:#}"), "Log batch not forwarded");
+                (StatusCode::SERVICE_UNAVAILABLE, "upstream unreachable").into_response()
+            }
+        };
+    }
     let mut extra = Map::new();
     extra.insert("ip".into(), Value::String(client_ip(&headers, peer.ip())));
     match mwlog::ui::relog_as(&state.shipper, &batch, &extra, Some(UI_APP)) {
