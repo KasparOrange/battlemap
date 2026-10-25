@@ -22,6 +22,7 @@
   import { log } from '../log.ts';
   import { markShellReady, onShellEvent, shellBridge } from '../shell.ts';
   import { TvSession } from '../state/sessions.svelte.ts';
+  import { rememberTried } from '../net/build-check.ts';
   import Icon from '../ui/Icon.svelte';
   import { focusFirst, installDpad, setSurface } from '../ui/spatial.ts';
   import { TvGames, type BusyStatus } from './games.ts';
@@ -192,6 +193,18 @@
     view?.update(state);
   });
 
+  // ── a newer app build on the server (rv#13): reload while no game is on the table ─────────
+  // A game in play is never interrupted; the reload waits until the game closes. A build is tried
+  // once per page session, so a server that keeps announcing it can't loop the TV.
+
+  $effect(() => {
+    const build = session.newBuild;
+    if (!build || !booted || session.state.game) return;
+    log.info('tv', 'Reloading for a newer build', { own: config.build, served: build });
+    rememberTried(build);
+    void games.reloadApp();
+  });
+
   // ── the server: badge red after a while offline, backups retried when back ────────────────
 
   let offlineTimer: ReturnType<typeof setTimeout> | undefined;
@@ -221,6 +234,11 @@
     session.host.applyLocal({ type: 'table.viewport', width: Math.max(1, innerWidth), height: Math.max(1, innerHeight) });
   }
 
+  /** The page goes away (reload, close): save first (rv#34: a named listener, removed again). */
+  function onPageHide(): void {
+    void games.flush('page hide');
+  }
+
   function onHide(): void {
     if (document.visibilityState === 'hidden') void games.flush('page hidden');
   }
@@ -241,7 +259,7 @@
     addEventListener('keydown', onKey, true);
     addEventListener('resize', reportViewport);
     document.addEventListener('visibilitychange', onHide);
-    addEventListener('pagehide', () => void games.flush('page hide'));
+    addEventListener('pagehide', onPageHide);
     reportViewport();
 
     void games.boot().then(async () => {
@@ -260,6 +278,7 @@
       removeEventListener('keydown', onKey, true);
       removeEventListener('resize', reportViewport);
       document.removeEventListener('visibilitychange', onHide);
+      removeEventListener('pagehide', onPageHide);
       clearTimeout(chromeTimer);
       clearTimeout(problemTimer);
       clearTimeout(offlineTimer);

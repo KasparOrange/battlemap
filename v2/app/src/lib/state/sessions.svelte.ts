@@ -10,9 +10,24 @@ import type { AppConfig } from '../config.ts';
 import { attachSession } from '../debug-hook.ts';
 import { log } from '../log.ts';
 import { Connection, type ConnectionState } from '../net/connection.ts';
+import { newerBuild, triedBuild } from '../net/build-check.ts';
 import { notify } from '../ui/notice.svelte.ts';
 import { SyncClient } from './client.ts';
 import { SyncHost, type TvRequest } from './host.ts';
+
+/**
+ * The server's build when reloading this page would bring it (`newerBuild`), else null.
+ *
+ * @param config - the page's configuration
+ * @param served - the build the server announced
+ * @returns the build to reload for, or null
+ */
+function buildToReload(config: AppConfig, served: string | null): string | null {
+  const origin = globalThis.location?.origin ?? null;
+  const yes = newerBuild(config.build, served, origin, config.serverUrl, triedBuild());
+  if (yes) log.info('net', 'A newer app build is served', { own: config.build, served });
+  return yes ? served : null;
+}
 
 /** The TV's session: the authority for its room. */
 export class TvSession {
@@ -24,6 +39,8 @@ export class TvSession {
   connection = $state<ConnectionState>('idle');
   /** Who else is in the room. */
   peers = $state.raw<Peer[]>([]);
+  /** The server serves a newer app build that a reload would bring (rv#13), else null. */
+  newBuild = $state<string | null>(null);
 
   /** The sync host (send it local commands with `host.applyLocal`). */
   readonly host: SyncHost;
@@ -51,6 +68,9 @@ export class TvSession {
     this.conn.onState = (s) => (this.connection = s);
     this.conn.onPeers = (peers) => (this.peers = peers);
     this.conn.onPeerMessage = (msg) => this.host.receive(msg);
+    this.conn.onServerMessage = (msg) => {
+      if (msg.type === 'welcome' || msg.type === 'server.build') this.newBuild = buildToReload(config, msg.build);
+    };
     attachSession({
       mode: 'tv', client: config.clientId,
       connection: () => this.connection, state: () => this.state, rev: () => this.rev,
@@ -93,6 +113,8 @@ export class CompanionSession {
   tvOnline = $derived(this.peers.some((p) => p.role === 'tv'));
   /** Whether commands can be sent (connected, TV there, snapshot in hand). */
   ready = $state(false);
+  /** The server serves a newer app build that a reload would bring (rv#13), else null. */
+  newBuild = $state<string | null>(null);
   /** The last peer message that isn't sync (library listing, TV status, …), for the screens. */
   lastMessage = $state.raw<Record<string, unknown> | null>(null);
 
@@ -144,6 +166,7 @@ export class CompanionSession {
     };
     this.conn.onServerMessage = (msg) => {
       if (msg.type === 'relay.undelivered' && msg.seq !== undefined) this.client.undelivered(msg.seq, msg.reason);
+      if (msg.type === 'welcome' || msg.type === 'server.build') this.newBuild = buildToReload(config, msg.build);
     };
     attachSession({
       mode: 'companion', client: config.clientId,

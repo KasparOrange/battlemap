@@ -59,7 +59,7 @@ export const DEFAULT_TIMING: ConnectionTiming = {
   silentMs: 35_000,
   welcomeMs: 8_000,
   lateMs: 1_500,
-  stallMs: 2_000,
+  stallMs: 1_000, // architecture.md "logs": a timer more than 1 s late (rv#14)
   backoffMs: [1_000, 2_000, 3_000, 5_000],
 };
 
@@ -172,7 +172,8 @@ export class Connection {
    * @returns false when not connected — the message is dropped, the caller tells the user
    */
   send(msg: { type: string } & Record<string, unknown>): boolean {
-    if (this.state !== 'open' || !this.socket) {
+    // A socket already closing still reads 'open' here until its onclose (rv#14).
+    if (this.state !== 'open' || !this.socket || this.socket.readyState !== 1) {
       this.dropped ??= { count: 0, firstAt: Date.now(), types: new Set() };
       this.dropped.count++;
       this.dropped.types.add(msg.type);
