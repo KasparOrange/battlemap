@@ -18,7 +18,7 @@ import type { FileLoader } from './types.ts';
 /** What happened to a map load (for notices and logs). */
 export type MapLoadEvent =
   | { type: 'map-loading'; mapId: string; name: string }
-  | { type: 'map-shown'; mapId: string; ms: number; pxPerSquare: number; tiles: number; bytes: number }
+  | { type: 'map-shown'; mapId: string; ms: number; pxPerSquare: number; tiles: number; bytes: number; fetchMs?: number; decodeMs?: number; uploadMs?: number }
   | { type: 'map-failed'; mapId: string; error: string };
 
 /** One shown tile. */
@@ -222,12 +222,15 @@ export class MapLayer {
       this.bytesHeld = plan.bytes * (this.opts.mipmaps ? 4 / 3 : 1);
       this.opts.invalidate();
       const ms = Math.round(performance.now() - t0);
+      const fetchMs = Math.round(tFetch - t0);
+      const decodeMs = Math.round(tDecode - tFetch);
+      const uploadMs = Math.round(performance.now() - tDecode);
       log.info('render', 'Map shown', {
         mapId: info.id,
         ms,
-        fetchMs: Math.round(tFetch - t0),
-        decodeMs: Math.round(tDecode - tFetch),
-        uploadMs: Math.round(performance.now() - tDecode),
+        fetchMs,
+        decodeMs,
+        uploadMs,
         sourceW: size.width,
         sourceH: size.height,
         decodedW: plan.dw,
@@ -236,7 +239,7 @@ export class MapLayer {
         tiles: built.length,
         mb: Math.round(this.bytesHeld / 2 ** 20),
       });
-      this.opts.onEvent({ type: 'map-shown', mapId: info.id, ms, pxPerSquare: plan.pxPerSquare, tiles: built.length, bytes: this.bytesHeld });
+      this.opts.onEvent({ type: 'map-shown', mapId: info.id, ms, pxPerSquare: plan.pxPerSquare, tiles: built.length, bytes: this.bytesHeld, fetchMs, decodeMs, uploadMs });
     } catch (e) {
       if (seq !== this.loadSeq) return;
       log.error('render', 'Map failed', { mapId: info.id, error: String(e) });

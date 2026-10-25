@@ -13,6 +13,8 @@ import { createTableView, type TableViewEvent } from '../render/index.ts';
 
 /** What TV mode uses of the renderer's table view. */
 export interface TvTableView {
+  /** Resolves when WebGL runs (rejects when it can't start; `renderer-failed` tells it too). */
+  readonly ready: Promise<void>;
   /** Draws this state (cheap when nothing it shows changed). */
   update(state: RootState): void;
   /** Frees everything. */

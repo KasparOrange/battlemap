@@ -32,12 +32,15 @@
   import type { TableViewEvent } from '../render/index.ts';
   import { openTableView, type TvTableView } from './table-view.ts';
   import { lanLogFields } from './lan.ts';
+  import { BootTiming } from './boot-timing.ts';
   import TvBadge from './TvBadge.svelte';
   import TvBusy from './TvBusy.svelte';
   import TvCalibration from './TvCalibration.svelte';
   import TvHome from './TvHome.svelte';
   import TvLibrary from './TvLibrary.svelte';
 
+  const timing = new BootTiming(log); // qa#11: reload → first frame with the map, logged as `perf`
+  timing.mark('script');
   const config: AppConfig = appConfig();
   const debug = new URL(location.href).searchParams.get('debug') === '1';
   const ports = realPorts();
@@ -224,9 +227,16 @@
 
   /** The renderer's map loading → the busy card here and on the tablet; failures → the badge. */
   function onViewEvent(e: TableViewEvent): void {
-    if (e.type === 'map-loading') games.showBusy(`Loading “${e.name}”…`);
-    else if (e.type === 'map-shown') games.showBusy(null);
-    else if (e.type === 'map-failed') {
+    if (e.type === 'map-loading') {
+      timing.mark('map-loading');
+      games.showBusy(`Loading “${e.name}”…`);
+    } else if (e.type === 'map-shown') {
+      timing.mark('map-shown');
+      // the view asked for its frame before telling us; this callback runs right after it
+      requestAnimationFrame(() => timing.report({ mapMs: e.ms, fetchMs: e.fetchMs, decodeMs: e.decodeMs, uploadMs: e.uploadMs, tiles: e.tiles, pxPerSquare: Math.round(e.pxPerSquare) }));
+      games.showBusy(null);
+    } else if (e.type === 'map-failed') {
+      timing.noMap();
       games.showBusy(null);
       games.report(`The map could not be shown: ${e.error}`);
     } else if (e.type === 'renderer-failed') games.report(`The table can't be drawn: ${e.error}`);
@@ -247,6 +257,7 @@
   }
 
   onMount(() => {
+    timing.mark('mounted');
     setSurface('tv');
     const stopDpad = installDpad({ onBack });
     const stopShell = onShellEvent((detail, event) => {
@@ -271,6 +282,8 @@
     reportViewport();
 
     void games.boot().then(async () => {
+      timing.mark('booted');
+      if (!session.state.game) timing.noMap();
       booted = true;
       session.start();
       markShellReady();
@@ -278,6 +291,7 @@
     });
 
     view = openTableView(stage!, { log, files: (ref) => ports.files.get(ref), onEvent: onViewEvent });
+    view.ready.then(() => timing.mark('renderer'), () => timing.noMap());
     view.update(session.state);
 
     return () => {

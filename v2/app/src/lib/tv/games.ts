@@ -135,8 +135,13 @@ export class TvGames {
     const t0 = this.now();
     const start = this.host.state.table;
     let calibration = { widthInches: start.widthInches, overscanPercent: start.overscanPercent };
+    // Both keys are asked at once (qa#11: one storage round trip less before the map can load).
+    const savedTable = this.ports.settings.get<{ widthInches?: unknown; overscanPercent?: unknown }>(KEY_TABLE);
+    const savedLast = this.ports.settings.get<string>(KEY_LAST_GAME);
+    savedTable.catch(() => {}); // awaited below; this only keeps an early failure from going unhandled
+    savedLast.catch(() => {});
     try {
-      const saved = await this.ports.settings.get<{ widthInches?: unknown; overscanPercent?: unknown }>(KEY_TABLE);
+      const saved = await savedTable;
       if (saved && typeof saved.widthInches === 'number' && typeof saved.overscanPercent === 'number') {
         calibration = {
           widthInches: Math.min(90, Math.max(10, saved.widthInches)),
@@ -150,7 +155,7 @@ export class TvGames {
     let game: Game | null = null;
     let lastId: string | null = null;
     try {
-      lastId = await this.ports.settings.get<string>(KEY_LAST_GAME);
+      lastId = await savedLast;
       if (lastId) game = await this.load(lastId);
     } catch (e) {
       this.log.error('tv', 'Last game could not be reopened', { gameId: lastId, error: errorText(e) });
