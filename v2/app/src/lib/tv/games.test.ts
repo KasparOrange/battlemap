@@ -336,7 +336,7 @@ describe('boot', () => {
     await settle();
     expect(r.host.state.table.widthInches).toBe(26);
     expect(r.host.state.table.overscanPercent).toBe(3);
-    expect(r.host.state.table.viewport.width).toBe(1920);
+    expect(r.host.state.table.viewport?.width).toBe(1920);
     expect(ports.setting.get(KEY_TABLE)).toEqual({ widthInches: 26, overscanPercent: 3 });
   });
 

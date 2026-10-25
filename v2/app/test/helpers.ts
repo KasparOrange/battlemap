@@ -3,7 +3,7 @@
  * between one SyncHost and several SyncClients (no sockets).
  */
 import type { Logger } from '../src/lib/log.ts';
-import { SyncClient } from '../src/lib/state/client.ts';
+import { SyncClient, type SyncClientOptions } from '../src/lib/state/client.ts';
 import { SyncHost } from '../src/lib/state/host.ts';
 import { initialRoot } from '@battlemap/shared';
 
@@ -43,13 +43,13 @@ export class FakeRoom {
   }
 
   /** Adds a companion (connected, with a TV present). */
-  join(id: string): SyncClient {
+  join(id: string, options?: SyncClientOptions): SyncClient {
     const client = new SyncClient((msg) => {
       if (!this.up) return false;
       const copy = JSON.parse(JSON.stringify({ ...msg, from: id })) as unknown;
       this.deliver(() => this.host.receive(copy));
       return true;
-    }, id, this.log);
+    }, id, this.log, options);
     client.onNotice = (text) => this.notices.push({ client: id, text });
     this.clients.set(id, client);
     client.setLink(true, true);

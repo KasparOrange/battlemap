@@ -5,6 +5,30 @@
 import { describe, expect, test } from 'bun:test';
 import { newGame, wholeGrid, type MapInfo } from '@battlemap/shared';
 import { FakeRoom } from './helpers.ts';
+import type { ClientTimers } from '../src/lib/state/client.ts';
+
+/** Manual clock + timers: `advance(ms)` runs what falls due. */
+function fakeClock(): ClientTimers & { now: () => number; advance(ms: number): void } {
+  let t = 0;
+  let next = 1;
+  const due = new Map<number, { at: number; fn: () => void }>();
+  return {
+    now: () => t,
+    set: (fn, ms) => { const id = next++; due.set(id, { at: t + ms, fn }); return id; },
+    clear: (h) => void due.delete(h as number),
+    advance(ms) {
+      const end = t + ms;
+      for (;;) {
+        const first = [...due.entries()].filter(([, d]) => d.at <= end).sort((a, b) => a[1].at - b[1].at)[0];
+        if (!first) break;
+        due.delete(first[0]);
+        t = first[1].at;
+        first[1].fn();
+      }
+      t = end;
+    },
+  };
+}
 
 const map = (id = 'm1'): MapInfo => ({
   id, name: id, kind: 'picture', picture: { hash: '0123456789abcdef', ext: 'png', bytes: 1 }, tableCopy: null, geometry: null,
@@ -97,7 +121,7 @@ describe('sync', () => {
     c.setLink(true, true); // reconnect → snapshot, the TV never got the command
     room.flush();
     expect(c.pendingCount).toBe(0);
-    expect(room.notices.some((n) => n.text.includes("didn't reach the TV"))).toBe(true);
+    expect(room.notices.filter((n) => n.text.includes("didn't reach the TV")).length).toBe(1);
     expect(c.view).toEqual(room.host.state);
   });
 
@@ -115,5 +139,79 @@ describe('sync', () => {
     room.host.receive({ type: 'sync.cmd', from: 'a', seq: 5, cmd: { type: 'view.grid', on: false } });
     room.host.receive({ type: 'sync.cmd', from: 'a', seq: 5, cmd: { type: 'view.grid', on: true } });
     expect(room.host.state.game?.maps.m1?.showGrid).toBe(false);
+  });
+
+  test('qa#6: a command the TV never echoes is rolled back after the ack timeout, never resent', () => {
+    const room = roomWithGame();
+    const clock = fakeClock();
+    const c = room.join('a', { ackTimeoutMs: 5000, now: clock.now, timers: clock });
+    room.instant = false; // the TV page is reloading: the relay took it, nobody answers
+    expect(c.dispatch({ type: 'fog.all', value: 'reveal' })).toBe(true);
+    expect(c.pendingCount).toBe(1);
+    clock.advance(4999);
+    expect(c.pendingCount).toBe(1);
+    clock.advance(1);
+    expect(c.pendingCount).toBe(0);
+    expect(c.view).toEqual(c.confirmed);
+    expect(room.notices.at(-1)?.text).toContain("didn't reach the TV");
+    expect(room.log.has('Commands dropped')).toBe(true);
+  });
+
+  test('qa#6: a late echo after the timeout still lands in the confirmed state', () => {
+    const room = roomWithGame();
+    const clock = fakeClock();
+    const c = room.join('a', { ackTimeoutMs: 5000, now: clock.now, timers: clock });
+    room.instant = false;
+    c.dispatch({ type: 'table.calibrate', widthInches: 44 });
+    clock.advance(6000);
+    expect(c.view?.table.widthInches).not.toBe(44);
+    room.flush();
+    expect(c.view?.table.widthInches).toBe(44);
+    expect(c.view).toEqual(room.host.state);
+  });
+
+  test('qa#6: losing the TV with commands in flight rolls back at once with one notice', () => {
+    const room = roomWithGame();
+    const c = room.join('a');
+    room.instant = false;
+    c.dispatch({ type: 'fog.all', value: 'reveal' });
+    c.dispatch({ type: 'table.calibrate', widthInches: 44 });
+    c.setLink(true, false); // peer.left: the TV went away
+    expect(c.pendingCount).toBe(0);
+    expect(c.view).toEqual(c.confirmed);
+    expect(room.notices.filter((n) => n.client === 'a').map((n) => n.text)).toEqual(["2 changes didn't reach the TV — they were undone here."]);
+  });
+
+  test('rv#9: an unanswered snapshot request is repeated', () => {
+    const room = roomWithGame();
+    const clock = fakeClock();
+    room.up = false;
+    const c = room.join('a', { snapshotRetryMs: 3000, now: clock.now, timers: clock });
+    expect(c.ready()).toBe(false);
+    room.up = true;
+    clock.advance(3000);
+    expect(c.ready()).toBe(true);
+    expect(room.log.lines.filter((l) => l.msg === 'Asking for a snapshot').length).toBeGreaterThanOrEqual(2);
+  });
+
+  test('rv#10: a new epoch drops what is pending instead of folding it onto the new game', () => {
+    const room = roomWithGame();
+    const c = room.join('a');
+    room.instant = false;
+    c.dispatch({ type: 'fog.all', value: 'reveal' });
+    room.instant = true;
+    room.host.replace({ ...room.host.state, game: newGame({ id: 'g2', name: 'G2', createdAt: '2026-10-25T00:00:00Z', map: map() }) }, 'test');
+    expect(c.epoch).toBe(room.host.epoch);
+    expect(c.pendingCount).toBe(0);
+    expect(c.view).toEqual(room.host.state);
+  });
+
+  test('rv#12: a rate-limited command says so', () => {
+    const room = roomWithGame();
+    const c = room.join('a');
+    room.instant = false;
+    c.dispatch({ type: 'fog.all', value: 'reveal' });
+    c.undelivered(1, 'rate-limited');
+    expect(room.notices.at(-1)?.text).toContain('Too fast');
   });
 });

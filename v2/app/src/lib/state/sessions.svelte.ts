@@ -5,7 +5,7 @@
  * only wires them together and makes them reactive. States are `$state.raw` — immutable trees
  * replaced whole, never deep proxies (cheap, and the renderer compares references).
  */
-import { initialRoot, type Command, type Peer, type RootState } from '@battlemap/shared';
+import { check, initialRoot, ToCompanion, type Command, type Peer, type RootState } from '@battlemap/shared';
 import type { AppConfig } from '../config.ts';
 import { attachSession } from '../debug-hook.ts';
 import { log } from '../log.ts';
@@ -130,11 +130,20 @@ export class CompanionSession {
       link();
     };
     this.conn.onPeerMessage = (msg) => {
-      if (msg.type.startsWith('sync.')) this.client.receive(msg);
-      else this.lastMessage = msg;
+      if (msg.type.startsWith('sync.')) {
+        this.client.receive(msg); // checks it itself
+        return;
+      }
+      // Every receiver parses with the shared schemas (rv#11): the screens get checked messages.
+      const checked = check(ToCompanion, msg);
+      if (!checked.ok) {
+        log.warn('sync', 'Bad message for the companion', { type: msg.type, error: checked.error });
+        return;
+      }
+      this.lastMessage = checked.value as Record<string, unknown>;
     };
     this.conn.onServerMessage = (msg) => {
-      if (msg.type === 'relay.undelivered' && msg.seq !== undefined) this.client.undelivered(msg.seq);
+      if (msg.type === 'relay.undelivered' && msg.seq !== undefined) this.client.undelivered(msg.seq, msg.reason);
     };
     attachSession({
       mode: 'companion', client: config.clientId,
@@ -173,6 +182,7 @@ export class CompanionSession {
 
   /** Disconnects. */
   stop(): void {
+    this.client.stop();
     this.conn.close();
   }
 }
