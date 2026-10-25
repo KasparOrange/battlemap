@@ -1,0 +1,18 @@
+<!doctype html>
+<!--
+  Effects demo (development only, not part of the build): plays library effects through the real
+  effects runtime on a minimal Pixi stage — a stone floor of 34 × 19 squares, two tokens.
+  Open /app/src/lib/effects/demo/index.html on the dev server. Query: ?scene=<bench scene id>
+  · ?only=id,id (one effect per cell) · ?quality=low · ?sync=1 (gl.finish after each frame, for
+  GPU-bound timings). window.fx exposes stats and a timing probe for Playwright.
+-->
+<meta charset="utf-8" />
+<title>battlemap — effects demo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  #stage { position: fixed; inset: 0; }
+  #info { position: fixed; left: 8px; bottom: 6px; font: 12px system-ui, sans-serif; color: #ddd; text-shadow: 0 1px 2px #000; }
+</style>
+<div id="stage"></div>
+<div id="info">starting…</div>
+<script type="module" src="./demo.ts"></script>

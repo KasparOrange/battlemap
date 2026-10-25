@@ -12,7 +12,8 @@ import { circleRegion, coneRegion, lineRegion } from '../../src/lib/effects/anch
 import { textureFiles, type EffectIndex, type EffectManifest } from '../../src/lib/effects/manifest.ts';
 import { EffectRegistry } from '../../src/lib/effects/registry.ts';
 import { createEffectsRuntime, type EffectsRuntime, type EffectSlots } from '../../src/lib/effects/runtime.ts';
-import { effectsBenchScenes } from '../../src/lib/effects/index.ts';
+import { BUILTIN_EFFECTS, effectsBenchScenes } from '../../src/lib/effects/index.ts';
+import type { EffectsFactory } from '../../src/lib/render/types.ts';
 
 // Headless: Pixi asks a test canvas for the shader precision; there is no DOM under bun.
 DOMAdapter.set({ ...DOMAdapter.get(), createCanvas: () => ({ getContext: () => null }) as unknown as HTMLCanvasElement });
@@ -76,28 +77,28 @@ function setup(opts: { budgetBytes?: number; now?: () => number } = {}) {
   world.addChild(map, slots.ground, slots.air);
   const { registry, freed, loads } = diskRegistry(opts.budgetBytes);
   const scheduler = fakeScheduler();
-  const rt = createEffectsRuntime(slots, { profile: 'players', scheduler, log: quiet, registry, now: opts.now });
+  let clockMs = 1000;
+  const rt = createEffectsRuntime(slots, { profile: 'players', scheduler, log: quiet, registry, now: opts.now, frameClock: () => clockMs });
+  current = rt;
   const renderer = { screen: { width: 1920, height: 1080 }, resolution: 1 } as unknown as Renderer;
   const clock = slots.ground.children.find((c) => c.label === 'fx:clock')!;
-  let fakeNow = performance.now();
-  /** Advances the runtime as if `ms` of frames were drawn. */
-  const frames = (n: number) => {
+  /** Draws `n` frames of 1000/60 ms each (or `stepMs`). */
+  const frames = (n: number, stepMs = 1000 / 60) => {
     for (let i = 0; i < n; i++) {
-      // The runtime dedupes ticks closer than 2 ms; real frames are 16.7 ms apart.
-      const until = performance.now() + 2.2;
-      while (performance.now() < until) {
-        /* wait */
-      }
+      clockMs += stepMs;
       clock.onRender!(renderer);
     }
-    fakeNow = performance.now();
   };
-  void fakeNow;
   return { rt, slots, tokens, map, scheduler, registry, freed, loads, frames };
 }
 
-/** Lets the registry's async loads land. */
-const settle = () => new Promise((r) => setTimeout(r, 30));
+/** Lets the registry's async loads land (polls, so a busy machine doesn't flake the tests). */
+let current: EffectsRuntime | null = null;
+async function settle(): Promise<void> {
+  await new Promise((r) => setTimeout(r, 20));
+  for (let i = 0; i < 200 && current && current.stats().loading > 0; i++) await new Promise((r) => setTimeout(r, 10));
+  await new Promise((r) => setTimeout(r, 10));
+}
 
 const point = (id: string, effect: string, x = 5, y = 5, params: PlacedEffect['params'] = {}): PlacedEffect => ({ id, effect, anchor: { kind: 'point', x, y }, params, on: true });
 const fxChildren = (c: Container) => c.children.filter((k) => k.label !== 'fx:clock');
@@ -152,12 +153,30 @@ describe('effects runtime', () => {
     expect(fxChildren(slots.air).length).toBe(1);
     frames(3);
     expect(rt.stats().shots).toBe(1);
-    // Fast-forward: its particles live at most 1.4 s.
-    await new Promise((r) => setTimeout(r, 1500));
-    frames(2);
+    // Its particles live at most 1.1 s.
+    frames(90);
     expect(fxChildren(slots.air).length).toBe(0);
     expect(scheduler.leases).toBe(0);
     expect(registry.usersOf('explosion-puffs')).toBe(0);
+    rt.destroy();
+  });
+
+  test('built-in screen shots: the shake moves the world and puts it back, the flash fades', async () => {
+    const { rt, slots, frames, scheduler } = setup();
+    const moves: [number, number][] = [];
+    slots.shake = (dx, dy) => moves.push([dx, dy]);
+    rt.update([], [
+      { id: 'sh', effect: 'screen-shake', anchor: { kind: 'global' }, params: { duration: 0.05 }, at: Date.now() },
+      { id: 'fl', effect: 'screen-flash', anchor: { kind: 'global' }, params: { duration: 0.05 }, at: Date.now() },
+    ], Date.now());
+    expect(fxChildren(slots.screen).length).toBe(2);
+    expect(scheduler.leases).toBe(1);
+    frames(2);
+    expect(moves.length).toBeGreaterThan(0);
+    frames(6);
+    expect(moves.at(-1)).toEqual([0, 0]);
+    expect(fxChildren(slots.screen).length).toBe(0);
+    expect(scheduler.leases).toBe(0);
     rt.destroy();
   });
 
@@ -257,7 +276,7 @@ describe('effects runtime', () => {
     expect(failures).toEqual([]);
     expect(registry.bytes).toBeLessThanOrEqual(8 * 1024 * 1024);
     rt.destroy();
-  }, 30_000);
+  }, 120_000);
 
   test('cones and lines place their art along the shape', async () => {
     const { rt, slots } = setup();
@@ -295,7 +314,7 @@ describe('the library on disk', () => {
 
   test('the bench scenes name effects of the library', async () => {
     const index = (await Bun.file(LIB + 'index.json').json()) as EffectIndex;
-    const ids = new Set(index.effects.map((e) => e.id));
+    const ids = new Set([...index.effects.map((e) => e.id), ...BUILTIN_EFFECTS]);
     for (const scene of effectsBenchScenes) {
       const used = [...scene.placed({ cols: 34, rows: 19 }), ...scene.shots({ cols: 34, rows: 19 }, 0, 0)].map((e) => e.effect);
       for (const id of used) expect(ids.has(id)).toBe(true);
@@ -303,4 +322,6 @@ describe('the library on disk', () => {
   });
 });
 
-void (null as unknown as EffectsRuntime);
+
+// The seam: the renderer's factory type accepts the runtime as it is (a compile-time check).
+createEffectsRuntime satisfies EffectsFactory;

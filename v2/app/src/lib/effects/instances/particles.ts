@@ -62,7 +62,8 @@ class ParticlesInstance implements EffectInstance {
     this.intensity = numParam(params, 'intensity', 1);
     if (this.sim) this.sim.intensity = this.intensity;
     this.root.alpha = numParam(params, 'opacity', 1);
-    if (anchor.kind === 'global') {
+    // A `screen` emitter covers the visible map whatever its anchor says.
+    if (anchor.kind === 'global' || m.particles!.emitter === 'screen') {
       this.root.position.set(0, 0);
       this.root.rotation = 0;
       this.root.scale.set(this.c.unitsPerSquare);

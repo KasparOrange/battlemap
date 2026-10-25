@@ -11,3 +11,4 @@ export { circleRegion, coneRegion, cubeRegion, lineRegion, type Pt, type RegionS
 export type { EffectsQuality, CostEstimate } from './budget.ts';
 export type { EffectIndex, EffectIndexEntry, EffectManifest, EffectCategory, EffectTechnique } from './manifest.ts';
 export { EffectRegistry, DEFAULT_EFFECTS_BUDGET } from './registry.ts';
+export { BUILTIN_EFFECTS } from './instances/screen.ts';

@@ -27,6 +27,7 @@ import { degradeFor, estimateCost, floorLevel, FrameGovernor, MAX_DEGRADE, sumCo
 import { planPlaced, runningRecord, ShotTracker, type RunningPlaced } from './diff.ts';
 import type { EffectInstance, FrameContext } from './instances/base.ts';
 import { createInstance } from './instances/create.ts';
+import { builtinSeconds, createBuiltin, isBuiltin } from './instances/screen.ts';
 import { ShaderInstance } from './instances/shader.ts';
 import { isOneShot, playSeconds } from './manifest.ts';
 import { hashSeed } from './particle-sim.ts';
@@ -72,6 +73,8 @@ export interface EffectsRuntimeOptions {
   quality?: EffectsQuality;
   /** Epoch-ms clock for shot ages (default `Date.now`). */
   now?: () => number;
+  /** Monotonic ms clock that animations run on (default `performance.now`; tests step it). */
+  frameClock?: () => number;
 }
 
 /** What the runtime reports (the bench, the log). */
@@ -143,7 +146,7 @@ interface Running {
   record: RunningPlaced | null;
   bundle: EffectBundle<Texture> | null;
   inst: EffectInstance | null;
-  /** performance.now() of t = 0. */
+  /** The frame clock at t = 0. */
   startedAt: number;
   speed: number;
   /** A placed one-shot replays after a pause. */
@@ -171,6 +174,7 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
   const log = opts.log;
   const ups = slots.unitsPerSquare ?? 1;
   const clock = opts.now ?? (() => Date.now());
+  const frameClock = opts.frameClock ?? (() => performance.now());
   const ownRegistry = !opts.registry;
   const registry =
     opts.registry ??
@@ -236,6 +240,18 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
 
   function start(r: Running): void {
     running.set(keyOf(r.kind, r.id), r);
+    if (isBuiltin(r.effect)) {
+      const inst = createBuiltin(r.effect, r.params, (dx, dy) => slots.shake?.(dx, dy));
+      r.inst = inst;
+      r.cost = inst.cost;
+      r.startedAt = frameClock();
+      r.parent = slots.screen;
+      slots.screen.addChild(inst.root);
+      log.info('effects', 'Shot playing', { id: r.id, effect: r.effect });
+      syncLease();
+      opts.scheduler.invalidate();
+      return;
+    }
     const t0 = performance.now();
     registry.acquire(r.effect).then(
       (bundle) => {
@@ -261,7 +277,7 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
           r.inst = inst;
           r.cost = inst.cost;
           r.replay = r.kind === 'placed' && isOneShot(bundle.manifest, partManifests(bundle));
-          r.startedAt = performance.now();
+          r.startedAt = frameClock();
           reparent(r);
           refreshLights();
           refreshBudget();
@@ -308,7 +324,7 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
   }
 
   function reparent(r: Running): void {
-    if (!r.inst) return;
+    if (!r.inst || !r.bundle) return;
     const want = slotFor(r);
     if (want === r.parent) return;
     if (want) want.addChild(r.inst.root);
@@ -402,7 +418,7 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
   }
 
   function tick(r: Renderer): void {
-    const now = performance.now();
+    const now = frameClock();
     if (destroyed || now - lastTick < 2) return;
     const dtMs = lastTick < 0 ? 16.7 : now - lastTick;
     lastTick = now;
@@ -456,6 +472,11 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
   }
 
   function startShot(shot: OneShot, now: number): void {
+    if (isBuiltin(shot.effect)) {
+      const verdict = tracker.judge(shot, now, builtinSeconds(shot.effect, shot.params) * 1000);
+      if (verdict === 'play') start(newRunning('shot', shot.id, shot.effect, shot.anchor, shot.params));
+      return;
+    }
     pendingShots.add(shot.id);
     registry.manifestTree(shot.effect).then(
       ({ manifest, parts }) => {
@@ -488,7 +509,7 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
       record: null,
       bundle: null,
       inst: null,
-      startedAt: performance.now(),
+      startedAt: frameClock(),
       speed,
       replay: false,
       cancelled: false,

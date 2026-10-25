@@ -92,10 +92,10 @@ export const effectsBenchScenes: readonly EffectsBenchScene[] = [
   },
   {
     id: 'fireballs',
-    name: 'fireball burst ×5 every 4 s',
+    name: 'fireball burst ×5 every 4 s (+ screen shake)',
     placed: () => [],
     shotEveryMs: 4000,
-    shots: (map, beat, now) => fireballs(map, beat, now),
+    shots: (map, beat, now) => [...fireballs(map, beat, now), { id: `shake-${beat}`, effect: 'screen-shake', anchor: { kind: 'global' }, params: { amplitude: 8 }, at: now }],
   },
   {
     id: 'spells',
