@@ -27,7 +27,7 @@ import { degradeFor, estimateCost, floorLevel, FrameGovernor, MAX_DEGRADE, sumCo
 import { planPlaced, runningRecord, ShotTracker, type RunningPlaced } from './diff.ts';
 import type { EffectInstance, FrameContext } from './instances/base.ts';
 import { createInstance } from './instances/create.ts';
-import { builtinSeconds, createBuiltin, isBuiltin } from './instances/screen.ts';
+import { builtinSeconds, createBuiltin, isBuiltin, isStandIn } from './instances/screen.ts';
 import { ShaderInstance } from './instances/shader.ts';
 import { isOneShot, playSeconds } from './manifest.ts';
 import { MapLights } from './map-lights.ts';
@@ -256,7 +256,7 @@ export function createEffectsRuntime(slots: EffectSlots, opts: EffectsRuntimeOpt
 
   function start(r: Running): void {
     running.set(keyOf(r.kind, r.id), r);
-    if (isBuiltin(r.effect)) {
+    if (isBuiltin(r.effect) || isStandIn(r.effect)) {
       const inst = createBuiltin(r.effect, r.params, (dx, dy) => slots.shake?.(dx, dy));
       r.inst = inst;
       r.cost = inst.cost;

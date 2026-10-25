@@ -44,3 +44,26 @@ export function fadeCover(t: number, p: FadePhases): number {
   if (out < p.fadeOut) return 1 - smooth(out / p.fadeOut);
   return 0;
 }
+
+/** GLSL's `fract(sin(n * 12.9898) * 43758.5453)` — the lightning shader's hash. */
+function hash1(n: number): number {
+  const v = Math.sin(n * 12.9898) * 43758.5453;
+  return v - Math.floor(v);
+}
+
+/**
+ * The lightning flash of `lightning-flash.frag`, on the CPU: one slot every `every` seconds,
+ * a strike at a random moment in it (some slots stay dark), a quick double flash.
+ *
+ * @param t - seconds
+ * @param every - slot length in seconds (the manifest's `uEvery`, 7)
+ * @returns flash strength 0–1
+ */
+export function lightningFlash(t: number, every: number): number {
+  const k = Math.floor(t / every);
+  const start = (k + 0.1 + 0.6 * hash1(k)) * every;
+  const dt = t - start;
+  if (dt < 0 || hash1(k + 7) < 0.35) return 0;
+  const f = Math.exp(-dt * 14) + (dt >= 0.16 ? 0.7 * Math.exp(-(dt - 0.16) * 9) : 0);
+  return Math.min(1, f < 0.004 ? 0 : f);
+}
