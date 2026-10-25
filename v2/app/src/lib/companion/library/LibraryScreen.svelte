@@ -11,6 +11,7 @@
   - onchangetable: () => void — "Change table" in the menu
 -->
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { newId, tableGrid, type GameSettings, type GameSummary, type LibraryEntry, type MapInfo } from '@battlemap/shared';
   import { log } from '../../log.ts';
   import type { CompanionSession } from '../../state/sessions.svelte.ts';
@@ -97,7 +98,11 @@
       games = listed;
       log.info('companion', 'Games listed', { count: listed.length });
     } else if (m.type === 'tv.notice') {
-      endOpening(); // the app shows the notice itself
+      // the app shows the notice itself; a failed open means this list is stale (another
+      // tablet deleted the game) — ask again, so the card goes
+      const wasOpening = untrack(() => opening) !== null;
+      endOpening();
+      if (wasOpening && m.level === 'error') setTimeout(list, 300);
     }
   });
 
