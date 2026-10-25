@@ -1,0 +1,179 @@
+{
+ "id": "plant-growth",
+ "name": "Plant Growth ring",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "plants",
+  "flowers",
+  "nature",
+  "ring"
+ ],
+ "damage": [],
+ "spells": [
+  "Plant Growth",
+  "Goodberry",
+  "Druid circle"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 5,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1856,
+    "h": 699
+   }
+  ],
+  "frameW": 232,
+  "frameH": 233,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    232,
+    0
+   ],
+   [
+    0,
+    464,
+    0
+   ],
+   [
+    0,
+    696,
+    0
+   ],
+   [
+    0,
+    928,
+    0
+   ],
+   [
+    0,
+    1160,
+    0
+   ],
+   [
+    0,
+    1392,
+    0
+   ],
+   [
+    0,
+    1624,
+    0
+   ],
+   [
+    0,
+    0,
+    233
+   ],
+   [
+    0,
+    232,
+    233
+   ],
+   [
+    0,
+    464,
+    233
+   ],
+   [
+    0,
+    696,
+    233
+   ],
+   [
+    0,
+    928,
+    233
+   ],
+   [
+    0,
+    1160,
+    233
+   ],
+   [
+    0,
+    1392,
+    233
+   ],
+   [
+    0,
+    1624,
+    233
+   ],
+   [
+    0,
+    0,
+    466
+   ],
+   [
+    0,
+    232,
+    466
+   ],
+   [
+    0,
+    464,
+    466
+   ],
+   [
+    0,
+    696,
+    466
+   ],
+   [
+    0,
+    928,
+    466
+   ],
+   [
+    0,
+    1160,
+    466
+   ],
+   [
+    0,
+    1392,
+    466
+   ],
+   [
+    0,
+    1624,
+    466
+   ]
+  ],
+  "fps": 5.94,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 4.83,
+  "h": 4.86
+ },
+ "anchor": [
+  0.5135,
+  0.5062
+ ],
+ "gpuBytes": 5189376,
+ "duration": 4.04,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "PlantGrowthRingLoop03_01_Regular_GreenYellow_500x500.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

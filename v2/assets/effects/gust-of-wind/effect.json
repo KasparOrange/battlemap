@@ -1,0 +1,181 @@
+{
+ "id": "gust-of-wind",
+ "name": "Gust of Wind (line)",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "wind",
+  "line",
+  "push"
+ ],
+ "damage": [],
+ "spells": [
+  "Gust of Wind",
+  "Wind Wall"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 12,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2048,
+    "h": 510
+   }
+  ],
+  "frameW": 512,
+  "frameH": 85,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    512,
+    0
+   ],
+   [
+    0,
+    1024,
+    0
+   ],
+   [
+    0,
+    1536,
+    0
+   ],
+   [
+    0,
+    0,
+    85
+   ],
+   [
+    0,
+    512,
+    85
+   ],
+   [
+    0,
+    1024,
+    85
+   ],
+   [
+    0,
+    1536,
+    85
+   ],
+   [
+    0,
+    0,
+    170
+   ],
+   [
+    0,
+    512,
+    170
+   ],
+   [
+    0,
+    1024,
+    170
+   ],
+   [
+    0,
+    1536,
+    170
+   ],
+   [
+    0,
+    0,
+    255
+   ],
+   [
+    0,
+    512,
+    255
+   ],
+   [
+    0,
+    1024,
+    255
+   ],
+   [
+    0,
+    1536,
+    255
+   ],
+   [
+    0,
+    0,
+    340
+   ],
+   [
+    0,
+    512,
+    340
+   ],
+   [
+    0,
+    1024,
+    340
+   ],
+   [
+    0,
+    1536,
+    340
+   ],
+   [
+    0,
+    0,
+    425
+   ],
+   [
+    0,
+    512,
+    425
+   ],
+   [
+    0,
+    1024,
+    425
+   ],
+   [
+    0,
+    1536,
+    425
+   ]
+  ],
+  "fps": 5.95,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 12.0,
+  "h": 2.0
+ },
+ "anchor": [
+  0.0,
+  0.5
+ ],
+ "beam": {
+  "start": 0.0,
+  "end": 1.0
+ },
+ "gpuBytes": 4177920,
+ "duration": 4.03,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "GustOfWind_01_White_1200x200.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

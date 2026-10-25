@@ -1,0 +1,299 @@
+{
+ "id": "restrained-chains",
+ "name": "Restrained (chains)",
+ "category": "aura",
+ "technique": "sheet",
+ "tags": [
+  "condition",
+  "restrained",
+  "paralyzed",
+  "chains"
+ ],
+ "damage": [],
+ "spells": [
+  "Hold Person",
+  "Hold Monster",
+  "Banishing chains"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1976,
+    "h": 315
+   }
+  ],
+  "frameW": 104,
+  "frameH": 105,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    104,
+    0
+   ],
+   [
+    0,
+    208,
+    0
+   ],
+   [
+    0,
+    312,
+    0
+   ],
+   [
+    0,
+    416,
+    0
+   ],
+   [
+    0,
+    520,
+    0
+   ],
+   [
+    0,
+    624,
+    0
+   ],
+   [
+    0,
+    728,
+    0
+   ],
+   [
+    0,
+    832,
+    0
+   ],
+   [
+    0,
+    936,
+    0
+   ],
+   [
+    0,
+    1040,
+    0
+   ],
+   [
+    0,
+    1144,
+    0
+   ],
+   [
+    0,
+    1248,
+    0
+   ],
+   [
+    0,
+    1352,
+    0
+   ],
+   [
+    0,
+    1456,
+    0
+   ],
+   [
+    0,
+    1560,
+    0
+   ],
+   [
+    0,
+    1664,
+    0
+   ],
+   [
+    0,
+    1768,
+    0
+   ],
+   [
+    0,
+    1872,
+    0
+   ],
+   [
+    0,
+    0,
+    105
+   ],
+   [
+    0,
+    104,
+    105
+   ],
+   [
+    0,
+    208,
+    105
+   ],
+   [
+    0,
+    312,
+    105
+   ],
+   [
+    0,
+    416,
+    105
+   ],
+   [
+    0,
+    520,
+    105
+   ],
+   [
+    0,
+    624,
+    105
+   ],
+   [
+    0,
+    728,
+    105
+   ],
+   [
+    0,
+    832,
+    105
+   ],
+   [
+    0,
+    936,
+    105
+   ],
+   [
+    0,
+    1040,
+    105
+   ],
+   [
+    0,
+    1144,
+    105
+   ],
+   [
+    0,
+    1248,
+    105
+   ],
+   [
+    0,
+    1352,
+    105
+   ],
+   [
+    0,
+    1456,
+    105
+   ],
+   [
+    0,
+    1560,
+    105
+   ],
+   [
+    0,
+    1664,
+    105
+   ],
+   [
+    0,
+    1768,
+    105
+   ],
+   [
+    0,
+    1872,
+    105
+   ],
+   [
+    0,
+    0,
+    210
+   ],
+   [
+    0,
+    104,
+    210
+   ],
+   [
+    0,
+    208,
+    210
+   ],
+   [
+    0,
+    312,
+    210
+   ],
+   [
+    0,
+    416,
+    210
+   ],
+   [
+    0,
+    520,
+    210
+   ],
+   [
+    0,
+    624,
+    210
+   ],
+   [
+    0,
+    728,
+    210
+   ],
+   [
+    0,
+    832,
+    210
+   ],
+   [
+    0,
+    936,
+    210
+   ]
+  ],
+  "fps": 9.6,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 1.855,
+  "h": 1.88
+ },
+ "anchor": [
+  0.5013,
+  0.5
+ ],
+ "gpuBytes": 2489760,
+ "duration": 5.0,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "MarkerChainStandard01_01_Regular_Red_Loop_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

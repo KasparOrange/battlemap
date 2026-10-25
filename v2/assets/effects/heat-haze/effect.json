@@ -1,0 +1,44 @@
+{
+ "id": "heat-haze",
+ "name": "Heat haze",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "heat",
+  "desert",
+  "lava",
+  "forge",
+  "shimmer"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/heat-haze.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uStrength": 0.6,
+   "uSpeed": 1.0,
+   "uScale": 1.0
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": "Distorts what is drawn beneath it; give it a region (mask) over lava or a forge, or the whole map in a desert."
+}

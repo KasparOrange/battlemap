@@ -1,0 +1,82 @@
+{
+ "id": "fireflies-cc0",
+ "name": "Fireflies (CC0)",
+ "category": "map-loop",
+ "technique": "particles",
+ "tags": [
+  "fireflies",
+  "night",
+  "forest",
+  "swamp",
+  "ambient"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "add",
+ "tint": false,
+ "squares": 6,
+ "particles": {
+  "textures": [
+   {
+    "file": "particle-0.webp",
+    "w": 32,
+    "h": 32,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   }
+  ],
+  "emitter": "area",
+  "w": 6,
+  "h": 6,
+  "rate": 5,
+  "max": 40,
+  "life": [
+   3.0,
+   6.0
+  ],
+  "speed": [
+   0.1,
+   0.35
+  ],
+  "angle": [
+   0,
+   360
+  ],
+  "gravity": [
+   0.0,
+   0.0
+  ],
+  "size": [
+   0.08,
+   0.14
+  ],
+  "grow": 1.0,
+  "alpha": [
+   0.0,
+   1.0,
+   0.0
+  ],
+  "colors": [
+   "#e8ff7a",
+   "#9cff5a"
+  ],
+  "wobble": [
+   0.3,
+   0.6
+  ],
+  "flicker": 2
+ },
+ "gpuBytes": 4096,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": null,
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

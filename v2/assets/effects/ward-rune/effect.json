@@ -1,0 +1,299 @@
+{
+ "id": "ward-rune",
+ "name": "Glyph of Warding (animated)",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "glyph",
+  "ward",
+  "trap",
+  "rune"
+ ],
+ "damage": [],
+ "spells": [
+  "Glyph of Warding",
+  "Symbol",
+  "Alarm"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 3,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1988,
+    "h": 544
+   }
+  ],
+  "frameW": 142,
+  "frameH": 136,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    142,
+    0
+   ],
+   [
+    0,
+    284,
+    0
+   ],
+   [
+    0,
+    426,
+    0
+   ],
+   [
+    0,
+    568,
+    0
+   ],
+   [
+    0,
+    710,
+    0
+   ],
+   [
+    0,
+    852,
+    0
+   ],
+   [
+    0,
+    994,
+    0
+   ],
+   [
+    0,
+    1136,
+    0
+   ],
+   [
+    0,
+    1278,
+    0
+   ],
+   [
+    0,
+    1420,
+    0
+   ],
+   [
+    0,
+    1562,
+    0
+   ],
+   [
+    0,
+    1704,
+    0
+   ],
+   [
+    0,
+    1846,
+    0
+   ],
+   [
+    0,
+    0,
+    136
+   ],
+   [
+    0,
+    142,
+    136
+   ],
+   [
+    0,
+    284,
+    136
+   ],
+   [
+    0,
+    426,
+    136
+   ],
+   [
+    0,
+    568,
+    136
+   ],
+   [
+    0,
+    710,
+    136
+   ],
+   [
+    0,
+    852,
+    136
+   ],
+   [
+    0,
+    994,
+    136
+   ],
+   [
+    0,
+    1136,
+    136
+   ],
+   [
+    0,
+    1278,
+    136
+   ],
+   [
+    0,
+    1420,
+    136
+   ],
+   [
+    0,
+    1562,
+    136
+   ],
+   [
+    0,
+    1704,
+    136
+   ],
+   [
+    0,
+    1846,
+    136
+   ],
+   [
+    0,
+    0,
+    272
+   ],
+   [
+    0,
+    142,
+    272
+   ],
+   [
+    0,
+    284,
+    272
+   ],
+   [
+    0,
+    426,
+    272
+   ],
+   [
+    0,
+    568,
+    272
+   ],
+   [
+    0,
+    710,
+    272
+   ],
+   [
+    0,
+    852,
+    272
+   ],
+   [
+    0,
+    994,
+    272
+   ],
+   [
+    0,
+    1136,
+    272
+   ],
+   [
+    0,
+    1278,
+    272
+   ],
+   [
+    0,
+    1420,
+    272
+   ],
+   [
+    0,
+    1562,
+    272
+   ],
+   [
+    0,
+    1704,
+    272
+   ],
+   [
+    0,
+    1846,
+    272
+   ],
+   [
+    0,
+    0,
+    408
+   ],
+   [
+    0,
+    142,
+    408
+   ],
+   [
+    0,
+    284,
+    408
+   ],
+   [
+    0,
+    426,
+    408
+   ],
+   [
+    0,
+    568,
+    408
+   ],
+   [
+    0,
+    710,
+    408
+   ]
+  ],
+  "fps": 8.0,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 2.54,
+  "h": 2.42
+ },
+ "anchor": [
+  0.5591,
+  0.4711
+ ],
+ "gpuBytes": 4325888,
+ "duration": 6.0,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "WardRune_01_Regular_Yellow_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

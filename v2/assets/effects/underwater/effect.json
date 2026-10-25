@@ -1,0 +1,47 @@
+{
+ "id": "underwater",
+ "name": "Underwater (caustics)",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "water",
+  "underwater",
+  "caustics",
+  "sea",
+  "flooded"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/caustics.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uStrength": 0.8,
+   "uSpeed": 1.0,
+   "uScale": 0.5,
+   "uTint": [
+    0.55,
+    0.8,
+    0.9
+   ]
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

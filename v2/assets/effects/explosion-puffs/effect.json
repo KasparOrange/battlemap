@@ -1,0 +1,105 @@
+{
+ "id": "explosion-puffs",
+ "name": "Explosion (puffs, CC0)",
+ "category": "point",
+ "technique": "particles",
+ "tags": [
+  "explosion",
+  "burst",
+  "smoke"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Fireball",
+  "Explosive barrel"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 3,
+ "particles": {
+  "textures": [
+   {
+    "file": "particle-0.webp",
+    "w": 128,
+    "h": 117,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   },
+   {
+    "file": "particle-1.webp",
+    "w": 115,
+    "h": 128,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   },
+   {
+    "file": "particle-2.webp",
+    "w": 126,
+    "h": 128,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   },
+   {
+    "file": "particle-3.webp",
+    "w": 128,
+    "h": 118,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   }
+  ],
+  "emitter": "point",
+  "radius": 0.3,
+  "rate": 0,
+  "burst": 14,
+  "max": 14,
+  "life": [
+   0.6,
+   1.1
+  ],
+  "speed": [
+   0.6,
+   2.0
+  ],
+  "angle": [
+   0,
+   360
+  ],
+  "gravity": [
+   0.0,
+   -0.4
+  ],
+  "size": [
+   0.8,
+   1.4
+  ],
+  "grow": 1.8,
+  "alpha": [
+   1.0,
+   0.9,
+   0.0
+  ],
+  "colors": [
+   "#ffffff",
+   "#5a504a"
+  ],
+  "spin": [
+   -60,
+   60
+  ]
+ },
+ "gpuBytes": 243712,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/smoke-particles",
+ "sourceFile": null,
+ "attribution": "Smoke texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

@@ -1,0 +1,79 @@
+{
+ "id": "campfire-cc0",
+ "name": "Campfire (CC0 + generated)",
+ "category": "map-loop",
+ "technique": "composite",
+ "tags": [
+  "fire",
+  "camp",
+  "light source"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "parts": [
+  {
+   "id": "torch-glow",
+   "x": 0.0,
+   "y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": "campfire-base",
+   "x": 0.0,
+   "y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": "flame-small",
+   "x": -0.15,
+   "y": 0.12,
+   "scale": 0.6
+  },
+  {
+   "id": "flame-small",
+   "x": 0.16,
+   "y": 0.1,
+   "scale": 0.55,
+   "phase": 0.4
+  },
+  {
+   "id": "flame-small",
+   "x": 0.0,
+   "y": 0.05,
+   "scale": 0.75,
+   "phase": 0.7
+  },
+  {
+   "id": "embers-rising",
+   "x": 0.0,
+   "y": 0.0,
+   "scale": 1.0
+  }
+ ],
+ "size": {
+  "w": 2,
+  "h": 2
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": "Parts keep their own licences (CC0 Unity flames + Kenney glow + generated base)."
+}

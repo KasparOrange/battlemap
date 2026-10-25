@@ -1,0 +1,81 @@
+{
+ "id": "hit-sparks",
+ "name": "Hit sparks",
+ "category": "point",
+ "technique": "particles",
+ "tags": [
+  "hit",
+  "sparks",
+  "metal",
+  "parry"
+ ],
+ "damage": [
+  "slashing",
+  "piercing",
+  "bludgeoning"
+ ],
+ "spells": [],
+ "layer": "air",
+ "blend": "add",
+ "tint": false,
+ "squares": 1,
+ "particles": {
+  "textures": [
+   {
+    "file": "particle-0.webp",
+    "w": 64,
+    "h": 22,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   }
+  ],
+  "emitter": "point",
+  "radius": 0.05,
+  "rate": 0,
+  "burst": 18,
+  "max": 18,
+  "life": [
+   0.2,
+   0.45
+  ],
+  "speed": [
+   2.0,
+   4.5
+  ],
+  "angle": [
+   0,
+   360
+  ],
+  "gravity": [
+   0.0,
+   2.0
+  ],
+  "size": [
+   0.15,
+   0.3
+  ],
+  "grow": 0.3,
+  "alpha": [
+   1.0,
+   1.0,
+   0.0
+  ],
+  "colors": [
+   "#fff4c0",
+   "#ff9a30"
+  ],
+  "alignToVelocity": true
+ },
+ "gpuBytes": 5632,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": null,
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

@@ -1,0 +1,45 @@
+{
+ "id": "web-corner",
+ "name": "Corner cobweb",
+ "category": "map-loop",
+ "technique": "texture",
+ "tags": [
+  "web",
+  "cobweb",
+  "dungeon dressing",
+  "corner"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 4,
+ "texture": {
+  "file": "texture.webp",
+  "w": 384,
+  "h": 384,
+  "wrap": "clamp"
+ },
+ "motion": {},
+ "size": {
+  "w": 3.48,
+  "h": 3.477
+ },
+ "anchor": [
+  0.0,
+  0.0
+ ],
+ "gpuBytes": 589824,
+ "licence": {
+  "id": "Own work (generated)",
+  "url": "https://ai.google.dev/gemini-api/terms",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap, generated with Google Gemini",
+ "source": "",
+ "sourceFile": "web-corner.jpg",
+ "attribution": "Generated for battlemap with Google Gemini (Nano Banana 2.1).",
+ "notes": "Anchor at the room corner (top left); rotate by 90° steps for other corners."
+}

@@ -1,0 +1,48 @@
+{
+ "id": "night",
+ "name": "Night (darkness with lights)",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "night",
+  "darkness",
+  "lighting",
+  "mood"
+ ],
+ "damage": [],
+ "spells": [
+  "Darkness",
+  "Darkvision"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/darkness.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uDarkness": 0.72,
+   "uTint": [
+    0.35,
+    0.42,
+    0.7
+   ],
+   "uLightCount": 0
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": "Up to 8 lights in uLights (x, y in squares, radius in squares, strength 0..1)."
+}

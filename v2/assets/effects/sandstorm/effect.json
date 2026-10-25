@@ -1,0 +1,47 @@
+{
+ "id": "sandstorm",
+ "name": "Sandstorm",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "sand",
+  "desert",
+  "weather",
+  "storm",
+  "dust"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/fog.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uDensity": 0.7,
+   "uSpeed": 2.2,
+   "uScale": 0.25,
+   "uColor": [
+    0.82,
+    0.66,
+    0.42
+   ]
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

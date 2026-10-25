@@ -1,0 +1,214 @@
+{
+ "id": "vortex-ring",
+ "name": "Spiral vortex ring",
+ "category": "aura",
+ "technique": "sheet",
+ "tags": [
+  "vortex",
+  "spiral",
+  "portal",
+  "aura"
+ ],
+ "damage": [],
+ "spells": [
+  "Gate",
+  "Teleport",
+  "Wild magic surge"
+ ],
+ "layer": "air",
+ "blend": "add",
+ "tint": true,
+ "squares": 3,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1995,
+    "h": 206
+   }
+  ],
+  "frameW": 105,
+  "frameH": 103,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    105,
+    0
+   ],
+   [
+    0,
+    210,
+    0
+   ],
+   [
+    0,
+    315,
+    0
+   ],
+   [
+    0,
+    420,
+    0
+   ],
+   [
+    0,
+    525,
+    0
+   ],
+   [
+    0,
+    630,
+    0
+   ],
+   [
+    0,
+    735,
+    0
+   ],
+   [
+    0,
+    840,
+    0
+   ],
+   [
+    0,
+    945,
+    0
+   ],
+   [
+    0,
+    1050,
+    0
+   ],
+   [
+    0,
+    1155,
+    0
+   ],
+   [
+    0,
+    1260,
+    0
+   ],
+   [
+    0,
+    1365,
+    0
+   ],
+   [
+    0,
+    1470,
+    0
+   ],
+   [
+    0,
+    1575,
+    0
+   ],
+   [
+    0,
+    1680,
+    0
+   ],
+   [
+    0,
+    1785,
+    0
+   ],
+   [
+    0,
+    1890,
+    0
+   ],
+   [
+    0,
+    0,
+    103
+   ],
+   [
+    0,
+    105,
+    103
+   ],
+   [
+    0,
+    210,
+    103
+   ],
+   [
+    0,
+    315,
+    103
+   ],
+   [
+    0,
+    420,
+    103
+   ],
+   [
+    0,
+    525,
+    103
+   ],
+   [
+    0,
+    630,
+    103
+   ],
+   [
+    0,
+    735,
+    103
+   ],
+   [
+    0,
+    840,
+    103
+   ],
+   [
+    0,
+    945,
+    103
+   ],
+   [
+    0,
+    1050,
+    103
+   ],
+   [
+    0,
+    1155,
+    103
+   ]
+  ],
+  "fps": 16.18,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 1.875,
+  "h": 1.836
+ },
+ "anchor": [
+  0.5,
+  0.5021
+ ],
+ "gpuBytes": 1643880,
+ "duration": 1.92,
+ "licence": {
+  "id": "Lottie Simple License",
+  "url": "https://lottiefiles.com/page/license",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "ZhengWang (LottieFiles)",
+ "source": "https://lottiefiles.com/animations/vortex-UhsY3SdpvW",
+ "sourceFile": "vortex-ring",
+ "attribution": "\"vortex\" by ZhengWang on LottieFiles (Lottie Simple License), baked into a sprite sheet.",
+ "notes": ""
+}

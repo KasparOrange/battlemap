@@ -1,0 +1,220 @@
+{
+ "id": "fireball",
+ "name": "Fireball",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "explosion",
+  "burst",
+  "evocation"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Fireball",
+  "Delayed Blast Fireball",
+  "Meteor Swarm"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 8,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1974,
+    "h": 1425
+   }
+  ],
+  "frameW": 282,
+  "frameH": 285,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    282,
+    0
+   ],
+   [
+    0,
+    564,
+    0
+   ],
+   [
+    0,
+    846,
+    0
+   ],
+   [
+    0,
+    1128,
+    0
+   ],
+   [
+    0,
+    1410,
+    0
+   ],
+   [
+    0,
+    1692,
+    0
+   ],
+   [
+    0,
+    0,
+    285
+   ],
+   [
+    0,
+    282,
+    285
+   ],
+   [
+    0,
+    564,
+    285
+   ],
+   [
+    0,
+    846,
+    285
+   ],
+   [
+    0,
+    1128,
+    285
+   ],
+   [
+    0,
+    1410,
+    285
+   ],
+   [
+    0,
+    1692,
+    285
+   ],
+   [
+    0,
+    0,
+    570
+   ],
+   [
+    0,
+    282,
+    570
+   ],
+   [
+    0,
+    564,
+    570
+   ],
+   [
+    0,
+    846,
+    570
+   ],
+   [
+    0,
+    1128,
+    570
+   ],
+   [
+    0,
+    1410,
+    570
+   ],
+   [
+    0,
+    1692,
+    570
+   ],
+   [
+    0,
+    0,
+    855
+   ],
+   [
+    0,
+    282,
+    855
+   ],
+   [
+    0,
+    564,
+    855
+   ],
+   [
+    0,
+    846,
+    855
+   ],
+   [
+    0,
+    1128,
+    855
+   ],
+   [
+    0,
+    1410,
+    855
+   ],
+   [
+    0,
+    1692,
+    855
+   ],
+   [
+    0,
+    0,
+    1140
+   ],
+   [
+    0,
+    282,
+    1140
+   ],
+   [
+    0,
+    564,
+    1140
+   ],
+   [
+    0,
+    846,
+    1140
+   ]
+  ],
+  "fps": 9.3,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 7.84,
+  "h": 7.91
+ },
+ "anchor": [
+  0.4987,
+  0.4943
+ ],
+ "gpuBytes": 11251800,
+ "duration": 3.33,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "FireballExplosion_01_Orange_800x800.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": "40 ft diameter at 8 squares. The long smoke fade after 3.4 s is cut."
+}

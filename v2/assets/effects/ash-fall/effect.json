@@ -1,0 +1,78 @@
+{
+ "id": "ash-fall",
+ "name": "Falling ash",
+ "category": "global",
+ "technique": "particles",
+ "tags": [
+  "ash",
+  "volcano",
+  "burnt",
+  "weather"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "particles": {
+  "textures": [
+   {
+    "file": "particle-0.webp",
+    "w": 32,
+    "h": 32,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   }
+  ],
+  "emitter": "screen",
+  "rate": 10,
+  "max": 90,
+  "life": [
+   5.0,
+   9.0
+  ],
+  "speed": [
+   0.2,
+   0.5
+  ],
+  "angle": [
+   70,
+   110
+  ],
+  "gravity": [
+   0.05,
+   0.02
+  ],
+  "size": [
+   0.05,
+   0.12
+  ],
+  "grow": 1.0,
+  "alpha": [
+   0.0,
+   0.7,
+   0.0
+  ],
+  "colors": [
+   "#9a958f",
+   "#5d5a56"
+  ],
+  "wobble": [
+   0.3,
+   0.4
+  ]
+ },
+ "gpuBytes": 4096,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": null,
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

@@ -1,0 +1,301 @@
+{
+ "id": "poison-cloud",
+ "name": "Poison cloud",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "poison",
+  "gas",
+  "cloud"
+ ],
+ "damage": [
+  "poison"
+ ],
+ "spells": [
+  "Cloudkill",
+  "Stinking Cloud",
+  "Poison Spray",
+  "Green dragon breath"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 4,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1936,
+    "h": 875
+   }
+  ],
+  "frameW": 176,
+  "frameH": 175,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    176,
+    0
+   ],
+   [
+    0,
+    352,
+    0
+   ],
+   [
+    0,
+    528,
+    0
+   ],
+   [
+    0,
+    704,
+    0
+   ],
+   [
+    0,
+    880,
+    0
+   ],
+   [
+    0,
+    1056,
+    0
+   ],
+   [
+    0,
+    1232,
+    0
+   ],
+   [
+    0,
+    1408,
+    0
+   ],
+   [
+    0,
+    1584,
+    0
+   ],
+   [
+    0,
+    1760,
+    0
+   ],
+   [
+    0,
+    0,
+    175
+   ],
+   [
+    0,
+    176,
+    175
+   ],
+   [
+    0,
+    352,
+    175
+   ],
+   [
+    0,
+    528,
+    175
+   ],
+   [
+    0,
+    704,
+    175
+   ],
+   [
+    0,
+    880,
+    175
+   ],
+   [
+    0,
+    1056,
+    175
+   ],
+   [
+    0,
+    1232,
+    175
+   ],
+   [
+    0,
+    1408,
+    175
+   ],
+   [
+    0,
+    1584,
+    175
+   ],
+   [
+    0,
+    1760,
+    175
+   ],
+   [
+    0,
+    0,
+    350
+   ],
+   [
+    0,
+    176,
+    350
+   ],
+   [
+    0,
+    352,
+    350
+   ],
+   [
+    0,
+    528,
+    350
+   ],
+   [
+    0,
+    704,
+    350
+   ],
+   [
+    0,
+    880,
+    350
+   ],
+   [
+    0,
+    1056,
+    350
+   ],
+   [
+    0,
+    1232,
+    350
+   ],
+   [
+    0,
+    1408,
+    350
+   ],
+   [
+    0,
+    1584,
+    350
+   ],
+   [
+    0,
+    1760,
+    350
+   ],
+   [
+    0,
+    0,
+    525
+   ],
+   [
+    0,
+    176,
+    525
+   ],
+   [
+    0,
+    352,
+    525
+   ],
+   [
+    0,
+    528,
+    525
+   ],
+   [
+    0,
+    704,
+    525
+   ],
+   [
+    0,
+    880,
+    525
+   ],
+   [
+    0,
+    1056,
+    525
+   ],
+   [
+    0,
+    1232,
+    525
+   ],
+   [
+    0,
+    1408,
+    525
+   ],
+   [
+    0,
+    1584,
+    525
+   ],
+   [
+    0,
+    1760,
+    525
+   ],
+   [
+    0,
+    0,
+    700
+   ],
+   [
+    0,
+    176,
+    700
+   ],
+   [
+    0,
+    352,
+    700
+   ],
+   [
+    0,
+    528,
+    700
+   ]
+  ],
+  "fps": 11.25,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 4.0,
+  "h": 3.969
+ },
+ "anchor": [
+  0.5,
+  0.4961
+ ],
+ "gpuBytes": 6776000,
+ "duration": 4.27,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Unity Technologies (Unity Labs)",
+ "source": "https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks",
+ "sourceFile": "Cloud01-flipbooks/Cloud01_8x8.tga",
+ "attribution": "Flipbook by Unity Labs (CC0).",
+ "notes": ""
+}

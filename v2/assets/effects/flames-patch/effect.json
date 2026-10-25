@@ -1,0 +1,300 @@
+{
+ "id": "flames-patch",
+ "name": "Burning ground",
+ "category": "map-loop",
+ "technique": "sheet",
+ "tags": [
+  "fire",
+  "burning",
+  "hazard"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Create Bonfire",
+  "Wall of Fire",
+  "Flame Strike (aftermath)"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1974,
+    "h": 249
+   }
+  ],
+  "frameW": 94,
+  "frameH": 83,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    94,
+    0
+   ],
+   [
+    0,
+    188,
+    0
+   ],
+   [
+    0,
+    282,
+    0
+   ],
+   [
+    0,
+    376,
+    0
+   ],
+   [
+    0,
+    470,
+    0
+   ],
+   [
+    0,
+    564,
+    0
+   ],
+   [
+    0,
+    658,
+    0
+   ],
+   [
+    0,
+    752,
+    0
+   ],
+   [
+    0,
+    846,
+    0
+   ],
+   [
+    0,
+    940,
+    0
+   ],
+   [
+    0,
+    1034,
+    0
+   ],
+   [
+    0,
+    1128,
+    0
+   ],
+   [
+    0,
+    1222,
+    0
+   ],
+   [
+    0,
+    1316,
+    0
+   ],
+   [
+    0,
+    1410,
+    0
+   ],
+   [
+    0,
+    1504,
+    0
+   ],
+   [
+    0,
+    1598,
+    0
+   ],
+   [
+    0,
+    1692,
+    0
+   ],
+   [
+    0,
+    1786,
+    0
+   ],
+   [
+    0,
+    1880,
+    0
+   ],
+   [
+    0,
+    0,
+    83
+   ],
+   [
+    0,
+    94,
+    83
+   ],
+   [
+    0,
+    188,
+    83
+   ],
+   [
+    0,
+    282,
+    83
+   ],
+   [
+    0,
+    376,
+    83
+   ],
+   [
+    0,
+    470,
+    83
+   ],
+   [
+    0,
+    564,
+    83
+   ],
+   [
+    0,
+    658,
+    83
+   ],
+   [
+    0,
+    752,
+    83
+   ],
+   [
+    0,
+    846,
+    83
+   ],
+   [
+    0,
+    940,
+    83
+   ],
+   [
+    0,
+    1034,
+    83
+   ],
+   [
+    0,
+    1128,
+    83
+   ],
+   [
+    0,
+    1222,
+    83
+   ],
+   [
+    0,
+    1316,
+    83
+   ],
+   [
+    0,
+    1410,
+    83
+   ],
+   [
+    0,
+    1504,
+    83
+   ],
+   [
+    0,
+    1598,
+    83
+   ],
+   [
+    0,
+    1692,
+    83
+   ],
+   [
+    0,
+    1786,
+    83
+   ],
+   [
+    0,
+    1880,
+    83
+   ],
+   [
+    0,
+    0,
+    166
+   ],
+   [
+    0,
+    94,
+    166
+   ],
+   [
+    0,
+    188,
+    166
+   ],
+   [
+    0,
+    282,
+    166
+   ],
+   [
+    0,
+    376,
+    166
+   ],
+   [
+    0,
+    470,
+    166
+   ]
+  ],
+  "fps": 9.66,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 1.685,
+  "h": 1.49
+ },
+ "anchor": [
+  0.5935,
+  0.4698
+ ],
+ "gpuBytes": 1966104,
+ "duration": 4.97,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "Flames_02_Regular_Orange_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

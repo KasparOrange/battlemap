@@ -1,0 +1,133 @@
+{
+ "id": "runes-ember",
+ "name": "Dwarven fire runes (16 variants)",
+ "category": "point",
+ "technique": "set",
+ "tags": [
+  "runes",
+  "glyphs",
+  "dwarven",
+  "forge"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "ground",
+ "blend": "add",
+ "tint": false,
+ "squares": 1.2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 944,
+    "h": 67
+   }
+  ],
+  "frameW": 59,
+  "frameH": 67,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    59,
+    0
+   ],
+   [
+    0,
+    118,
+    0
+   ],
+   [
+    0,
+    177,
+    0
+   ],
+   [
+    0,
+    236,
+    0
+   ],
+   [
+    0,
+    295,
+    0
+   ],
+   [
+    0,
+    354,
+    0
+   ],
+   [
+    0,
+    413,
+    0
+   ],
+   [
+    0,
+    472,
+    0
+   ],
+   [
+    0,
+    531,
+    0
+   ],
+   [
+    0,
+    590,
+    0
+   ],
+   [
+    0,
+    649,
+    0
+   ],
+   [
+    0,
+    708,
+    0
+   ],
+   [
+    0,
+    767,
+    0
+   ],
+   [
+    0,
+    826,
+    0
+   ],
+   [
+    0,
+    885,
+    0
+   ]
+  ],
+  "variants": true
+ },
+ "size": {
+  "w": 1.055,
+  "h": 1.2
+ },
+ "anchor": [
+  0.4311,
+  0.5
+ ],
+ "gpuBytes": 252992,
+ "duration": 0.53,
+ "licence": {
+  "id": "Own work (generated)",
+  "url": "https://ai.google.dev/gemini-api/terms",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap, generated with Google Gemini",
+ "source": "",
+ "sourceFile": "runes-ember.jpg",
+ "attribution": "Generated for battlemap with Google Gemini (Nano Banana 2.1).",
+ "notes": ""
+}

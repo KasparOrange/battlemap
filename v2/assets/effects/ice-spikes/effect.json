@@ -1,0 +1,241 @@
+{
+ "id": "ice-spikes",
+ "name": "Ice spikes burst",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "ice",
+  "spikes",
+  "frost"
+ ],
+ "damage": [
+  "cold",
+  "piercing"
+ ],
+ "spells": [
+  "Ice Knife",
+  "Frost spikes",
+  "Spike Growth (ice)"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 6,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1990,
+    "h": 824
+   }
+  ],
+  "frameW": 199,
+  "frameH": 206,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    199,
+    0
+   ],
+   [
+    0,
+    398,
+    0
+   ],
+   [
+    0,
+    597,
+    0
+   ],
+   [
+    0,
+    796,
+    0
+   ],
+   [
+    0,
+    995,
+    0
+   ],
+   [
+    0,
+    1194,
+    0
+   ],
+   [
+    0,
+    1393,
+    0
+   ],
+   [
+    0,
+    1592,
+    0
+   ],
+   [
+    0,
+    1791,
+    0
+   ],
+   [
+    0,
+    0,
+    206
+   ],
+   [
+    0,
+    199,
+    206
+   ],
+   [
+    0,
+    398,
+    206
+   ],
+   [
+    0,
+    597,
+    206
+   ],
+   [
+    0,
+    796,
+    206
+   ],
+   [
+    0,
+    995,
+    206
+   ],
+   [
+    0,
+    1194,
+    206
+   ],
+   [
+    0,
+    1393,
+    206
+   ],
+   [
+    0,
+    1592,
+    206
+   ],
+   [
+    0,
+    1791,
+    206
+   ],
+   [
+    0,
+    0,
+    412
+   ],
+   [
+    0,
+    199,
+    412
+   ],
+   [
+    0,
+    398,
+    412
+   ],
+   [
+    0,
+    597,
+    412
+   ],
+   [
+    0,
+    796,
+    412
+   ],
+   [
+    0,
+    995,
+    412
+   ],
+   [
+    0,
+    1194,
+    412
+   ],
+   [
+    0,
+    1393,
+    412
+   ],
+   [
+    0,
+    1592,
+    412
+   ],
+   [
+    0,
+    1791,
+    412
+   ],
+   [
+    0,
+    0,
+    618
+   ],
+   [
+    0,
+    199,
+    618
+   ],
+   [
+    0,
+    398,
+    618
+   ],
+   [
+    0,
+    597,
+    618
+   ],
+   [
+    0,
+    796,
+    618
+   ],
+   [
+    0,
+    995,
+    618
+   ]
+  ],
+  "fps": 11.87,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 4.518,
+  "h": 4.674
+ },
+ "anchor": [
+  0.4887,
+  0.466
+ ],
+ "gpuBytes": 6559040,
+ "duration": 3.03,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "IceSpikesRadialLoop_01_Regular_White_1000x1000.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

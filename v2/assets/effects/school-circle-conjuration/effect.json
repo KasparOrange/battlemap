@@ -1,0 +1,58 @@
+{
+ "id": "school-circle-conjuration",
+ "name": "Magic circle — conjuration (JB2A)",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "magic circle",
+  "school",
+  "conjuration",
+  "summon",
+  "ritual"
+ ],
+ "damage": [],
+ "spells": [
+  "Conjure Animals",
+  "Find Familiar",
+  "Teleportation Circle"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 8,
+ "texture": {
+  "file": "texture.webp",
+  "w": 512,
+  "h": 512,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "rotate": 3,
+  "pulse": {
+   "period": 4,
+   "alpha": 0.2,
+   "scale": 0.0
+  },
+  "fadeIn": 1.0
+ },
+ "size": {
+  "w": 7.9,
+  "h": 7.9
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 1048576,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "ConjurationCircleLoop_02_Regular_Yellow_800x800.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

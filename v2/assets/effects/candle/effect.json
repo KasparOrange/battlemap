@@ -1,0 +1,52 @@
+{
+ "id": "candle",
+ "name": "Candle (flame + light)",
+ "category": "map-loop",
+ "technique": "composite",
+ "tags": [
+  "candle",
+  "light source",
+  "altar",
+  "ritual"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 0.5,
+ "parts": [
+  {
+   "id": "candle-glow",
+   "x": 0.0,
+   "y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": "flame-candle",
+   "x": 0.0,
+   "y": 0.1,
+   "scale": 1.0
+  }
+ ],
+ "size": {
+  "w": 0.5,
+  "h": 0.5
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

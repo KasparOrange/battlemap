@@ -1,0 +1,58 @@
+{
+ "id": "school-circle-necromancy",
+ "name": "Magic circle — necromancy (JB2A)",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "magic circle",
+  "school",
+  "necromancy",
+  "undead",
+  "ritual"
+ ],
+ "damage": [],
+ "spells": [
+  "Animate Dead",
+  "Speak with Dead",
+  "Create Undead"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 8,
+ "texture": {
+  "file": "texture.webp",
+  "w": 512,
+  "h": 512,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "rotate": 3,
+  "pulse": {
+   "period": 4,
+   "alpha": 0.2,
+   "scale": 0.0
+  },
+  "fadeIn": 1.0
+ },
+ "size": {
+  "w": 8.0,
+  "h": 8.0
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 1048576,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "NecromancyCircleLoop_02_Regular_Green_800x800.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

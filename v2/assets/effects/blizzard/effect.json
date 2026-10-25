@@ -1,0 +1,48 @@
+{
+ "id": "blizzard",
+ "name": "Blizzard",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "snow",
+  "weather",
+  "winter",
+  "storm"
+ ],
+ "damage": [
+  "cold"
+ ],
+ "spells": [
+  "Control Weather",
+  "Sleet Storm",
+  "Ice Storm"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/snow.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uDensity": 1.0,
+   "uSpeed": 2.2,
+   "uWind": 1.1,
+   "uSize": 0.8
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

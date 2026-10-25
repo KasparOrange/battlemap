@@ -1,0 +1,138 @@
+{
+ "id": "thunderwave",
+ "name": "Thunderwave",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "shockwave",
+  "cube",
+  "push"
+ ],
+ "damage": [
+  "thunder"
+ ],
+ "spells": [
+  "Thunderwave"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 3,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2004,
+    "h": 334
+   }
+  ],
+  "frameW": 167,
+  "frameH": 167,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    167,
+    0
+   ],
+   [
+    0,
+    334,
+    0
+   ],
+   [
+    0,
+    501,
+    0
+   ],
+   [
+    0,
+    668,
+    0
+   ],
+   [
+    0,
+    835,
+    0
+   ],
+   [
+    0,
+    1002,
+    0
+   ],
+   [
+    0,
+    1169,
+    0
+   ],
+   [
+    0,
+    1336,
+    0
+   ],
+   [
+    0,
+    1503,
+    0
+   ],
+   [
+    0,
+    1670,
+    0
+   ],
+   [
+    0,
+    1837,
+    0
+   ],
+   [
+    0,
+    0,
+    167
+   ],
+   [
+    0,
+    167,
+    167
+   ],
+   [
+    0,
+    334,
+    167
+   ],
+   [
+    0,
+    501,
+    167
+   ]
+  ],
+  "fps": 25.0,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 2.98,
+  "h": 2.985
+ },
+ "anchor": [
+  0.5034,
+  0.5025
+ ],
+ "gpuBytes": 2677344,
+ "duration": 0.6,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "Thunderwave_01_Bright_Blue_Center_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

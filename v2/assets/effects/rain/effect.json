@@ -1,0 +1,46 @@
+{
+ "id": "rain",
+ "name": "Rain",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "rain",
+  "weather",
+  "storm"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/rain.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uDensity": 0.55,
+   "uSpeed": 1.0,
+   "uAngle": 0.15,
+   "uDarken": 0.12,
+   "uColor": [
+    0.75,
+    0.82,
+    0.95
+   ]
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

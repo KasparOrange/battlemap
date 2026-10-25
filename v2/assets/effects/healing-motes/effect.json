@@ -1,0 +1,82 @@
+{
+ "id": "healing-motes",
+ "name": "Healing motes",
+ "category": "aura",
+ "technique": "particles",
+ "tags": [
+  "healing",
+  "sparkles",
+  "aura"
+ ],
+ "damage": [],
+ "spells": [
+  "Cure Wounds",
+  "Aura of Vitality",
+  "Regenerate"
+ ],
+ "layer": "air",
+ "blend": "add",
+ "tint": false,
+ "squares": 1.5,
+ "particles": {
+  "textures": [
+   {
+    "file": "particle-0.webp",
+    "w": 47,
+    "h": 48,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   }
+  ],
+  "emitter": "ring",
+  "radius": 0.7,
+  "rate": 12,
+  "max": 40,
+  "life": [
+   1.0,
+   2.0
+  ],
+  "speed": [
+   0.2,
+   0.5
+  ],
+  "angle": [
+   -100,
+   -80
+  ],
+  "gravity": [
+   0.0,
+   -0.2
+  ],
+  "size": [
+   0.12,
+   0.22
+  ],
+  "grow": 0.4,
+  "alpha": [
+   0.0,
+   1.0,
+   0.0
+  ],
+  "colors": [
+   "#d8ffb0",
+   "#40e070"
+  ],
+  "spin": [
+   -90,
+   90
+  ]
+ },
+ "gpuBytes": 9024,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": null,
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

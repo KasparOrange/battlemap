@@ -1,0 +1,53 @@
+{
+ "id": "arcane-sigil",
+ "name": "Arcane sigil (pentagon)",
+ "category": "aura",
+ "technique": "texture",
+ "tags": [
+  "sigil",
+  "ring",
+  "aura",
+  "casting"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "ground",
+ "blend": "add",
+ "tint": true,
+ "squares": 2.5,
+ "texture": {
+  "file": "texture.webp",
+  "w": 249,
+  "h": 256,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "color": "#b08cff",
+  "rotate": 20,
+  "pulse": {
+   "period": 2,
+   "alpha": 0.3,
+   "scale": 0.0
+  }
+ },
+ "size": {
+  "w": 2.036,
+  "h": 2.09
+ },
+ "anchor": [
+  0.4964,
+  0.4953
+ ],
+ "gpuBytes": 254976,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": "magic_02.png",
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

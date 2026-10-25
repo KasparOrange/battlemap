@@ -1,0 +1,297 @@
+{
+ "id": "burning-hands",
+ "name": "Burning Hands (cone)",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "cone",
+  "flame"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Burning Hands"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 3,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2004,
+    "h": 672
+   }
+  ],
+  "frameW": 167,
+  "frameH": 168,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    167,
+    0
+   ],
+   [
+    0,
+    334,
+    0
+   ],
+   [
+    0,
+    501,
+    0
+   ],
+   [
+    0,
+    668,
+    0
+   ],
+   [
+    0,
+    835,
+    0
+   ],
+   [
+    0,
+    1002,
+    0
+   ],
+   [
+    0,
+    1169,
+    0
+   ],
+   [
+    0,
+    1336,
+    0
+   ],
+   [
+    0,
+    1503,
+    0
+   ],
+   [
+    0,
+    1670,
+    0
+   ],
+   [
+    0,
+    1837,
+    0
+   ],
+   [
+    0,
+    0,
+    168
+   ],
+   [
+    0,
+    167,
+    168
+   ],
+   [
+    0,
+    334,
+    168
+   ],
+   [
+    0,
+    501,
+    168
+   ],
+   [
+    0,
+    668,
+    168
+   ],
+   [
+    0,
+    835,
+    168
+   ],
+   [
+    0,
+    1002,
+    168
+   ],
+   [
+    0,
+    1169,
+    168
+   ],
+   [
+    0,
+    1336,
+    168
+   ],
+   [
+    0,
+    1503,
+    168
+   ],
+   [
+    0,
+    1670,
+    168
+   ],
+   [
+    0,
+    1837,
+    168
+   ],
+   [
+    0,
+    0,
+    336
+   ],
+   [
+    0,
+    167,
+    336
+   ],
+   [
+    0,
+    334,
+    336
+   ],
+   [
+    0,
+    501,
+    336
+   ],
+   [
+    0,
+    668,
+    336
+   ],
+   [
+    0,
+    835,
+    336
+   ],
+   [
+    0,
+    1002,
+    336
+   ],
+   [
+    0,
+    1169,
+    336
+   ],
+   [
+    0,
+    1336,
+    336
+   ],
+   [
+    0,
+    1503,
+    336
+   ],
+   [
+    0,
+    1670,
+    336
+   ],
+   [
+    0,
+    1837,
+    336
+   ],
+   [
+    0,
+    0,
+    504
+   ],
+   [
+    0,
+    167,
+    504
+   ],
+   [
+    0,
+    334,
+    504
+   ],
+   [
+    0,
+    501,
+    504
+   ],
+   [
+    0,
+    668,
+    504
+   ],
+   [
+    0,
+    835,
+    504
+   ],
+   [
+    0,
+    1002,
+    504
+   ],
+   [
+    0,
+    1169,
+    504
+   ],
+   [
+    0,
+    1336,
+    504
+   ],
+   [
+    0,
+    1503,
+    504
+   ],
+   [
+    0,
+    1670,
+    504
+   ],
+   [
+    0,
+    1837,
+    504
+   ]
+  ],
+  "fps": 8.92,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 2.985,
+  "h": 3.0
+ },
+ "anchor": [
+  -0.005,
+  0.5
+ ],
+ "gpuBytes": 5386752,
+ "duration": 5.27,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "BurningHands_01_Regular_Orange_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": "Apex of the 15 ft cone at the anchor (left middle); rotate toward the target."
+}

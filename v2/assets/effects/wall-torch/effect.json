@@ -1,0 +1,55 @@
+{
+ "id": "wall-torch",
+ "name": "Torch (flame + light)",
+ "category": "map-loop",
+ "technique": "composite",
+ "tags": [
+  "fire",
+  "torch",
+  "sconce",
+  "light source",
+  "dungeon"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 1,
+ "parts": [
+  {
+   "id": "torch-glow",
+   "x": 0.0,
+   "y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": "flame-small",
+   "x": 0.0,
+   "y": 0.2,
+   "scale": 0.7
+  }
+ ],
+ "size": {
+  "w": 1,
+  "h": 1
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

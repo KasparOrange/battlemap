@@ -1,0 +1,187 @@
+{
+ "id": "dust-burst",
+ "name": "Dust burst",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "dust",
+  "smoke",
+  "impact",
+  "collapse"
+ ],
+ "damage": [
+  "bludgeoning",
+  "thunder"
+ ],
+ "spells": [
+  "Earth Tremor",
+  "Thunderwave",
+  "Cave-in"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 4,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2016,
+    "h": 663
+   }
+  ],
+  "frameW": 224,
+  "frameH": 221,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    224,
+    0
+   ],
+   [
+    0,
+    448,
+    0
+   ],
+   [
+    0,
+    672,
+    0
+   ],
+   [
+    0,
+    896,
+    0
+   ],
+   [
+    0,
+    1120,
+    0
+   ],
+   [
+    0,
+    1344,
+    0
+   ],
+   [
+    0,
+    1568,
+    0
+   ],
+   [
+    0,
+    1792,
+    0
+   ],
+   [
+    0,
+    0,
+    221
+   ],
+   [
+    0,
+    224,
+    221
+   ],
+   [
+    0,
+    448,
+    221
+   ],
+   [
+    0,
+    672,
+    221
+   ],
+   [
+    0,
+    896,
+    221
+   ],
+   [
+    0,
+    1120,
+    221
+   ],
+   [
+    0,
+    1344,
+    221
+   ],
+   [
+    0,
+    1568,
+    221
+   ],
+   [
+    0,
+    1792,
+    221
+   ],
+   [
+    0,
+    0,
+    442
+   ],
+   [
+    0,
+    224,
+    442
+   ],
+   [
+    0,
+    448,
+    442
+   ],
+   [
+    0,
+    672,
+    442
+   ],
+   [
+    0,
+    896,
+    442
+   ],
+   [
+    0,
+    1120,
+    442
+   ],
+   [
+    0,
+    1344,
+    442
+   ]
+  ],
+  "fps": 14.4,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 4.0,
+  "h": 3.941
+ },
+ "anchor": [
+  0.5,
+  0.4925
+ ],
+ "gpuBytes": 5346432,
+ "duration": 1.67,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Unity Technologies (Unity Labs)",
+ "source": "https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks",
+ "sourceFile": "Explosion01-light-nofire-flipbooks/Explosion01-light-nofire_5x5.tga",
+ "attribution": "Flipbook by Unity Labs (CC0).",
+ "notes": ""
+}

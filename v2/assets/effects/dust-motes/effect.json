@@ -1,0 +1,78 @@
+{
+ "id": "dust-motes",
+ "name": "Dust motes (sunbeam)",
+ "category": "global",
+ "technique": "particles",
+ "tags": [
+  "dust",
+  "ambient",
+  "old library",
+  "crypt"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "add",
+ "tint": false,
+ "squares": null,
+ "particles": {
+  "textures": [
+   {
+    "file": "particle-0.webp",
+    "w": 32,
+    "h": 32,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   }
+  ],
+  "emitter": "screen",
+  "rate": 4,
+  "max": 45,
+  "life": [
+   6.0,
+   12.0
+  ],
+  "speed": [
+   0.02,
+   0.1
+  ],
+  "angle": [
+   0,
+   360
+  ],
+  "gravity": [
+   0.0,
+   0.0
+  ],
+  "size": [
+   0.03,
+   0.07
+  ],
+  "grow": 1.0,
+  "alpha": [
+   0.0,
+   0.45,
+   0.0
+  ],
+  "colors": [
+   "#fff1d0",
+   "#ffe0a0"
+  ],
+  "wobble": [
+   0.2,
+   0.15
+  ]
+ },
+ "gpuBytes": 4096,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": null,
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

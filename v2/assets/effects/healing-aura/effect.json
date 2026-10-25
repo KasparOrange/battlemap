@@ -1,0 +1,198 @@
+{
+ "id": "healing-aura",
+ "name": "Healing aura",
+ "category": "aura",
+ "technique": "sheet",
+ "tags": [
+  "healing",
+  "aura",
+  "regeneration"
+ ],
+ "damage": [],
+ "spells": [
+  "Aura of Vitality",
+  "Regenerate",
+  "Prayer of Healing"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 3,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1980,
+    "h": 501
+   }
+  ],
+  "frameW": 165,
+  "frameH": 167,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    165,
+    0
+   ],
+   [
+    0,
+    330,
+    0
+   ],
+   [
+    0,
+    495,
+    0
+   ],
+   [
+    0,
+    660,
+    0
+   ],
+   [
+    0,
+    825,
+    0
+   ],
+   [
+    0,
+    990,
+    0
+   ],
+   [
+    0,
+    1155,
+    0
+   ],
+   [
+    0,
+    1320,
+    0
+   ],
+   [
+    0,
+    1485,
+    0
+   ],
+   [
+    0,
+    1650,
+    0
+   ],
+   [
+    0,
+    1815,
+    0
+   ],
+   [
+    0,
+    0,
+    167
+   ],
+   [
+    0,
+    165,
+    167
+   ],
+   [
+    0,
+    330,
+    167
+   ],
+   [
+    0,
+    495,
+    167
+   ],
+   [
+    0,
+    660,
+    167
+   ],
+   [
+    0,
+    825,
+    167
+   ],
+   [
+    0,
+    990,
+    167
+   ],
+   [
+    0,
+    1155,
+    167
+   ],
+   [
+    0,
+    1320,
+    167
+   ],
+   [
+    0,
+    1485,
+    167
+   ],
+   [
+    0,
+    1650,
+    167
+   ],
+   [
+    0,
+    1815,
+    167
+   ],
+   [
+    0,
+    0,
+    334
+   ],
+   [
+    0,
+    165,
+    334
+   ],
+   [
+    0,
+    330,
+    334
+   ],
+   [
+    0,
+    495,
+    334
+   ]
+  ],
+  "fps": 11.83,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 2.945,
+  "h": 2.98
+ },
+ "anchor": [
+  0.4992,
+  0.5034
+ ],
+ "gpuBytes": 3967920,
+ "duration": 2.37,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "HealingAbility_02_Regular_GreenOrange_Loop_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

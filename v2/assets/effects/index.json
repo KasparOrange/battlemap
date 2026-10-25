@@ -1,0 +1,3611 @@
+{
+ "version": 1,
+ "count": 150,
+ "categories": [
+  "aura",
+  "global",
+  "map-loop",
+  "point",
+  "regional"
+ ],
+ "effects": [
+  {
+   "id": "fireball",
+   "name": "Fireball",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "explosion",
+    "burst",
+    "evocation"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Fireball",
+    "Delayed Blast Fireball",
+    "Meteor Swarm"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "fireball/effect.json",
+   "thumb": "fireball/thumb.webp",
+   "bytes": 732954,
+   "gpuBytes": 11251800
+  },
+  {
+   "id": "burning-hands",
+   "name": "Burning Hands (cone)",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "cone",
+    "flame"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Burning Hands"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "burning-hands/effect.json",
+   "thumb": "burning-hands/thumb.webp",
+   "bytes": 327882,
+   "gpuBytes": 5386752
+  },
+  {
+   "id": "breath-fire-cone",
+   "name": "Dragon breath — fire cone",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "cone",
+    "breath",
+    "dragon"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Dragon breath",
+    "Dragonborn breath weapon"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "breath-fire-cone/effect.json",
+   "thumb": "breath-fire-cone/thumb.webp",
+   "bytes": 494009,
+   "gpuBytes": 11059200
+  },
+  {
+   "id": "breath-lightning-line",
+   "name": "Dragon breath — lightning line",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "line",
+    "breath",
+    "dragon"
+   ],
+   "damage": [
+    "lightning"
+   ],
+   "spells": [
+    "Dragon breath"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "breath-lightning-line/effect.json",
+   "thumb": "breath-lightning-line/thumb.webp",
+   "bytes": 354296,
+   "gpuBytes": 3601920
+  },
+  {
+   "id": "cone-of-cold",
+   "name": "Cone of Cold",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "cone",
+    "frost",
+    "ice"
+   ],
+   "damage": [
+    "cold"
+   ],
+   "spells": [
+    "Cone of Cold"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "cone-of-cold/effect.json",
+   "thumb": "cone-of-cold/thumb.webp",
+   "bytes": 1144441,
+   "gpuBytes": 11113920
+  },
+  {
+   "id": "thunderwave",
+   "name": "Thunderwave",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "shockwave",
+    "cube",
+    "push"
+   ],
+   "damage": [
+    "thunder"
+   ],
+   "spells": [
+    "Thunderwave"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "thunderwave/effect.json",
+   "thumb": "thunderwave/thumb.webp",
+   "bytes": 167429,
+   "gpuBytes": 2677344
+  },
+  {
+   "id": "shatter",
+   "name": "Shatter",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "shockwave",
+    "burst"
+   ],
+   "damage": [
+    "thunder"
+   ],
+   "spells": [
+    "Shatter"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "shatter/effect.json",
+   "thumb": "shatter/thumb.webp",
+   "bytes": 439760,
+   "gpuBytes": 10838016
+  },
+  {
+   "id": "darkness",
+   "name": "Darkness",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "darkness",
+    "shadow",
+    "sphere"
+   ],
+   "damage": [
+    "necrotic"
+   ],
+   "spells": [
+    "Darkness"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "darkness/effect.json",
+   "thumb": "darkness/thumb.webp",
+   "bytes": 162663,
+   "gpuBytes": 5529600
+  },
+  {
+   "id": "fog-cloud",
+   "name": "Fog Cloud",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "fog",
+    "cloud",
+    "mist",
+    "obscure"
+   ],
+   "damage": [],
+   "spells": [
+    "Fog Cloud",
+    "Obscuring mist"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "fog-cloud/effect.json",
+   "thumb": "fog-cloud/thumb.webp",
+   "bytes": 281037,
+   "gpuBytes": 6967296
+  },
+  {
+   "id": "cloudkill",
+   "name": "Cloudkill",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "cloud",
+    "gas",
+    "poison"
+   ],
+   "damage": [
+    "poison"
+   ],
+   "spells": [
+    "Cloudkill",
+    "Stinking Cloud",
+    "Poison cloud"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "cloudkill/effect.json",
+   "thumb": "cloudkill/thumb.webp",
+   "bytes": 400840,
+   "gpuBytes": 5975808
+  },
+  {
+   "id": "spirit-guardians",
+   "name": "Spirit Guardians",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "aura",
+    "holy",
+    "spirits"
+   ],
+   "damage": [
+    "radiant",
+    "necrotic"
+   ],
+   "spells": [
+    "Spirit Guardians"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "spirit-guardians/effect.json",
+   "thumb": "spirit-guardians/thumb.webp",
+   "bytes": 1121739,
+   "gpuBytes": 5529600
+  },
+  {
+   "id": "black-tentacles",
+   "name": "Evard's Black Tentacles",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "tentacles",
+    "shadow",
+    "restrain"
+   ],
+   "damage": [
+    "bludgeoning"
+   ],
+   "spells": [
+    "Evard's Black Tentacles",
+    "Hunger of Hadar"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "black-tentacles/effect.json",
+   "thumb": "black-tentacles/thumb.webp",
+   "bytes": 730090,
+   "gpuBytes": 5516160
+  },
+  {
+   "id": "plant-growth",
+   "name": "Plant Growth ring",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "plants",
+    "flowers",
+    "nature",
+    "ring"
+   ],
+   "damage": [],
+   "spells": [
+    "Plant Growth",
+    "Goodberry",
+    "Druid circle"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "plant-growth/effect.json",
+   "thumb": "plant-growth/thumb.webp",
+   "bytes": 459573,
+   "gpuBytes": 5189376
+  },
+  {
+   "id": "call-lightning",
+   "name": "Call Lightning",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "lightning",
+    "storm",
+    "strike"
+   ],
+   "damage": [
+    "lightning"
+   ],
+   "spells": [
+    "Call Lightning",
+    "Storm of Vengeance"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "call-lightning/effect.json",
+   "thumb": "call-lightning/thumb.webp",
+   "bytes": 410107,
+   "gpuBytes": 10597392
+  },
+  {
+   "id": "ice-spikes",
+   "name": "Ice spikes burst",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "ice",
+    "spikes",
+    "frost"
+   ],
+   "damage": [
+    "cold",
+    "piercing"
+   ],
+   "spells": [
+    "Ice Knife",
+    "Frost spikes",
+    "Spike Growth (ice)"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "ice-spikes/effect.json",
+   "thumb": "ice-spikes/thumb.webp",
+   "bytes": 669268,
+   "gpuBytes": 6559040
+  },
+  {
+   "id": "wall-of-fire-line",
+   "name": "Wall of Fire (5 squares)",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "wall",
+    "flames",
+    "line"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Wall of Fire",
+    "Blade Barrier (fire)"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "wall-of-fire-line/effect.json",
+   "thumb": "wall-of-fire-line/thumb.webp",
+   "bytes": 262182,
+   "gpuBytes": 1481760
+  },
+  {
+   "id": "wall-of-fire-ring",
+   "name": "Wall of Fire (ring)",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "wall",
+    "flames",
+    "ring"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Wall of Fire",
+    "Fire Shield"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "wall-of-fire-ring/effect.json",
+   "thumb": "wall-of-fire-ring/thumb.webp",
+   "bytes": 446455,
+   "gpuBytes": 6814720
+  },
+  {
+   "id": "wall-of-force",
+   "name": "Wall of Force (dome)",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "dome",
+    "barrier",
+    "force"
+   ],
+   "damage": [
+    "force"
+   ],
+   "spells": [
+    "Wall of Force",
+    "Resilient Sphere",
+    "Tiny Hut"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "wall-of-force/effect.json",
+   "thumb": "wall-of-force/thumb.webp",
+   "bytes": 560078,
+   "gpuBytes": 6814720
+  },
+  {
+   "id": "misty-step",
+   "name": "Misty Step (teleport)",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "teleport",
+    "conjuration",
+    "mist"
+   ],
+   "damage": [],
+   "spells": [
+    "Misty Step",
+    "Dimension Door",
+    "Thunder Step",
+    "Teleport"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "misty-step/effect.json",
+   "thumb": "misty-step/thumb.webp",
+   "bytes": 314926,
+   "gpuBytes": 2661336
+  },
+  {
+   "id": "eruption",
+   "name": "Eruption",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "lava",
+    "earth",
+    "burst"
+   ],
+   "damage": [
+    "fire",
+    "bludgeoning"
+   ],
+   "spells": [
+    "Eruption",
+    "Erupting Earth",
+    "Volcano"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "eruption/effect.json",
+   "thumb": "eruption/thumb.webp",
+   "bytes": 637714,
+   "gpuBytes": 9707688
+  },
+  {
+   "id": "lightning-bolt",
+   "name": "Lightning Bolt",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "line",
+    "bolt",
+    "beam"
+   ],
+   "damage": [
+    "lightning"
+   ],
+   "spells": [
+    "Lightning Bolt"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "lightning-bolt/effect.json",
+   "thumb": "lightning-bolt/thumb.webp",
+   "bytes": 429545,
+   "gpuBytes": 2555904
+  },
+  {
+   "id": "fire-bolt",
+   "name": "Fire Bolt",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "projectile",
+    "bolt",
+    "cantrip"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Fire Bolt",
+    "Produce Flame (thrown)"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "fire-bolt/effect.json",
+   "thumb": "fire-bolt/thumb.webp",
+   "bytes": 92651,
+   "gpuBytes": 3519360
+  },
+  {
+   "id": "ray-of-frost",
+   "name": "Ray of Frost",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "ray",
+    "beam",
+    "cantrip"
+   ],
+   "damage": [
+    "cold"
+   ],
+   "spells": [
+    "Ray of Frost"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "ray-of-frost/effect.json",
+   "thumb": "ray-of-frost/thumb.webp",
+   "bytes": 395971,
+   "gpuBytes": 5182400
+  },
+  {
+   "id": "eldritch-blast",
+   "name": "Eldritch Blast",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "beam",
+    "cantrip",
+    "warlock"
+   ],
+   "damage": [
+    "force"
+   ],
+   "spells": [
+    "Eldritch Blast"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "eldritch-blast/effect.json",
+   "thumb": "eldritch-blast/thumb.webp",
+   "bytes": 459343,
+   "gpuBytes": 9526272
+  },
+  {
+   "id": "magic-missile",
+   "name": "Magic Missile (one dart)",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "projectile",
+    "dart"
+   ],
+   "damage": [
+    "force"
+   ],
+   "spells": [
+    "Magic Missile"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "magic-missile/effect.json",
+   "thumb": "magic-missile/thumb.webp",
+   "bytes": 105650,
+   "gpuBytes": 3697680
+  },
+  {
+   "id": "gust-of-wind",
+   "name": "Gust of Wind (line)",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "wind",
+    "line",
+    "push"
+   ],
+   "damage": [],
+   "spells": [
+    "Gust of Wind",
+    "Wind Wall"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "gust-of-wind/effect.json",
+   "thumb": "gust-of-wind/thumb.webp",
+   "bytes": 292073,
+   "gpuBytes": 4177920
+  },
+  {
+   "id": "cure-wounds",
+   "name": "Cure Wounds",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "healing",
+    "heal"
+   ],
+   "damage": [],
+   "spells": [
+    "Cure Wounds",
+    "Healing Word",
+    "Mass Cure Wounds"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "cure-wounds/effect.json",
+   "thumb": "cure-wounds/thumb.webp",
+   "bytes": 273493,
+   "gpuBytes": 2472480
+  },
+  {
+   "id": "healing-aura",
+   "name": "Healing aura",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "healing",
+    "aura",
+    "regeneration"
+   ],
+   "damage": [],
+   "spells": [
+    "Aura of Vitality",
+    "Regenerate",
+    "Prayer of Healing"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "healing-aura/effect.json",
+   "thumb": "healing-aura/thumb.webp",
+   "bytes": 388883,
+   "gpuBytes": 3967920
+  },
+  {
+   "id": "sacred-flame",
+   "name": "Sacred Flame",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "holy",
+    "light",
+    "column"
+   ],
+   "damage": [
+    "radiant"
+   ],
+   "spells": [
+    "Sacred Flame",
+    "Flame Strike",
+    "Dawn"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "sacred-flame/effect.json",
+   "thumb": "sacred-flame/thumb.webp",
+   "bytes": 164473,
+   "gpuBytes": 2442336
+  },
+  {
+   "id": "toll-the-dead",
+   "name": "Toll the Dead",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "necrotic",
+    "bell",
+    "death"
+   ],
+   "damage": [
+    "necrotic"
+   ],
+   "spells": [
+    "Toll the Dead",
+    "Chill Touch",
+    "Inflict Wounds"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "toll-the-dead/effect.json",
+   "thumb": "toll-the-dead/thumb.webp",
+   "bytes": 240813,
+   "gpuBytes": 2685312
+  },
+  {
+   "id": "lightning-strike",
+   "name": "Lightning strike",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "lightning",
+    "strike",
+    "storm"
+   ],
+   "damage": [
+    "lightning"
+   ],
+   "spells": [
+    "Call Lightning",
+    "Shocking Grasp",
+    "Destructive Wave"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "lightning-strike/effect.json",
+   "thumb": "lightning-strike/thumb.webp",
+   "bytes": 73735,
+   "gpuBytes": 2354976
+  },
+  {
+   "id": "explosion-arcane",
+   "name": "Arcane burst",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "explosion",
+    "burst",
+    "arcane"
+   ],
+   "damage": [
+    "force"
+   ],
+   "spells": [
+    "Counterspell",
+    "Dispel Magic",
+    "Arcane Eruption"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "explosion-arcane/effect.json",
+   "thumb": "explosion-arcane/thumb.webp",
+   "bytes": 85262,
+   "gpuBytes": 753280
+  },
+  {
+   "id": "impact-hit",
+   "name": "Hit impact",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "hit",
+    "impact",
+    "attack"
+   ],
+   "damage": [
+    "force",
+    "bludgeoning"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "impact-hit/effect.json",
+   "thumb": "impact-hit/thumb.webp",
+   "bytes": 52691,
+   "gpuBytes": 355740
+  },
+  {
+   "id": "claw-slash",
+   "name": "Claw slash",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "hit",
+    "claw",
+    "monster attack"
+   ],
+   "damage": [
+    "slashing"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "claw-slash/effect.json",
+   "thumb": "claw-slash/thumb.webp",
+   "bytes": 21726,
+   "gpuBytes": 129536
+  },
+  {
+   "id": "ground-crack-impact",
+   "name": "Ground slam",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "impact",
+    "cracks",
+    "earth"
+   ],
+   "damage": [
+    "bludgeoning",
+    "thunder"
+   ],
+   "spells": [
+    "Earth Tremor",
+    "Erupting Earth"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "ground-crack-impact/effect.json",
+   "thumb": "ground-crack-impact/thumb.webp",
+   "bytes": 373082,
+   "gpuBytes": 5258496
+  },
+  {
+   "id": "frost-impact",
+   "name": "Frost impact",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "ice",
+    "impact",
+    "burst"
+   ],
+   "damage": [
+    "cold"
+   ],
+   "spells": [
+    "Ice Knife",
+    "Frostbite",
+    "Snilloc's Snowball Swarm"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "frost-impact/effect.json",
+   "thumb": "frost-impact/thumb.webp",
+   "bytes": 714099,
+   "gpuBytes": 4836832
+  },
+  {
+   "id": "blood-splash",
+   "name": "Blood splash (hit)",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "blood",
+    "hit",
+    "splash"
+   ],
+   "damage": [
+    "piercing",
+    "slashing"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "blood-splash/effect.json",
+   "thumb": "blood-splash/thumb.webp",
+   "bytes": 52985,
+   "gpuBytes": 613632
+  },
+  {
+   "id": "aura-arcane",
+   "name": "Aura — arcane",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "aura",
+    "glow"
+   ],
+   "damage": [],
+   "spells": [
+    "Aura of Protection",
+    "Mage Armor",
+    "Haste"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "aura-arcane/effect.json",
+   "thumb": "aura-arcane/thumb.webp",
+   "bytes": 457178,
+   "gpuBytes": 5386752
+  },
+  {
+   "id": "aura-frost",
+   "name": "Aura — frost orbit",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "aura",
+    "ice",
+    "orbit"
+   ],
+   "damage": [
+    "cold"
+   ],
+   "spells": [
+    "Armor of Agathys",
+    "Frost aura"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "aura-frost/effect.json",
+   "thumb": "aura-frost/thumb.webp",
+   "bytes": 701739,
+   "gpuBytes": 4868240
+  },
+  {
+   "id": "token-ring",
+   "name": "Turn ring (spinning)",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "marker",
+    "ring",
+    "turn",
+    "selected"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "token-ring/effect.json",
+   "thumb": "token-ring/thumb.webp",
+   "bytes": 182888,
+   "gpuBytes": 1280000
+  },
+  {
+   "id": "bless",
+   "name": "Bless",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "buff",
+    "holy",
+    "aura"
+   ],
+   "damage": [],
+   "spells": [
+    "Bless",
+    "Bardic Inspiration",
+    "Heroism"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "bless/effect.json",
+   "thumb": "bless/thumb.webp",
+   "bytes": 332245,
+   "gpuBytes": 2613384
+  },
+  {
+   "id": "hunters-mark",
+   "name": "Hunter's Mark",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "marked",
+    "target",
+    "debuff"
+   ],
+   "damage": [],
+   "spells": [
+    "Hunter's Mark",
+    "Hex"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "hunters-mark/effect.json",
+   "thumb": "hunters-mark/thumb.webp",
+   "bytes": 204456,
+   "gpuBytes": 1354752
+  },
+  {
+   "id": "shield",
+   "name": "Shield",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "barrier",
+    "buff",
+    "abjuration"
+   ],
+   "damage": [],
+   "spells": [
+    "Shield",
+    "Shield of Faith",
+    "Protection from Energy"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "shield/effect.json",
+   "thumb": "shield/thumb.webp",
+   "bytes": 274275,
+   "gpuBytes": 2651184
+  },
+  {
+   "id": "dancing-lights",
+   "name": "Dancing Lights",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "light",
+    "orb",
+    "wisp"
+   ],
+   "damage": [],
+   "spells": [
+    "Dancing Lights",
+    "Light",
+    "Will-o'-wisp"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "dancing-lights/effect.json",
+   "thumb": "dancing-lights/thumb.webp",
+   "bytes": 90417,
+   "gpuBytes": 843648
+  },
+  {
+   "id": "swirling-leaves",
+   "name": "Swirling leaves",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "leaves",
+    "nature",
+    "wind"
+   ],
+   "damage": [],
+   "spells": [
+    "Pass without Trace",
+    "Wild Shape",
+    "Misty Step (Eladrin spring)"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "swirling-leaves/effect.json",
+   "thumb": "swirling-leaves/thumb.webp",
+   "bytes": 125407,
+   "gpuBytes": 4996992
+  },
+  {
+   "id": "restrained-chains",
+   "name": "Restrained (chains)",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "condition",
+    "restrained",
+    "paralyzed",
+    "chains"
+   ],
+   "damage": [],
+   "spells": [
+    "Hold Person",
+    "Hold Monster",
+    "Banishing chains"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "restrained-chains/effect.json",
+   "thumb": "restrained-chains/thumb.webp",
+   "bytes": 303374,
+   "gpuBytes": 2489760
+  },
+  {
+   "id": "marker-poisoned",
+   "name": "Poisoned",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "condition",
+    "poisoned",
+    "marker"
+   ],
+   "damage": [
+    "poison"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "marker-poisoned/effect.json",
+   "thumb": "marker-poisoned/thumb.webp",
+   "bytes": 277598,
+   "gpuBytes": 2371068
+  },
+  {
+   "id": "marker-frightened",
+   "name": "Frightened",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "condition",
+    "frightened",
+    "marker"
+   ],
+   "damage": [
+    "psychic"
+   ],
+   "spells": [
+    "Cause Fear",
+    "Fear"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "marker-frightened/effect.json",
+   "thumb": "marker-frightened/thumb.webp",
+   "bytes": 233795,
+   "gpuBytes": 2570400
+  },
+  {
+   "id": "marker-stunned",
+   "name": "Stunned",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "condition",
+    "stunned",
+    "marker"
+   ],
+   "damage": [],
+   "spells": [
+    "Stunning Strike",
+    "Power Word Stun"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "marker-stunned/effect.json",
+   "thumb": "marker-stunned/thumb.webp",
+   "bytes": 276614,
+   "gpuBytes": 2348400
+  },
+  {
+   "id": "campfire",
+   "name": "Campfire",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fire",
+    "camp",
+    "light source"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "campfire/effect.json",
+   "thumb": "campfire/thumb.webp",
+   "bytes": 288969,
+   "gpuBytes": 2637360
+  },
+  {
+   "id": "bonfire",
+   "name": "Bonfire",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fire",
+    "pyre",
+    "light source"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "bonfire/effect.json",
+   "thumb": "bonfire/thumb.webp",
+   "bytes": 491252,
+   "gpuBytes": 5386752
+  },
+  {
+   "id": "flames-patch",
+   "name": "Burning ground",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fire",
+    "burning",
+    "hazard"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Create Bonfire",
+    "Wall of Fire",
+    "Flame Strike (aftermath)"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "flames-patch/effect.json",
+   "thumb": "flames-patch/thumb.webp",
+   "bytes": 209523,
+   "gpuBytes": 1966104
+  },
+  {
+   "id": "lava-cracks",
+   "name": "Glowing lava cracks",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "lava",
+    "cracks",
+    "hazard"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Earthquake",
+    "Molten ground"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "lava-cracks/effect.json",
+   "thumb": "lava-cracks/thumb.webp",
+   "bytes": 759859,
+   "gpuBytes": 6756480
+  },
+  {
+   "id": "scorched-earth",
+   "name": "Scorched earth",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "burnt",
+    "lava",
+    "hazard"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Fireball (aftermath)",
+    "Incendiary Cloud"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "scorched-earth/effect.json",
+   "thumb": "scorched-earth/thumb.webp",
+   "bytes": 280770,
+   "gpuBytes": 5483520
+  },
+  {
+   "id": "water-splash",
+   "name": "Waterfall foot / splash",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "water",
+    "waterfall",
+    "fountain",
+    "splash"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "water-splash/effect.json",
+   "thumb": "water-splash/thumb.webp",
+   "bytes": 606430,
+   "gpuBytes": 5038656
+  },
+  {
+   "id": "bubbles",
+   "name": "Bubbles (swamp, cauldron)",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "water",
+    "swamp",
+    "cauldron",
+    "bubbles"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "bubbles/effect.json",
+   "thumb": "bubbles/thumb.webp",
+   "bytes": 88043,
+   "gpuBytes": 1707264
+  },
+  {
+   "id": "steam-vent",
+   "name": "Steam vent",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "steam",
+    "vent",
+    "hot spring",
+    "fumes"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "steam-vent/effect.json",
+   "thumb": "steam-vent/thumb.webp",
+   "bytes": 199328,
+   "gpuBytes": 2566080
+  },
+  {
+   "id": "fog-patch",
+   "name": "Fog bank (patch)",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fog",
+    "mist",
+    "swamp",
+    "ambient"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "fog-patch/effect.json",
+   "thumb": "fog-patch/thumb.webp",
+   "bytes": 323081,
+   "gpuBytes": 5832000
+  },
+  {
+   "id": "fireflies",
+   "name": "Fireflies",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fireflies",
+    "night",
+    "forest",
+    "ambient"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "fireflies/effect.json",
+   "thumb": "fireflies/thumb.webp",
+   "bytes": 273310,
+   "gpuBytes": 5710848
+  },
+  {
+   "id": "portal",
+   "name": "Portal (golden)",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "portal",
+    "gate",
+    "teleport"
+   ],
+   "damage": [],
+   "spells": [
+    "Gate",
+    "Teleportation Circle",
+    "Arcane Gate"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "portal/effect.json",
+   "thumb": "portal/thumb.webp",
+   "bytes": 198141,
+   "gpuBytes": 2281440
+  },
+  {
+   "id": "glint",
+   "name": "Glints (loot)",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "treasure",
+    "sparkle",
+    "loot",
+    "gold"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "glint/effect.json",
+   "thumb": "glint/thumb.webp",
+   "bytes": 39835,
+   "gpuBytes": 862840
+  },
+  {
+   "id": "ward-rune",
+   "name": "Glyph of Warding (animated)",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "glyph",
+    "ward",
+    "trap",
+    "rune"
+   ],
+   "damage": [],
+   "spells": [
+    "Glyph of Warding",
+    "Symbol",
+    "Alarm"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "ward-rune/effect.json",
+   "thumb": "ward-rune/thumb.webp",
+   "bytes": 573711,
+   "gpuBytes": 4325888
+  },
+  {
+   "id": "wind-streams",
+   "name": "Wind streaks",
+   "category": "global",
+   "technique": "sheet",
+   "tags": [
+    "wind",
+    "weather",
+    "storm"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "wind-streams/effect.json",
+   "thumb": "wind-streams/thumb.webp",
+   "bytes": 117551,
+   "gpuBytes": 4128768
+  },
+  {
+   "id": "bad-omen",
+   "name": "Bad omen (dark vignette)",
+   "category": "global",
+   "technique": "texture",
+   "tags": [
+    "vignette",
+    "dread",
+    "mood",
+    "darkness"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "bad-omen/effect.json",
+   "thumb": "bad-omen/thumb.webp",
+   "bytes": 75937,
+   "gpuBytes": 1327104
+  },
+  {
+   "id": "school-circle-abjuration",
+   "name": "Magic circle — abjuration (JB2A)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "school",
+    "abjuration",
+    "ward",
+    "ritual"
+   ],
+   "damage": [],
+   "spells": [
+    "Glyph of Warding",
+    "Counterspell",
+    "Banishment"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "school-circle-abjuration/effect.json",
+   "thumb": "school-circle-abjuration/thumb.webp",
+   "bytes": 214778,
+   "gpuBytes": 1046528
+  },
+  {
+   "id": "school-circle-conjuration",
+   "name": "Magic circle — conjuration (JB2A)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "school",
+    "conjuration",
+    "summon",
+    "ritual"
+   ],
+   "damage": [],
+   "spells": [
+    "Conjure Animals",
+    "Find Familiar",
+    "Teleportation Circle"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "school-circle-conjuration/effect.json",
+   "thumb": "school-circle-conjuration/thumb.webp",
+   "bytes": 202854,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "school-circle-divination",
+   "name": "Magic circle — divination (JB2A)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "school",
+    "divination",
+    "scry",
+    "ritual"
+   ],
+   "damage": [],
+   "spells": [
+    "Scrying",
+    "Clairvoyance",
+    "Augury"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "school-circle-divination/effect.json",
+   "thumb": "school-circle-divination/thumb.webp",
+   "bytes": 188193,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "school-circle-enchantment",
+   "name": "Magic circle — enchantment (JB2A)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "school",
+    "enchantment",
+    "charm",
+    "ritual"
+   ],
+   "damage": [],
+   "spells": [
+    "Charm Person",
+    "Hypnotic Pattern",
+    "Suggestion"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "school-circle-enchantment/effect.json",
+   "thumb": "school-circle-enchantment/thumb.webp",
+   "bytes": 198405,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "school-circle-evocation",
+   "name": "Magic circle — evocation (JB2A)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "school",
+    "evocation",
+    "power",
+    "ritual"
+   ],
+   "damage": [],
+   "spells": [
+    "Fireball",
+    "Flame Strike",
+    "Wall of Fire"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "school-circle-evocation/effect.json",
+   "thumb": "school-circle-evocation/thumb.webp",
+   "bytes": 211986,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "school-circle-illusion",
+   "name": "Magic circle — illusion (JB2A)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "school",
+    "illusion",
+    "illusion",
+    "ritual"
+   ],
+   "damage": [],
+   "spells": [
+    "Silent Image",
+    "Mirror Image",
+    "Major Image"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "school-circle-illusion/effect.json",
+   "thumb": "school-circle-illusion/thumb.webp",
+   "bytes": 228909,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "school-circle-necromancy",
+   "name": "Magic circle — necromancy (JB2A)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "school",
+    "necromancy",
+    "undead",
+    "ritual"
+   ],
+   "damage": [],
+   "spells": [
+    "Animate Dead",
+    "Speak with Dead",
+    "Create Undead"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "school-circle-necromancy/effect.json",
+   "thumb": "school-circle-necromancy/thumb.webp",
+   "bytes": 208417,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "school-circle-transmutation",
+   "name": "Magic circle — transmutation (JB2A)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "school",
+    "transmutation",
+    "change",
+    "ritual"
+   ],
+   "damage": [],
+   "spells": [
+    "Polymorph",
+    "Stone Shape",
+    "Haste"
+   ],
+   "blend": "normal",
+   "licence": "CC BY-NC-SA 4.0",
+   "commercial": false,
+   "manifest": "school-circle-transmutation/effect.json",
+   "thumb": "school-circle-transmutation/thumb.webp",
+   "bytes": 195133,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "circle-summoning",
+   "name": "Magic circle — summoning circle",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "golden",
+    "ritual",
+    "glyph"
+   ],
+   "damage": [],
+   "spells": [
+    "Conjure Elemental",
+    "Summon Fiend",
+    "Find Steed",
+    "Planar Binding"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "circle-summoning/effect.json",
+   "thumb": "circle-summoning/thumb.webp",
+   "bytes": 225274,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "circle-ward",
+   "name": "Magic circle — warding circle",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "icy blue",
+    "ritual",
+    "glyph"
+   ],
+   "damage": [],
+   "spells": [
+    "Magic Circle",
+    "Protection from Evil and Good",
+    "Forbiddance"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "circle-ward/effect.json",
+   "thumb": "circle-ward/thumb.webp",
+   "bytes": 271221,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "circle-teleport",
+   "name": "Magic circle — teleportation circle",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "cyan",
+    "ritual",
+    "glyph"
+   ],
+   "damage": [],
+   "spells": [
+    "Teleportation Circle",
+    "Teleport",
+    "Word of Recall"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "circle-teleport/effect.json",
+   "thumb": "circle-teleport/thumb.webp",
+   "bytes": 276921,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "circle-counterspell",
+   "name": "Magic circle — counterspell sigil",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "violet-red",
+    "ritual",
+    "glyph"
+   ],
+   "damage": [],
+   "spells": [
+    "Counterspell",
+    "Dispel Magic",
+    "Antimagic Field"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "circle-counterspell/effect.json",
+   "thumb": "circle-counterspell/thumb.webp",
+   "bytes": 258392,
+   "gpuBytes": 1034240
+  },
+  {
+   "id": "circle-necromantic",
+   "name": "Magic circle — necromantic binding circle",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "sickly green",
+    "ritual",
+    "glyph"
+   ],
+   "damage": [],
+   "spells": [
+    "Animate Dead",
+    "Create Undead",
+    "Finger of Death"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "circle-necromantic/effect.json",
+   "thumb": "circle-necromantic/thumb.webp",
+   "bytes": 282157,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "circle-celestial",
+   "name": "Magic circle — celestial circle",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "white-gold",
+    "ritual",
+    "glyph"
+   ],
+   "damage": [],
+   "spells": [
+    "Hallow",
+    "Holy Aura",
+    "Divine Word",
+    "Commune"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "circle-celestial/effect.json",
+   "thumb": "circle-celestial/thumb.webp",
+   "bytes": 229138,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "circle-druidic",
+   "name": "Magic circle — druidic circle",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "green",
+    "ritual",
+    "glyph"
+   ],
+   "damage": [],
+   "spells": [
+    "Druid Grove",
+    "Commune with Nature",
+    "Transport via Plants"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "circle-druidic/effect.json",
+   "thumb": "circle-druidic/thumb.webp",
+   "bytes": 290784,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "circle-infernal",
+   "name": "Magic circle — infernal pact circle",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "crimson",
+    "ritual",
+    "glyph"
+   ],
+   "damage": [],
+   "spells": [
+    "Summon Fiend",
+    "Infernal Calling",
+    "Warlock pact"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "circle-infernal/effect.json",
+   "thumb": "circle-infernal/thumb.webp",
+   "bytes": 243220,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "circle-arcane",
+   "name": "Magic circle — arcane circle (simple)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "violet",
+    "ritual",
+    "glyph"
+   ],
+   "damage": [],
+   "spells": [
+    "Mage Armor",
+    "Arcane Lock",
+    "Ritual casting"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "circle-arcane/effect.json",
+   "thumb": "circle-arcane/thumb.webp",
+   "bytes": 177744,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "glyph-of-warding",
+   "name": "Glyph of Warding",
+   "category": "point",
+   "technique": "texture",
+   "tags": [
+    "glyph",
+    "ward",
+    "trap",
+    "rune"
+   ],
+   "damage": [],
+   "spells": [
+    "Glyph of Warding",
+    "Symbol",
+    "Alarm",
+    "Arcane Lock"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "glyph-of-warding/effect.json",
+   "thumb": "glyph-of-warding/thumb.webp",
+   "bytes": 60375,
+   "gpuBytes": 250880
+  },
+  {
+   "id": "runes-arcane",
+   "name": "Arcane runes (16 variants)",
+   "category": "point",
+   "technique": "set",
+   "tags": [
+    "runes",
+    "glyphs",
+    "writing",
+    "magic"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "runes-arcane/effect.json",
+   "thumb": "runes-arcane/thumb.webp",
+   "bytes": 57750,
+   "gpuBytes": 287296
+  },
+  {
+   "id": "runes-ember",
+   "name": "Dwarven fire runes (16 variants)",
+   "category": "point",
+   "technique": "set",
+   "tags": [
+    "runes",
+    "glyphs",
+    "dwarven",
+    "forge"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "runes-ember/effect.json",
+   "thumb": "runes-ember/thumb.webp",
+   "bytes": 47504,
+   "gpuBytes": 252992
+  },
+  {
+   "id": "web",
+   "name": "Spider web",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "web",
+    "spider",
+    "restrain",
+    "difficult terrain",
+    "dungeon dressing"
+   ],
+   "damage": [],
+   "spells": [
+    "Web"
+   ],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "web/effect.json",
+   "thumb": "web/thumb.webp",
+   "bytes": 214814,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "web-corner",
+   "name": "Corner cobweb",
+   "category": "map-loop",
+   "technique": "texture",
+   "tags": [
+    "web",
+    "cobweb",
+    "dungeon dressing",
+    "corner"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "web-corner/effect.json",
+   "thumb": "web-corner/thumb.webp",
+   "bytes": 85406,
+   "gpuBytes": 589824
+  },
+  {
+   "id": "vines",
+   "name": "Entangling vines",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "vines",
+    "plants",
+    "restrain",
+    "difficult terrain"
+   ],
+   "damage": [],
+   "spells": [
+    "Entangle",
+    "Grasping Vine",
+    "Wrath of Nature"
+   ],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "vines/effect.json",
+   "thumb": "vines/thumb.webp",
+   "bytes": 175760,
+   "gpuBytes": 1034240
+  },
+  {
+   "id": "spike-growth",
+   "name": "Spike Growth",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "thorns",
+    "spikes",
+    "difficult terrain",
+    "hazard"
+   ],
+   "damage": [
+    "piercing"
+   ],
+   "spells": [
+    "Spike Growth",
+    "Caltrops",
+    "Thorn Whip"
+   ],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "spike-growth/effect.json",
+   "thumb": "spike-growth/thumb.webp",
+   "bytes": 103803,
+   "gpuBytes": 1011712
+  },
+  {
+   "id": "frost-patch",
+   "name": "Frost / ice patch",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "ice",
+    "frost",
+    "slippery",
+    "difficult terrain"
+   ],
+   "damage": [
+    "cold"
+   ],
+   "spells": [
+    "Ice Storm (aftermath)",
+    "Sleet Storm",
+    "Frost ground"
+   ],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "frost-patch/effect.json",
+   "thumb": "frost-patch/thumb.webp",
+   "bytes": 102270,
+   "gpuBytes": 1032192
+  },
+  {
+   "id": "acid-pool",
+   "name": "Acid pool",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "acid",
+    "puddle",
+    "hazard"
+   ],
+   "damage": [
+    "acid"
+   ],
+   "spells": [
+    "Acid Splash",
+    "Melf's Acid Arrow",
+    "Black dragon lair"
+   ],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "acid-pool/effect.json",
+   "thumb": "acid-pool/thumb.webp",
+   "bytes": 53043,
+   "gpuBytes": 566784
+  },
+  {
+   "id": "blood-stains",
+   "name": "Blood stains (4 variants)",
+   "category": "point",
+   "technique": "set",
+   "tags": [
+    "blood",
+    "stain",
+    "wounded",
+    "decal"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "blood-stains/effect.json",
+   "thumb": "blood-stains/thumb.webp",
+   "bytes": 7506,
+   "gpuBytes": 36848
+  },
+  {
+   "id": "scorch-marks",
+   "name": "Scorch marks (4 variants)",
+   "category": "point",
+   "technique": "set",
+   "tags": [
+    "scorch",
+    "burn",
+    "soot",
+    "decal",
+    "aftermath"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "scorch-marks/effect.json",
+   "thumb": "scorch-marks/thumb.webp",
+   "bytes": 32335,
+   "gpuBytes": 242048
+  },
+  {
+   "id": "hunger-of-hadar",
+   "name": "Hunger of Hadar",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "darkness",
+    "void",
+    "tentacles",
+    "shadow"
+   ],
+   "damage": [
+    "cold",
+    "acid"
+   ],
+   "spells": [
+    "Hunger of Hadar",
+    "Darkness",
+    "Maddening Darkness"
+   ],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "hunger-of-hadar/effect.json",
+   "thumb": "hunger-of-hadar/thumb.webp",
+   "bytes": 35809,
+   "gpuBytes": 1044480
+  },
+  {
+   "id": "spirit-ring",
+   "name": "Spectral guardians ring",
+   "category": "aura",
+   "technique": "texture",
+   "tags": [
+    "aura",
+    "spirits",
+    "holy",
+    "ring"
+   ],
+   "damage": [
+    "radiant",
+    "necrotic"
+   ],
+   "spells": [
+    "Spirit Guardians",
+    "Crusader's Mantle",
+    "Aura of Life"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "spirit-ring/effect.json",
+   "thumb": "spirit-ring/thumb.webp",
+   "bytes": 184859,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "portal-swirl",
+   "name": "Portal swirl",
+   "category": "map-loop",
+   "technique": "texture",
+   "tags": [
+    "portal",
+    "vortex",
+    "gate",
+    "teleport"
+   ],
+   "damage": [],
+   "spells": [
+    "Gate",
+    "Plane Shift",
+    "Dimension Door",
+    "Arcane Gate"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "portal-swirl/effect.json",
+   "thumb": "portal-swirl/thumb.webp",
+   "bytes": 119062,
+   "gpuBytes": 589824
+  },
+  {
+   "id": "campfire-base",
+   "name": "Campfire stones and embers (base)",
+   "category": "map-loop",
+   "technique": "texture",
+   "tags": [
+    "campfire",
+    "stones",
+    "embers",
+    "part"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "campfire-base/effect.json",
+   "thumb": "campfire-base/thumb.webp",
+   "bytes": 33826,
+   "gpuBytes": 260096
+  },
+  {
+   "id": "brazier-base",
+   "name": "Iron brazier (base)",
+   "category": "map-loop",
+   "technique": "texture",
+   "tags": [
+    "brazier",
+    "coals",
+    "part"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "brazier-base/effect.json",
+   "thumb": "brazier-base/thumb.webp",
+   "bytes": 22652,
+   "gpuBytes": 147456
+  },
+  {
+   "id": "magic-circle-indicator",
+   "name": "Magic circle indicator (layered)",
+   "category": "regional",
+   "technique": "layers",
+   "tags": [
+    "magic circle",
+    "indicator",
+    "casting",
+    "ring"
+   ],
+   "damage": [],
+   "spells": [
+    "Any spell being cast",
+    "Concentration",
+    "Ritual"
+   ],
+   "blend": "add",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "magic-circle-indicator/effect.json",
+   "thumb": "magic-circle-indicator/thumb.webp",
+   "bytes": 32563,
+   "gpuBytes": 1234800
+  },
+  {
+   "id": "vortex-ring",
+   "name": "Spiral vortex ring",
+   "category": "aura",
+   "technique": "sheet",
+   "tags": [
+    "vortex",
+    "spiral",
+    "portal",
+    "aura"
+   ],
+   "damage": [],
+   "spells": [
+    "Gate",
+    "Teleport",
+    "Wild magic surge"
+   ],
+   "blend": "add",
+   "licence": "Lottie Simple License",
+   "commercial": true,
+   "manifest": "vortex-ring/effect.json",
+   "thumb": "vortex-ring/thumb.webp",
+   "bytes": 152413,
+   "gpuBytes": 1643880
+  },
+  {
+   "id": "summoning-circle-green",
+   "name": "Summoning circle — green (johndh)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "summoning",
+    "green"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC BY 3.0",
+   "commercial": true,
+   "manifest": "summoning-circle-green/effect.json",
+   "thumb": "summoning-circle-green/thumb.webp",
+   "bytes": 50058,
+   "gpuBytes": 262144
+  },
+  {
+   "id": "summoning-circle-red",
+   "name": "Summoning circle — red (johndh)",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "magic circle",
+    "summoning",
+    "red",
+    "infernal"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC BY 3.0",
+   "commercial": true,
+   "manifest": "summoning-circle-red/effect.json",
+   "thumb": "summoning-circle-red/thumb.webp",
+   "bytes": 41023,
+   "gpuBytes": 262144
+  },
+  {
+   "id": "explosion-smoky",
+   "name": "Explosion (fire and smoke)",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "explosion",
+    "burst",
+    "smoke"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Fireball",
+    "Explosive runes",
+    "Barrel of oil"
+   ],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "explosion-smoky/effect.json",
+   "thumb": "explosion-smoky/thumb.webp",
+   "bytes": 428531,
+   "gpuBytes": 8749440
+  },
+  {
+   "id": "explosion-fiery",
+   "name": "Explosion (small, fiery)",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "explosion",
+    "burst",
+    "bomb"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Alchemist's fire",
+    "Bomb",
+    "Fire trap"
+   ],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "explosion-fiery/effect.json",
+   "thumb": "explosion-fiery/thumb.webp",
+   "bytes": 163590,
+   "gpuBytes": 3800736
+  },
+  {
+   "id": "dust-burst",
+   "name": "Dust burst",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "dust",
+    "smoke",
+    "impact",
+    "collapse"
+   ],
+   "damage": [
+    "bludgeoning",
+    "thunder"
+   ],
+   "spells": [
+    "Earth Tremor",
+    "Thunderwave",
+    "Cave-in"
+   ],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "dust-burst/effect.json",
+   "thumb": "dust-burst/thumb.webp",
+   "bytes": 277904,
+   "gpuBytes": 5346432
+  },
+  {
+   "id": "fire-orb",
+   "name": "Fire orb (flaming sphere)",
+   "category": "point",
+   "technique": "sheet",
+   "tags": [
+    "fire",
+    "orb",
+    "ball"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Flaming Sphere",
+    "Fire Shield",
+    "Fire elemental"
+   ],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "fire-orb/effect.json",
+   "thumb": "fire-orb/thumb.webp",
+   "bytes": 218684,
+   "gpuBytes": 2496960
+  },
+  {
+   "id": "flame-large",
+   "name": "Flame (large, side view)",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fire",
+    "flame",
+    "bonfire",
+    "burning building"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "flame-large/effect.json",
+   "thumb": "flame-large/thumb.webp",
+   "bytes": 296344,
+   "gpuBytes": 4992192
+  },
+  {
+   "id": "flame-small",
+   "name": "Flame (torch)",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fire",
+    "flame",
+    "torch",
+    "light source"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "flame-small/effect.json",
+   "thumb": "flame-small/thumb.webp",
+   "bytes": 143362,
+   "gpuBytes": 1612800
+  },
+  {
+   "id": "flame-candle",
+   "name": "Flame (candle)",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fire",
+    "flame",
+    "candle",
+    "light source"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "flame-candle/effect.json",
+   "thumb": "flame-candle/thumb.webp",
+   "bytes": 42139,
+   "gpuBytes": 245616
+  },
+  {
+   "id": "flame-green",
+   "name": "Flame (green, fel / necrotic)",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fire",
+    "flame",
+    "green fire",
+    "witchfire"
+   ],
+   "damage": [
+    "necrotic",
+    "poison"
+   ],
+   "spells": [
+    "Hellish Rebuke (fel)",
+    "Necrotic brazier"
+   ],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "flame-green/effect.json",
+   "thumb": "flame-green/thumb.webp",
+   "bytes": 259475,
+   "gpuBytes": 3742704
+  },
+  {
+   "id": "flame-blue",
+   "name": "Flame (blue, spectral / holy)",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "fire",
+    "flame",
+    "blue fire",
+    "ghost fire"
+   ],
+   "damage": [
+    "radiant",
+    "cold"
+   ],
+   "spells": [
+    "Continual Flame",
+    "Spectral fire",
+    "Sacred Flame"
+   ],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "flame-blue/effect.json",
+   "thumb": "flame-blue/thumb.webp",
+   "bytes": 261773,
+   "gpuBytes": 3742704
+  },
+  {
+   "id": "smoke-cloud",
+   "name": "Smoke cloud",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "smoke",
+    "cloud",
+    "obscure"
+   ],
+   "damage": [],
+   "spells": [
+    "Fog Cloud",
+    "Pyrotechnics (smoke)",
+    "Smoke bomb"
+   ],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "smoke-cloud/effect.json",
+   "thumb": "smoke-cloud/thumb.webp",
+   "bytes": 382119,
+   "gpuBytes": 6814720
+  },
+  {
+   "id": "poison-cloud",
+   "name": "Poison cloud",
+   "category": "regional",
+   "technique": "sheet",
+   "tags": [
+    "poison",
+    "gas",
+    "cloud"
+   ],
+   "damage": [
+    "poison"
+   ],
+   "spells": [
+    "Cloudkill",
+    "Stinking Cloud",
+    "Poison Spray",
+    "Green dragon breath"
+   ],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "poison-cloud/effect.json",
+   "thumb": "poison-cloud/thumb.webp",
+   "bytes": 360089,
+   "gpuBytes": 6776000
+  },
+  {
+   "id": "smoke-wisp",
+   "name": "Smoke wisps",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "smoke",
+    "chimney",
+    "incense",
+    "ruin"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "smoke-wisp/effect.json",
+   "thumb": "smoke-wisp/thumb.webp",
+   "bytes": 225180,
+   "gpuBytes": 2448000
+  },
+  {
+   "id": "candle-smoke",
+   "name": "Candle smoke",
+   "category": "map-loop",
+   "technique": "sheet",
+   "tags": [
+    "smoke",
+    "candle",
+    "incense"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "candle-smoke/effect.json",
+   "thumb": "candle-smoke/thumb.webp",
+   "bytes": 45396,
+   "gpuBytes": 310576
+  },
+  {
+   "id": "torch-glow",
+   "name": "Torch light (flickering glow)",
+   "category": "map-loop",
+   "technique": "texture",
+   "tags": [
+    "light",
+    "torch",
+    "glow",
+    "light source"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "torch-glow/effect.json",
+   "thumb": "torch-glow/thumb.webp",
+   "bytes": 9235,
+   "gpuBytes": 262144
+  },
+  {
+   "id": "candle-glow",
+   "name": "Candle light",
+   "category": "map-loop",
+   "technique": "texture",
+   "tags": [
+    "light",
+    "candle",
+    "glow",
+    "light source"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "candle-glow/effect.json",
+   "thumb": "candle-glow/thumb.webp",
+   "bytes": 4902,
+   "gpuBytes": 65536
+  },
+  {
+   "id": "holy-light",
+   "name": "Radiant light",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "light",
+    "holy",
+    "sun",
+    "glow"
+   ],
+   "damage": [
+    "radiant"
+   ],
+   "spells": [
+    "Daylight",
+    "Dawn",
+    "Sunbeam",
+    "Holy Aura"
+   ],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "holy-light/effect.json",
+   "thumb": "holy-light/thumb.webp",
+   "bytes": 19280,
+   "gpuBytes": 262144
+  },
+  {
+   "id": "moonlight-pool",
+   "name": "Moonlight pool",
+   "category": "regional",
+   "technique": "texture",
+   "tags": [
+    "light",
+    "moon",
+    "night",
+    "glow"
+   ],
+   "damage": [
+    "radiant"
+   ],
+   "spells": [
+    "Moonbeam",
+    "Faerie light",
+    "Starry Wisp"
+   ],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "moonlight-pool/effect.json",
+   "thumb": "moonlight-pool/thumb.webp",
+   "bytes": 19820,
+   "gpuBytes": 262144
+  },
+  {
+   "id": "shockwave-ring",
+   "name": "Shockwave ring",
+   "category": "point",
+   "technique": "texture",
+   "tags": [
+    "shockwave",
+    "ring",
+    "pulse",
+    "impact"
+   ],
+   "damage": [
+    "thunder",
+    "force"
+   ],
+   "spells": [
+    "Thunderwave",
+    "Shatter",
+    "Thunderclap",
+    "Destructive Wave"
+   ],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "shockwave-ring/effect.json",
+   "thumb": "shockwave-ring/thumb.webp",
+   "bytes": 19179,
+   "gpuBytes": 261120
+  },
+  {
+   "id": "arcane-sigil",
+   "name": "Arcane sigil (pentagon)",
+   "category": "aura",
+   "technique": "texture",
+   "tags": [
+    "sigil",
+    "ring",
+    "aura",
+    "casting"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "arcane-sigil/effect.json",
+   "thumb": "arcane-sigil/thumb.webp",
+   "bytes": 25453,
+   "gpuBytes": 254976
+  },
+  {
+   "id": "embers",
+   "name": "Drifting embers (whole map)",
+   "category": "global",
+   "technique": "particles",
+   "tags": [
+    "embers",
+    "fire",
+    "ash",
+    "burning city",
+    "volcano"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "embers/effect.json",
+   "thumb": "embers/thumb.webp",
+   "bytes": 3065,
+   "gpuBytes": 4096
+  },
+  {
+   "id": "embers-rising",
+   "name": "Embers rising (from a fire)",
+   "category": "map-loop",
+   "technique": "particles",
+   "tags": [
+    "embers",
+    "fire",
+    "campfire",
+    "sparks"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "embers-rising/effect.json",
+   "thumb": "embers-rising/thumb.webp",
+   "bytes": 3140,
+   "gpuBytes": 4096
+  },
+  {
+   "id": "ash-fall",
+   "name": "Falling ash",
+   "category": "global",
+   "technique": "particles",
+   "tags": [
+    "ash",
+    "volcano",
+    "burnt",
+    "weather"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "ash-fall/effect.json",
+   "thumb": "ash-fall/thumb.webp",
+   "bytes": 3021,
+   "gpuBytes": 4096
+  },
+  {
+   "id": "dust-motes",
+   "name": "Dust motes (sunbeam)",
+   "category": "global",
+   "technique": "particles",
+   "tags": [
+    "dust",
+    "ambient",
+    "old library",
+    "crypt"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "dust-motes/effect.json",
+   "thumb": "dust-motes/thumb.webp",
+   "bytes": 3032,
+   "gpuBytes": 4096
+  },
+  {
+   "id": "falling-leaves",
+   "name": "Falling leaves",
+   "category": "global",
+   "technique": "particles",
+   "tags": [
+    "leaves",
+    "autumn",
+    "forest",
+    "wind",
+    "weather"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "falling-leaves/effect.json",
+   "thumb": "falling-leaves/thumb.webp",
+   "bytes": 23263,
+   "gpuBytes": 103424
+  },
+  {
+   "id": "sparkle-area",
+   "name": "Treasure sparkle (area)",
+   "category": "map-loop",
+   "technique": "particles",
+   "tags": [
+    "treasure",
+    "sparkle",
+    "loot",
+    "gold",
+    "magic item"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "sparkle-area/effect.json",
+   "thumb": "sparkle-area/thumb.webp",
+   "bytes": 3655,
+   "gpuBytes": 16128
+  },
+  {
+   "id": "fireflies-cc0",
+   "name": "Fireflies (CC0)",
+   "category": "map-loop",
+   "technique": "particles",
+   "tags": [
+    "fireflies",
+    "night",
+    "forest",
+    "swamp",
+    "ambient"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "fireflies-cc0/effect.json",
+   "thumb": "fireflies-cc0/thumb.webp",
+   "bytes": 3085,
+   "gpuBytes": 4096
+  },
+  {
+   "id": "rune-motes",
+   "name": "Rising rune motes",
+   "category": "regional",
+   "technique": "particles",
+   "tags": [
+    "runes",
+    "magic",
+    "arcane",
+    "ambient"
+   ],
+   "damage": [],
+   "spells": [
+    "Ritual",
+    "Identify",
+    "Legend Lore",
+    "Arcane library"
+   ],
+   "blend": "add",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "rune-motes/effect.json",
+   "thumb": "rune-motes/thumb.webp",
+   "bytes": 20946,
+   "gpuBytes": 59136
+  },
+  {
+   "id": "explosion-puffs",
+   "name": "Explosion (puffs, CC0)",
+   "category": "point",
+   "technique": "particles",
+   "tags": [
+    "explosion",
+    "burst",
+    "smoke"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [
+    "Fireball",
+    "Explosive barrel"
+   ],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "explosion-puffs/effect.json",
+   "thumb": "explosion-puffs/thumb.webp",
+   "bytes": 24775,
+   "gpuBytes": 243712
+  },
+  {
+   "id": "smoke-column",
+   "name": "Smoke column (CC0)",
+   "category": "map-loop",
+   "technique": "particles",
+   "tags": [
+    "smoke",
+    "chimney",
+    "burning",
+    "signal fire"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "smoke-column/effect.json",
+   "thumb": "smoke-column/thumb.webp",
+   "bytes": 13449,
+   "gpuBytes": 105600
+  },
+  {
+   "id": "healing-motes",
+   "name": "Healing motes",
+   "category": "aura",
+   "technique": "particles",
+   "tags": [
+    "healing",
+    "sparkles",
+    "aura"
+   ],
+   "damage": [],
+   "spells": [
+    "Cure Wounds",
+    "Aura of Vitality",
+    "Regenerate"
+   ],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "healing-motes/effect.json",
+   "thumb": "healing-motes/thumb.webp",
+   "bytes": 3396,
+   "gpuBytes": 9024
+  },
+  {
+   "id": "hit-sparks",
+   "name": "Hit sparks",
+   "category": "point",
+   "technique": "particles",
+   "tags": [
+    "hit",
+    "sparks",
+    "metal",
+    "parry"
+   ],
+   "damage": [
+    "slashing",
+    "piercing",
+    "bludgeoning"
+   ],
+   "spells": [],
+   "blend": "add",
+   "licence": "CC0 1.0",
+   "commercial": true,
+   "manifest": "hit-sparks/effect.json",
+   "thumb": "hit-sparks/thumb.webp",
+   "bytes": 3105,
+   "gpuBytes": 5632
+  },
+  {
+   "id": "rain",
+   "name": "Rain",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "rain",
+    "weather",
+    "storm"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "rain/effect.json",
+   "thumb": "rain/thumb.webp",
+   "bytes": 3417,
+   "gpuBytes": 0
+  },
+  {
+   "id": "rain-storm",
+   "name": "Rainstorm",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "rain",
+    "weather",
+    "storm",
+    "thunderstorm"
+   ],
+   "damage": [],
+   "spells": [
+    "Control Weather",
+    "Storm of Vengeance"
+   ],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "rain-storm/effect.json",
+   "thumb": "rain-storm/thumb.webp",
+   "bytes": 4088,
+   "gpuBytes": 0
+  },
+  {
+   "id": "snow",
+   "name": "Snowfall",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "snow",
+    "weather",
+    "winter"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "snow/effect.json",
+   "thumb": "snow/thumb.webp",
+   "bytes": 3915,
+   "gpuBytes": 0
+  },
+  {
+   "id": "blizzard",
+   "name": "Blizzard",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "snow",
+    "weather",
+    "winter",
+    "storm"
+   ],
+   "damage": [
+    "cold"
+   ],
+   "spells": [
+    "Control Weather",
+    "Sleet Storm",
+    "Ice Storm"
+   ],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "blizzard/effect.json",
+   "thumb": "blizzard/thumb.webp",
+   "bytes": 4844,
+   "gpuBytes": 0
+  },
+  {
+   "id": "mist",
+   "name": "Mist (drifting)",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "fog",
+    "mist",
+    "weather",
+    "swamp",
+    "morning"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "mist/effect.json",
+   "thumb": "mist/thumb.webp",
+   "bytes": 2091,
+   "gpuBytes": 0
+  },
+  {
+   "id": "fog-thick",
+   "name": "Thick fog",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "fog",
+    "weather",
+    "obscure",
+    "graveyard"
+   ],
+   "damage": [],
+   "spells": [
+    "Fog Cloud",
+    "Control Weather"
+   ],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "fog-thick/effect.json",
+   "thumb": "fog-thick/thumb.webp",
+   "bytes": 2087,
+   "gpuBytes": 0
+  },
+  {
+   "id": "sandstorm",
+   "name": "Sandstorm",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "sand",
+    "desert",
+    "weather",
+    "storm",
+    "dust"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "sandstorm/effect.json",
+   "thumb": "sandstorm/thumb.webp",
+   "bytes": 2083,
+   "gpuBytes": 0
+  },
+  {
+   "id": "heat-haze",
+   "name": "Heat haze",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "heat",
+    "desert",
+    "lava",
+    "forge",
+    "shimmer"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "heat-haze/effect.json",
+   "thumb": "heat-haze/thumb.webp",
+   "bytes": 2298,
+   "gpuBytes": 0
+  },
+  {
+   "id": "underwater",
+   "name": "Underwater (caustics)",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "water",
+    "underwater",
+    "caustics",
+    "sea",
+    "flooded"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "underwater/effect.json",
+   "thumb": "underwater/thumb.webp",
+   "bytes": 2953,
+   "gpuBytes": 0
+  },
+  {
+   "id": "night",
+   "name": "Night (darkness with lights)",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "night",
+    "darkness",
+    "lighting",
+    "mood"
+   ],
+   "damage": [],
+   "spells": [
+    "Darkness",
+    "Darkvision"
+   ],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "night/effect.json",
+   "thumb": "night/thumb.webp",
+   "bytes": 1975,
+   "gpuBytes": 0
+  },
+  {
+   "id": "cloud-shadows",
+   "name": "Passing cloud shadows",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "clouds",
+    "weather",
+    "overcast",
+    "outdoor"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "cloud-shadows/effect.json",
+   "thumb": "cloud-shadows/thumb.webp",
+   "bytes": 2122,
+   "gpuBytes": 0
+  },
+  {
+   "id": "lightning-storm",
+   "name": "Lightning flashes",
+   "category": "global",
+   "technique": "shader",
+   "tags": [
+    "lightning",
+    "storm",
+    "thunder",
+    "weather"
+   ],
+   "damage": [
+    "lightning"
+   ],
+   "spells": [
+    "Call Lightning",
+    "Control Weather",
+    "Storm of Vengeance"
+   ],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "lightning-storm/effect.json",
+   "thumb": "lightning-storm/thumb.webp",
+   "bytes": 2377,
+   "gpuBytes": 0
+  },
+  {
+   "id": "water-pool",
+   "name": "Water (flowing pool / river)",
+   "category": "map-loop",
+   "technique": "shader",
+   "tags": [
+    "water",
+    "pool",
+    "river",
+    "fountain",
+    "moat"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "water-pool/effect.json",
+   "thumb": "water-pool/thumb.webp",
+   "bytes": 32883,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "lava-pool",
+   "name": "Lava (flowing)",
+   "category": "map-loop",
+   "technique": "shader",
+   "tags": [
+    "lava",
+    "magma",
+    "volcano",
+    "hazard"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (generated)",
+   "commercial": true,
+   "manifest": "lava-pool/effect.json",
+   "thumb": "lava-pool/thumb.webp",
+   "bytes": 93316,
+   "gpuBytes": 1048576
+  },
+  {
+   "id": "campfire-cc0",
+   "name": "Campfire (CC0 + generated)",
+   "category": "map-loop",
+   "technique": "composite",
+   "tags": [
+    "fire",
+    "camp",
+    "light source"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "campfire-cc0/effect.json",
+   "thumb": "campfire-cc0/thumb.webp",
+   "bytes": 3682,
+   "gpuBytes": 0
+  },
+  {
+   "id": "brazier",
+   "name": "Brazier (CC0 + generated)",
+   "category": "map-loop",
+   "technique": "composite",
+   "tags": [
+    "fire",
+    "brazier",
+    "light source",
+    "temple"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "brazier/effect.json",
+   "thumb": "brazier/thumb.webp",
+   "bytes": 3161,
+   "gpuBytes": 0
+  },
+  {
+   "id": "wall-torch",
+   "name": "Torch (flame + light)",
+   "category": "map-loop",
+   "technique": "composite",
+   "tags": [
+    "fire",
+    "torch",
+    "sconce",
+    "light source",
+    "dungeon"
+   ],
+   "damage": [
+    "fire"
+   ],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "wall-torch/effect.json",
+   "thumb": "wall-torch/thumb.webp",
+   "bytes": 2414,
+   "gpuBytes": 0
+  },
+  {
+   "id": "candle",
+   "name": "Candle (flame + light)",
+   "category": "map-loop",
+   "technique": "composite",
+   "tags": [
+    "candle",
+    "light source",
+    "altar",
+    "ritual"
+   ],
+   "damage": [],
+   "spells": [],
+   "blend": "normal",
+   "licence": "Own work (repo licence)",
+   "commercial": true,
+   "manifest": "candle/effect.json",
+   "thumb": "candle/thumb.webp",
+   "bytes": 2453,
+   "gpuBytes": 0
+  }
+ ]
+}

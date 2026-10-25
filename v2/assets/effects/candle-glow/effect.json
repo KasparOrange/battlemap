@@ -1,0 +1,58 @@
+{
+ "id": "candle-glow",
+ "name": "Candle light",
+ "category": "map-loop",
+ "technique": "texture",
+ "tags": [
+  "light",
+  "candle",
+  "glow",
+  "light source"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "ground",
+ "blend": "add",
+ "tint": true,
+ "squares": 2.5,
+ "texture": {
+  "file": "texture.webp",
+  "w": 128,
+  "h": 128,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "color": "#ffc46b",
+  "flicker": {
+   "hz": 9,
+   "alpha": [
+    0.75,
+    1.0
+   ],
+   "scale": [
+    0.98,
+    1.02
+   ]
+  }
+ },
+ "size": {
+  "w": 2.5,
+  "h": 2.5
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 65536,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": "circle_05.png",
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

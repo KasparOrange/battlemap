@@ -1,0 +1,61 @@
+{
+ "id": "shockwave-ring",
+ "name": "Shockwave ring",
+ "category": "point",
+ "technique": "texture",
+ "tags": [
+  "shockwave",
+  "ring",
+  "pulse",
+  "impact"
+ ],
+ "damage": [
+  "thunder",
+  "force"
+ ],
+ "spells": [
+  "Thunderwave",
+  "Shatter",
+  "Thunderclap",
+  "Destructive Wave"
+ ],
+ "layer": "air",
+ "blend": "add",
+ "tint": true,
+ "squares": 4,
+ "texture": {
+  "file": "texture.webp",
+  "w": 255,
+  "h": 256,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "color": "#cfe6ff",
+  "once": 0.7,
+  "grow": {
+   "from": 0.15,
+   "duration": 0.7
+  },
+  "fadeOut": 0.5
+ },
+ "size": {
+  "w": 3.75,
+  "h": 3.758
+ },
+ "anchor": [
+  0.5,
+  0.499
+ ],
+ "gpuBytes": 261120,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": "circle_03.png",
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

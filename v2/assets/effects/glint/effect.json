@@ -1,0 +1,295 @@
+{
+ "id": "glint",
+ "name": "Glints (loot)",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "treasure",
+  "sparkle",
+  "loot",
+  "gold"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "add",
+ "tint": false,
+ "squares": 1,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2035,
+    "h": 106
+   }
+  ],
+  "frameW": 55,
+  "frameH": 53,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    55,
+    0
+   ],
+   [
+    0,
+    110,
+    0
+   ],
+   [
+    0,
+    165,
+    0
+   ],
+   [
+    0,
+    220,
+    0
+   ],
+   [
+    0,
+    275,
+    0
+   ],
+   [
+    0,
+    330,
+    0
+   ],
+   [
+    0,
+    385,
+    0
+   ],
+   [
+    0,
+    440,
+    0
+   ],
+   [
+    0,
+    495,
+    0
+   ],
+   [
+    0,
+    550,
+    0
+   ],
+   [
+    0,
+    605,
+    0
+   ],
+   [
+    0,
+    660,
+    0
+   ],
+   [
+    0,
+    715,
+    0
+   ],
+   [
+    0,
+    770,
+    0
+   ],
+   [
+    0,
+    825,
+    0
+   ],
+   [
+    0,
+    880,
+    0
+   ],
+   [
+    0,
+    935,
+    0
+   ],
+   [
+    0,
+    990,
+    0
+   ],
+   [
+    0,
+    1045,
+    0
+   ],
+   [
+    0,
+    1100,
+    0
+   ],
+   [
+    0,
+    1155,
+    0
+   ],
+   [
+    0,
+    1210,
+    0
+   ],
+   [
+    0,
+    1265,
+    0
+   ],
+   [
+    0,
+    1320,
+    0
+   ],
+   [
+    0,
+    1375,
+    0
+   ],
+   [
+    0,
+    1430,
+    0
+   ],
+   [
+    0,
+    1485,
+    0
+   ],
+   [
+    0,
+    1540,
+    0
+   ],
+   [
+    0,
+    1595,
+    0
+   ],
+   [
+    0,
+    1650,
+    0
+   ],
+   [
+    0,
+    1705,
+    0
+   ],
+   [
+    0,
+    1760,
+    0
+   ],
+   [
+    0,
+    1815,
+    0
+   ],
+   [
+    0,
+    1870,
+    0
+   ],
+   [
+    0,
+    1925,
+    0
+   ],
+   [
+    0,
+    1980,
+    0
+   ],
+   [
+    0,
+    0,
+    53
+   ],
+   [
+    0,
+    55,
+    53
+   ],
+   [
+    0,
+    110,
+    53
+   ],
+   [
+    0,
+    165,
+    53
+   ],
+   [
+    0,
+    220,
+    53
+   ],
+   [
+    0,
+    275,
+    53
+   ],
+   [
+    0,
+    330,
+    53
+   ],
+   [
+    0,
+    385,
+    53
+   ],
+   [
+    0,
+    440,
+    53
+   ],
+   [
+    0,
+    495,
+    53
+   ],
+   [
+    0,
+    550,
+    53
+   ]
+  ],
+  "fps": 10.38,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 0.985,
+  "h": 0.95
+ },
+ "anchor": [
+  0.4924,
+  0.5263
+ ],
+ "gpuBytes": 862840,
+ "duration": 4.62,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "GlintMany01_01_Regular_Yellow_200x200.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

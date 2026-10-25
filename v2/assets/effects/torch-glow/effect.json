@@ -1,0 +1,58 @@
+{
+ "id": "torch-glow",
+ "name": "Torch light (flickering glow)",
+ "category": "map-loop",
+ "technique": "texture",
+ "tags": [
+  "light",
+  "torch",
+  "glow",
+  "light source"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "ground",
+ "blend": "add",
+ "tint": true,
+ "squares": 5,
+ "texture": {
+  "file": "texture.webp",
+  "w": 256,
+  "h": 256,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "color": "#ff9a40",
+  "flicker": {
+   "hz": 7,
+   "alpha": [
+    0.7,
+    1.0
+   ],
+   "scale": [
+    0.97,
+    1.03
+   ]
+  }
+ },
+ "size": {
+  "w": 5.0,
+  "h": 5.0
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 262144,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": "circle_05.png",
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": "Additive warm light under a flame; colour is a tint."
+}

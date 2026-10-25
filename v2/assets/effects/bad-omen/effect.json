@@ -1,0 +1,52 @@
+{
+ "id": "bad-omen",
+ "name": "Bad omen (dark vignette)",
+ "category": "global",
+ "technique": "texture",
+ "tags": [
+  "vignette",
+  "dread",
+  "mood",
+  "darkness"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 34,
+ "texture": {
+  "file": "texture.webp",
+  "w": 768,
+  "h": 432,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "pulse": {
+   "period": 6,
+   "alpha": 0.3,
+   "scale": 0.0
+  },
+  "fadeIn": 2.0
+ },
+ "size": {
+  "w": 34.0,
+  "h": 19.125
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 1327104,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "BadOmen01_01_Dark_Black_1920x1080.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": "Stretch over the visible table (cover)."
+}

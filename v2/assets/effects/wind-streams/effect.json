@@ -1,0 +1,134 @@
+{
+ "id": "wind-streams",
+ "name": "Wind streaks",
+ "category": "global",
+ "technique": "sheet",
+ "tags": [
+  "wind",
+  "weather",
+  "storm"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 12,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2048,
+    "h": 504
+   }
+  ],
+  "frameW": 256,
+  "frameH": 252,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    256,
+    0
+   ],
+   [
+    0,
+    512,
+    0
+   ],
+   [
+    0,
+    768,
+    0
+   ],
+   [
+    0,
+    1024,
+    0
+   ],
+   [
+    0,
+    1280,
+    0
+   ],
+   [
+    0,
+    1536,
+    0
+   ],
+   [
+    0,
+    1792,
+    0
+   ],
+   [
+    0,
+    0,
+    252
+   ],
+   [
+    0,
+    256,
+    252
+   ],
+   [
+    0,
+    512,
+    252
+   ],
+   [
+    0,
+    768,
+    252
+   ],
+   [
+    0,
+    1024,
+    252
+   ],
+   [
+    0,
+    1280,
+    252
+   ],
+   [
+    0,
+    1536,
+    252
+   ],
+   [
+    0,
+    1792,
+    252
+   ]
+  ],
+  "fps": 3.97,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 11.93,
+  "h": 11.74
+ },
+ "anchor": [
+  0.5029,
+  0.4991
+ ],
+ "gpuBytes": 4128768,
+ "duration": 4.03,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "WindStreams_01_White_20OPA_1200x1200.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": "Tile it over the map (repeat every 12 squares)."
+}

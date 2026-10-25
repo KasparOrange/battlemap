@@ -1,0 +1,272 @@
+{
+ "id": "flame-large",
+ "name": "Flame (large, side view)",
+ "category": "map-loop",
+ "technique": "sheet",
+ "tags": [
+  "fire",
+  "flame",
+  "bonfire",
+  "burning building"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [],
+ "layer": "air",
+ "blend": "add",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1944,
+    "h": 642
+   }
+  ],
+  "frameW": 108,
+  "frameH": 214,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    108,
+    0
+   ],
+   [
+    0,
+    216,
+    0
+   ],
+   [
+    0,
+    324,
+    0
+   ],
+   [
+    0,
+    432,
+    0
+   ],
+   [
+    0,
+    540,
+    0
+   ],
+   [
+    0,
+    648,
+    0
+   ],
+   [
+    0,
+    756,
+    0
+   ],
+   [
+    0,
+    864,
+    0
+   ],
+   [
+    0,
+    972,
+    0
+   ],
+   [
+    0,
+    1080,
+    0
+   ],
+   [
+    0,
+    1188,
+    0
+   ],
+   [
+    0,
+    1296,
+    0
+   ],
+   [
+    0,
+    1404,
+    0
+   ],
+   [
+    0,
+    1512,
+    0
+   ],
+   [
+    0,
+    1620,
+    0
+   ],
+   [
+    0,
+    1728,
+    0
+   ],
+   [
+    0,
+    1836,
+    0
+   ],
+   [
+    0,
+    0,
+    214
+   ],
+   [
+    0,
+    108,
+    214
+   ],
+   [
+    0,
+    216,
+    214
+   ],
+   [
+    0,
+    324,
+    214
+   ],
+   [
+    0,
+    432,
+    214
+   ],
+   [
+    0,
+    540,
+    214
+   ],
+   [
+    0,
+    648,
+    214
+   ],
+   [
+    0,
+    756,
+    214
+   ],
+   [
+    0,
+    864,
+    214
+   ],
+   [
+    0,
+    972,
+    214
+   ],
+   [
+    0,
+    1080,
+    214
+   ],
+   [
+    0,
+    1188,
+    214
+   ],
+   [
+    0,
+    1296,
+    214
+   ],
+   [
+    0,
+    1404,
+    214
+   ],
+   [
+    0,
+    1512,
+    214
+   ],
+   [
+    0,
+    1620,
+    214
+   ],
+   [
+    0,
+    1728,
+    214
+   ],
+   [
+    0,
+    1836,
+    214
+   ],
+   [
+    0,
+    0,
+    428
+   ],
+   [
+    0,
+    108,
+    428
+   ],
+   [
+    0,
+    216,
+    428
+   ],
+   [
+    0,
+    324,
+    428
+   ],
+   [
+    0,
+    432,
+    428
+   ],
+   [
+    0,
+    540,
+    428
+   ],
+   [
+    0,
+    648,
+    428
+   ]
+  ],
+  "fps": 16.12,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 1.938,
+  "h": 3.812
+ },
+ "anchor": [
+  0.5,
+  0.9284
+ ],
+ "gpuBytes": 4992192,
+ "duration": 2.67,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Unity Technologies (Unity Labs)",
+ "source": "https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks",
+ "sourceFile": "Flame02-flipbooks/Flame02_16x4.tga",
+ "attribution": "Flipbook by Unity Labs (CC0).",
+ "notes": ""
+}

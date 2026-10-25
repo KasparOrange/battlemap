@@ -1,0 +1,175 @@
+{
+ "id": "bubbles",
+ "name": "Bubbles (swamp, cauldron)",
+ "category": "map-loop",
+ "technique": "sheet",
+ "tags": [
+  "water",
+  "swamp",
+  "cauldron",
+  "bubbles"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": true,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1976,
+    "h": 216
+   }
+  ],
+  "frameW": 104,
+  "frameH": 108,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    104,
+    0
+   ],
+   [
+    0,
+    208,
+    0
+   ],
+   [
+    0,
+    312,
+    0
+   ],
+   [
+    0,
+    416,
+    0
+   ],
+   [
+    0,
+    520,
+    0
+   ],
+   [
+    0,
+    624,
+    0
+   ],
+   [
+    0,
+    728,
+    0
+   ],
+   [
+    0,
+    832,
+    0
+   ],
+   [
+    0,
+    936,
+    0
+   ],
+   [
+    0,
+    1040,
+    0
+   ],
+   [
+    0,
+    1144,
+    0
+   ],
+   [
+    0,
+    1248,
+    0
+   ],
+   [
+    0,
+    1352,
+    0
+   ],
+   [
+    0,
+    1456,
+    0
+   ],
+   [
+    0,
+    1560,
+    0
+   ],
+   [
+    0,
+    1664,
+    0
+   ],
+   [
+    0,
+    1768,
+    0
+   ],
+   [
+    0,
+    1872,
+    0
+   ],
+   [
+    0,
+    0,
+    108
+   ],
+   [
+    0,
+    104,
+    108
+   ],
+   [
+    0,
+    208,
+    108
+   ],
+   [
+    0,
+    312,
+    108
+   ],
+   [
+    0,
+    416,
+    108
+   ]
+  ],
+  "fps": 12.0,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 1.86,
+  "h": 1.92
+ },
+ "anchor": [
+  0.4866,
+  0.4792
+ ],
+ "gpuBytes": 1707264,
+ "duration": 2.0,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "BubbleLoop001_001_Blue_2x2_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

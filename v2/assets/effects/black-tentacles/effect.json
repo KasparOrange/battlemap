@@ -1,0 +1,299 @@
+{
+ "id": "black-tentacles",
+ "name": "Evard's Black Tentacles",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "tentacles",
+  "shadow",
+  "restrain"
+ ],
+ "damage": [
+  "bludgeoning"
+ ],
+ "spells": [
+  "Evard's Black Tentacles",
+  "Hunger of Hadar"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 5,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2028,
+    "h": 680
+   }
+  ],
+  "frameW": 169,
+  "frameH": 170,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    169,
+    0
+   ],
+   [
+    0,
+    338,
+    0
+   ],
+   [
+    0,
+    507,
+    0
+   ],
+   [
+    0,
+    676,
+    0
+   ],
+   [
+    0,
+    845,
+    0
+   ],
+   [
+    0,
+    1014,
+    0
+   ],
+   [
+    0,
+    1183,
+    0
+   ],
+   [
+    0,
+    1352,
+    0
+   ],
+   [
+    0,
+    1521,
+    0
+   ],
+   [
+    0,
+    1690,
+    0
+   ],
+   [
+    0,
+    1859,
+    0
+   ],
+   [
+    0,
+    0,
+    170
+   ],
+   [
+    0,
+    169,
+    170
+   ],
+   [
+    0,
+    338,
+    170
+   ],
+   [
+    0,
+    507,
+    170
+   ],
+   [
+    0,
+    676,
+    170
+   ],
+   [
+    0,
+    845,
+    170
+   ],
+   [
+    0,
+    1014,
+    170
+   ],
+   [
+    0,
+    1183,
+    170
+   ],
+   [
+    0,
+    1352,
+    170
+   ],
+   [
+    0,
+    1521,
+    170
+   ],
+   [
+    0,
+    1690,
+    170
+   ],
+   [
+    0,
+    1859,
+    170
+   ],
+   [
+    0,
+    0,
+    340
+   ],
+   [
+    0,
+    169,
+    340
+   ],
+   [
+    0,
+    338,
+    340
+   ],
+   [
+    0,
+    507,
+    340
+   ],
+   [
+    0,
+    676,
+    340
+   ],
+   [
+    0,
+    845,
+    340
+   ],
+   [
+    0,
+    1014,
+    340
+   ],
+   [
+    0,
+    1183,
+    340
+   ],
+   [
+    0,
+    1352,
+    340
+   ],
+   [
+    0,
+    1521,
+    340
+   ],
+   [
+    0,
+    1690,
+    340
+   ],
+   [
+    0,
+    1859,
+    340
+   ],
+   [
+    0,
+    0,
+    510
+   ],
+   [
+    0,
+    169,
+    510
+   ],
+   [
+    0,
+    338,
+    510
+   ],
+   [
+    0,
+    507,
+    510
+   ],
+   [
+    0,
+    676,
+    510
+   ],
+   [
+    0,
+    845,
+    510
+   ],
+   [
+    0,
+    1014,
+    510
+   ],
+   [
+    0,
+    1183,
+    510
+   ],
+   [
+    0,
+    1352,
+    510
+   ],
+   [
+    0,
+    1521,
+    510
+   ],
+   [
+    0,
+    1690,
+    510
+   ],
+   [
+    0,
+    1859,
+    510
+   ]
+  ],
+  "fps": 9.6,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 4.225,
+  "h": 4.258
+ },
+ "anchor": [
+  0.503,
+  0.5029
+ ],
+ "gpuBytes": 5516160,
+ "duration": 5.0,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "BlackTentacles_01_Dark_Purple_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

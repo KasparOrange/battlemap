@@ -1,0 +1,58 @@
+{
+ "id": "school-circle-abjuration",
+ "name": "Magic circle — abjuration (JB2A)",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "magic circle",
+  "school",
+  "abjuration",
+  "ward",
+  "ritual"
+ ],
+ "damage": [],
+ "spells": [
+  "Glyph of Warding",
+  "Counterspell",
+  "Banishment"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 8,
+ "texture": {
+  "file": "texture.webp",
+  "w": 511,
+  "h": 512,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "rotate": 3,
+  "pulse": {
+   "period": 4,
+   "alpha": 0.2,
+   "scale": 0.0
+  },
+  "fadeIn": 1.0
+ },
+ "size": {
+  "w": 7.84,
+  "h": 7.85
+ },
+ "anchor": [
+  0.4987,
+  0.4994
+ ],
+ "gpuBytes": 1046528,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "AbjurationCircleLoop_02_Regular_Blue_800x800.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

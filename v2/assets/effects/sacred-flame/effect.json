@@ -1,0 +1,300 @@
+{
+ "id": "sacred-flame",
+ "name": "Sacred Flame",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "holy",
+  "light",
+  "column"
+ ],
+ "damage": [
+  "radiant"
+ ],
+ "spells": [
+  "Sacred Flame",
+  "Flame Strike",
+  "Dawn"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1976,
+    "h": 309
+   }
+  ],
+  "frameW": 104,
+  "frameH": 103,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    104,
+    0
+   ],
+   [
+    0,
+    208,
+    0
+   ],
+   [
+    0,
+    312,
+    0
+   ],
+   [
+    0,
+    416,
+    0
+   ],
+   [
+    0,
+    520,
+    0
+   ],
+   [
+    0,
+    624,
+    0
+   ],
+   [
+    0,
+    728,
+    0
+   ],
+   [
+    0,
+    832,
+    0
+   ],
+   [
+    0,
+    936,
+    0
+   ],
+   [
+    0,
+    1040,
+    0
+   ],
+   [
+    0,
+    1144,
+    0
+   ],
+   [
+    0,
+    1248,
+    0
+   ],
+   [
+    0,
+    1352,
+    0
+   ],
+   [
+    0,
+    1456,
+    0
+   ],
+   [
+    0,
+    1560,
+    0
+   ],
+   [
+    0,
+    1664,
+    0
+   ],
+   [
+    0,
+    1768,
+    0
+   ],
+   [
+    0,
+    1872,
+    0
+   ],
+   [
+    0,
+    0,
+    103
+   ],
+   [
+    0,
+    104,
+    103
+   ],
+   [
+    0,
+    208,
+    103
+   ],
+   [
+    0,
+    312,
+    103
+   ],
+   [
+    0,
+    416,
+    103
+   ],
+   [
+    0,
+    520,
+    103
+   ],
+   [
+    0,
+    624,
+    103
+   ],
+   [
+    0,
+    728,
+    103
+   ],
+   [
+    0,
+    832,
+    103
+   ],
+   [
+    0,
+    936,
+    103
+   ],
+   [
+    0,
+    1040,
+    103
+   ],
+   [
+    0,
+    1144,
+    103
+   ],
+   [
+    0,
+    1248,
+    103
+   ],
+   [
+    0,
+    1352,
+    103
+   ],
+   [
+    0,
+    1456,
+    103
+   ],
+   [
+    0,
+    1560,
+    103
+   ],
+   [
+    0,
+    1664,
+    103
+   ],
+   [
+    0,
+    1768,
+    103
+   ],
+   [
+    0,
+    1872,
+    103
+   ],
+   [
+    0,
+    0,
+    206
+   ],
+   [
+    0,
+    104,
+    206
+   ],
+   [
+    0,
+    208,
+    206
+   ],
+   [
+    0,
+    312,
+    206
+   ],
+   [
+    0,
+    416,
+    206
+   ],
+   [
+    0,
+    520,
+    206
+   ],
+   [
+    0,
+    624,
+    206
+   ],
+   [
+    0,
+    728,
+    206
+   ],
+   [
+    0,
+    832,
+    206
+   ],
+   [
+    0,
+    936,
+    206
+   ]
+  ],
+  "fps": 9.46,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 1.855,
+  "h": 1.835
+ },
+ "anchor": [
+  0.4987,
+  0.5095
+ ],
+ "gpuBytes": 2442336,
+ "duration": 4.97,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "SacredFlameTarget_01_Regular_Yellow_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

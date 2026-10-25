@@ -1,0 +1,50 @@
+{
+ "id": "campfire-base",
+ "name": "Campfire stones and embers (base)",
+ "category": "map-loop",
+ "technique": "texture",
+ "tags": [
+  "campfire",
+  "stones",
+  "embers",
+  "part"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "texture": {
+  "file": "texture.webp",
+  "w": 256,
+  "h": 254,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "glow": {
+   "period": 1.3,
+   "amount": 0.15
+  }
+ },
+ "size": {
+  "w": 1.656,
+  "h": 1.641
+ },
+ "anchor": [
+  0.5,
+  0.5024
+ ],
+ "gpuBytes": 260096,
+ "licence": {
+  "id": "Own work (generated)",
+  "url": "https://ai.google.dev/gemini-api/terms",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap, generated with Google Gemini",
+ "source": "",
+ "sourceFile": "campfire-base.jpg",
+ "attribution": "Generated for battlemap with Google Gemini (Nano Banana 2.1).",
+ "notes": "The ground part of the campfire composite."
+}

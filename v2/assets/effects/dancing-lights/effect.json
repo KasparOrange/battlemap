@@ -1,0 +1,298 @@
+{
+ "id": "dancing-lights",
+ "name": "Dancing Lights",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "light",
+  "orb",
+  "wisp"
+ ],
+ "damage": [],
+ "spells": [
+  "Dancing Lights",
+  "Light",
+  "Will-o'-wisp"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 1,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2028,
+    "h": 104
+   }
+  ],
+  "frameW": 52,
+  "frameH": 52,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    52,
+    0
+   ],
+   [
+    0,
+    104,
+    0
+   ],
+   [
+    0,
+    156,
+    0
+   ],
+   [
+    0,
+    208,
+    0
+   ],
+   [
+    0,
+    260,
+    0
+   ],
+   [
+    0,
+    312,
+    0
+   ],
+   [
+    0,
+    364,
+    0
+   ],
+   [
+    0,
+    416,
+    0
+   ],
+   [
+    0,
+    468,
+    0
+   ],
+   [
+    0,
+    520,
+    0
+   ],
+   [
+    0,
+    572,
+    0
+   ],
+   [
+    0,
+    624,
+    0
+   ],
+   [
+    0,
+    676,
+    0
+   ],
+   [
+    0,
+    728,
+    0
+   ],
+   [
+    0,
+    780,
+    0
+   ],
+   [
+    0,
+    832,
+    0
+   ],
+   [
+    0,
+    884,
+    0
+   ],
+   [
+    0,
+    936,
+    0
+   ],
+   [
+    0,
+    988,
+    0
+   ],
+   [
+    0,
+    1040,
+    0
+   ],
+   [
+    0,
+    1092,
+    0
+   ],
+   [
+    0,
+    1144,
+    0
+   ],
+   [
+    0,
+    1196,
+    0
+   ],
+   [
+    0,
+    1248,
+    0
+   ],
+   [
+    0,
+    1300,
+    0
+   ],
+   [
+    0,
+    1352,
+    0
+   ],
+   [
+    0,
+    1404,
+    0
+   ],
+   [
+    0,
+    1456,
+    0
+   ],
+   [
+    0,
+    1508,
+    0
+   ],
+   [
+    0,
+    1560,
+    0
+   ],
+   [
+    0,
+    1612,
+    0
+   ],
+   [
+    0,
+    1664,
+    0
+   ],
+   [
+    0,
+    1716,
+    0
+   ],
+   [
+    0,
+    1768,
+    0
+   ],
+   [
+    0,
+    1820,
+    0
+   ],
+   [
+    0,
+    1872,
+    0
+   ],
+   [
+    0,
+    1924,
+    0
+   ],
+   [
+    0,
+    1976,
+    0
+   ],
+   [
+    0,
+    0,
+    52
+   ],
+   [
+    0,
+    52,
+    52
+   ],
+   [
+    0,
+    104,
+    52
+   ],
+   [
+    0,
+    156,
+    52
+   ],
+   [
+    0,
+    208,
+    52
+   ],
+   [
+    0,
+    260,
+    52
+   ],
+   [
+    0,
+    312,
+    52
+   ],
+   [
+    0,
+    364,
+    52
+   ],
+   [
+    0,
+    416,
+    52
+   ]
+  ],
+  "fps": 12.0,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 0.93,
+  "h": 0.925
+ },
+ "anchor": [
+  0.5054,
+  0.4811
+ ],
+ "gpuBytes": 843648,
+ "duration": 4.0,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "DancingLights_01_Yellow_200x200.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

@@ -1,0 +1,58 @@
+{
+ "id": "frost-patch",
+ "name": "Frost / ice patch",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "ice",
+  "frost",
+  "slippery",
+  "difficult terrain"
+ ],
+ "damage": [
+  "cold"
+ ],
+ "spells": [
+  "Ice Storm (aftermath)",
+  "Sleet Storm",
+  "Frost ground"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 4,
+ "texture": {
+  "file": "texture.webp",
+  "w": 512,
+  "h": 504,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "fadeIn": 1.5,
+  "pulse": {
+   "period": 6,
+   "alpha": 0.1,
+   "scale": 0.0
+  }
+ },
+ "size": {
+  "w": 3.777,
+  "h": 3.719
+ },
+ "anchor": [
+  0.5047,
+  0.4926
+ ],
+ "gpuBytes": 1032192,
+ "licence": {
+  "id": "Own work (generated)",
+  "url": "https://ai.google.dev/gemini-api/terms",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap, generated with Google Gemini",
+ "source": "",
+ "sourceFile": "frost-patch.jpg",
+ "attribution": "Generated for battlemap with Google Gemini (Nano Banana 2.1).",
+ "notes": ""
+}

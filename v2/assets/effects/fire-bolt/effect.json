@@ -1,0 +1,208 @@
+{
+ "id": "fire-bolt",
+ "name": "Fire Bolt",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "projectile",
+  "bolt",
+  "cantrip"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Fire Bolt",
+  "Produce Flame (thrown)"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 8,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1880,
+    "h": 468
+   }
+  ],
+  "frameW": 376,
+  "frameH": 78,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    376,
+    0
+   ],
+   [
+    0,
+    752,
+    0
+   ],
+   [
+    0,
+    1128,
+    0
+   ],
+   [
+    0,
+    1504,
+    0
+   ],
+   [
+    0,
+    0,
+    78
+   ],
+   [
+    0,
+    376,
+    78
+   ],
+   [
+    0,
+    752,
+    78
+   ],
+   [
+    0,
+    1128,
+    78
+   ],
+   [
+    0,
+    1504,
+    78
+   ],
+   [
+    0,
+    0,
+    156
+   ],
+   [
+    0,
+    376,
+    156
+   ],
+   [
+    0,
+    752,
+    156
+   ],
+   [
+    0,
+    1128,
+    156
+   ],
+   [
+    0,
+    1504,
+    156
+   ],
+   [
+    0,
+    0,
+    234
+   ],
+   [
+    0,
+    376,
+    234
+   ],
+   [
+    0,
+    752,
+    234
+   ],
+   [
+    0,
+    1128,
+    234
+   ],
+   [
+    0,
+    1504,
+    234
+   ],
+   [
+    0,
+    0,
+    312
+   ],
+   [
+    0,
+    376,
+    312
+   ],
+   [
+    0,
+    752,
+    312
+   ],
+   [
+    0,
+    1128,
+    312
+   ],
+   [
+    0,
+    1504,
+    312
+   ],
+   [
+    0,
+    0,
+    390
+   ],
+   [
+    0,
+    376,
+    390
+   ],
+   [
+    0,
+    752,
+    390
+   ],
+   [
+    0,
+    1128,
+    390
+   ]
+  ],
+  "fps": 19.09,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 6.715,
+  "h": 1.395
+ },
+ "anchor": [
+  0.4483,
+  0.4444
+ ],
+ "beam": {
+  "start": 0.0015,
+  "end": 0.895
+ },
+ "gpuBytes": 3519360,
+ "duration": 1.47,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "FireBolt_01_Regular_Orange_30ft_1600x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

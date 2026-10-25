@@ -1,0 +1,299 @@
+{
+ "id": "misty-step",
+ "name": "Misty Step (teleport)",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "teleport",
+  "conjuration",
+  "mist"
+ ],
+ "damage": [],
+ "spells": [
+  "Misty Step",
+  "Dimension Door",
+  "Thunder Step",
+  "Teleport"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1998,
+    "h": 333
+   }
+  ],
+  "frameW": 111,
+  "frameH": 111,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    111,
+    0
+   ],
+   [
+    0,
+    222,
+    0
+   ],
+   [
+    0,
+    333,
+    0
+   ],
+   [
+    0,
+    444,
+    0
+   ],
+   [
+    0,
+    555,
+    0
+   ],
+   [
+    0,
+    666,
+    0
+   ],
+   [
+    0,
+    777,
+    0
+   ],
+   [
+    0,
+    888,
+    0
+   ],
+   [
+    0,
+    999,
+    0
+   ],
+   [
+    0,
+    1110,
+    0
+   ],
+   [
+    0,
+    1221,
+    0
+   ],
+   [
+    0,
+    1332,
+    0
+   ],
+   [
+    0,
+    1443,
+    0
+   ],
+   [
+    0,
+    1554,
+    0
+   ],
+   [
+    0,
+    1665,
+    0
+   ],
+   [
+    0,
+    1776,
+    0
+   ],
+   [
+    0,
+    1887,
+    0
+   ],
+   [
+    0,
+    0,
+    111
+   ],
+   [
+    0,
+    111,
+    111
+   ],
+   [
+    0,
+    222,
+    111
+   ],
+   [
+    0,
+    333,
+    111
+   ],
+   [
+    0,
+    444,
+    111
+   ],
+   [
+    0,
+    555,
+    111
+   ],
+   [
+    0,
+    666,
+    111
+   ],
+   [
+    0,
+    777,
+    111
+   ],
+   [
+    0,
+    888,
+    111
+   ],
+   [
+    0,
+    999,
+    111
+   ],
+   [
+    0,
+    1110,
+    111
+   ],
+   [
+    0,
+    1221,
+    111
+   ],
+   [
+    0,
+    1332,
+    111
+   ],
+   [
+    0,
+    1443,
+    111
+   ],
+   [
+    0,
+    1554,
+    111
+   ],
+   [
+    0,
+    1665,
+    111
+   ],
+   [
+    0,
+    1776,
+    111
+   ],
+   [
+    0,
+    1887,
+    111
+   ],
+   [
+    0,
+    0,
+    222
+   ],
+   [
+    0,
+    111,
+    222
+   ],
+   [
+    0,
+    222,
+    222
+   ],
+   [
+    0,
+    333,
+    222
+   ],
+   [
+    0,
+    444,
+    222
+   ],
+   [
+    0,
+    555,
+    222
+   ],
+   [
+    0,
+    666,
+    222
+   ],
+   [
+    0,
+    777,
+    222
+   ],
+   [
+    0,
+    888,
+    222
+   ],
+   [
+    0,
+    999,
+    222
+   ],
+   [
+    0,
+    1110,
+    222
+   ],
+   [
+    0,
+    1221,
+    222
+   ]
+  ],
+  "fps": 18.31,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 1.98,
+  "h": 1.975
+ },
+ "anchor": [
+  0.4975,
+  0.4962
+ ],
+ "gpuBytes": 2661336,
+ "duration": 2.57,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "MistyStep_01_Regular_Blue_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

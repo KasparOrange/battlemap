@@ -1,0 +1,179 @@
+{
+ "id": "scorched-earth",
+ "name": "Scorched earth",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "burnt",
+  "lava",
+  "hazard"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Fireball (aftermath)",
+  "Incendiary Cloud"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 6,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1904,
+    "h": 720
+   }
+  ],
+  "frameW": 238,
+  "frameH": 240,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    238,
+    0
+   ],
+   [
+    0,
+    476,
+    0
+   ],
+   [
+    0,
+    714,
+    0
+   ],
+   [
+    0,
+    952,
+    0
+   ],
+   [
+    0,
+    1190,
+    0
+   ],
+   [
+    0,
+    1428,
+    0
+   ],
+   [
+    0,
+    1666,
+    0
+   ],
+   [
+    0,
+    0,
+    240
+   ],
+   [
+    0,
+    238,
+    240
+   ],
+   [
+    0,
+    476,
+    240
+   ],
+   [
+    0,
+    714,
+    240
+   ],
+   [
+    0,
+    952,
+    240
+   ],
+   [
+    0,
+    1190,
+    240
+   ],
+   [
+    0,
+    1428,
+    240
+   ],
+   [
+    0,
+    1666,
+    240
+   ],
+   [
+    0,
+    0,
+    480
+   ],
+   [
+    0,
+    238,
+    480
+   ],
+   [
+    0,
+    476,
+    480
+   ],
+   [
+    0,
+    714,
+    480
+   ],
+   [
+    0,
+    952,
+    480
+   ],
+   [
+    0,
+    1190,
+    480
+   ],
+   [
+    0,
+    1428,
+    480
+   ],
+   [
+    0,
+    1666,
+    480
+   ]
+  ],
+  "fps": 3.84,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 5.94,
+  "h": 6.0
+ },
+ "anchor": [
+  0.5025,
+  0.5
+ ],
+ "gpuBytes": 5483520,
+ "duration": 6.25,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "ScorchedEarth_01_Black_800x800.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

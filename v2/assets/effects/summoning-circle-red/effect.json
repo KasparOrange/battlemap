@@ -1,0 +1,52 @@
+{
+ "id": "summoning-circle-red",
+ "name": "Summoning circle — red (johndh)",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "magic circle",
+  "summoning",
+  "red",
+  "infernal"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "ground",
+ "blend": "add",
+ "tint": false,
+ "squares": 4,
+ "texture": {
+  "file": "texture.webp",
+  "w": 256,
+  "h": 256,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "rotate": -8,
+  "pulse": {
+   "period": 3,
+   "alpha": 0.2,
+   "scale": 0.0
+  }
+ },
+ "size": {
+  "w": 4.0,
+  "h": 4.0
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 262144,
+ "licence": {
+  "id": "CC BY 3.0",
+  "url": "https://creativecommons.org/licenses/by/3.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "johndh",
+ "source": "https://opengameart.org/content/colored-summoning-circles",
+ "sourceFile": "circle5a.png",
+ "attribution": "\"Colored summoning circles\" by johndh (opengameart.org), CC BY 3.0.",
+ "notes": ""
+}

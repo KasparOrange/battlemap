@@ -1,0 +1,299 @@
+{
+ "id": "call-lightning",
+ "name": "Call Lightning",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "lightning",
+  "storm",
+  "strike"
+ ],
+ "damage": [
+  "lightning"
+ ],
+ "spells": [
+  "Call Lightning",
+  "Storm of Vengeance"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 4,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1998,
+    "h": 1326
+   }
+  ],
+  "frameW": 222,
+  "frameH": 221,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    222,
+    0
+   ],
+   [
+    0,
+    444,
+    0
+   ],
+   [
+    0,
+    666,
+    0
+   ],
+   [
+    0,
+    888,
+    0
+   ],
+   [
+    0,
+    1110,
+    0
+   ],
+   [
+    0,
+    1332,
+    0
+   ],
+   [
+    0,
+    1554,
+    0
+   ],
+   [
+    0,
+    1776,
+    0
+   ],
+   [
+    0,
+    0,
+    221
+   ],
+   [
+    0,
+    222,
+    221
+   ],
+   [
+    0,
+    444,
+    221
+   ],
+   [
+    0,
+    666,
+    221
+   ],
+   [
+    0,
+    888,
+    221
+   ],
+   [
+    0,
+    1110,
+    221
+   ],
+   [
+    0,
+    1332,
+    221
+   ],
+   [
+    0,
+    1554,
+    221
+   ],
+   [
+    0,
+    1776,
+    221
+   ],
+   [
+    0,
+    0,
+    442
+   ],
+   [
+    0,
+    222,
+    442
+   ],
+   [
+    0,
+    444,
+    442
+   ],
+   [
+    0,
+    666,
+    442
+   ],
+   [
+    0,
+    888,
+    442
+   ],
+   [
+    0,
+    1110,
+    442
+   ],
+   [
+    0,
+    1332,
+    442
+   ],
+   [
+    0,
+    1554,
+    442
+   ],
+   [
+    0,
+    1776,
+    442
+   ],
+   [
+    0,
+    0,
+    663
+   ],
+   [
+    0,
+    222,
+    663
+   ],
+   [
+    0,
+    444,
+    663
+   ],
+   [
+    0,
+    666,
+    663
+   ],
+   [
+    0,
+    888,
+    663
+   ],
+   [
+    0,
+    1110,
+    663
+   ],
+   [
+    0,
+    1332,
+    663
+   ],
+   [
+    0,
+    1554,
+    663
+   ],
+   [
+    0,
+    1776,
+    663
+   ],
+   [
+    0,
+    0,
+    884
+   ],
+   [
+    0,
+    222,
+    884
+   ],
+   [
+    0,
+    444,
+    884
+   ],
+   [
+    0,
+    666,
+    884
+   ],
+   [
+    0,
+    888,
+    884
+   ],
+   [
+    0,
+    1110,
+    884
+   ],
+   [
+    0,
+    1332,
+    884
+   ],
+   [
+    0,
+    1554,
+    884
+   ],
+   [
+    0,
+    1776,
+    884
+   ],
+   [
+    0,
+    0,
+    1105
+   ],
+   [
+    0,
+    222,
+    1105
+   ],
+   [
+    0,
+    444,
+    1105
+   ]
+  ],
+  "fps": 11.75,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 3.956,
+  "h": 3.952
+ },
+ "anchor": [
+  0.4995,
+  0.5
+ ],
+ "gpuBytes": 10597392,
+ "duration": 4.0,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "CallLightning_01_Blue_1000x1000.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

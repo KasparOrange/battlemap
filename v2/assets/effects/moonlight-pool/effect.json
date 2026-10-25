@@ -1,0 +1,59 @@
+{
+ "id": "moonlight-pool",
+ "name": "Moonlight pool",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "light",
+  "moon",
+  "night",
+  "glow"
+ ],
+ "damage": [
+  "radiant"
+ ],
+ "spells": [
+  "Moonbeam",
+  "Faerie light",
+  "Starry Wisp"
+ ],
+ "layer": "air",
+ "blend": "add",
+ "tint": true,
+ "squares": 4,
+ "texture": {
+  "file": "texture.webp",
+  "w": 256,
+  "h": 256,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "color": "#b8d4ff",
+  "pulse": {
+   "period": 4,
+   "alpha": 0.2,
+   "scale": 0.03
+  },
+  "fadeIn": 1.2
+ },
+ "size": {
+  "w": 4.0,
+  "h": 4.0
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 262144,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": "light_03.png",
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

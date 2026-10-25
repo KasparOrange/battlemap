@@ -1,0 +1,301 @@
+{
+ "id": "eruption",
+ "name": "Eruption",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "lava",
+  "earth",
+  "burst"
+ ],
+ "damage": [
+  "fire",
+  "bludgeoning"
+ ],
+ "spells": [
+  "Eruption",
+  "Erupting Earth",
+  "Volcano"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 4,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1899,
+    "h": 1278
+   }
+  ],
+  "frameW": 211,
+  "frameH": 213,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    211,
+    0
+   ],
+   [
+    0,
+    422,
+    0
+   ],
+   [
+    0,
+    633,
+    0
+   ],
+   [
+    0,
+    844,
+    0
+   ],
+   [
+    0,
+    1055,
+    0
+   ],
+   [
+    0,
+    1266,
+    0
+   ],
+   [
+    0,
+    1477,
+    0
+   ],
+   [
+    0,
+    1688,
+    0
+   ],
+   [
+    0,
+    0,
+    213
+   ],
+   [
+    0,
+    211,
+    213
+   ],
+   [
+    0,
+    422,
+    213
+   ],
+   [
+    0,
+    633,
+    213
+   ],
+   [
+    0,
+    844,
+    213
+   ],
+   [
+    0,
+    1055,
+    213
+   ],
+   [
+    0,
+    1266,
+    213
+   ],
+   [
+    0,
+    1477,
+    213
+   ],
+   [
+    0,
+    1688,
+    213
+   ],
+   [
+    0,
+    0,
+    426
+   ],
+   [
+    0,
+    211,
+    426
+   ],
+   [
+    0,
+    422,
+    426
+   ],
+   [
+    0,
+    633,
+    426
+   ],
+   [
+    0,
+    844,
+    426
+   ],
+   [
+    0,
+    1055,
+    426
+   ],
+   [
+    0,
+    1266,
+    426
+   ],
+   [
+    0,
+    1477,
+    426
+   ],
+   [
+    0,
+    1688,
+    426
+   ],
+   [
+    0,
+    0,
+    639
+   ],
+   [
+    0,
+    211,
+    639
+   ],
+   [
+    0,
+    422,
+    639
+   ],
+   [
+    0,
+    633,
+    639
+   ],
+   [
+    0,
+    844,
+    639
+   ],
+   [
+    0,
+    1055,
+    639
+   ],
+   [
+    0,
+    1266,
+    639
+   ],
+   [
+    0,
+    1477,
+    639
+   ],
+   [
+    0,
+    1688,
+    639
+   ],
+   [
+    0,
+    0,
+    852
+   ],
+   [
+    0,
+    211,
+    852
+   ],
+   [
+    0,
+    422,
+    852
+   ],
+   [
+    0,
+    633,
+    852
+   ],
+   [
+    0,
+    844,
+    852
+   ],
+   [
+    0,
+    1055,
+    852
+   ],
+   [
+    0,
+    1266,
+    852
+   ],
+   [
+    0,
+    1477,
+    852
+   ],
+   [
+    0,
+    1688,
+    852
+   ],
+   [
+    0,
+    0,
+    1065
+   ],
+   [
+    0,
+    211,
+    1065
+   ],
+   [
+    0,
+    422,
+    1065
+   ]
+  ],
+  "fps": 5.3,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 3.767,
+  "h": 3.807
+ },
+ "anchor": [
+  0.5027,
+  0.4904
+ ],
+ "gpuBytes": 9707688,
+ "duration": 8.88,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "Eruption_01_Regular_Orange_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

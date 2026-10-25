@@ -1,0 +1,185 @@
+{
+ "id": "explosion-fiery",
+ "name": "Explosion (small, fiery)",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "explosion",
+  "burst",
+  "bomb"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Alchemist's fire",
+  "Bomb",
+  "Fire trap"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 3,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1908,
+    "h": 498
+   }
+  ],
+  "frameW": 159,
+  "frameH": 166,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    159,
+    0
+   ],
+   [
+    0,
+    318,
+    0
+   ],
+   [
+    0,
+    477,
+    0
+   ],
+   [
+    0,
+    636,
+    0
+   ],
+   [
+    0,
+    795,
+    0
+   ],
+   [
+    0,
+    954,
+    0
+   ],
+   [
+    0,
+    1113,
+    0
+   ],
+   [
+    0,
+    1272,
+    0
+   ],
+   [
+    0,
+    1431,
+    0
+   ],
+   [
+    0,
+    1590,
+    0
+   ],
+   [
+    0,
+    1749,
+    0
+   ],
+   [
+    0,
+    0,
+    166
+   ],
+   [
+    0,
+    159,
+    166
+   ],
+   [
+    0,
+    318,
+    166
+   ],
+   [
+    0,
+    477,
+    166
+   ],
+   [
+    0,
+    636,
+    166
+   ],
+   [
+    0,
+    795,
+    166
+   ],
+   [
+    0,
+    954,
+    166
+   ],
+   [
+    0,
+    1113,
+    166
+   ],
+   [
+    0,
+    1272,
+    166
+   ],
+   [
+    0,
+    1431,
+    166
+   ],
+   [
+    0,
+    1590,
+    166
+   ],
+   [
+    0,
+    1749,
+    166
+   ],
+   [
+    0,
+    0,
+    332
+   ]
+  ],
+  "fps": 14.4,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 2.838,
+  "h": 2.956
+ },
+ "anchor": [
+  0.4819,
+  0.4925
+ ],
+ "gpuBytes": 3800736,
+ "duration": 1.67,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Unity Technologies (Unity Labs)",
+ "source": "https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks",
+ "sourceFile": "Explosion00-flipbooks/Explosion00_5x5.tga",
+ "attribution": "Flipbook by Unity Labs (CC0).",
+ "notes": ""
+}

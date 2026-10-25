@@ -1,0 +1,275 @@
+{
+ "id": "fire-orb",
+ "name": "Fire orb (flaming sphere)",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "fire",
+  "orb",
+  "ball"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Flaming Sphere",
+  "Fire Shield",
+  "Fire elemental"
+ ],
+ "layer": "air",
+ "blend": "add",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2040,
+    "h": 306
+   }
+  ],
+  "frameW": 102,
+  "frameH": 102,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    102,
+    0
+   ],
+   [
+    0,
+    204,
+    0
+   ],
+   [
+    0,
+    306,
+    0
+   ],
+   [
+    0,
+    408,
+    0
+   ],
+   [
+    0,
+    510,
+    0
+   ],
+   [
+    0,
+    612,
+    0
+   ],
+   [
+    0,
+    714,
+    0
+   ],
+   [
+    0,
+    816,
+    0
+   ],
+   [
+    0,
+    918,
+    0
+   ],
+   [
+    0,
+    1020,
+    0
+   ],
+   [
+    0,
+    1122,
+    0
+   ],
+   [
+    0,
+    1224,
+    0
+   ],
+   [
+    0,
+    1326,
+    0
+   ],
+   [
+    0,
+    1428,
+    0
+   ],
+   [
+    0,
+    1530,
+    0
+   ],
+   [
+    0,
+    1632,
+    0
+   ],
+   [
+    0,
+    1734,
+    0
+   ],
+   [
+    0,
+    1836,
+    0
+   ],
+   [
+    0,
+    1938,
+    0
+   ],
+   [
+    0,
+    0,
+    102
+   ],
+   [
+    0,
+    102,
+    102
+   ],
+   [
+    0,
+    204,
+    102
+   ],
+   [
+    0,
+    306,
+    102
+   ],
+   [
+    0,
+    408,
+    102
+   ],
+   [
+    0,
+    510,
+    102
+   ],
+   [
+    0,
+    612,
+    102
+   ],
+   [
+    0,
+    714,
+    102
+   ],
+   [
+    0,
+    816,
+    102
+   ],
+   [
+    0,
+    918,
+    102
+   ],
+   [
+    0,
+    1020,
+    102
+   ],
+   [
+    0,
+    1122,
+    102
+   ],
+   [
+    0,
+    1224,
+    102
+   ],
+   [
+    0,
+    1326,
+    102
+   ],
+   [
+    0,
+    1428,
+    102
+   ],
+   [
+    0,
+    1530,
+    102
+   ],
+   [
+    0,
+    1632,
+    102
+   ],
+   [
+    0,
+    1734,
+    102
+   ],
+   [
+    0,
+    1836,
+    102
+   ],
+   [
+    0,
+    1938,
+    102
+   ],
+   [
+    0,
+    0,
+    204
+   ],
+   [
+    0,
+    102,
+    204
+   ],
+   [
+    0,
+    204,
+    204
+   ]
+  ],
+  "fps": 16.12,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 1.812,
+  "h": 1.812
+ },
+ "anchor": [
+  0.4914,
+  0.5086
+ ],
+ "gpuBytes": 2496960,
+ "duration": 2.67,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Unity Technologies (Unity Labs)",
+ "source": "https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks",
+ "sourceFile": "FireBall01-flipbooks/FireBall01_8x8.tga",
+ "attribution": "Flipbook by Unity Labs (CC0).",
+ "notes": ""
+}

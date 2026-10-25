@@ -1,0 +1,49 @@
+{
+ "id": "fog-thick",
+ "name": "Thick fog",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "fog",
+  "weather",
+  "obscure",
+  "graveyard"
+ ],
+ "damage": [],
+ "spells": [
+  "Fog Cloud",
+  "Control Weather"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/fog.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uDensity": 0.85,
+   "uSpeed": 0.25,
+   "uScale": 0.12,
+   "uColor": [
+    0.78,
+    0.8,
+    0.84
+   ]
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

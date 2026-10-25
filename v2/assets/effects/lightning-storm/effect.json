@@ -1,0 +1,51 @@
+{
+ "id": "lightning-storm",
+ "name": "Lightning flashes",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "lightning",
+  "storm",
+  "thunder",
+  "weather"
+ ],
+ "damage": [
+  "lightning"
+ ],
+ "spells": [
+  "Call Lightning",
+  "Control Weather",
+  "Storm of Vengeance"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/lightning-flash.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uEvery": 7.0,
+   "uStrength": 0.85,
+   "uColor": [
+    0.85,
+    0.9,
+    1.0
+   ]
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": "The flash timing is a hash of time; trigger lightning-strike sheets in sync from the runtime if wanted."
+}

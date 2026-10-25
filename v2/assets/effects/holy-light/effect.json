@@ -1,0 +1,61 @@
+{
+ "id": "holy-light",
+ "name": "Radiant light",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "light",
+  "holy",
+  "sun",
+  "glow"
+ ],
+ "damage": [
+  "radiant"
+ ],
+ "spells": [
+  "Daylight",
+  "Dawn",
+  "Sunbeam",
+  "Holy Aura"
+ ],
+ "layer": "air",
+ "blend": "add",
+ "tint": true,
+ "squares": 4,
+ "texture": {
+  "file": "texture.webp",
+  "w": 256,
+  "h": 256,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "color": "#ffe9a8",
+  "rotate": 6,
+  "pulse": {
+   "period": 3,
+   "alpha": 0.25,
+   "scale": 0.04
+  },
+  "fadeIn": 0.8
+ },
+ "size": {
+  "w": 4.0,
+  "h": 4.0
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 262144,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": "light_02.png",
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

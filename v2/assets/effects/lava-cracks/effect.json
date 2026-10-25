@@ -1,0 +1,219 @@
+{
+ "id": "lava-cracks",
+ "name": "Glowing lava cracks",
+ "category": "map-loop",
+ "technique": "sheet",
+ "tags": [
+  "lava",
+  "cracks",
+  "hazard"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Earthquake",
+  "Molten ground"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 4,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2040,
+    "h": 828
+   }
+  ],
+  "frameW": 204,
+  "frameH": 207,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    204,
+    0
+   ],
+   [
+    0,
+    408,
+    0
+   ],
+   [
+    0,
+    612,
+    0
+   ],
+   [
+    0,
+    816,
+    0
+   ],
+   [
+    0,
+    1020,
+    0
+   ],
+   [
+    0,
+    1224,
+    0
+   ],
+   [
+    0,
+    1428,
+    0
+   ],
+   [
+    0,
+    1632,
+    0
+   ],
+   [
+    0,
+    1836,
+    0
+   ],
+   [
+    0,
+    0,
+    207
+   ],
+   [
+    0,
+    204,
+    207
+   ],
+   [
+    0,
+    408,
+    207
+   ],
+   [
+    0,
+    612,
+    207
+   ],
+   [
+    0,
+    816,
+    207
+   ],
+   [
+    0,
+    1020,
+    207
+   ],
+   [
+    0,
+    1224,
+    207
+   ],
+   [
+    0,
+    1428,
+    207
+   ],
+   [
+    0,
+    1632,
+    207
+   ],
+   [
+    0,
+    1836,
+    207
+   ],
+   [
+    0,
+    0,
+    414
+   ],
+   [
+    0,
+    204,
+    414
+   ],
+   [
+    0,
+    408,
+    414
+   ],
+   [
+    0,
+    612,
+    414
+   ],
+   [
+    0,
+    816,
+    414
+   ],
+   [
+    0,
+    1020,
+    414
+   ],
+   [
+    0,
+    1224,
+    414
+   ],
+   [
+    0,
+    1428,
+    414
+   ],
+   [
+    0,
+    1632,
+    414
+   ],
+   [
+    0,
+    1836,
+    414
+   ],
+   [
+    0,
+    0,
+    621
+   ],
+   [
+    0,
+    204,
+    621
+   ]
+  ],
+  "fps": 12.0,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 3.92,
+  "h": 3.973
+ },
+ "anchor": [
+  0.5034,
+  0.4983
+ ],
+ "gpuBytes": 6756480,
+ "duration": 2.67,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "GroundCrackLoop_01_Regular_Orange_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

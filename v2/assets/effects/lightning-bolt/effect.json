@@ -1,0 +1,302 @@
+{
+ "id": "lightning-bolt",
+ "name": "Lightning Bolt",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "line",
+  "bolt",
+  "beam"
+ ],
+ "damage": [
+  "lightning"
+ ],
+ "spells": [
+  "Lightning Bolt"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 20,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2048,
+    "h": 312
+   }
+  ],
+  "frameW": 512,
+  "frameH": 26,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    512,
+    0
+   ],
+   [
+    0,
+    1024,
+    0
+   ],
+   [
+    0,
+    1536,
+    0
+   ],
+   [
+    0,
+    0,
+    26
+   ],
+   [
+    0,
+    512,
+    26
+   ],
+   [
+    0,
+    1024,
+    26
+   ],
+   [
+    0,
+    1536,
+    26
+   ],
+   [
+    0,
+    0,
+    52
+   ],
+   [
+    0,
+    512,
+    52
+   ],
+   [
+    0,
+    1024,
+    52
+   ],
+   [
+    0,
+    1536,
+    52
+   ],
+   [
+    0,
+    0,
+    78
+   ],
+   [
+    0,
+    512,
+    78
+   ],
+   [
+    0,
+    1024,
+    78
+   ],
+   [
+    0,
+    1536,
+    78
+   ],
+   [
+    0,
+    0,
+    104
+   ],
+   [
+    0,
+    512,
+    104
+   ],
+   [
+    0,
+    1024,
+    104
+   ],
+   [
+    0,
+    1536,
+    104
+   ],
+   [
+    0,
+    0,
+    130
+   ],
+   [
+    0,
+    512,
+    130
+   ],
+   [
+    0,
+    1024,
+    130
+   ],
+   [
+    0,
+    1536,
+    130
+   ],
+   [
+    0,
+    0,
+    156
+   ],
+   [
+    0,
+    512,
+    156
+   ],
+   [
+    0,
+    1024,
+    156
+   ],
+   [
+    0,
+    1536,
+    156
+   ],
+   [
+    0,
+    0,
+    182
+   ],
+   [
+    0,
+    512,
+    182
+   ],
+   [
+    0,
+    1024,
+    182
+   ],
+   [
+    0,
+    1536,
+    182
+   ],
+   [
+    0,
+    0,
+    208
+   ],
+   [
+    0,
+    512,
+    208
+   ],
+   [
+    0,
+    1024,
+    208
+   ],
+   [
+    0,
+    1536,
+    208
+   ],
+   [
+    0,
+    0,
+    234
+   ],
+   [
+    0,
+    512,
+    234
+   ],
+   [
+    0,
+    1024,
+    234
+   ],
+   [
+    0,
+    1536,
+    234
+   ],
+   [
+    0,
+    0,
+    260
+   ],
+   [
+    0,
+    512,
+    260
+   ],
+   [
+    0,
+    1024,
+    260
+   ],
+   [
+    0,
+    1536,
+    260
+   ],
+   [
+    0,
+    0,
+    286
+   ],
+   [
+    0,
+    512,
+    286
+   ],
+   [
+    0,
+    1024,
+    286
+   ],
+   [
+    0,
+    1536,
+    286
+   ]
+  ],
+  "fps": 13.18,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 19.98,
+  "h": 1.0
+ },
+ "anchor": [
+  0.5005,
+  0.5
+ ],
+ "beam": {
+  "start": 0.0501,
+  "end": 0.951
+ },
+ "gpuBytes": 2555904,
+ "duration": 3.57,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "LightningBolt_01_Regular_Blue_4000x200.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": "A line effect: stretch so beam.start→beam.end spans caster→target."
+}

@@ -1,0 +1,299 @@
+{
+ "id": "marker-frightened",
+ "name": "Frightened",
+ "category": "aura",
+ "technique": "sheet",
+ "tags": [
+  "condition",
+  "frightened",
+  "marker"
+ ],
+ "damage": [
+  "psychic"
+ ],
+ "spells": [
+  "Cause Fear",
+  "Fear"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2040,
+    "h": 315
+   }
+  ],
+  "frameW": 102,
+  "frameH": 105,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    102,
+    0
+   ],
+   [
+    0,
+    204,
+    0
+   ],
+   [
+    0,
+    306,
+    0
+   ],
+   [
+    0,
+    408,
+    0
+   ],
+   [
+    0,
+    510,
+    0
+   ],
+   [
+    0,
+    612,
+    0
+   ],
+   [
+    0,
+    714,
+    0
+   ],
+   [
+    0,
+    816,
+    0
+   ],
+   [
+    0,
+    918,
+    0
+   ],
+   [
+    0,
+    1020,
+    0
+   ],
+   [
+    0,
+    1122,
+    0
+   ],
+   [
+    0,
+    1224,
+    0
+   ],
+   [
+    0,
+    1326,
+    0
+   ],
+   [
+    0,
+    1428,
+    0
+   ],
+   [
+    0,
+    1530,
+    0
+   ],
+   [
+    0,
+    1632,
+    0
+   ],
+   [
+    0,
+    1734,
+    0
+   ],
+   [
+    0,
+    1836,
+    0
+   ],
+   [
+    0,
+    1938,
+    0
+   ],
+   [
+    0,
+    0,
+    105
+   ],
+   [
+    0,
+    102,
+    105
+   ],
+   [
+    0,
+    204,
+    105
+   ],
+   [
+    0,
+    306,
+    105
+   ],
+   [
+    0,
+    408,
+    105
+   ],
+   [
+    0,
+    510,
+    105
+   ],
+   [
+    0,
+    612,
+    105
+   ],
+   [
+    0,
+    714,
+    105
+   ],
+   [
+    0,
+    816,
+    105
+   ],
+   [
+    0,
+    918,
+    105
+   ],
+   [
+    0,
+    1020,
+    105
+   ],
+   [
+    0,
+    1122,
+    105
+   ],
+   [
+    0,
+    1224,
+    105
+   ],
+   [
+    0,
+    1326,
+    105
+   ],
+   [
+    0,
+    1428,
+    105
+   ],
+   [
+    0,
+    1530,
+    105
+   ],
+   [
+    0,
+    1632,
+    105
+   ],
+   [
+    0,
+    1734,
+    105
+   ],
+   [
+    0,
+    1836,
+    105
+   ],
+   [
+    0,
+    1938,
+    105
+   ],
+   [
+    0,
+    0,
+    210
+   ],
+   [
+    0,
+    102,
+    210
+   ],
+   [
+    0,
+    204,
+    210
+   ],
+   [
+    0,
+    306,
+    210
+   ],
+   [
+    0,
+    408,
+    210
+   ],
+   [
+    0,
+    510,
+    210
+   ],
+   [
+    0,
+    612,
+    210
+   ],
+   [
+    0,
+    714,
+    210
+   ]
+  ],
+  "fps": 7.94,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 1.815,
+  "h": 1.87
+ },
+ "anchor": [
+  0.5152,
+  0.508
+ ],
+ "gpuBytes": 2570400,
+ "duration": 6.04,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "MarkerFear_01_Dark_Purple_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

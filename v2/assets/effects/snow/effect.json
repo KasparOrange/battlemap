@@ -1,0 +1,41 @@
+{
+ "id": "snow",
+ "name": "Snowfall",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "snow",
+  "weather",
+  "winter"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/snow.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uDensity": 0.5,
+   "uSpeed": 1.0,
+   "uWind": 0.15,
+   "uSize": 1.0
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

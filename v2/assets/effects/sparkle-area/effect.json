@@ -1,0 +1,81 @@
+{
+ "id": "sparkle-area",
+ "name": "Treasure sparkle (area)",
+ "category": "map-loop",
+ "technique": "particles",
+ "tags": [
+  "treasure",
+  "sparkle",
+  "loot",
+  "gold",
+  "magic item"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "add",
+ "tint": false,
+ "squares": 2,
+ "particles": {
+  "textures": [
+   {
+    "file": "particle-0.webp",
+    "w": 64,
+    "h": 63,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   }
+  ],
+  "emitter": "area",
+  "w": 2,
+  "h": 2,
+  "rate": 4,
+  "max": 12,
+  "life": [
+   0.6,
+   1.2
+  ],
+  "speed": [
+   0.0,
+   0.0
+  ],
+  "angle": [
+   0,
+   0
+  ],
+  "gravity": [
+   0.0,
+   0.0
+  ],
+  "size": [
+   0.25,
+   0.5
+  ],
+  "grow": 0.6,
+  "alpha": [
+   0.0,
+   1.0,
+   0.0
+  ],
+  "colors": [
+   "#fff6c8",
+   "#ffd060"
+  ],
+  "spin": [
+   -90,
+   90
+  ]
+ },
+ "gpuBytes": 16128,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": null,
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

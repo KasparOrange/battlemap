@@ -1,0 +1,138 @@
+{
+ "id": "fog-cloud",
+ "name": "Fog Cloud",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "fog",
+  "cloud",
+  "mist",
+  "obscure"
+ ],
+ "damage": [],
+ "spells": [
+  "Fog Cloud",
+  "Obscuring mist"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 8,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2016,
+    "h": 864
+   }
+  ],
+  "frameW": 288,
+  "frameH": 288,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    288,
+    0
+   ],
+   [
+    0,
+    576,
+    0
+   ],
+   [
+    0,
+    864,
+    0
+   ],
+   [
+    0,
+    1152,
+    0
+   ],
+   [
+    0,
+    1440,
+    0
+   ],
+   [
+    0,
+    1728,
+    0
+   ],
+   [
+    0,
+    0,
+    288
+   ],
+   [
+    0,
+    288,
+    288
+   ],
+   [
+    0,
+    576,
+    288
+   ],
+   [
+    0,
+    864,
+    288
+   ],
+   [
+    0,
+    1152,
+    288
+   ],
+   [
+    0,
+    1440,
+    288
+   ],
+   [
+    0,
+    1728,
+    288
+   ],
+   [
+    0,
+    0,
+    576
+   ],
+   [
+    0,
+    288,
+    576
+   ]
+  ],
+  "fps": 3.17,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 8.0,
+  "h": 8.0
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 6967296,
+ "duration": 5.04,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "FogCloud_01_White_800x800.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

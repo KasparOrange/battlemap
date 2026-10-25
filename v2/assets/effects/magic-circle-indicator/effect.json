@@ -1,0 +1,136 @@
+{
+ "id": "magic-circle-indicator",
+ "name": "Magic circle indicator (layered)",
+ "category": "regional",
+ "technique": "layers",
+ "tags": [
+  "magic circle",
+  "indicator",
+  "casting",
+  "ring"
+ ],
+ "damage": [],
+ "spells": [
+  "Any spell being cast",
+  "Concentration",
+  "Ritual"
+ ],
+ "layer": "ground",
+ "blend": "add",
+ "tint": true,
+ "squares": 4,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1470,
+    "h": 210
+   }
+  ],
+  "frameW": 210,
+  "frameH": 210,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    210,
+    0
+   ],
+   [
+    0,
+    420,
+    0
+   ],
+   [
+    0,
+    630,
+    0
+   ],
+   [
+    0,
+    840,
+    0
+   ],
+   [
+    0,
+    1050,
+    0
+   ],
+   [
+    0,
+    1260,
+    0
+   ]
+  ],
+  "variants": true
+ },
+ "size": {
+  "w": 3.75,
+  "h": 3.75
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 1234800,
+ "duration": 0.23,
+ "layers": [
+  {
+   "frame": 0,
+   "name": "outer ring",
+   "rotate": 45
+  },
+  {
+   "frame": 1,
+   "name": "dashed ring",
+   "rotate": -45
+  },
+  {
+   "frame": 2,
+   "name": "runes",
+   "rotate": 11.25
+  },
+  {
+   "frame": 3,
+   "name": "star",
+   "rotate": 9
+  },
+  {
+   "frame": 4,
+   "name": "pentagon",
+   "rotate": 9
+  },
+  {
+   "frame": 5,
+   "name": "inner ring",
+   "rotate": -22.5
+  },
+  {
+   "frame": 6,
+   "name": "core",
+   "pulse": {
+    "period": 4,
+    "scale": [
+     0.92,
+     1.04
+    ]
+   }
+  }
+ ],
+ "motion": {},
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap (hand-made Lottie, docs/mockups/effects/media/lottie-magic-circle.json)",
+ "source": "",
+ "sourceFile": "magic-circle-layers",
+ "attribution": "battlemap (own work).",
+ "notes": "The tabletop board's liked magic circle: each layer one texture turning at its own speed — no frames, smooth at any speed."
+}

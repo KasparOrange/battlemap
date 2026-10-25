@@ -1,0 +1,53 @@
+{
+ "id": "lava-pool",
+ "name": "Lava (flowing)",
+ "category": "map-loop",
+ "technique": "shader",
+ "tags": [
+  "lava",
+  "magma",
+  "volcano",
+  "hazard"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/lava-flow.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "mask",
+  "uniforms": {
+   "uTileSquares": 4.0,
+   "uFlow": [
+    0.06,
+    0.02
+   ],
+   "uGlow": 0.6
+  },
+  "textures": {
+   "uFlowTex": {
+    "file": "uFlowTex.webp",
+    "w": 512,
+    "h": 512,
+    "wrap": "repeat"
+   }
+  }
+ },
+ "gpuBytes": 1048576,
+ "licence": {
+  "id": "Own work (generated)",
+  "url": "https://ai.google.dev/gemini-api/terms",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap, generated with Google Gemini",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "Generated for battlemap with Google Gemini (Nano Banana 2.1).",
+ "notes": "Same use as water-pool; pairs with heat-haze over it."
+}

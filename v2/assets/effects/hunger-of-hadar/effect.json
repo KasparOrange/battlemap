@@ -1,0 +1,60 @@
+{
+ "id": "hunger-of-hadar",
+ "name": "Hunger of Hadar",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "darkness",
+  "void",
+  "tentacles",
+  "shadow"
+ ],
+ "damage": [
+  "cold",
+  "acid"
+ ],
+ "spells": [
+  "Hunger of Hadar",
+  "Darkness",
+  "Maddening Darkness"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 9,
+ "texture": {
+  "file": "texture.webp",
+  "w": 512,
+  "h": 510,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "rotate": -2,
+  "pulse": {
+   "period": 5,
+   "alpha": 0.0,
+   "scale": 0.02
+  },
+  "fadeIn": 1.5
+ },
+ "size": {
+  "w": 5.924,
+  "h": 5.897
+ },
+ "anchor": [
+  0.5163,
+  0.5082
+ ],
+ "gpuBytes": 1044480,
+ "licence": {
+  "id": "Own work (generated)",
+  "url": "https://ai.google.dev/gemini-api/terms",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap, generated with Google Gemini",
+ "source": "",
+ "sourceFile": "hunger-of-hadar.jpg",
+ "attribution": "Generated for battlemap with Google Gemini (Nano Banana 2.1).",
+ "notes": ""
+}

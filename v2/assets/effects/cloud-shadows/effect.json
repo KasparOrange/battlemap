@@ -1,0 +1,45 @@
+{
+ "id": "cloud-shadows",
+ "name": "Passing cloud shadows",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "clouds",
+  "weather",
+  "overcast",
+  "outdoor"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/cloud-shadows.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uStrength": 0.35,
+   "uSpeed": 1.0,
+   "uScale": 0.06,
+   "uWind": [
+    1.0,
+    0.3
+   ]
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

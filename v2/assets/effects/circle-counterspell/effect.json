@@ -1,0 +1,58 @@
+{
+ "id": "circle-counterspell",
+ "name": "Magic circle — counterspell sigil",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "magic circle",
+  "violet-red",
+  "ritual",
+  "glyph"
+ ],
+ "damage": [],
+ "spells": [
+  "Counterspell",
+  "Dispel Magic",
+  "Antimagic Field"
+ ],
+ "layer": "ground",
+ "blend": "add",
+ "tint": false,
+ "squares": 9,
+ "texture": {
+  "file": "texture.webp",
+  "w": 512,
+  "h": 505,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "rotate": 4,
+  "pulse": {
+   "period": 3.5,
+   "alpha": 0.25,
+   "scale": 0.0
+  },
+  "fadeIn": 1.2,
+  "shader": "magic-circle.frag"
+ },
+ "size": {
+  "w": 8.596,
+  "h": 8.473
+ },
+ "anchor": [
+  0.4765,
+  0.4689
+ ],
+ "gpuBytes": 1034240,
+ "licence": {
+  "id": "Own work (generated)",
+  "url": "https://ai.google.dev/gemini-api/terms",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap, generated with Google Gemini",
+ "source": "",
+ "sourceFile": "circle-counterspell.jpg",
+ "attribution": "Generated for battlemap with Google Gemini (Nano Banana 2.1).",
+ "notes": ""
+}

@@ -1,0 +1,66 @@
+{
+ "id": "brazier",
+ "name": "Brazier (CC0 + generated)",
+ "category": "map-loop",
+ "technique": "composite",
+ "tags": [
+  "fire",
+  "brazier",
+  "light source",
+  "temple"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 1.3,
+ "parts": [
+  {
+   "id": "torch-glow",
+   "x": 0.0,
+   "y": 0.0,
+   "scale": 0.8
+  },
+  {
+   "id": "brazier-base",
+   "x": 0.0,
+   "y": 0.0,
+   "scale": 1.0
+  },
+  {
+   "id": "flame-small",
+   "x": 0.0,
+   "y": 0.1,
+   "scale": 0.7
+  },
+  {
+   "id": "embers-rising",
+   "x": 0.0,
+   "y": 0.0,
+   "scale": 0.7
+  }
+ ],
+ "size": {
+  "w": 1.3,
+  "h": 1.3
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

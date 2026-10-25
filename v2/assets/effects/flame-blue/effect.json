@@ -1,0 +1,302 @@
+{
+ "id": "flame-blue",
+ "name": "Flame (blue, spectral / holy)",
+ "category": "map-loop",
+ "technique": "sheet",
+ "tags": [
+  "fire",
+  "flame",
+  "blue fire",
+  "ghost fire"
+ ],
+ "damage": [
+  "radiant",
+  "cold"
+ ],
+ "spells": [
+  "Continual Flame",
+  "Spectral fire",
+  "Sacred Flame"
+ ],
+ "layer": "air",
+ "blend": "add",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1974,
+    "h": 474
+   }
+  ],
+  "frameW": 94,
+  "frameH": 158,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    94,
+    0
+   ],
+   [
+    0,
+    188,
+    0
+   ],
+   [
+    0,
+    282,
+    0
+   ],
+   [
+    0,
+    376,
+    0
+   ],
+   [
+    0,
+    470,
+    0
+   ],
+   [
+    0,
+    564,
+    0
+   ],
+   [
+    0,
+    658,
+    0
+   ],
+   [
+    0,
+    752,
+    0
+   ],
+   [
+    0,
+    846,
+    0
+   ],
+   [
+    0,
+    940,
+    0
+   ],
+   [
+    0,
+    1034,
+    0
+   ],
+   [
+    0,
+    1128,
+    0
+   ],
+   [
+    0,
+    1222,
+    0
+   ],
+   [
+    0,
+    1316,
+    0
+   ],
+   [
+    0,
+    1410,
+    0
+   ],
+   [
+    0,
+    1504,
+    0
+   ],
+   [
+    0,
+    1598,
+    0
+   ],
+   [
+    0,
+    1692,
+    0
+   ],
+   [
+    0,
+    1786,
+    0
+   ],
+   [
+    0,
+    1880,
+    0
+   ],
+   [
+    0,
+    0,
+    158
+   ],
+   [
+    0,
+    94,
+    158
+   ],
+   [
+    0,
+    188,
+    158
+   ],
+   [
+    0,
+    282,
+    158
+   ],
+   [
+    0,
+    376,
+    158
+   ],
+   [
+    0,
+    470,
+    158
+   ],
+   [
+    0,
+    564,
+    158
+   ],
+   [
+    0,
+    658,
+    158
+   ],
+   [
+    0,
+    752,
+    158
+   ],
+   [
+    0,
+    846,
+    158
+   ],
+   [
+    0,
+    940,
+    158
+   ],
+   [
+    0,
+    1034,
+    158
+   ],
+   [
+    0,
+    1128,
+    158
+   ],
+   [
+    0,
+    1222,
+    158
+   ],
+   [
+    0,
+    1316,
+    158
+   ],
+   [
+    0,
+    1410,
+    158
+   ],
+   [
+    0,
+    1504,
+    158
+   ],
+   [
+    0,
+    1598,
+    158
+   ],
+   [
+    0,
+    1692,
+    158
+   ],
+   [
+    0,
+    1786,
+    158
+   ],
+   [
+    0,
+    1880,
+    158
+   ],
+   [
+    0,
+    0,
+    316
+   ],
+   [
+    0,
+    94,
+    316
+   ],
+   [
+    0,
+    188,
+    316
+   ],
+   [
+    0,
+    282,
+    316
+   ],
+   [
+    0,
+    376,
+    316
+   ],
+   [
+    0,
+    470,
+    316
+   ]
+  ],
+  "fps": 14.4,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 1.672,
+  "h": 2.812
+ },
+ "anchor": [
+  0.4953,
+  0.9204
+ ],
+ "gpuBytes": 3742704,
+ "duration": 3.33,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Unity Technologies (Unity Labs)",
+ "source": "https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks",
+ "sourceFile": "Flame02-temperature-flipbooks/Flame02-temperature_16x4.tga",
+ "attribution": "Flipbook by Unity Labs (CC0).",
+ "notes": ""
+}

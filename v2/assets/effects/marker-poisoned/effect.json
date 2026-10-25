@@ -1,0 +1,296 @@
+{
+ "id": "marker-poisoned",
+ "name": "Poisoned",
+ "category": "aura",
+ "technique": "sheet",
+ "tags": [
+  "condition",
+  "poisoned",
+  "marker"
+ ],
+ "damage": [
+  "poison"
+ ],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2037,
+    "h": 291
+   }
+  ],
+  "frameW": 97,
+  "frameH": 97,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    97,
+    0
+   ],
+   [
+    0,
+    194,
+    0
+   ],
+   [
+    0,
+    291,
+    0
+   ],
+   [
+    0,
+    388,
+    0
+   ],
+   [
+    0,
+    485,
+    0
+   ],
+   [
+    0,
+    582,
+    0
+   ],
+   [
+    0,
+    679,
+    0
+   ],
+   [
+    0,
+    776,
+    0
+   ],
+   [
+    0,
+    873,
+    0
+   ],
+   [
+    0,
+    970,
+    0
+   ],
+   [
+    0,
+    1067,
+    0
+   ],
+   [
+    0,
+    1164,
+    0
+   ],
+   [
+    0,
+    1261,
+    0
+   ],
+   [
+    0,
+    1358,
+    0
+   ],
+   [
+    0,
+    1455,
+    0
+   ],
+   [
+    0,
+    1552,
+    0
+   ],
+   [
+    0,
+    1649,
+    0
+   ],
+   [
+    0,
+    1746,
+    0
+   ],
+   [
+    0,
+    1843,
+    0
+   ],
+   [
+    0,
+    1940,
+    0
+   ],
+   [
+    0,
+    0,
+    97
+   ],
+   [
+    0,
+    97,
+    97
+   ],
+   [
+    0,
+    194,
+    97
+   ],
+   [
+    0,
+    291,
+    97
+   ],
+   [
+    0,
+    388,
+    97
+   ],
+   [
+    0,
+    485,
+    97
+   ],
+   [
+    0,
+    582,
+    97
+   ],
+   [
+    0,
+    679,
+    97
+   ],
+   [
+    0,
+    776,
+    97
+   ],
+   [
+    0,
+    873,
+    97
+   ],
+   [
+    0,
+    970,
+    97
+   ],
+   [
+    0,
+    1067,
+    97
+   ],
+   [
+    0,
+    1164,
+    97
+   ],
+   [
+    0,
+    1261,
+    97
+   ],
+   [
+    0,
+    1358,
+    97
+   ],
+   [
+    0,
+    1455,
+    97
+   ],
+   [
+    0,
+    1552,
+    97
+   ],
+   [
+    0,
+    1649,
+    97
+   ],
+   [
+    0,
+    1746,
+    97
+   ],
+   [
+    0,
+    1843,
+    97
+   ],
+   [
+    0,
+    1940,
+    97
+   ],
+   [
+    0,
+    0,
+    194
+   ],
+   [
+    0,
+    97,
+    194
+   ],
+   [
+    0,
+    194,
+    194
+   ],
+   [
+    0,
+    291,
+    194
+   ],
+   [
+    0,
+    388,
+    194
+   ],
+   [
+    0,
+    485,
+    194
+   ]
+  ],
+  "fps": 7.94,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 1.735,
+  "h": 1.725
+ },
+ "anchor": [
+  0.4841,
+  0.5072
+ ],
+ "gpuBytes": 2371068,
+ "duration": 6.04,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "MarkerPoison_01_Dark_Green_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

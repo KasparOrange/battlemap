@@ -1,0 +1,136 @@
+{
+ "id": "claw-slash",
+ "name": "Claw slash",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "hit",
+  "claw",
+  "monster attack"
+ ],
+ "damage": [
+  "slashing"
+ ],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 736,
+    "h": 44
+   }
+  ],
+  "frameW": 46,
+  "frameH": 44,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    46,
+    0
+   ],
+   [
+    0,
+    92,
+    0
+   ],
+   [
+    0,
+    138,
+    0
+   ],
+   [
+    0,
+    184,
+    0
+   ],
+   [
+    0,
+    230,
+    0
+   ],
+   [
+    0,
+    276,
+    0
+   ],
+   [
+    0,
+    322,
+    0
+   ],
+   [
+    0,
+    368,
+    0
+   ],
+   [
+    0,
+    414,
+    0
+   ],
+   [
+    0,
+    460,
+    0
+   ],
+   [
+    0,
+    506,
+    0
+   ],
+   [
+    0,
+    552,
+    0
+   ],
+   [
+    0,
+    598,
+    0
+   ],
+   [
+    0,
+    644,
+    0
+   ],
+   [
+    0,
+    690,
+    0
+   ]
+  ],
+  "fps": 21.43,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 0.825,
+  "h": 0.785
+ },
+ "anchor": [
+  0.5,
+  0.4904
+ ],
+ "gpuBytes": 129536,
+ "duration": 0.7,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "CreatureAttackClaw_001_001_Red_800x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

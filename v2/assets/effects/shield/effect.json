@@ -1,0 +1,298 @@
+{
+ "id": "shield",
+ "name": "Shield",
+ "category": "aura",
+ "technique": "sheet",
+ "tags": [
+  "barrier",
+  "buff",
+  "abjuration"
+ ],
+ "damage": [],
+ "spells": [
+  "Shield",
+  "Shield of Faith",
+  "Protection from Energy"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2.5,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1938,
+    "h": 342
+   }
+  ],
+  "frameW": 114,
+  "frameH": 114,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    114,
+    0
+   ],
+   [
+    0,
+    228,
+    0
+   ],
+   [
+    0,
+    342,
+    0
+   ],
+   [
+    0,
+    456,
+    0
+   ],
+   [
+    0,
+    570,
+    0
+   ],
+   [
+    0,
+    684,
+    0
+   ],
+   [
+    0,
+    798,
+    0
+   ],
+   [
+    0,
+    912,
+    0
+   ],
+   [
+    0,
+    1026,
+    0
+   ],
+   [
+    0,
+    1140,
+    0
+   ],
+   [
+    0,
+    1254,
+    0
+   ],
+   [
+    0,
+    1368,
+    0
+   ],
+   [
+    0,
+    1482,
+    0
+   ],
+   [
+    0,
+    1596,
+    0
+   ],
+   [
+    0,
+    1710,
+    0
+   ],
+   [
+    0,
+    1824,
+    0
+   ],
+   [
+    0,
+    0,
+    114
+   ],
+   [
+    0,
+    114,
+    114
+   ],
+   [
+    0,
+    228,
+    114
+   ],
+   [
+    0,
+    342,
+    114
+   ],
+   [
+    0,
+    456,
+    114
+   ],
+   [
+    0,
+    570,
+    114
+   ],
+   [
+    0,
+    684,
+    114
+   ],
+   [
+    0,
+    798,
+    114
+   ],
+   [
+    0,
+    912,
+    114
+   ],
+   [
+    0,
+    1026,
+    114
+   ],
+   [
+    0,
+    1140,
+    114
+   ],
+   [
+    0,
+    1254,
+    114
+   ],
+   [
+    0,
+    1368,
+    114
+   ],
+   [
+    0,
+    1482,
+    114
+   ],
+   [
+    0,
+    1596,
+    114
+   ],
+   [
+    0,
+    1710,
+    114
+   ],
+   [
+    0,
+    1824,
+    114
+   ],
+   [
+    0,
+    0,
+    228
+   ],
+   [
+    0,
+    114,
+    228
+   ],
+   [
+    0,
+    228,
+    228
+   ],
+   [
+    0,
+    342,
+    228
+   ],
+   [
+    0,
+    456,
+    228
+   ],
+   [
+    0,
+    570,
+    228
+   ],
+   [
+    0,
+    684,
+    228
+   ],
+   [
+    0,
+    798,
+    228
+   ],
+   [
+    0,
+    912,
+    228
+   ],
+   [
+    0,
+    1026,
+    228
+   ],
+   [
+    0,
+    1140,
+    228
+   ],
+   [
+    0,
+    1254,
+    228
+   ],
+   [
+    0,
+    1368,
+    228
+   ],
+   [
+    0,
+    1482,
+    228
+   ]
+  ],
+  "fps": 11.9,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 2.031,
+  "h": 2.044
+ },
+ "anchor": [
+  0.4985,
+  0.4985
+ ],
+ "gpuBytes": 2651184,
+ "duration": 4.03,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "Shield_01_Regular_Blue_Loop_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

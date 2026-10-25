@@ -1,0 +1,299 @@
+{
+ "id": "aura-frost",
+ "name": "Aura — frost orbit",
+ "category": "aura",
+ "technique": "sheet",
+ "tags": [
+  "aura",
+  "ice",
+  "orbit"
+ ],
+ "damage": [
+  "cold"
+ ],
+ "spells": [
+  "Armor of Agathys",
+  "Frost aura"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 4,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2015,
+    "h": 604
+   }
+  ],
+  "frameW": 155,
+  "frameH": 151,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    155,
+    0
+   ],
+   [
+    0,
+    310,
+    0
+   ],
+   [
+    0,
+    465,
+    0
+   ],
+   [
+    0,
+    620,
+    0
+   ],
+   [
+    0,
+    775,
+    0
+   ],
+   [
+    0,
+    930,
+    0
+   ],
+   [
+    0,
+    1085,
+    0
+   ],
+   [
+    0,
+    1240,
+    0
+   ],
+   [
+    0,
+    1395,
+    0
+   ],
+   [
+    0,
+    1550,
+    0
+   ],
+   [
+    0,
+    1705,
+    0
+   ],
+   [
+    0,
+    1860,
+    0
+   ],
+   [
+    0,
+    0,
+    151
+   ],
+   [
+    0,
+    155,
+    151
+   ],
+   [
+    0,
+    310,
+    151
+   ],
+   [
+    0,
+    465,
+    151
+   ],
+   [
+    0,
+    620,
+    151
+   ],
+   [
+    0,
+    775,
+    151
+   ],
+   [
+    0,
+    930,
+    151
+   ],
+   [
+    0,
+    1085,
+    151
+   ],
+   [
+    0,
+    1240,
+    151
+   ],
+   [
+    0,
+    1395,
+    151
+   ],
+   [
+    0,
+    1550,
+    151
+   ],
+   [
+    0,
+    1705,
+    151
+   ],
+   [
+    0,
+    1860,
+    151
+   ],
+   [
+    0,
+    0,
+    302
+   ],
+   [
+    0,
+    155,
+    302
+   ],
+   [
+    0,
+    310,
+    302
+   ],
+   [
+    0,
+    465,
+    302
+   ],
+   [
+    0,
+    620,
+    302
+   ],
+   [
+    0,
+    775,
+    302
+   ],
+   [
+    0,
+    930,
+    302
+   ],
+   [
+    0,
+    1085,
+    302
+   ],
+   [
+    0,
+    1240,
+    302
+   ],
+   [
+    0,
+    1395,
+    302
+   ],
+   [
+    0,
+    1550,
+    302
+   ],
+   [
+    0,
+    1705,
+    302
+   ],
+   [
+    0,
+    1860,
+    302
+   ],
+   [
+    0,
+    0,
+    453
+   ],
+   [
+    0,
+    155,
+    453
+   ],
+   [
+    0,
+    310,
+    453
+   ],
+   [
+    0,
+    465,
+    453
+   ],
+   [
+    0,
+    620,
+    453
+   ],
+   [
+    0,
+    775,
+    453
+   ],
+   [
+    0,
+    930,
+    453
+   ],
+   [
+    0,
+    1085,
+    453
+   ],
+   [
+    0,
+    1240,
+    453
+   ]
+  ],
+  "fps": 12.1,
+  "loop": true,
+  "crossfade": false
+ },
+ "size": {
+  "w": 2.766,
+  "h": 2.697
+ },
+ "anchor": [
+  0.4917,
+  0.4936
+ ],
+ "gpuBytes": 4868240,
+ "duration": 3.97,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "AuraThemedOrbitLoopCold01_01_Regular_Blue_700x700.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

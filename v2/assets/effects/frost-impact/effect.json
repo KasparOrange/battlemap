@@ -1,0 +1,300 @@
+{
+ "id": "frost-impact",
+ "name": "Frost impact",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "ice",
+  "impact",
+  "burst"
+ ],
+ "damage": [
+  "cold"
+ ],
+ "spells": [
+  "Ice Knife",
+  "Frostbite",
+  "Snilloc's Snowball Swarm"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 3,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1963,
+    "h": 616
+   }
+  ],
+  "frameW": 151,
+  "frameH": 154,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    151,
+    0
+   ],
+   [
+    0,
+    302,
+    0
+   ],
+   [
+    0,
+    453,
+    0
+   ],
+   [
+    0,
+    604,
+    0
+   ],
+   [
+    0,
+    755,
+    0
+   ],
+   [
+    0,
+    906,
+    0
+   ],
+   [
+    0,
+    1057,
+    0
+   ],
+   [
+    0,
+    1208,
+    0
+   ],
+   [
+    0,
+    1359,
+    0
+   ],
+   [
+    0,
+    1510,
+    0
+   ],
+   [
+    0,
+    1661,
+    0
+   ],
+   [
+    0,
+    1812,
+    0
+   ],
+   [
+    0,
+    0,
+    154
+   ],
+   [
+    0,
+    151,
+    154
+   ],
+   [
+    0,
+    302,
+    154
+   ],
+   [
+    0,
+    453,
+    154
+   ],
+   [
+    0,
+    604,
+    154
+   ],
+   [
+    0,
+    755,
+    154
+   ],
+   [
+    0,
+    906,
+    154
+   ],
+   [
+    0,
+    1057,
+    154
+   ],
+   [
+    0,
+    1208,
+    154
+   ],
+   [
+    0,
+    1359,
+    154
+   ],
+   [
+    0,
+    1510,
+    154
+   ],
+   [
+    0,
+    1661,
+    154
+   ],
+   [
+    0,
+    1812,
+    154
+   ],
+   [
+    0,
+    0,
+    308
+   ],
+   [
+    0,
+    151,
+    308
+   ],
+   [
+    0,
+    302,
+    308
+   ],
+   [
+    0,
+    453,
+    308
+   ],
+   [
+    0,
+    604,
+    308
+   ],
+   [
+    0,
+    755,
+    308
+   ],
+   [
+    0,
+    906,
+    308
+   ],
+   [
+    0,
+    1057,
+    308
+   ],
+   [
+    0,
+    1208,
+    308
+   ],
+   [
+    0,
+    1359,
+    308
+   ],
+   [
+    0,
+    1510,
+    308
+   ],
+   [
+    0,
+    1661,
+    308
+   ],
+   [
+    0,
+    1812,
+    308
+   ],
+   [
+    0,
+    0,
+    462
+   ],
+   [
+    0,
+    151,
+    462
+   ],
+   [
+    0,
+    302,
+    462
+   ],
+   [
+    0,
+    453,
+    462
+   ],
+   [
+    0,
+    604,
+    462
+   ],
+   [
+    0,
+    755,
+    462
+   ],
+   [
+    0,
+    906,
+    462
+   ],
+   [
+    0,
+    1057,
+    462
+   ],
+   [
+    0,
+    1208,
+    462
+   ]
+  ],
+  "fps": 8.76,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 2.7,
+  "h": 2.75
+ },
+ "anchor": [
+  0.4889,
+  0.4982
+ ],
+ "gpuBytes": 4836832,
+ "duration": 5.37,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "FrostImpact_01_Regular_White_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

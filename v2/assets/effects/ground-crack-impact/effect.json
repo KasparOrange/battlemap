@@ -1,0 +1,300 @@
+{
+ "id": "ground-crack-impact",
+ "name": "Ground slam",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "impact",
+  "cracks",
+  "earth"
+ ],
+ "damage": [
+  "bludgeoning",
+  "thunder"
+ ],
+ "spells": [
+  "Earth Tremor",
+  "Erupting Earth"
+ ],
+ "layer": "ground",
+ "blend": "normal",
+ "tint": false,
+ "squares": 3,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2004,
+    "h": 656
+   }
+  ],
+  "frameW": 167,
+  "frameH": 164,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    167,
+    0
+   ],
+   [
+    0,
+    334,
+    0
+   ],
+   [
+    0,
+    501,
+    0
+   ],
+   [
+    0,
+    668,
+    0
+   ],
+   [
+    0,
+    835,
+    0
+   ],
+   [
+    0,
+    1002,
+    0
+   ],
+   [
+    0,
+    1169,
+    0
+   ],
+   [
+    0,
+    1336,
+    0
+   ],
+   [
+    0,
+    1503,
+    0
+   ],
+   [
+    0,
+    1670,
+    0
+   ],
+   [
+    0,
+    1837,
+    0
+   ],
+   [
+    0,
+    0,
+    164
+   ],
+   [
+    0,
+    167,
+    164
+   ],
+   [
+    0,
+    334,
+    164
+   ],
+   [
+    0,
+    501,
+    164
+   ],
+   [
+    0,
+    668,
+    164
+   ],
+   [
+    0,
+    835,
+    164
+   ],
+   [
+    0,
+    1002,
+    164
+   ],
+   [
+    0,
+    1169,
+    164
+   ],
+   [
+    0,
+    1336,
+    164
+   ],
+   [
+    0,
+    1503,
+    164
+   ],
+   [
+    0,
+    1670,
+    164
+   ],
+   [
+    0,
+    1837,
+    164
+   ],
+   [
+    0,
+    0,
+    328
+   ],
+   [
+    0,
+    167,
+    328
+   ],
+   [
+    0,
+    334,
+    328
+   ],
+   [
+    0,
+    501,
+    328
+   ],
+   [
+    0,
+    668,
+    328
+   ],
+   [
+    0,
+    835,
+    328
+   ],
+   [
+    0,
+    1002,
+    328
+   ],
+   [
+    0,
+    1169,
+    328
+   ],
+   [
+    0,
+    1336,
+    328
+   ],
+   [
+    0,
+    1503,
+    328
+   ],
+   [
+    0,
+    1670,
+    328
+   ],
+   [
+    0,
+    1837,
+    328
+   ],
+   [
+    0,
+    0,
+    492
+   ],
+   [
+    0,
+    167,
+    492
+   ],
+   [
+    0,
+    334,
+    492
+   ],
+   [
+    0,
+    501,
+    492
+   ],
+   [
+    0,
+    668,
+    492
+   ],
+   [
+    0,
+    835,
+    492
+   ],
+   [
+    0,
+    1002,
+    492
+   ],
+   [
+    0,
+    1169,
+    492
+   ],
+   [
+    0,
+    1336,
+    492
+   ],
+   [
+    0,
+    1503,
+    492
+   ],
+   [
+    0,
+    1670,
+    492
+   ],
+   [
+    0,
+    1837,
+    492
+   ]
+  ],
+  "fps": 9.79,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 2.99,
+  "h": 2.93
+ },
+ "anchor": [
+  0.5017,
+  0.4881
+ ],
+ "gpuBytes": 5258496,
+ "duration": 4.8,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "GroundCrackImpact_01_Regular_Orange_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

@@ -1,0 +1,132 @@
+{
+ "id": "impact-hit",
+ "name": "Hit impact",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "hit",
+  "impact",
+  "attack"
+ ],
+ "damage": [
+  "force",
+  "bludgeoning"
+ ],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 1.5,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1155,
+    "h": 77
+   }
+  ],
+  "frameW": 77,
+  "frameH": 77,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    77,
+    0
+   ],
+   [
+    0,
+    154,
+    0
+   ],
+   [
+    0,
+    231,
+    0
+   ],
+   [
+    0,
+    308,
+    0
+   ],
+   [
+    0,
+    385,
+    0
+   ],
+   [
+    0,
+    462,
+    0
+   ],
+   [
+    0,
+    539,
+    0
+   ],
+   [
+    0,
+    616,
+    0
+   ],
+   [
+    0,
+    693,
+    0
+   ],
+   [
+    0,
+    770,
+    0
+   ],
+   [
+    0,
+    847,
+    0
+   ],
+   [
+    0,
+    924,
+    0
+   ],
+   [
+    0,
+    1001,
+    0
+   ],
+   [
+    0,
+    1078,
+    0
+   ]
+  ],
+  "fps": 28.0,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 1.369,
+  "h": 1.369
+ },
+ "anchor": [
+  0.5479,
+  0.5479
+ ],
+ "gpuBytes": 355740,
+ "duration": 0.5,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "Impact_03_Regular_Blue_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

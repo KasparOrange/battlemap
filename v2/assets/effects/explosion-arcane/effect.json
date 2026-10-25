@@ -1,0 +1,140 @@
+{
+ "id": "explosion-arcane",
+ "name": "Arcane burst",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "explosion",
+  "burst",
+  "arcane"
+ ],
+ "damage": [
+  "force"
+ ],
+ "spells": [
+  "Counterspell",
+  "Dispel Magic",
+  "Arcane Eruption"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1760,
+    "h": 107
+   }
+  ],
+  "frameW": 110,
+  "frameH": 107,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    110,
+    0
+   ],
+   [
+    0,
+    220,
+    0
+   ],
+   [
+    0,
+    330,
+    0
+   ],
+   [
+    0,
+    440,
+    0
+   ],
+   [
+    0,
+    550,
+    0
+   ],
+   [
+    0,
+    660,
+    0
+   ],
+   [
+    0,
+    770,
+    0
+   ],
+   [
+    0,
+    880,
+    0
+   ],
+   [
+    0,
+    990,
+    0
+   ],
+   [
+    0,
+    1100,
+    0
+   ],
+   [
+    0,
+    1210,
+    0
+   ],
+   [
+    0,
+    1320,
+    0
+   ],
+   [
+    0,
+    1430,
+    0
+   ],
+   [
+    0,
+    1540,
+    0
+   ],
+   [
+    0,
+    1650,
+    0
+   ]
+  ],
+  "fps": 23.68,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 1.965,
+  "h": 1.91
+ },
+ "anchor": [
+  0.5038,
+  0.5105
+ ],
+ "gpuBytes": 753280,
+ "duration": 0.63,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "Explosion_04_Regular_Blue_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

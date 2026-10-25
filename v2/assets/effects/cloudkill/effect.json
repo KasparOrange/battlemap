@@ -1,0 +1,180 @@
+{
+ "id": "cloudkill",
+ "name": "Cloudkill",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "cloud",
+  "gas",
+  "poison"
+ ],
+ "damage": [
+  "poison"
+ ],
+ "spells": [
+  "Cloudkill",
+  "Stinking Cloud",
+  "Poison cloud"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 8,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1984,
+    "h": 753
+   }
+  ],
+  "frameW": 248,
+  "frameH": 251,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    248,
+    0
+   ],
+   [
+    0,
+    496,
+    0
+   ],
+   [
+    0,
+    744,
+    0
+   ],
+   [
+    0,
+    992,
+    0
+   ],
+   [
+    0,
+    1240,
+    0
+   ],
+   [
+    0,
+    1488,
+    0
+   ],
+   [
+    0,
+    1736,
+    0
+   ],
+   [
+    0,
+    0,
+    251
+   ],
+   [
+    0,
+    248,
+    251
+   ],
+   [
+    0,
+    496,
+    251
+   ],
+   [
+    0,
+    744,
+    251
+   ],
+   [
+    0,
+    992,
+    251
+   ],
+   [
+    0,
+    1240,
+    251
+   ],
+   [
+    0,
+    1488,
+    251
+   ],
+   [
+    0,
+    1736,
+    251
+   ],
+   [
+    0,
+    0,
+    502
+   ],
+   [
+    0,
+    248,
+    502
+   ],
+   [
+    0,
+    496,
+    502
+   ],
+   [
+    0,
+    744,
+    502
+   ],
+   [
+    0,
+    992,
+    502
+   ],
+   [
+    0,
+    1240,
+    502
+   ],
+   [
+    0,
+    1488,
+    502
+   ],
+   [
+    0,
+    1736,
+    502
+   ]
+  ],
+  "fps": 8.0,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 7.74,
+  "h": 7.84
+ },
+ "anchor": [
+  0.4832,
+  0.4898
+ ],
+ "gpuBytes": 5975808,
+ "duration": 3.0,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "SmokeCircleLoop001_001_GreenPurple_15ft_800x800.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

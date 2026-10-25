@@ -1,0 +1,179 @@
+{
+ "id": "spirit-guardians",
+ "name": "Spirit Guardians",
+ "category": "aura",
+ "technique": "sheet",
+ "tags": [
+  "aura",
+  "holy",
+  "spirits"
+ ],
+ "damage": [
+  "radiant",
+  "necrotic"
+ ],
+ "spells": [
+  "Spirit Guardians"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 6,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1920,
+    "h": 720
+   }
+  ],
+  "frameW": 240,
+  "frameH": 240,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    240,
+    0
+   ],
+   [
+    0,
+    480,
+    0
+   ],
+   [
+    0,
+    720,
+    0
+   ],
+   [
+    0,
+    960,
+    0
+   ],
+   [
+    0,
+    1200,
+    0
+   ],
+   [
+    0,
+    1440,
+    0
+   ],
+   [
+    0,
+    1680,
+    0
+   ],
+   [
+    0,
+    0,
+    240
+   ],
+   [
+    0,
+    240,
+    240
+   ],
+   [
+    0,
+    480,
+    240
+   ],
+   [
+    0,
+    720,
+    240
+   ],
+   [
+    0,
+    960,
+    240
+   ],
+   [
+    0,
+    1200,
+    240
+   ],
+   [
+    0,
+    1440,
+    240
+   ],
+   [
+    0,
+    1680,
+    240
+   ],
+   [
+    0,
+    0,
+    480
+   ],
+   [
+    0,
+    240,
+    480
+   ],
+   [
+    0,
+    480,
+    480
+   ],
+   [
+    0,
+    720,
+    480
+   ],
+   [
+    0,
+    960,
+    480
+   ],
+   [
+    0,
+    1200,
+    480
+   ],
+   [
+    0,
+    1440,
+    480
+   ],
+   [
+    0,
+    1680,
+    480
+   ]
+  ],
+  "fps": 3.97,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 6.0,
+  "h": 6.0
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 5529600,
+ "duration": 6.04,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "SpiritGuardians_01_Light_BlueYellow_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

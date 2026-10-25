@@ -1,0 +1,226 @@
+{
+ "id": "magic-missile",
+ "name": "Magic Missile (one dart)",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "projectile",
+  "dart"
+ ],
+ "damage": [
+  "force"
+ ],
+ "spells": [
+  "Magic Missile"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 8,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1860,
+    "h": 497
+   }
+  ],
+  "frameW": 372,
+  "frameH": 71,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    372,
+    0
+   ],
+   [
+    0,
+    744,
+    0
+   ],
+   [
+    0,
+    1116,
+    0
+   ],
+   [
+    0,
+    1488,
+    0
+   ],
+   [
+    0,
+    0,
+    71
+   ],
+   [
+    0,
+    372,
+    71
+   ],
+   [
+    0,
+    744,
+    71
+   ],
+   [
+    0,
+    1116,
+    71
+   ],
+   [
+    0,
+    1488,
+    71
+   ],
+   [
+    0,
+    0,
+    142
+   ],
+   [
+    0,
+    372,
+    142
+   ],
+   [
+    0,
+    744,
+    142
+   ],
+   [
+    0,
+    1116,
+    142
+   ],
+   [
+    0,
+    1488,
+    142
+   ],
+   [
+    0,
+    0,
+    213
+   ],
+   [
+    0,
+    372,
+    213
+   ],
+   [
+    0,
+    744,
+    213
+   ],
+   [
+    0,
+    1116,
+    213
+   ],
+   [
+    0,
+    1488,
+    213
+   ],
+   [
+    0,
+    0,
+    284
+   ],
+   [
+    0,
+    372,
+    284
+   ],
+   [
+    0,
+    744,
+    284
+   ],
+   [
+    0,
+    1116,
+    284
+   ],
+   [
+    0,
+    1488,
+    284
+   ],
+   [
+    0,
+    0,
+    355
+   ],
+   [
+    0,
+    372,
+    355
+   ],
+   [
+    0,
+    744,
+    355
+   ],
+   [
+    0,
+    1116,
+    355
+   ],
+   [
+    0,
+    1488,
+    355
+   ],
+   [
+    0,
+    0,
+    426
+   ],
+   [
+    0,
+    372,
+    426
+   ],
+   [
+    0,
+    744,
+    426
+   ]
+  ],
+  "fps": 19.59,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 6.65,
+  "h": 1.26
+ },
+ "anchor": [
+  0.4782,
+  0.496
+ ],
+ "beam": {
+  "start": 0.0271,
+  "end": 0.9293
+ },
+ "gpuBytes": 3697680,
+ "duration": 1.63,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "MagicMissile_01_Regular_Purple_30ft_01_1600x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

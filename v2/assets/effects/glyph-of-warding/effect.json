@@ -1,0 +1,57 @@
+{
+ "id": "glyph-of-warding",
+ "name": "Glyph of Warding",
+ "category": "point",
+ "technique": "texture",
+ "tags": [
+  "glyph",
+  "ward",
+  "trap",
+  "rune"
+ ],
+ "damage": [],
+ "spells": [
+  "Glyph of Warding",
+  "Symbol",
+  "Alarm",
+  "Arcane Lock"
+ ],
+ "layer": "ground",
+ "blend": "add",
+ "tint": false,
+ "squares": 3,
+ "texture": {
+  "file": "texture.webp",
+  "w": 245,
+  "h": 256,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "pulse": {
+   "period": 2.5,
+   "alpha": 0.4,
+   "scale": 0.03
+  },
+  "fadeIn": 0.8
+ },
+ "size": {
+  "w": 2.871,
+  "h": 3.0
+ },
+ "anchor": [
+  0.5224,
+  0.5
+ ],
+ "gpuBytes": 250880,
+ "licence": {
+  "id": "Own work (generated)",
+  "url": "https://ai.google.dev/gemini-api/terms",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap, generated with Google Gemini",
+ "source": "",
+ "sourceFile": "glyph-of-warding.jpg",
+ "attribution": "Generated for battlemap with Google Gemini (Nano Banana 2.1).",
+ "notes": ""
+}

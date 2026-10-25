@@ -1,0 +1,298 @@
+{
+ "id": "cone-of-cold",
+ "name": "Cone of Cold",
+ "category": "regional",
+ "technique": "sheet",
+ "tags": [
+  "cone",
+  "frost",
+  "ice"
+ ],
+ "damage": [
+  "cold"
+ ],
+ "spells": [
+  "Cone of Cold"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 6,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 2040,
+    "h": 1362
+   }
+  ],
+  "frameW": 255,
+  "frameH": 227,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    255,
+    0
+   ],
+   [
+    0,
+    510,
+    0
+   ],
+   [
+    0,
+    765,
+    0
+   ],
+   [
+    0,
+    1020,
+    0
+   ],
+   [
+    0,
+    1275,
+    0
+   ],
+   [
+    0,
+    1530,
+    0
+   ],
+   [
+    0,
+    1785,
+    0
+   ],
+   [
+    0,
+    0,
+    227
+   ],
+   [
+    0,
+    255,
+    227
+   ],
+   [
+    0,
+    510,
+    227
+   ],
+   [
+    0,
+    765,
+    227
+   ],
+   [
+    0,
+    1020,
+    227
+   ],
+   [
+    0,
+    1275,
+    227
+   ],
+   [
+    0,
+    1530,
+    227
+   ],
+   [
+    0,
+    1785,
+    227
+   ],
+   [
+    0,
+    0,
+    454
+   ],
+   [
+    0,
+    255,
+    454
+   ],
+   [
+    0,
+    510,
+    454
+   ],
+   [
+    0,
+    765,
+    454
+   ],
+   [
+    0,
+    1020,
+    454
+   ],
+   [
+    0,
+    1275,
+    454
+   ],
+   [
+    0,
+    1530,
+    454
+   ],
+   [
+    0,
+    1785,
+    454
+   ],
+   [
+    0,
+    0,
+    681
+   ],
+   [
+    0,
+    255,
+    681
+   ],
+   [
+    0,
+    510,
+    681
+   ],
+   [
+    0,
+    765,
+    681
+   ],
+   [
+    0,
+    1020,
+    681
+   ],
+   [
+    0,
+    1275,
+    681
+   ],
+   [
+    0,
+    1530,
+    681
+   ],
+   [
+    0,
+    1785,
+    681
+   ],
+   [
+    0,
+    0,
+    908
+   ],
+   [
+    0,
+    255,
+    908
+   ],
+   [
+    0,
+    510,
+    908
+   ],
+   [
+    0,
+    765,
+    908
+   ],
+   [
+    0,
+    1020,
+    908
+   ],
+   [
+    0,
+    1275,
+    908
+   ],
+   [
+    0,
+    1530,
+    908
+   ],
+   [
+    0,
+    1785,
+    908
+   ],
+   [
+    0,
+    0,
+    1135
+   ],
+   [
+    0,
+    255,
+    1135
+   ],
+   [
+    0,
+    510,
+    1135
+   ],
+   [
+    0,
+    765,
+    1135
+   ],
+   [
+    0,
+    1020,
+    1135
+   ],
+   [
+    0,
+    1275,
+    1135
+   ],
+   [
+    0,
+    1530,
+    1135
+   ],
+   [
+    0,
+    1785,
+    1135
+   ]
+  ],
+  "fps": 17.2,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 5.79,
+  "h": 5.15
+ },
+ "anchor": [
+  -0.0294,
+  0.5087
+ ],
+ "gpuBytes": 11113920,
+ "duration": 2.73,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "ConeOfCold_01_Regular_Blue_600x600.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": "Drawn at 30 ft; scale ×2 for the spell's 60 ft cone."
+}

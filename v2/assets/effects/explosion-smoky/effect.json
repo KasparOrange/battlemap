@@ -1,0 +1,185 @@
+{
+ "id": "explosion-smoky",
+ "name": "Explosion (fire and smoke)",
+ "category": "point",
+ "technique": "sheet",
+ "tags": [
+  "explosion",
+  "burst",
+  "smoke"
+ ],
+ "damage": [
+  "fire"
+ ],
+ "spells": [
+  "Fireball",
+  "Explosive runes",
+  "Barrel of oil"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 5,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1960,
+    "h": 1116
+   }
+  ],
+  "frameW": 280,
+  "frameH": 279,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    280,
+    0
+   ],
+   [
+    0,
+    560,
+    0
+   ],
+   [
+    0,
+    840,
+    0
+   ],
+   [
+    0,
+    1120,
+    0
+   ],
+   [
+    0,
+    1400,
+    0
+   ],
+   [
+    0,
+    1680,
+    0
+   ],
+   [
+    0,
+    0,
+    279
+   ],
+   [
+    0,
+    280,
+    279
+   ],
+   [
+    0,
+    560,
+    279
+   ],
+   [
+    0,
+    840,
+    279
+   ],
+   [
+    0,
+    1120,
+    279
+   ],
+   [
+    0,
+    1400,
+    279
+   ],
+   [
+    0,
+    1680,
+    279
+   ],
+   [
+    0,
+    0,
+    558
+   ],
+   [
+    0,
+    280,
+    558
+   ],
+   [
+    0,
+    560,
+    558
+   ],
+   [
+    0,
+    840,
+    558
+   ],
+   [
+    0,
+    1120,
+    558
+   ],
+   [
+    0,
+    1400,
+    558
+   ],
+   [
+    0,
+    1680,
+    558
+   ],
+   [
+    0,
+    0,
+    837
+   ],
+   [
+    0,
+    280,
+    837
+   ],
+   [
+    0,
+    560,
+    837
+   ],
+   [
+    0,
+    840,
+    837
+   ]
+  ],
+  "fps": 14.4,
+  "loop": false,
+  "crossfade": false
+ },
+ "size": {
+  "w": 5.0,
+  "h": 4.976
+ },
+ "anchor": [
+  0.5,
+  0.5025
+ ],
+ "gpuBytes": 8749440,
+ "duration": 1.67,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Unity Technologies (Unity Labs)",
+ "source": "https://unity.com/blog/engine-platform/free-vfx-image-sequences-flipbooks",
+ "sourceFile": "Explosion02HD-flipbooks/Explosion02HD_5x5.tga",
+ "attribution": "Flipbook by Unity Labs (CC0).",
+ "notes": ""
+}

@@ -1,0 +1,298 @@
+{
+ "id": "portal",
+ "name": "Portal (golden)",
+ "category": "map-loop",
+ "technique": "sheet",
+ "tags": [
+  "portal",
+  "gate",
+  "teleport"
+ ],
+ "damage": [],
+ "spells": [
+  "Gate",
+  "Teleportation Circle",
+  "Arcane Gate"
+ ],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 2,
+ "sheet": {
+  "atlases": [
+   {
+    "file": "atlas-0.webp",
+    "w": 1960,
+    "h": 291
+   }
+  ],
+  "frameW": 98,
+  "frameH": 97,
+  "frames": [
+   [
+    0,
+    0,
+    0
+   ],
+   [
+    0,
+    98,
+    0
+   ],
+   [
+    0,
+    196,
+    0
+   ],
+   [
+    0,
+    294,
+    0
+   ],
+   [
+    0,
+    392,
+    0
+   ],
+   [
+    0,
+    490,
+    0
+   ],
+   [
+    0,
+    588,
+    0
+   ],
+   [
+    0,
+    686,
+    0
+   ],
+   [
+    0,
+    784,
+    0
+   ],
+   [
+    0,
+    882,
+    0
+   ],
+   [
+    0,
+    980,
+    0
+   ],
+   [
+    0,
+    1078,
+    0
+   ],
+   [
+    0,
+    1176,
+    0
+   ],
+   [
+    0,
+    1274,
+    0
+   ],
+   [
+    0,
+    1372,
+    0
+   ],
+   [
+    0,
+    1470,
+    0
+   ],
+   [
+    0,
+    1568,
+    0
+   ],
+   [
+    0,
+    1666,
+    0
+   ],
+   [
+    0,
+    1764,
+    0
+   ],
+   [
+    0,
+    1862,
+    0
+   ],
+   [
+    0,
+    0,
+    97
+   ],
+   [
+    0,
+    98,
+    97
+   ],
+   [
+    0,
+    196,
+    97
+   ],
+   [
+    0,
+    294,
+    97
+   ],
+   [
+    0,
+    392,
+    97
+   ],
+   [
+    0,
+    490,
+    97
+   ],
+   [
+    0,
+    588,
+    97
+   ],
+   [
+    0,
+    686,
+    97
+   ],
+   [
+    0,
+    784,
+    97
+   ],
+   [
+    0,
+    882,
+    97
+   ],
+   [
+    0,
+    980,
+    97
+   ],
+   [
+    0,
+    1078,
+    97
+   ],
+   [
+    0,
+    1176,
+    97
+   ],
+   [
+    0,
+    1274,
+    97
+   ],
+   [
+    0,
+    1372,
+    97
+   ],
+   [
+    0,
+    1470,
+    97
+   ],
+   [
+    0,
+    1568,
+    97
+   ],
+   [
+    0,
+    1666,
+    97
+   ],
+   [
+    0,
+    1764,
+    97
+   ],
+   [
+    0,
+    1862,
+    97
+   ],
+   [
+    0,
+    0,
+    194
+   ],
+   [
+    0,
+    98,
+    194
+   ],
+   [
+    0,
+    196,
+    194
+   ],
+   [
+    0,
+    294,
+    194
+   ],
+   [
+    0,
+    392,
+    194
+   ],
+   [
+    0,
+    490,
+    194
+   ],
+   [
+    0,
+    588,
+    194
+   ],
+   [
+    0,
+    686,
+    194
+   ]
+  ],
+  "fps": 5.97,
+  "loop": true,
+  "crossfade": true
+ },
+ "size": {
+  "w": 1.75,
+  "h": 1.735
+ },
+ "anchor": [
+  0.5,
+  0.4986
+ ],
+ "gpuBytes": 2281440,
+ "duration": 8.04,
+ "licence": {
+  "id": "CC BY-NC-SA 4.0",
+  "url": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+  "commercial": false,
+  "shareAlike": true
+ },
+ "author": "JB2A (Jules & Ben)",
+ "source": "https://github.com/Jules-Bens-Aa/JB2A_DnD5e",
+ "sourceFile": "Portal_Bright_Yellow_H_400x400.webm",
+ "attribution": "Animation © JB2A — Jules&Ben's Animated Assets (jb2a.com), CC BY-NC-SA 4.0. Resampled into a sprite sheet for battlemap.",
+ "notes": ""
+}

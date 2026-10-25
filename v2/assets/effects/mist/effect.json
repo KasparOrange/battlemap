@@ -1,0 +1,47 @@
+{
+ "id": "mist",
+ "name": "Mist (drifting)",
+ "category": "global",
+ "technique": "shader",
+ "tags": [
+  "fog",
+  "mist",
+  "weather",
+  "swamp",
+  "morning"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": null,
+ "shader": {
+  "fragment": "../shaders/fog.frag",
+  "vertex": "../shaders/filter.vert",
+  "apply": "filter",
+  "uniforms": {
+   "uDensity": 0.45,
+   "uSpeed": 0.35,
+   "uScale": 0.18,
+   "uColor": [
+    0.82,
+    0.85,
+    0.9
+   ]
+  },
+  "textures": {}
+ },
+ "gpuBytes": 0,
+ "licence": {
+  "id": "Own work (repo licence)",
+  "url": "",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap",
+ "source": "",
+ "sourceFile": null,
+ "attribution": "battlemap (own work).",
+ "notes": ""
+}

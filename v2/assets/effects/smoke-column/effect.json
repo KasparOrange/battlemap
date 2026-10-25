@@ -1,0 +1,93 @@
+{
+ "id": "smoke-column",
+ "name": "Smoke column (CC0)",
+ "category": "map-loop",
+ "technique": "particles",
+ "tags": [
+  "smoke",
+  "chimney",
+  "burning",
+  "signal fire"
+ ],
+ "damage": [],
+ "spells": [],
+ "layer": "air",
+ "blend": "normal",
+ "tint": false,
+ "squares": 1,
+ "particles": {
+  "textures": [
+   {
+    "file": "particle-0.webp",
+    "w": 96,
+    "h": 96,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   },
+   {
+    "file": "particle-1.webp",
+    "w": 94,
+    "h": 96,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   },
+   {
+    "file": "particle-2.webp",
+    "w": 96,
+    "h": 85,
+    "licence": "CC0 1.0",
+    "author": "Kenney (kenney.nl)"
+   }
+  ],
+  "emitter": "point",
+  "radius": 0.2,
+  "rate": 5,
+  "max": 40,
+  "life": [
+   3.0,
+   5.0
+  ],
+  "speed": [
+   0.3,
+   0.6
+  ],
+  "angle": [
+   -100,
+   -80
+  ],
+  "gravity": [
+   0.15,
+   -0.05
+  ],
+  "size": [
+   0.6,
+   0.9
+  ],
+  "grow": 3.0,
+  "alpha": [
+   0.0,
+   0.55,
+   0.0
+  ],
+  "colors": [
+   "#8a8580",
+   "#3c3a38"
+  ],
+  "spin": [
+   -30,
+   30
+  ]
+ },
+ "gpuBytes": 105600,
+ "licence": {
+  "id": "CC0 1.0",
+  "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "Kenney (kenney.nl)",
+ "source": "https://kenney.nl/assets/particle-pack",
+ "sourceFile": null,
+ "attribution": "Particle texture by Kenney (kenney.nl), CC0.",
+ "notes": ""
+}

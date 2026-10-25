@@ -1,0 +1,58 @@
+{
+ "id": "circle-teleport",
+ "name": "Magic circle — teleportation circle",
+ "category": "regional",
+ "technique": "texture",
+ "tags": [
+  "magic circle",
+  "cyan",
+  "ritual",
+  "glyph"
+ ],
+ "damage": [],
+ "spells": [
+  "Teleportation Circle",
+  "Teleport",
+  "Word of Recall"
+ ],
+ "layer": "ground",
+ "blend": "add",
+ "tint": false,
+ "squares": 9,
+ "texture": {
+  "file": "texture.webp",
+  "w": 512,
+  "h": 512,
+  "wrap": "clamp"
+ },
+ "motion": {
+  "rotate": 4,
+  "pulse": {
+   "period": 3.5,
+   "alpha": 0.25,
+   "scale": 0.0
+  },
+  "fadeIn": 1.2,
+  "shader": "magic-circle.frag"
+ },
+ "size": {
+  "w": 9.0,
+  "h": 9.0
+ },
+ "anchor": [
+  0.5,
+  0.5
+ ],
+ "gpuBytes": 1048576,
+ "licence": {
+  "id": "Own work (generated)",
+  "url": "https://ai.google.dev/gemini-api/terms",
+  "commercial": true,
+  "shareAlike": false
+ },
+ "author": "battlemap, generated with Google Gemini",
+ "source": "",
+ "sourceFile": "circle-teleport.jpg",
+ "attribution": "Generated for battlemap with Google Gemini (Nano Banana 2.1).",
+ "notes": ""
+}
