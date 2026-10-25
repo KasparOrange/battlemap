@@ -3,8 +3,9 @@
   `createTableView(host, { profile: 'dm' })`) with the companion's gestures on it — one finger is
   the chosen tab's tool, two move the DM's own camera (input/). The view owns the camera and the
   hit tests; files come from the device's cache (what this tablet uploaded is never downloaded
-  again). While a map loads a small card says so over the map; failures become notices. Fills
-  its parent.
+  again). The view itself is kept for the whole page (`view-keeper.ts`): closing and reopening a
+  game moves the same canvas into the new screen instead of starting WebGL again. While a map
+  loads a small card says so over the map; failures become notices. Fills its parent.
 
   Props:
   - ctx: GameScreenContext — the game screen's context (state, camera, geometry, selection)
@@ -15,6 +16,7 @@
   import { onMount, untrack } from 'svelte';
   import { log } from '../../log.ts';
   import type { TableView, TableViewEvent } from '../../render/index.ts';
+  import { viewKeeper, type ViewHandlers } from './view-keeper.ts';
   import { files } from '../../storage/index.ts';
   import { wallsDebug } from '../session-settings/walls-debug.svelte.ts';
   import Spinner from '../../ui/Spinner.svelte';
@@ -109,40 +111,40 @@
         camera: () => view?.dmCamera() ?? null,
       };
     }
-    void (async () => {
-      const t0 = performance.now();
-      const [{ createTableView }, { createEffectsRuntime }] = await Promise.all([import('../../render/index.ts'), import('../../effects/index.ts')]);
-      if (gone) return;
-      const v = createTableView(el, {
-        profile: 'dm',
-        log,
-        files: (ref) => files.get(ref),
-        effects: (slots, c) => createEffectsRuntime(slots, c),
-        now: () => ctx.serverNow(), // one-shots are stamped with the server's clock
-        onEvent,
-      });
-      try {
-        await v.ready;
-      } catch {
-        v.destroy();
-        return; // 'renderer-failed' told the DM
-      }
-      if (gone) {
-        v.destroy();
-        return;
-      }
-      view = v;
-      ctx.attach(v);
-      log.info('companion', 'Map view running', { ms: Math.round(performance.now() - t0) });
-    })().catch((e: unknown) => {
-      failed = true;
-      log.error('companion', 'Map view failed', { error: String(e) });
-      notify("The map view didn't start — reload the page.", { kind: 'error' });
-    });
+    const handlers: ViewHandlers = { onEvent, now: () => ctx.serverNow() }; // one-shots are stamped with the server's clock
+    const t0 = performance.now();
+    const fresh = !viewKeeper.holding;
+    viewKeeper
+      .borrow(el, handlers, async (host, h) => {
+        const [{ createTableView }, { createEffectsRuntime }] = await Promise.all([import('../../render/index.ts'), import('../../effects/index.ts')]);
+        return createTableView(host, {
+          profile: 'dm',
+          log,
+          files: (ref) => files.get(ref),
+          effects: (slots, c) => createEffectsRuntime(slots, c),
+          now: h.now,
+          onEvent: h.onEvent,
+        });
+      })
+      .then(
+        (v) => {
+          if (gone) return;
+          view = v;
+          ctx.attach(v);
+          log.info('companion', fresh ? 'Map view running' : 'Map view adopted', { ms: Math.round(performance.now() - t0) });
+        },
+        (e: unknown) => {
+          // 'renderer-failed' told the DM already when WebGL didn't start
+          if (gone) return;
+          log.error('companion', 'Map view failed', { error: String(e) });
+          if (!failed) notify("The map view didn't start — reload the page.", { kind: 'error' });
+          failed = true;
+        },
+      );
     return () => {
       gone = true;
       unbind();
-      view?.destroy();
+      viewKeeper.release(handlers);
       view = null;
     };
   });

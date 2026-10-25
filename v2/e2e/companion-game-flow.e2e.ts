@@ -263,6 +263,7 @@ test('draw: a stroke reaches the TV, undo removes it, clear offers Undo', async 
 });
 
 test('screenshots: tablet and phone', async ({ browser }) => {
+  test.setTimeout(240_000); // two tables, each starting WebGL in software (8 s and more under load)
   for (const [name, size] of [['tablet', { width: 1280, height: 800 }], ['phone', { width: 390, height: 844 }]] as const) {
     const { page, drv, close } = await setup(browser, size);
     // something on the table: two tokens, a revealed room, a stroke
