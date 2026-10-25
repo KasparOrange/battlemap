@@ -3,7 +3,7 @@
   name, "Start the game"), and from the Game tab mid-game, where every change applies at once
   (fluent rule 8) and Done closes. Only settings that do something are offered, and only those
   the protocol keeps (`settings-logic.ts` `supported`): the tool preset and the Draw / Measure
-  tabs, the fog's look and fade, effects — plus "Show walls", a setting of this tablet.
+  tabs, the fog's look and fade, effects, light from the map — plus "Show walls", a setting of this tablet.
 
   Props:
   - open: boolean · mode: 'new' | 'game'
@@ -114,6 +114,14 @@
 
   <Section title="Effects">
     <ToggleSwitch label="Effects on the table" description="Weather, torches and spell effects." checked={s.effects} onchange={(on) => set({ effects: on })} />
+    {#if supported('mapLights')}
+      <ToggleSwitch
+        label="Light from the map"
+        description="Torches and braziers of a Dungeondraft map glow and flicker on the table."
+        checked={s.mapLights}
+        onchange={(on) => set({ mapLights: on })}
+      />
+    {/if}
   </Section>
 
   <Section title="This tablet">

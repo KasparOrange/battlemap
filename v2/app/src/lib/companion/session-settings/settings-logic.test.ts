@@ -24,4 +24,8 @@ describe('session settings', () => {
     expect(hidden.has('draw')).toBe(supported('drawTools'));
     expect(hiddenTabs(null).size).toBe(0);
   });
+  test('light from the map is off by default and only sent once the protocol has it', () => {
+    expect(withDefaults(null).mapLights).toBe(false);
+    expect('mapLights' in forProtocol({ mapLights: true })).toBe(supported('mapLights'));
+  });
 });

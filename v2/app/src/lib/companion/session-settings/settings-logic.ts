@@ -17,6 +17,8 @@ export interface SessionSettings {
   drawTools: boolean;
   /** The Measure tab is offered (needs shared `GameSettings.measureTools`). */
   measureTools: boolean;
+  /** Torches and braziers of a `.dd2vtt` glow and flicker on the table (needs shared `GameSettings.mapLights`, default off). */
+  mapLights: boolean;
 }
 
 /** A setting's name. */
@@ -39,7 +41,7 @@ export function supported(key: SettingKey): boolean {
  * @returns every setting
  */
 export function withDefaults(stored: Partial<SessionSettings> | null | undefined): SessionSettings {
-  return { ...defaultSettings(), drawTools: true, measureTools: true, ...stored } as SessionSettings;
+  return { ...defaultSettings(), drawTools: true, measureTools: true, mapLights: false, ...stored } as SessionSettings;
 }
 
 /**
