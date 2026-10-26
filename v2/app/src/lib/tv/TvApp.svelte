@@ -34,6 +34,7 @@
   import { backAction, backGate, CHROME_MS, homeBadge, OFFLINE_RED_MS, PROBLEM_MS, problemBadge, screenFor } from './screen.ts';
   import type { TableViewEvent } from '../render/index.ts';
   import { openTableView, type TvTableView } from './table-view.ts';
+  import { createTvSound } from '../sound/tv-sound.ts';
   import { lanLogFields } from './lan.ts';
   import { BootTiming } from './boot-timing.ts';
   import TvBadge from './TvBadge.svelte';
@@ -79,6 +80,8 @@
   let stage: HTMLDivElement | undefined = $state();
   let backArrow: HTMLButtonElement | undefined = $state();
   let view: TvTableView | null = null;
+  /** The TV plays the game's soundscape to the room (the tablet only previews). */
+  const sound = createTvSound({ log, now: () => session.conn.serverNow() });
 
   const game = $derived(session.state.game);
   const patternOn = $derived(session.state.table.pattern.on);
@@ -210,6 +213,7 @@
   $effect(() => {
     const state = session.state; // read first: `view?.update(…)` would skip it while view is null
     view?.update(state);
+    sound.update(state); // the soundscape and one-shot sounds (docs/features.md "Sound")
   });
 
   // ── a newer app build on the server (rv#13): reload while no game is on the table ─────────
@@ -319,6 +323,7 @@
       clearTimeout(problemTimer);
       clearTimeout(offlineTimer);
       view?.destroy();
+      sound.destroy();
       session.stop();
     };
   });

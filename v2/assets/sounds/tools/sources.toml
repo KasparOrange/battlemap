@@ -1,0 +1,301 @@
+# The sound library's sources: one table per shipped sound. `build.py` reads this, cuts each
+# raw file from `v2/assets-src/sounds/<file>` (gitignored downloads, one folder per source),
+# loops beds seamlessly, normalises loudness and writes `../beds/`, `../oneshots/`, `../index.json`.
+# Licence checked on each `url` page (2026-10-25/26). Only licences fine for the table, a paid
+# product included: CC0 here; CC-BY would need `attribution`. Nothing non-commercial.
+#
+# Fields: id, kind (bed|oneshot), name, group, file, start/end (s; 0 = auto/whole), tags,
+# effects (one-shots: effects-library ids it sounds with), duck (default true), extra (an
+# ffmpeg filter appended before loudness), author, url, licence, licence_url, attribution.
+
+# ── beds ─────────────────────────────────────────────────────────────────────────────────
+[[sound]]
+id = "dungeon-drips"
+kind = "bed"
+name = "Dungeon drips"
+group = "places"
+file = "freesound-177958/177958_985466-hq.ogg"
+tags = ["cave", "water", "underground", "echo"]
+author = "Sclolex"
+url = "https://freesound.org/s/177958/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "crypt"
+kind = "bed"
+name = "Crypt"
+group = "places"
+file = "freesound-468235/468235_3159750-hq.ogg"
+tags = ["tomb", "undead", "drone", "dark"]
+author = "TheMovieMacher"
+url = "https://freesound.org/s/468235/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "tavern"
+kind = "bed"
+name = "Tavern crowd"
+group = "places"
+file = "freesound-475505/475505_7009965-hq.ogg"
+tags = ["inn", "pub", "crowd", "people"]
+author = "o_ciz"
+url = "https://freesound.org/s/475505/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "city"
+kind = "bed"
+name = "Market street"
+group = "places"
+file = "freesound-703644/703644_15247766-hq.ogg"
+tags = ["town", "market", "medieval", "people", "footsteps"]
+author = "hobonski"
+url = "https://freesound.org/s/703644/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "forest-day"
+kind = "bed"
+name = "Forest by day"
+group = "nature"
+file = "freesound-643731/643731_8415824-hq.ogg"
+tags = ["birds", "woods", "outdoor"]
+author = "AbsynthFactory"
+url = "https://freesound.org/s/643731/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "forest-night"
+kind = "bed"
+name = "Forest at night"
+group = "nature"
+file = "freesound-203598/203598_548893-hq.ogg"
+tags = ["crickets", "owl", "night", "woods"]
+author = "raoul_slayer"
+url = "https://freesound.org/s/203598/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "cave-wind"
+kind = "bed"
+name = "Cave wind"
+group = "nature"
+file = "freesound-852822/852822_18763192-hq.ogg"
+tags = ["wind", "howl", "underground"]
+author = "KolbyRFX"
+url = "https://freesound.org/s/852822/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "campfire"
+kind = "bed"
+name = "Campfire"
+group = "nature"
+file = "freesound-40699/40699_25133-hq.ogg"
+tags = ["fire", "crackle", "camp", "night"]
+author = "Spandau"
+url = "https://freesound.org/s/40699/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "ocean"
+kind = "bed"
+name = "Ocean waves"
+group = "nature"
+file = "freesound-440712/440712_8858975-hq.ogg"
+tags = ["sea", "coast", "waves", "beach"]
+author = "Ninochka"
+url = "https://freesound.org/s/440712/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "rain"
+kind = "bed"
+name = "Rain"
+group = "weather"
+file = "freesound-527500/527500_288104-hq.ogg"
+tags = ["rain", "wet", "weather"]
+author = "timothyd4y"
+url = "https://freesound.org/s/527500/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "storm"
+kind = "bed"
+name = "Thunderstorm"
+group = "weather"
+file = "freesound-866246/866246_2797317-hq.ogg"
+tags = ["rain", "thunder", "storm", "weather"]
+author = "Fhmediahmo"
+url = "https://freesound.org/s/866246/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "battle-drums"
+kind = "bed"
+name = "War drums"
+group = "mood"
+file = "freesound-527829/527829_2019171-hq.ogg"
+tags = ["drums", "war", "battle", "march"]
+author = "BaDoink"
+url = "https://freesound.org/s/527829/"
+licence = "CC0-1.0"
+# a rhythmic loop: the loop length is a whole number of beats (build.py "beat")
+beat = true
+
+[[sound]]
+id = "eerie-hum"
+kind = "bed"
+name = "Eerie hum"
+group = "mood"
+file = "freesound-865550/865550_17997500-hq.ogg"
+tags = ["drone", "dark", "magic", "dread"]
+author = "kkenny101"
+url = "https://freesound.org/s/865550/"
+licence = "CC0-1.0"
+
+# ── one-shots ────────────────────────────────────────────────────────────────────────────
+[[sound]]
+id = "door-creak"
+kind = "oneshot"
+name = "Door creak"
+group = "doors"
+file = "freesound-125957/125957_981397-hq.ogg"
+tags = ["door", "open", "wood"]
+author = "Ryding"
+url = "https://freesound.org/s/125957/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "door-slam"
+kind = "oneshot"
+name = "Door slam"
+group = "doors"
+file = "freesound-571797/571797_5620304-hq.ogg"
+tags = ["door", "close", "bang"]
+author = "NachtmahrTV"
+url = "https://freesound.org/s/571797/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "trap-click"
+kind = "oneshot"
+name = "Trap click"
+group = "doors"
+file = "kenney-rpg-audio/x/Audio/metalClick.ogg"
+tags = ["trap", "click", "mechanism"]
+duck = false
+author = "Kenney"
+url = "https://kenney.nl/assets/rpg-audio"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "coin-jingle"
+kind = "oneshot"
+name = "Coins"
+group = "doors"
+file = "kenney-rpg-audio/x/Audio/handleCoins.ogg"
+tags = ["gold", "loot", "money", "treasure"]
+duck = false
+author = "Kenney"
+url = "https://kenney.nl/assets/rpg-audio"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "sword-clash"
+kind = "oneshot"
+name = "Sword clash"
+group = "combat"
+file = "freesound-364531/364531_3908740-hq.ogg"
+tags = ["sword", "steel", "fight"]
+effects = ["impact-hit"]
+author = "Christopherderp"
+url = "https://freesound.org/s/364531/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "monster-roar"
+kind = "oneshot"
+name = "Monster roar"
+group = "combat"
+file = "freesound-489901/489901_10418401-hq.ogg"
+tags = ["monster", "beast", "dragon", "growl"]
+author = "NicknameLarry"
+url = "https://freesound.org/s/489901/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "explosion"
+kind = "oneshot"
+name = "Explosion"
+group = "combat"
+file = "oga-tinyworlds-explosion/explosion.wav"
+tags = ["boom", "blast"]
+effects = ["explosion-arcane", "eruption", "shatter", "ground-crack-impact"]
+# a short dry boom: a little room tail so it doesn't stop dead
+extra = "apad=pad_dur=1.2,aecho=0.8:0.5:90|210|380:0.4|0.25|0.12"
+author = "tinyworlds"
+url = "https://opengameart.org/content/explosion-0"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "thunder"
+kind = "oneshot"
+name = "Thunder"
+group = "weather"
+file = "freesound-436790/436790_3206727-hq.ogg"
+tags = ["thunder", "storm", "rumble"]
+effects = ["thunderwave", "call-lightning"]
+author = "roboroo"
+url = "https://freesound.org/s/436790/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "lightning"
+kind = "oneshot"
+name = "Lightning crack"
+group = "weather"
+file = "freesound-327986/327986_5622625-hq.ogg"
+tags = ["lightning", "crack", "zap", "storm"]
+effects = ["lightning-bolt", "lightning-strike", "breath-lightning-line"]
+author = "Terry93D"
+url = "https://freesound.org/s/327986/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "fireball"
+kind = "oneshot"
+name = "Fireball"
+group = "magic"
+file = "freesound-346917/346917_1535323-hq.ogg"
+tags = ["fire", "whoosh", "spell"]
+effects = ["fireball", "fire-bolt", "burning-hands", "breath-fire-cone", "scorched-earth"]
+author = "Julien_Matthey"
+url = "https://freesound.org/s/346917/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "magic-chime"
+kind = "oneshot"
+name = "Magic chime"
+group = "magic"
+file = "freesound-351408/351408_4067257-hq.ogg"
+tags = ["magic", "sparkle", "spell", "glow"]
+effects = ["magic-missile", "misty-step", "dancing-lights", "glint", "ward-rune"]
+duck = false
+author = "newagesoup"
+url = "https://freesound.org/s/351408/"
+licence = "CC0-1.0"
+
+[[sound]]
+id = "heal"
+kind = "oneshot"
+name = "Heal"
+group = "magic"
+file = "freesound-562292/562292_11785387-hq.ogg"
+tags = ["heal", "cure", "holy", "shimmer"]
+effects = ["cure-wounds", "sacred-flame"]
+duck = false
+author = "colorsCrimsonTears"
+url = "https://freesound.org/s/562292/"
+licence = "CC0-1.0"

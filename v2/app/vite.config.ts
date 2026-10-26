@@ -78,9 +78,41 @@ function effectsLibrary(): Plugin {
   };
 }
 
+/** The sound library (`v2/assets/sounds/`), served and shipped as `/app/sounds/` (docs/sounds.md). */
+const SOUNDS_DIR = here('../assets/sounds');
+
+/** What of the sound library ships: `index.json` and the sound files, not the build tools. */
+const soundsShipped = (rel: string) => !/^(tools)(\/|$)/.test(rel);
+
+/** Like {@link effectsLibrary}, for the sound library: `/app/sounds/*` in development, `dist/sounds/` in a build. */
+function soundsLibrary(): Plugin {
+  const types: Record<string, string> = { '.json': 'application/json', '.ogg': 'audio/ogg' };
+  return {
+    name: 'battlemap-sounds-library',
+    configureServer(server) {
+      server.middlewares.use('/app/sounds/', (req, res, next) => {
+        const rel = normalize(decodeURIComponent((req.url ?? '').split('?')[0]!)).replace(/^[/\\]+/, '');
+        if (rel.startsWith('..') || !soundsShipped(rel)) return next();
+        const file = join(SOUNDS_DIR, rel);
+        try {
+          if (!statSync(file).isFile()) return next();
+        } catch {
+          return next();
+        }
+        res.setHeader('Content-Type', types[extname(file)] ?? 'application/octet-stream');
+        createReadStream(file).pipe(res);
+      });
+    },
+    writeBundle(options) {
+      const out = join(options.dir ?? here('dist'), 'sounds');
+      cpSync(SOUNDS_DIR, out, { recursive: true, filter: (src) => soundsShipped(src.slice(SOUNDS_DIR.length).replace(/^[/\\]+/, '')) });
+    },
+  };
+}
+
 export default defineConfig({
   base: '/app/', // the shell serves the bundle under /app/, the server too (docs/shell.md)
-  plugins: [svelte(), buildJson(), effectsLibrary()],
+  plugins: [svelte(), buildJson(), effectsLibrary(), soundsLibrary()],
   resolve: { alias: { $lib: here('./src/lib') } },
   define: { __BUILD__: JSON.stringify(BUILD) },
   server: {

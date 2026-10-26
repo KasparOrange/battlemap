@@ -1,0 +1,694 @@
+{
+ "version": 1,
+ "count": 25,
+ "sounds": [
+  {
+   "id": "dungeon-drips",
+   "kind": "bed",
+   "name": "Dungeon drips",
+   "group": "places",
+   "file": "beds/dungeon-drips.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 440728,
+   "lufs": -28.1,
+   "tags": [
+    "cave",
+    "water",
+    "underground",
+    "echo"
+   ],
+   "author": "Sclolex",
+   "source": "https://freesound.org/s/177958/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "crypt",
+   "kind": "bed",
+   "name": "Crypt",
+   "group": "places",
+   "file": "beds/crypt.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 618820,
+   "lufs": -23.0,
+   "tags": [
+    "tomb",
+    "undead",
+    "drone",
+    "dark"
+   ],
+   "author": "TheMovieMacher",
+   "source": "https://freesound.org/s/468235/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "tavern",
+   "kind": "bed",
+   "name": "Tavern crowd",
+   "group": "places",
+   "file": "beds/tavern.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 430948,
+   "lufs": -23.0,
+   "tags": [
+    "inn",
+    "pub",
+    "crowd",
+    "people"
+   ],
+   "author": "o_ciz",
+   "source": "https://freesound.org/s/475505/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "city",
+   "kind": "bed",
+   "name": "Market street",
+   "group": "places",
+   "file": "beds/city.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 446453,
+   "lufs": -24.7,
+   "tags": [
+    "town",
+    "market",
+    "medieval",
+    "people",
+    "footsteps"
+   ],
+   "author": "hobonski",
+   "source": "https://freesound.org/s/703644/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "forest-day",
+   "kind": "bed",
+   "name": "Forest by day",
+   "group": "nature",
+   "file": "beds/forest-day.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 442057,
+   "lufs": -23.0,
+   "tags": [
+    "birds",
+    "woods",
+    "outdoor"
+   ],
+   "author": "AbsynthFactory",
+   "source": "https://freesound.org/s/643731/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "forest-night",
+   "kind": "bed",
+   "name": "Forest at night",
+   "group": "nature",
+   "file": "beds/forest-night.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 482390,
+   "lufs": -23.1,
+   "tags": [
+    "crickets",
+    "owl",
+    "night",
+    "woods"
+   ],
+   "author": "raoul_slayer",
+   "source": "https://freesound.org/s/203598/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "cave-wind",
+   "kind": "bed",
+   "name": "Cave wind",
+   "group": "nature",
+   "file": "beds/cave-wind.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 446324,
+   "lufs": -23.0,
+   "tags": [
+    "wind",
+    "howl",
+    "underground"
+   ],
+   "author": "KolbyRFX",
+   "source": "https://freesound.org/s/852822/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "campfire",
+   "kind": "bed",
+   "name": "Campfire",
+   "group": "nature",
+   "file": "beds/campfire.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 428424,
+   "lufs": -26.8,
+   "tags": [
+    "fire",
+    "crackle",
+    "camp",
+    "night"
+   ],
+   "author": "Spandau",
+   "source": "https://freesound.org/s/40699/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "ocean",
+   "kind": "bed",
+   "name": "Ocean waves",
+   "group": "nature",
+   "file": "beds/ocean.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 420116,
+   "lufs": -23.0,
+   "tags": [
+    "sea",
+    "coast",
+    "waves",
+    "beach"
+   ],
+   "author": "Ninochka",
+   "source": "https://freesound.org/s/440712/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "rain",
+   "kind": "bed",
+   "name": "Rain",
+   "group": "weather",
+   "file": "beds/rain.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 428815,
+   "lufs": -23.0,
+   "tags": [
+    "rain",
+    "wet",
+    "weather"
+   ],
+   "author": "timothyd4y",
+   "source": "https://freesound.org/s/527500/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "storm",
+   "kind": "bed",
+   "name": "Thunderstorm",
+   "group": "weather",
+   "file": "beds/storm.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 421603,
+   "lufs": -24.3,
+   "tags": [
+    "rain",
+    "thunder",
+    "storm",
+    "weather"
+   ],
+   "author": "Fhmediahmo",
+   "source": "https://freesound.org/s/866246/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "battle-drums",
+   "kind": "bed",
+   "name": "War drums",
+   "group": "mood",
+   "file": "beds/battle-drums.ogg",
+   "seconds": 18.136,
+   "samples": 870528,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 143052,
+   "lufs": -23.0,
+   "tags": [
+    "drums",
+    "war",
+    "battle",
+    "march"
+   ],
+   "author": "BaDoink",
+   "source": "https://freesound.org/s/527829/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "eerie-hum",
+   "kind": "bed",
+   "name": "Eerie hum",
+   "group": "mood",
+   "file": "beds/eerie-hum.ogg",
+   "seconds": 60.0,
+   "samples": 2880000,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 518078,
+   "lufs": -23.0,
+   "tags": [
+    "drone",
+    "dark",
+    "magic",
+    "dread"
+   ],
+   "author": "kkenny101",
+   "source": "https://freesound.org/s/865550/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "door-creak",
+   "kind": "oneshot",
+   "name": "Door creak",
+   "group": "doors",
+   "file": "oneshots/door-creak.ogg",
+   "seconds": 3.677,
+   "samples": 176489,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 29937,
+   "lufs": -16.0,
+   "tags": [
+    "door",
+    "open",
+    "wood"
+   ],
+   "duck": true,
+   "author": "Ryding",
+   "source": "https://freesound.org/s/125957/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "door-slam",
+   "kind": "oneshot",
+   "name": "Door slam",
+   "group": "doors",
+   "file": "oneshots/door-slam.ogg",
+   "seconds": 1.331,
+   "samples": 63900,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 9243,
+   "lufs": -18.5,
+   "tags": [
+    "door",
+    "close",
+    "bang"
+   ],
+   "duck": true,
+   "author": "NachtmahrTV",
+   "source": "https://freesound.org/s/571797/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "trap-click",
+   "kind": "oneshot",
+   "name": "Trap click",
+   "group": "doors",
+   "file": "oneshots/trap-click.ogg",
+   "seconds": 0.345,
+   "samples": 16551,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 3594,
+   "lufs": -70.0,
+   "tags": [
+    "trap",
+    "click",
+    "mechanism"
+   ],
+   "duck": false,
+   "author": "Kenney",
+   "source": "https://kenney.nl/assets/rpg-audio",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "coin-jingle",
+   "kind": "oneshot",
+   "name": "Coins",
+   "group": "doors",
+   "file": "oneshots/coin-jingle.ogg",
+   "seconds": 0.69,
+   "samples": 33139,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 7228,
+   "lufs": -24.7,
+   "tags": [
+    "gold",
+    "loot",
+    "money",
+    "treasure"
+   ],
+   "duck": false,
+   "author": "Kenney",
+   "source": "https://kenney.nl/assets/rpg-audio",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "sword-clash",
+   "kind": "oneshot",
+   "name": "Sword clash",
+   "group": "combat",
+   "file": "oneshots/sword-clash.ogg",
+   "seconds": 2.09,
+   "samples": 100301,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 18991,
+   "lufs": -19.3,
+   "tags": [
+    "sword",
+    "steel",
+    "fight"
+   ],
+   "effects": [
+    "impact-hit"
+   ],
+   "duck": true,
+   "author": "Christopherderp",
+   "source": "https://freesound.org/s/364531/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "monster-roar",
+   "kind": "oneshot",
+   "name": "Monster roar",
+   "group": "combat",
+   "file": "oneshots/monster-roar.ogg",
+   "seconds": 2.757,
+   "samples": 132320,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 25240,
+   "lufs": -16.0,
+   "tags": [
+    "monster",
+    "beast",
+    "dragon",
+    "growl"
+   ],
+   "duck": true,
+   "author": "NicknameLarry",
+   "source": "https://freesound.org/s/489901/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "explosion",
+   "kind": "oneshot",
+   "name": "Explosion",
+   "group": "combat",
+   "file": "oneshots/explosion.ogg",
+   "seconds": 1.29,
+   "samples": 61911,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 9025,
+   "lufs": -20.4,
+   "tags": [
+    "boom",
+    "blast"
+   ],
+   "effects": [
+    "explosion-arcane",
+    "eruption",
+    "shatter",
+    "ground-crack-impact"
+   ],
+   "duck": true,
+   "author": "tinyworlds",
+   "source": "https://opengameart.org/content/explosion-0",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "thunder",
+   "kind": "oneshot",
+   "name": "Thunder",
+   "group": "weather",
+   "file": "oneshots/thunder.ogg",
+   "seconds": 4.153,
+   "samples": 199361,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 29077,
+   "lufs": -18.2,
+   "tags": [
+    "thunder",
+    "storm",
+    "rumble"
+   ],
+   "effects": [
+    "thunderwave",
+    "call-lightning"
+   ],
+   "duck": true,
+   "author": "roboroo",
+   "source": "https://freesound.org/s/436790/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "lightning",
+   "kind": "oneshot",
+   "name": "Lightning crack",
+   "group": "weather",
+   "file": "oneshots/lightning.ogg",
+   "seconds": 5.086,
+   "samples": 244122,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 38235,
+   "lufs": -16.1,
+   "tags": [
+    "lightning",
+    "crack",
+    "zap",
+    "storm"
+   ],
+   "effects": [
+    "lightning-bolt",
+    "lightning-strike",
+    "breath-lightning-line"
+   ],
+   "duck": true,
+   "author": "Terry93D",
+   "source": "https://freesound.org/s/327986/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "fireball",
+   "kind": "oneshot",
+   "name": "Fireball",
+   "group": "magic",
+   "file": "oneshots/fireball.ogg",
+   "seconds": 1.25,
+   "samples": 59982,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 12571,
+   "lufs": -17.8,
+   "tags": [
+    "fire",
+    "whoosh",
+    "spell"
+   ],
+   "effects": [
+    "fireball",
+    "fire-bolt",
+    "burning-hands",
+    "breath-fire-cone",
+    "scorched-earth"
+   ],
+   "duck": true,
+   "author": "Julien_Matthey",
+   "source": "https://freesound.org/s/346917/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "magic-chime",
+   "kind": "oneshot",
+   "name": "Magic chime",
+   "group": "magic",
+   "file": "oneshots/magic-chime.ogg",
+   "seconds": 2.021,
+   "samples": 96993,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 18358,
+   "lufs": -16.0,
+   "tags": [
+    "magic",
+    "sparkle",
+    "spell",
+    "glow"
+   ],
+   "effects": [
+    "magic-missile",
+    "misty-step",
+    "dancing-lights",
+    "glint",
+    "ward-rune"
+   ],
+   "duck": false,
+   "author": "newagesoup",
+   "source": "https://freesound.org/s/351408/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  },
+  {
+   "id": "heal",
+   "kind": "oneshot",
+   "name": "Heal",
+   "group": "magic",
+   "file": "oneshots/heal.ogg",
+   "seconds": 1.03,
+   "samples": 49425,
+   "rate": 48000,
+   "channels": 1,
+   "bytes": 11091,
+   "lufs": -18.3,
+   "tags": [
+    "heal",
+    "cure",
+    "holy",
+    "shimmer"
+   ],
+   "effects": [
+    "cure-wounds",
+    "sacred-flame"
+   ],
+   "duck": false,
+   "author": "colorsCrimsonTears",
+   "source": "https://freesound.org/s/562292/",
+   "licence": {
+    "id": "CC0-1.0",
+    "url": "https://creativecommons.org/publicdomain/zero/1.0/"
+   },
+   "attribution": ""
+  }
+ ]
+}
