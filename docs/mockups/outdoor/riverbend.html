@@ -1,8 +1,23 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>Outdoor slice — riverbend</title>
-<link rel="stylesheet" href="../effects/fx.css">
 <style>
+  /* the effects demos' look (../effects/fx.css), inlined: a board embed serves only this folder */
+  html,body{margin:0;height:100%;background:#121214;color:#ddd;font:13px/1.4 system-ui,sans-serif;overflow:hidden}
+  .stage{position:absolute;inset:0}
+  canvas.stage{width:100%;height:100%;display:block}
+  .cap{position:absolute;left:10px;bottom:8px;right:10px;background:#000a;padding:6px 9px;border-radius:7px;pointer-events:none}
+  .cap b{color:#fff}
+  .fps{position:absolute;right:10px;top:8px;background:#000a;padding:3px 8px;border-radius:6px;font:12px ui-monospace,monospace;color:#9f9}
+  .bar{position:absolute;left:10px;top:8px;display:flex;gap:6px;flex-wrap:wrap}
+  .bar button{background:#2a2a30;color:#ddd;border:1px solid #444;border-radius:6px;padding:3px 9px;font:12px system-ui;cursor:pointer}
+  .bar button.on{background:#3d5afe;border-color:#3d5afe;color:#fff}
+  .score{position:absolute;right:10px;top:40px;background:#000c;border-radius:8px;padding:6px 8px;font:11px system-ui;color:#ccc;display:grid;grid-template-columns:auto auto;gap:3px 8px;align-items:center}
+  .score .row{display:flex;gap:2px}
+  .score .l{width:15px;height:15px;border-radius:3px;display:grid;place-items:center;font-weight:700;color:#fff;opacity:.28;font-size:10px}
+  .score .l.on{opacity:1;transform:scale(1.35);box-shadow:0 0 0 2px #000}
+  .score .note{grid-column:1/-1;color:#aaa;font-size:10px;max-width:180px}
+
   canvas.stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block }
   .bar, .fps, .cap, .info { z-index: 2 }
   .info { position: absolute; right: 10px; top: 38px; background: #000a; padding: 4px 8px; border-radius: 6px; font: 11px ui-monospace, monospace; color: #cfc }
@@ -19,7 +34,18 @@
   one draw call, wind in the vertex shader (gusts roll across the map). Drag the party: crowns open around them, the
   roof lifts when one steps inside.</div>
 <script type="module">
-import { fpsMeter, toggles } from "../effects/fx.js";
+// fpsMeter and toggles as in ../effects/fx.js (inlined: a board embed serves only this folder)
+function fpsMeter(el) {
+  let n = 0, t0 = performance.now();
+  (function tick(t) { n++; if (t - t0 >= 1000) { el.textContent = `${Math.round(n * 1000 / (t - t0))} fps`; n = 0; t0 = t; } requestAnimationFrame(tick); })(t0);
+}
+function toggles(bar, names, state, onChange) {
+  for (const k of names) {
+    const b = document.createElement("button"); b.textContent = k; b.className = state[k] ? "on" : "";
+    b.onclick = () => { state[k] = !state[k]; b.className = state[k] ? "on" : ""; onChange?.(); };
+    bar.append(b);
+  }
+}
 import { start } from "./outdoor.js";
 
 fpsMeter(document.getElementById("fps"));

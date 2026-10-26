@@ -135,7 +135,7 @@ void main() {
   if (mod(v_flags, 2.0) >= 1.0 && u_lift > 0.5) {   // canopy: see-through around the party
     float d = 99.0;
     for (int i = 0; i < 8; i++) { if (i >= u_nparty) break; d = min(d, length(v_sq - u_party[i])); }
-    c *= mix(0.14, 1.0, smoothstep(1.4, 2.8, d));
+    c *= mix(0.22, 1.0, smoothstep(1.4, 2.8, d));   // a ghost of the crown stays: you are under a tree
   }
   c.rgb *= cloud(v_sq);
   o = c;
@@ -204,7 +204,7 @@ const load = (src) => new Promise((ok, no) => { const i = new Image(); i.onload 
 
 // ---------------------------------------------------------------- plants → one vertex buffer
 
-const KIND = { clump: 0, bush: 1, fern: 1, reed: 2, lily: 3, willow: 4, spruce: 4, tree: 4, under: 5 };
+const KIND = { clump: 0, bush: 1, fern: 1, reed: 2, lily: 3, willow: 4, spruce: 4, tree: 4, under: 5, trunk: 5 };
 const FLOATS = 2 + 2 + 2 + 2 + 4 + 4 + 1;   // pos uv pivot centre p tint radius
 
 /** Builds the plants' vertices: shadows first, then every plant in scene order. */
@@ -230,7 +230,9 @@ function buildPlants(scene) {
   const sunTint = { tree: 0.42, bush: 0.34, low: 0.22, reed: 0.26, lily: 0.12 };
   // shadows (one pass under everything)
   for (const p of plants) {
-    const t = types[p.type], to = place(p, t), k = KIND[t.kind] ?? 1, c = to(t.centre[0], t.centre[1]);
+    const t = types[p.type];
+    if (!t.shadow) continue;                 // trunks lie flat: no shadow
+    const to = place(p, t), k = KIND[t.kind] ?? 1, c = to(t.centre[0], t.centre[1]);
     R = (t.squares * p.scale) / 2;
     const kk = t.clumps || k === 3 ? 1 : k;   // a crown's shadow bends as one bush; a lily's lies still
     grid(to, t.shadow, 0, 0, t.w, t.h, 3, c, c, [k === 3 ? 0 : 0.035 * R, (p.x * 0.37) % 1, kk, (layerOf(p) ? 1 : 0) + 2], [1, 1, 1, sunTint[p.layer] ?? 0.3]);
@@ -248,7 +250,7 @@ function buildPlants(scene) {
       }
     } else {
       const k = KIND[t.kind] ?? 1, n = mesh[t.kind] ?? 4;
-      const amp = { 1: 0.06, 2: 0.10, 3: 0, 4: 0.075 }[k] * R;
+      const amp = ({ 1: 0.06, 2: 0.10, 3: 0, 4: 0.075 }[k] ?? 0) * R;
       grid(to, t.still, 0, 0, t.w, t.h, n, centre, centre, [amp, seed, k, flags], tint);
     }
   }

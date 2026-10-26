@@ -33,6 +33,8 @@ import outdoor  # noqa: E402
 RUN = REPO / "tools/mapgen/out/riverbend/261026-001219-ground"
 ATLAS_W = 2048
 GROW = 3
+PPS = 64            # atlas pixels per square: the TV draws ~56 at 1080p, so more is wasted memory
+SHADOW_SCALE = 0.5  # shadows are blurred anyway
 MESH = {"bush": 5, "reed": 8, "lily": 3, "fern": 5, "willow": 8, "spruce": 6, "tree": 6}
 
 rng = random.Random(7)
@@ -101,7 +103,7 @@ class Atlas:
         return rect
 
     def save(self, path):
-        h = 1 << math.ceil(math.log2(self.y + self.row + 2))
+        h = -(-(self.y + self.row + 2) // 64) * 64   # WebGL2 mips any size; no power-of-two padding
         sheet = Image.new("RGBA", (ATLAS_W, h), (0, 0, 0, 0))
         for img, (x, y, _, _) in self.items:
             sheet.paste(img, (x, y))
@@ -114,11 +116,17 @@ def build_types(veg, atlas):
     types = {}
     for v in veg:
         still = Image.open(HERE / "veg" / v["still"]).convert("RGBA")
+        k = min(1.0, max(96, v["squares"] * PPS) / max(still.size))   # shrink to ~PPS per square
+        size = (round(still.width * k), round(still.height * k))
+        still = still.resize(size, Image.LANCZOS)
         kind = {"willow": "willow", "spruce": "spruce", "fern": "fern"}.get(v["name"], v["kind"])
         t = {"kind": kind, "squares": v["squares"], "w": still.width, "h": still.height,
-             "centre": v["centre"], "shadow": atlas.add(shadow_of(still))}
+             "centre": [v["centre"][0] * k, v["centre"][1] * k]}
+        if kind != "trunk":
+            sh = shadow_of(still)
+            t["shadow"] = atlas.add(sh.resize((round(sh.width * SHADOW_SCALE), round(sh.height * SHADOW_SCALE)), Image.LANCZOS))
         if v.get("parts"):
-            labels = Image.open(HERE / "veg" / v["parts"]["file"])
+            labels = Image.open(HERE / "veg" / v["parts"]["file"]).resize(size, Image.NEAREST)
             t["under"] = atlas.add(under_copy(still))
             t["clumps"] = []
             for p in clump_pieces(still, labels):
@@ -217,12 +225,20 @@ def scatter(spec, types):
         if name in types:
             plants.append({"type": name, "x": x, "y": y, "layer": "tree"})
 
+    # a trunk with its roots under every tree (seen when the crown lifts)
+    trunks = have("trunk1", "trunk2")
+    for p in [p for p in plants if p["layer"] == "tree"]:
+        if trunks:
+            plants.append({"type": rng.choice(trunks), "x": p["x"], "y": p["y"], "layer": "trunk",
+                           "size": round(0.55 * types[p["type"]]["squares"] / 2.2 * rng.uniform(0.9, 1.1), 2),
+                           "rot": round(rng.uniform(0, 360), 1)})
+
     # ferns under the forest canopy (seen when it lifts)
-    for _ in range(260):
+    for _ in range(120):
         x, y = rng.uniform(-0.5, cols + 0.5), rng.uniform(-0.5, rows + 0.5)
         z = g.zone(x, y)
         if "fern" in types and z and z["kind"] == "forest" and g.road(x, y) > 0.6 and g.at(g.to_water, x, y) > 0.8:
-            if all(math.hypot(x - p["x"], y - p["y"]) > 1.3 for p in plants if p["type"] == "fern"):
+            if all(math.hypot(x - p["x"], y - p["y"]) > 2.2 for p in plants if p["type"] == "fern"):
                 plants.append({"type": "fern", "x": round(x, 2), "y": round(y, 2), "layer": "low"})
 
     # bushes along the forest edge and around the cottage garden
@@ -263,9 +279,9 @@ def scatter(spec, types):
 
     for p in plants:
         p.setdefault("rot", round(rng.uniform(-15, 15), 1))
-        p["scale"] = round(rng.uniform(0.85, 1.15), 2)
+        p["scale"] = p.pop("size", None) or round(rng.uniform(0.85, 1.15), 2)
         p["tint"] = [round(rng.uniform(0.94, 1.06), 3), round(rng.uniform(0.95, 1.05), 3), round(rng.uniform(0.94, 1.04), 3)]
-    order = {"lily": 0, "reed": 1, "low": 2, "bush": 3, "tree": 4}
+    order = {"lily": 0, "reed": 1, "trunk": 2, "low": 3, "bush": 4, "tree": 5}
     plants.sort(key=lambda p: (order[p["layer"]], types[p["type"]]["squares"] * p["scale"] if p["layer"] == "tree" else p["y"]))
     return plants
 

@@ -527,6 +527,18 @@ What limits it is the TV: v2 decodes the whole map picture at ~56 px per square,
 The TV only ever shows one screen (8 MB), so v2 should load the window plus a ring around it;
 until then 3 × 3 (102 × 57) fits comfortably.
 
+**Plants (2026-10-26):** 14 summer types + 2 trunk bases, `ige` project `summer-vegetation`
+(style ref = a crop of the slice's ground; 1K, 2 draws each, all usable in round one, $0.94 +
+$0.10 for the trunks): oak, beech, linden, alder, willow, birch, spruce; hazel, elder, bramble,
+fern; reed bed (Schilf), cattail, water lilies. Eight are cut into 18–35 leaf clumps
+(hazel merged down from 40). Willow reads as a big radial tuft rather than hanging fronds —
+redraw it before the big map. **Trunk bases** (Konrad's idea): a trunk with spreading roots
+under every tree, so where the crown opens around the party the players still see a tree
+stands there; the crown doesn't vanish either — it stays as a 22 % ghost. Atlas at 64 px per
+square (the TV draws ~56), shadows at half that: 2048 × 2112, 16.5 MB GPU, 644 KB WebP; the
+slice holds 93 plants as 3,121 quads in one draw call. The slice page shows the 2K ground
+(22 MB with mipmaps); a TV copy at 56 px per square is 8 MB.
+
 **Built:** `tools/mapgen/outdoor.py` (`guide`, `paint`, `roof`), `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,
