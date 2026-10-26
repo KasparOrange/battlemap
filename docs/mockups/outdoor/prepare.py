@@ -184,13 +184,14 @@ def build_types(veg, atlas):
 CANOPY_SPRITES = {"oak", "beech", "alder", "willow", "birch", "spruce", "linden"}   # painted with the canopy instead
 
 
-def canopy_trees(run, spec, atlas, which=None):
+def canopy_trees(run, spec, atlas, which=None, debug=None):
     """The forest canopy painted as one layer (outdoor.py canopy) cut back into trees: every
     canopy pixel goes to the crown on top of it (the biggest disc that covers it), the seams
     then follow the painting's dark crevices (watershed from each crown's core); each tree is
     cut into leaf clumps the same way (seeds on two rings, the watershed along the crevices),
     so the canopy sways in the same wind as every other crown. Returns (types, plants): one
-    type per tree, placed once at its trunk."""
+    type per tree, placed once at its trunk. `debug` (a dict) gets the tree label map and each
+    tree's clump labels, for pictures of the steps."""
     which, _, pick = (which or "canopy.json").partition("#")   # canopy_<tag>.json#2 = its second draw
     meta = json.loads((run / which).read_text())
     crowns = meta["crowns"]
@@ -227,6 +228,8 @@ def canopy_trees(run, spec, atlas, which=None):
     lab = flood(cost, markers, on)
     lab[(lab == 0) & on] = nearest[(lab == 0) & on]   # islands the flood could not reach
     lab[~on] = 0
+    if debug is not None:
+        debug.update(lab=lab, canopy=A, pad=E, crowns=crowns, clumps=[])
     types, plants = {}, []
     for i, c in enumerate(crowns):
         region = lab == i + 1
@@ -247,6 +250,8 @@ def canopy_trees(run, spec, atlas, which=None):
         arms = int(np.clip(round(c["d"] * 1.7), 6, 13))
         labels = np.asarray(branch_pieces(masked, arms)).copy()
         labels[~region[y0:y1, x0:x1]] = 0
+        if debug is not None:
+            debug["clumps"].append((x0, y0, labels.copy()))
         name = f"canopy{i}"
         t = {"kind": "tree", "squares": max(still.size) / PPS, "w": still.width, "h": still.height,
              "centre": [c["x"] * PPS + E - x0, c["y"] * PPS + E - y0], "crown": c["d"], "species": c["species"]}
