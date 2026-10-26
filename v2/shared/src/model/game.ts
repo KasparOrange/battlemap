@@ -267,17 +267,20 @@ export interface NewGameInput {
   createdAt: string;
   /** Its first map. */
   map: MapInfo;
+  /** More maps after the first (several pages of one PDF); a map id twice is kept once. */
+  moreMaps?: MapInfo[] | undefined;
   /** Settings, the defaults where missing. */
   settings?: Partial<GameSettings> | undefined;
 }
 
 /**
- * A new game on one map.
+ * A new game on one map (or several: `moreMaps` join after the first, which is on the table).
  *
- * @param input - id, name, time, first map and optional settings
+ * @param input - id, name, time, first map, more maps and optional settings
  * @returns the game
  */
 export function newGame(input: NewGameInput): Game {
+  const maps = [input.map, ...(input.moreMaps ?? [])].filter((m, i, all) => all.findIndex((x) => x.id === m.id) === i);
   return {
     id: input.id,
     name: input.name,
@@ -287,9 +290,9 @@ export function newGame(input: NewGameInput): Game {
     timer: null,
     handouts: [],
     handoutShown: null,
-    mapOrder: [input.map.id],
+    mapOrder: maps.map((m) => m.id),
     activeMapId: input.map.id,
-    maps: { [input.map.id]: newMapPlay(input.map) },
+    maps: Object.fromEntries(maps.map((m) => [m.id, newMapPlay(m)])),
     curtain: defaultCurtain(),
     scenes: [],
     sound: defaultSoundscape(),

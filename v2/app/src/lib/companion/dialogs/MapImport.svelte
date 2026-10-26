@@ -5,12 +5,15 @@
   as" (progress in the dialog's footer); the map joins the shared library (every device upload
   does, parity UP-10) and `ondone` gets it. A cancelled import leaves nothing on the server.
   Failures show as notices; a failed upload can be tried again from the same dialog.
+  A PDF of several pages first shows the page picker (PdfPagePicker): every picked page becomes
+  its own map, one after another through the squares dialog. Stopping at page k keeps the maps
+  already uploaded.
 
   Mount it with a `file`; it opens itself and calls `ondone` or `oncancel` exactly once.
 
   Props:
   - file: File — what the DM picked · commitLabel: string · table: {cols, rows} | null
-  - ondone: (map: MapInfo) => void · oncancel: () => void
+  - ondone: (maps: MapInfo[]) => void — one map, or one per picked PDF page · oncancel: () => void
 -->
 <script lang="ts">
   import { onMount } from 'svelte';
@@ -22,6 +25,8 @@
   import { releasePrepared, services, type MapChoices, type PreparedMap, type StoreAs } from '../library/services.ts';
   import { loadStoreAs, saveStoreAs } from '../library/store-as.ts';
   import GridEditor from './grid-editor/GridEditor.svelte';
+  import PdfPagePicker from './PdfPagePicker.svelte';
+  import { isPdfFile, pageCommitLabel } from './pdf-pages.ts';
   import SquaresDialog from './SquaresDialog.svelte';
 
   interface Props {
@@ -31,8 +36,8 @@
     commitLabel?: string;
     /** Squares the table holds. */
     table?: { cols: number; rows: number } | null;
-    /** The map is uploaded and in the shared library. */
-    ondone: (map: MapInfo) => void;
+    /** The maps are uploaded and in the shared library (several for several PDF pages). */
+    ondone: (maps: MapInfo[]) => void;
     /** The DM stopped, or it failed. */
     oncancel: () => void;
   }
@@ -46,36 +51,78 @@
   let reading = $state<{ value: number | null; label: string } | null>({ value: null, label: 'Reading the file' });
   let uploading = $state<{ value: number | null; label: string; detail?: string } | null>(null);
   let editor = $state<{ tool: 'fit' | 'length' } | null>(null);
+  /** A multi-page PDF waiting for the DM's pick. */
+  let pages = $state.raw<{ pageCount: number; thumbs: Blob[] } | null>(null);
+  /** The PDF pages to import, in order (`[undefined]` for any other file). */
+  let queue = $state.raw<(number | undefined)[]>([undefined]);
+  /** Which of `queue` is in the squares dialog now. */
+  let step = $state(0);
+  const done: MapInfo[] = [];
   let finished = false;
 
-  function finish(map: MapInfo | null): void {
+  function finish(): void {
     if (finished) return;
     finished = true;
-    if (!map && prepared) log.info('companion', 'Import cancelled — nothing was uploaded', { file: prepared.fileName });
+    if (prepared && done.length < queue.length) log.info('companion', 'Import stopped — the rest was not uploaded', { file: prepared.fileName, uploaded: done.length, picked: queue.length });
     releasePrepared(prepared);
-    if (map) ondone(map);
+    prepared = null;
+    if (done.length > 0) ondone([...done]);
     else oncancel();
   }
 
-  onMount(() => {
+  /** Reads `queue[step]` and opens the squares dialog for it. */
+  async function readStep(): Promise<void> {
     const t0 = performance.now();
+    const page = queue[step];
+    reading = { value: null, label: page ? `Reading page ${page}` : 'Reading the file' };
+    try {
+      const p = await services().prepareMap(file, (value, label) => (reading = { value, label }), page);
+      log.info('companion', 'Map examined', {
+        file: file.name, page: page ?? null, bytes: file.size, kind: p.kind, w: p.pictureW, h: p.pictureH, found: p.finding.source,
+        cols: p.grid.cols, rows: p.grid.rows, ms: Math.round(performance.now() - t0),
+      });
+      prepared = p;
+      grid = p.grid;
+      fitted = false;
+    } catch (e) {
+      log.warn('companion', 'Map not read', { file: file.name, page: page ?? null, error: String(e) });
+      notify(e instanceof Error ? e.message : `Couldn't read ${file.name}.`, { kind: 'error' });
+      finish();
+    } finally {
+      reading = null;
+    }
+  }
+
+  /** The DM picked pages of a multi-page PDF. */
+  function pickedPages(picked: number[]): void {
+    pages = null;
+    log.info('companion', 'PDF pages picked', { file: file.name, pages: picked });
+    queue = picked;
+    step = 0;
+    void readStep();
+  }
+
+  onMount(() => {
     void (async () => {
       format = await loadStoreAs();
-      try {
-        const p = await services().prepareMap(file, (value, label) => (reading = { value, label }));
-        log.info('companion', 'Map examined', {
-          file: file.name, bytes: file.size, kind: p.kind, w: p.pictureW, h: p.pictureH, found: p.finding.source,
-          cols: p.grid.cols, rows: p.grid.rows, ms: Math.round(performance.now() - t0),
-        });
-        prepared = p;
-        grid = p.grid;
-      } catch (e) {
-        log.warn('companion', 'Map not read', { file: file.name, error: String(e) });
-        notify(e instanceof Error ? e.message : `Couldn't read ${file.name}.`, { kind: 'error' });
-        finish(null);
-      } finally {
-        reading = null;
+      if (isPdfFile(file.name, new Uint8Array(await file.slice(0, 5).arrayBuffer()))) {
+        reading = { value: 0, label: 'Reading the pages' };
+        try {
+          const r = await services().pdfPages(file, (value, label) => (reading = { value, label }));
+          reading = null;
+          if (r.pageCount > 1) {
+            pages = r;
+            return;
+          }
+        } catch (e) {
+          log.warn('companion', 'PDF pages not read', { file: file.name, error: String(e) });
+          notify(e instanceof Error ? e.message : `Couldn't read ${file.name}.`, { kind: 'error' });
+          reading = null;
+          finish();
+          return;
+        }
       }
+      await readStep();
     })();
     return () => releasePrepared(prepared);
   });
@@ -98,8 +145,15 @@
         log.warn('companion', 'Map not added to the shared library', { error: String(e) });
         notify("The map is up, but it didn't make it into the shared library.", { kind: 'warning' });
       }
-      log.info('companion', 'Map uploaded', { name: map.name, cols: map.grid.cols, rows: map.grid.rows, format: choices.format, ms: Math.round(performance.now() - t0) });
-      finish({ ...map, libraryId: map.id });
+      log.info('companion', 'Map uploaded', { name: map.name, page: queue[step] ?? null, cols: map.grid.cols, rows: map.grid.rows, format: choices.format, ms: Math.round(performance.now() - t0) });
+      done.push({ ...map, libraryId: map.id });
+      uploading = null;
+      if (step + 1 < queue.length) {
+        releasePrepared(prepared);
+        prepared = null;
+        step++;
+        await readStep();
+      } else finish();
     } catch (e) {
       log.error('companion', 'Upload failed', { file: file.name, error: String(e) });
       notify(`Upload failed: ${e instanceof Error ? e.message : String(e)}`, { kind: 'error' });
@@ -114,6 +168,10 @@
   </Dialog>
 {/if}
 
+{#if pages}
+  <PdfPagePicker fileName={file.name} pageCount={pages.pageCount} thumbs={pages.thumbs} onpick={pickedPages} oncancel={finish} />
+{/if}
+
 {#if prepared && grid}
   <SquaresDialog
     open={!editor}
@@ -121,12 +179,12 @@
     bind:grid
     bind:format
     {fitted}
-    {commitLabel}
+    commitLabel={pageCommitLabel(commitLabel, step, queue.length)}
     {table}
     progress={uploading}
     oncommit={(c) => void commit(c)}
     onfit={(_g, tool) => (editor = { tool })}
-    onclose={() => !uploading && finish(null)}
+    onclose={() => !uploading && finish()}
   />
   {#if editor}
     <GridEditor

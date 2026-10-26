@@ -20,7 +20,7 @@
 import { api } from '../api/index.ts';
 import { log } from '../log.ts';
 import { runImport, type ImportOptions, type ImportProgress, type ImportResult } from './pipeline.ts';
-import { renderPdfFirstPage } from './pdf.ts';
+import { renderPdfPage } from './pdf.ts';
 import { runInWorker } from './worker-client.ts';
 
 export { ImportError, type ImportErrorCode } from './errors.ts';
@@ -36,6 +36,7 @@ export {
   type UploadedMap,
 } from './pipeline.ts';
 export type { ImportStep, GridOrigin } from './prepare.ts';
+export { pdfPageThumbs, MAX_PICKER_PAGES, type PdfThumbs } from './pdf.ts';
 
 /** File types for the picker's `accept` (Safari doesn't know `.dd2vtt`, so it also takes any). */
 export const ACCEPT = '.dd2vtt,.uvtt,.pdf,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp,application/pdf';
@@ -54,7 +55,7 @@ export function importFile(file: File, onProgress?: (p: ImportProgress) => void,
   return runImport(file, onProgress, {
     upload: (blob, opts, progress) => api.uploadFile(blob, opts, progress),
     work: runInWorker,
-    renderPdf: renderPdfFirstPage,
+    renderPdf: (pdf, page) => renderPdfPage(pdf, page ?? 1),
     log,
     now: () => performance.now(),
   }, options);

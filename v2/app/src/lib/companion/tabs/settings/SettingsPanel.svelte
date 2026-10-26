@@ -82,6 +82,18 @@
     }
   }
 
+  /** Several maps from one import (PDF pages): the first goes on the table, the rest join behind it. */
+  function addMaps(maps: MapInfo[]): void {
+    const [first, ...rest] = maps;
+    if (!first) return;
+    addMap(first);
+    for (const m of rest) {
+      if (game.maps[m.id]) continue;
+      if (ctx.dispatch({ type: 'map.add', map: m, activate: false })) log.info('companion', 'Map added to the game', { name: m.name, id: m.id });
+    }
+    if (rest.length) notify(`${maps.length} maps joined the game — “${first.name}” is on the table`, { kind: 'success' });
+  }
+
   function addShared(e: LibraryEntry): void {
     sheet = false;
     addMap({ ...e.map, libraryId: e.map.id });
@@ -252,9 +264,9 @@
     file={importing}
     {table}
     commitLabel="Add to the game"
-    ondone={(m) => {
+    ondone={(maps) => {
       importing = null;
-      addMap(m);
+      addMaps(maps);
     }}
     oncancel={() => (importing = null)}
   />

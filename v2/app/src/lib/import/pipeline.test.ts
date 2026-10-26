@@ -174,7 +174,21 @@ describe('runImport', () => {
     const r = await runImport(new File(['%PDF-1.7\n...'], 'Dungeon.pdf'), undefined, d);
     expect(r.draft.kind).toBe('picture');
     expect(r.draft.name).toBe('Dungeon');
-    expect(d.log.lines.some((l) => l.msg === 'PDF page 1 rendered' && l.props!['pages'] === 3)).toBe(true);
+    expect(d.log.lines.some((l) => l.msg === 'PDF page rendered' && l.props!['page'] === 1 && l.props!['pages'] === 3)).toBe(true);
+
+    // a picked page (S16): rendered by number, named after it
+    const asked: (number | undefined)[] = [];
+    const d2 = deps({
+      upload: up.upload,
+      renderPdf: async (_f: Blob, page?: number) => {
+        asked.push(page);
+        return { bitmap: { width: 4096, height: 3165 } as ImageBitmap, pageCount: 3 };
+      },
+      work: (async () => fakePrepared) as ImportDeps['work'],
+    });
+    const r2 = await runImport(new File(['%PDF-1.7\n...'], 'Dungeon.pdf'), undefined, d2, { pdfPage: 3 });
+    expect(asked).toEqual([3]);
+    expect(r2.draft.name).toBe('Dungeon — page 3');
   });
 
   test('bad files fail with the DM\'s message and a log line', async () => {

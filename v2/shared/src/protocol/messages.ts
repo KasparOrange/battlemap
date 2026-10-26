@@ -179,6 +179,8 @@ export const GameNew = v.object({
     createdAt: v.string(),
     /** The first map. */
     map: MapInfo,
+    /** More maps of the game after the first (several pages of one PDF), not on the table yet. */
+    moreMaps: v.optional(v.pipe(v.array(MapInfo), v.maxLength(59))),
     /** Settings (defaults where missing). */
     settings: v.optional(v.partial(GameSettings)),
   }),

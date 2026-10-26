@@ -127,10 +127,10 @@
    * @param name - its name (default "Session N · date")
    * @param settings - its settings (default: the ones this device used last)
    */
-  function newGameOn(map: MapInfo, name = defaultGameName(map.name, games ?? []), settings: Partial<GameSettings> = lastSettings): void {
+  function newGameOn(map: MapInfo, name = defaultGameName(map.name, games ?? []), settings: Partial<GameSettings> = lastSettings, moreMaps: MapInfo[] = []): void {
     if (!startOpening(map.id)) return;
-    log.info('companion', 'New game', { name, map: map.name, cols: map.grid.cols, rows: map.grid.rows, settings });
-    const sent = session.request({ type: 'game.new', game: { id: newId(), name, createdAt: new Date().toISOString(), map, settings } });
+    log.info('companion', 'New game', { name, map: map.name, cols: map.grid.cols, rows: map.grid.rows, settings, moreMaps: moreMaps.length });
+    const sent = session.request({ type: 'game.new', game: { id: newId(), name, createdAt: new Date().toISOString(), map, settings, ...(moreMaps.length ? { moreMaps } : {}) } });
     if (!sent) endOpening();
     else notify(`Starting “${name}”…`);
   }
@@ -312,10 +312,10 @@
     file={importing}
     {table}
     commitLabel="Upload and play"
-    ondone={(map) => {
+    ondone={(maps) => {
       importing = null;
       void shared?.reload();
-      newGameOn(map);
+      newGameOn(maps[0]!, undefined, undefined, maps.slice(1));
     }}
     oncancel={() => (importing = null)}
   />

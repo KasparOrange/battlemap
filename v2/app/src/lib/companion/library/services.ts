@@ -100,8 +100,13 @@ export interface TableRow {
 export interface CompanionServices {
   /** Tables with a TV online on a server (default this page's server). */
   listTables(serverUrl?: string): Promise<TableRow[]>;
-  /** Reads and examines a picked file (`.dd2vtt`, PDF, picture). Throws a readable `Error`. */
-  prepareMap(file: File, onProgress: ProgressFn): Promise<PreparedMap>;
+  /**
+   * Reads and examines a picked file (`.dd2vtt`, PDF, picture). Throws a readable `Error`.
+   * `pdfPage` (from 1) picks a PDF's page; the map's name then says the page.
+   */
+  prepareMap(file: File, onProgress: ProgressFn, pdfPage?: number): Promise<PreparedMap>;
+  /** A PDF's pages as small thumbnails for the page picker (at most 60). Throws a readable `Error`. */
+  pdfPages(file: File, onProgress: ProgressFn): Promise<{ pageCount: number; thumbs: Blob[] }>;
   /** Uploads a prepared map with the DM's choices (the first upload of its files); returns the map ready for a game and its thumbnail. */
   uploadMap(prepared: PreparedMap, choices: MapChoices, onProgress: ProgressFn): Promise<UploadedMap>;
   /** Uploads one file (a DM layer). */

@@ -33,7 +33,7 @@ export interface ImportProgress {
 export const STEP_LABELS: Record<ImportStep, string> = {
   read: 'Reading the map file…',
   parse: 'Reading walls and doors…',
-  pdf: 'Rendering PDF page 1…',
+  pdf: 'Rendering the PDF page…',
   decode: 'Decoding the picture…',
   detect: 'Looking for a grid in the picture…',
   'table-copy': 'Making the copy for the TV…',
@@ -119,6 +119,11 @@ export interface ImportResult {
 export interface ImportOptions {
   /** The server's "Store as" for the original picture (default `asis`). */
   format?: StoreAs;
+  /**
+   * A PDF's page to import, from 1 (default 1). When given, the map's name says the page
+   * ("Dungeon — page 2"), so several pages of one PDF stay apart in a game.
+   */
+  pdfPage?: number;
 }
 
 /** What the pipeline needs from the outside. */
@@ -127,8 +132,8 @@ export interface ImportDeps {
   upload: UploadFn;
   /** Runs a job in the import worker. */
   work<T>(job: WorkerJob, onStep: (step: ImportStep) => void): Promise<T>;
-  /** Renders a PDF's first page (pdf.js). */
-  renderPdf(file: Blob): Promise<{ bitmap: ImageBitmap; pageCount: number }>;
+  /** Renders a PDF's page (pdf.js), page 1 when `page` is missing. */
+  renderPdf(file: Blob, page?: number): Promise<{ bitmap: ImageBitmap; pageCount: number }>;
   /** The logger. */
   log: Logger;
   /** Clock in ms. */
@@ -206,10 +211,11 @@ export async function runImport(
     } else {
       onStep('pdf');
       const tp = deps.now();
-      const page = await deps.renderPdf(file);
+      const pageNo = options.pdfPage ?? 1;
+      const page = await deps.renderPdf(file, pageNo);
       pdfMs = Math.round(deps.now() - tp);
       pageCount = page.pageCount;
-      deps.log.info('import', 'PDF page 1 rendered', { name, width: page.bitmap.width, height: page.bitmap.height, pages: page.pageCount, ms: pdfMs });
+      deps.log.info('import', 'PDF page rendered', { name, page: pageNo, width: page.bitmap.width, height: page.bitmap.height, pages: page.pageCount, ms: pdfMs });
       prepared = await deps.work<Prepared>({ op: 'pdfPage', bitmap: page.bitmap, name }, onStep);
     }
     for (const w of prepared.warnings) deps.log.warn('import', 'Import warning', { name, warning: w });
@@ -227,7 +233,7 @@ export async function runImport(
     });
 
     const draft: MapDraft = {
-      name: mapNameFromFile(name),
+      name: kind === 'pdf' && options.pdfPage !== undefined ? `${mapNameFromFile(name)} — page ${options.pdfPage}` : mapNameFromFile(name),
       kind: prepared.kind,
       grid: prepared.grid,
       drawGrid: prepared.drawGrid,

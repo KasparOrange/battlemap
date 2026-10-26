@@ -6,7 +6,7 @@
  */
 import type { FileRef, LibraryEntry } from '@battlemap/shared';
 import { api } from '../../api/index.ts';
-import { importFile, type ImportResult } from '../../import/index.ts';
+import { importFile, pdfPageThumbs, type ImportResult } from '../../import/index.ts';
 import { log } from '../../log.ts';
 import { files, settings } from '../../storage/index.ts';
 import {
@@ -54,18 +54,26 @@ export function appServices(): CompanionServices {
       return ((await r.json()) as { tables: TableRow[] }).tables;
     },
 
-    async prepareMap(file: File, onProgress: ProgressFn): Promise<PreparedMap> {
+    async prepareMap(file: File, onProgress: ProgressFn, pdfPage?: number): Promise<PreparedMap> {
       // nothing is uploaded here: a cancelled squares dialog leaves nothing on the server
-      const r = await importFile(file, (p) => onProgress(p.fraction, p.label.replace(/…$/, '')));
+      const r = await importFile(file, (p) => onProgress(p.fraction, p.label.replace(/…$/, '')), pdfPage ? { pdfPage } : {});
       const d = r.draft;
       const pic = d.grid;
       return {
-        fileName: file.name, name: nameFromFile(file.name), kind: d.kind,
+        fileName: file.name, name: pdfPage ? `${nameFromFile(file.name)} — page ${pdfPage}` : nameFromFile(file.name), kind: d.kind,
         picture: r.pictureBlob, pictureExt: d.pictureExt === 'jpg' || d.pictureExt === 'webp' ? d.pictureExt : 'png',
         pictureW: pic.pictureW, pictureH: pic.pictureH, previewUrl: URL.createObjectURL(r.pictureBlob),
         geometry: null, grid: d.grid, drawGrid: d.drawGrid, finding: findingOf(r),
         needsGrid: r.needsGrid && r.gridOrigin === 'default', handle: r,
       };
+    },
+
+    async pdfPages(file: File, onProgress: ProgressFn): Promise<{ pageCount: number; thumbs: Blob[] }> {
+      onProgress(0, 'Reading the pages');
+      const t0 = performance.now();
+      const r = await pdfPageThumbs(file, 240, (done, total) => onProgress(done / total, `Reading page ${done} of ${total}`));
+      log.info('companion', 'PDF pages read', { file: file.name, pages: r.pageCount, thumbs: r.thumbs.length, ms: Math.round(performance.now() - t0) });
+      return r;
     },
 
     async uploadMap(p: PreparedMap, c: MapChoices, onProgress: ProgressFn): Promise<UploadedMap> {
