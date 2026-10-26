@@ -11,7 +11,7 @@ import type { Logger } from '../../log.ts';
 import { pinchCamera } from '../../render/camera.ts';
 import type { TableView } from '../../render/types.ts';
 import type { MapTool, ToolDrag } from '../game/tabs.ts';
-import { GestureTracker, type GestureHandler } from './gesture.ts';
+import { GestureTracker, type GestureHandler, type HoldTimers } from './gesture.ts';
 import { LIVE_PER_SECOND, throttle, type Throttle } from './throttle.ts';
 
 /** How often a players'-window drag sends, in ms (v1: 80). */
@@ -34,6 +34,15 @@ export interface MapInputDeps {
   doors(): boolean;
   /** Sends a command. */
   dispatch(cmd: Command): boolean;
+  /**
+   * A long press on the map, in squares (a DM note — optional; without it a press never becomes
+   * a long press).
+   *
+   * @returns true when it was taken (the press then neither taps nor drags)
+   */
+  hold?(at: Point): boolean;
+  /** The long press's clock (tests pass their own; default the page's timers). */
+  timers?: HoldTimers;
   /** The logger. */
   log: Logger;
 }
@@ -59,7 +68,7 @@ export class MapInputController implements GestureHandler {
 
   /** @param deps - the game screen's hooks */
   constructor(private readonly deps: MapInputDeps) {
-    this.tracker = new GestureTracker(this);
+    this.tracker = new GestureTracker(this, deps.timers);
   }
 
   /** A host point in squares (the view's camera), or null before a map is drawn. */
@@ -98,6 +107,23 @@ export class MapInputController implements GestureHandler {
       kind: 'frame', from, col: layout.col, row: layout.row,
       maxCol: Math.max(0, cols - layout.winCols), maxRow: Math.max(0, rows - layout.winRows), pansX: layout.pansX, pansY: layout.pansY,
     };
+  }
+
+  /**
+   * A long press: handed to the game screen (a note) unless the finger is on the disc, the
+   * ruler or a door — those keep their own press.
+   *
+   * @param at - where, in CSS px of the map view
+   * @returns whether it was taken
+   */
+  hold(at: Point): boolean {
+    const t = this.target.kind;
+    if (!this.deps.hold || (t !== 'tool' && t !== 'frame')) return false;
+    const p = this.sq(at);
+    if (!p || !this.deps.map()) return false;
+    const taken = this.deps.hold(p);
+    if (taken) this.deps.log.info('companion', 'Long press on the map', { x: Math.round(p.x * 10) / 10, y: Math.round(p.y * 10) / 10 });
+    return taken;
   }
 
   /** @inheritdoc */

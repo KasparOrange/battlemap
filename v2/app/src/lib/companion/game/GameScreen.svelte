@@ -6,6 +6,8 @@
   sheet that grows out of the tab bar. Tabs come from the registry (`tabs.ts`): every
   `companion/tabs/<id>/tab.ts`. Undo / redo sit at the rail's foot (tablet), in the sheet's
   header or above the tab bar (phone). Desk keys: 1–9 tabs, Ctrl Z / Ctrl Shift Z, F, Escape.
+  Table moments reach every tab: a long press on the map pins a DM note (the note dialog), and
+  the timer / handout chips sit beside the curtain (`tabs/moments/`).
 
   Props:
   - config: AppConfig — the page's configuration
@@ -30,6 +32,9 @@
   import { hiddenTabs } from '../session-settings/settings-logic.ts';
   import { serverWhere } from '../library/picker-logic.ts';
   import CurtainButton from '../tabs/scenes/CurtainButton.svelte';
+  import MomentsChips from '../tabs/moments/MomentsChips.svelte';
+  import NoteDialog from '../tabs/moments/NoteDialog.svelte';
+  import { holdNote } from '../tabs/moments/tool.ts';
 
   interface Props {
     /** The page's configuration. */
@@ -193,7 +198,7 @@
 
 <div class="screen" class:phone bind:clientWidth={width} data-testid="game-screen">
   <div class="map" bind:this={mapEl}>
-    <MapView {ctx} tool={() => tool} doors={() => active.doors !== false} />
+    <MapView {ctx} tool={() => tool} doors={() => active.doors !== false} hold={(p) => holdNote(ctx, p)} />
     {#if active.overlay}
       <div class="tab-overlay" data-testid="tab-overlay">
         <active.overlay {ctx} />
@@ -206,6 +211,7 @@
 
     <div class="corner tr" data-ctl={phone ? 'toolbar' : 'standalone'}>
       {#if !tvOk}<Badge text="TV not connected" icon="warning" tone="warn" />{/if}
+      <MomentsChips {ctx} />
       <CurtainButton {ctx} />
       <IconButton
         icon="tv"
@@ -278,6 +284,8 @@
     </nav>
   {/if}
 </div>
+
+<NoteDialog {ctx} />
 
 <style>
   .screen {

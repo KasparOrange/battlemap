@@ -11,6 +11,7 @@
   - ctx: GameScreenContext — the game screen's context (state, camera, geometry, selection)
   - tool: () => MapTool — the chosen tab's tool, read on every gesture
   - doors: () => boolean — whether door taps work in the chosen tab
+  - hold: (at: Point) => boolean — a long press on the map in squares (a DM note); true = taken
 -->
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
@@ -24,6 +25,7 @@
   import { bindPointers, MapInputController } from '../input/map-input.ts';
   import type { GameScreenContext } from './context.svelte.ts';
   import type { MapTool } from './tabs.ts';
+  import type { Point } from '@battlemap/shared';
 
   interface Props {
     /** The game screen's context. */
@@ -32,9 +34,11 @@
     tool: () => MapTool;
     /** Whether door taps work in the chosen tab. */
     doors: () => boolean;
+    /** A long press on the map, in squares (a DM note); returns whether it was taken. */
+    hold?: (at: Point) => boolean;
   }
 
-  let { ctx, tool, doors }: Props = $props();
+  let { ctx, tool, doors, hold }: Props = $props();
 
   let host = $state<HTMLDivElement>();
   let view = $state.raw<TableView | null>(null);
@@ -96,6 +100,7 @@
       tool,
       doors,
       dispatch: (c) => ctx.dispatch(c),
+      hold: (p) => hold?.(p) ?? false,
       log,
     });
     const unbind = bindPointers(el, controller);

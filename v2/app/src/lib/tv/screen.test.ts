@@ -39,6 +39,10 @@ describe('navigation', () => {
     expect(backAction('game', true)).toBe('pattern-off');
     expect(backAction('game', false)).toBe('close-game');
     expect(backAction('game', false, true)).toBe('lift-curtain');
+    expect(backAction('game', false, false, true)).toBe('close-handout');
+    expect(backAction('game', false, true, true)).toBe('lift-curtain');
+    expect(backAction('game', true, false, true)).toBe('pattern-off');
+    expect(backAction('library', false, false, true)).toBe('home');
     expect(backAction('game', true, true)).toBe('pattern-off');
     expect(backAction('library', false, true)).toBe('home');
     expect(backAction('library', false)).toBe('home');

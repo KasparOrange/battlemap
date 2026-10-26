@@ -29,6 +29,11 @@ export interface TvTableViewOptions {
   files: (ref: FileRef) => Promise<Blob>;
   /** Map loading, shown, failed; the renderer failing. */
   onEvent: (e: TableViewEvent) => void;
+  /**
+   * The server's clock, epoch ms (`Connection.serverNow`): the countdown and one-shots are
+   * stamped with it by the tablet, so the TV must age them by it too (rv#16). Default `Date.now`.
+   */
+  now?: () => number;
 }
 
 /**
@@ -45,6 +50,7 @@ export function openTableView(host: HTMLElement, options: TvTableViewOptions): T
     files: options.files,
     effects: (slots, ctx) => createEffectsRuntime(slots, ctx),
     onEvent: options.onEvent,
+    now: options.now,
   });
   view.ready.catch((e: unknown) => options.onEvent({ type: 'renderer-failed', error: String(e) }));
   attachRenderStats(() => view.stats()); // the test hook (`?debug=1` only)

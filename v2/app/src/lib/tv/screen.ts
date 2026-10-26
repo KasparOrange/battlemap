@@ -97,6 +97,8 @@ export type BackAction =
   | 'pattern-off'
   /** Lift the curtain (the game stays open). */
   | 'lift-curtain'
+  /** Take the handout on the TV off (features.md "table moments"). */
+  | 'close-handout'
   /** Save and close the game, then show the library. */
   | 'close-game'
   /** Library → home. */
@@ -107,16 +109,20 @@ export type BackAction =
 /**
  * Where Back goes (parity TV-32): pattern → off, curtain → up, game → library, library → home,
  * home → exit. With the curtain down, Back first lifts it (features.md "the curtain"): the
- * remote's way back to the table when the tablet is gone, never a jump out of the game.
+ * remote's way back to the table when the tablet is gone, never a jump out of the game. A
+ * handout on the TV (at the edge or as a full-screen pause) is taken off the same way, after the
+ * curtain.
  *
  * @param screen - the screen shown
  * @param patternOn - whether the calibration pattern is up
  * @param curtainDown - whether the game's curtain is down
+ * @param handoutShown - whether a handout shows on the table
  * @returns the action
  */
-export function backAction(screen: TvScreen, patternOn: boolean, curtainDown = false): BackAction {
+export function backAction(screen: TvScreen, patternOn: boolean, curtainDown = false, handoutShown = false): BackAction {
   if (patternOn) return 'pattern-off';
   if (screen === 'game' && curtainDown) return 'lift-curtain';
+  if (screen === 'game' && handoutShown) return 'close-handout';
   if (screen === 'game') return 'close-game';
   if (screen === 'library') return 'home';
   return 'exit';

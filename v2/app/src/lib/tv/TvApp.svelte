@@ -42,6 +42,7 @@
   import TvCalibration from './TvCalibration.svelte';
   import TvHome from './TvHome.svelte';
   import TvLibrary from './TvLibrary.svelte';
+  import TvHandout from './TvHandout.svelte';
 
   const timing = new BootTiming(log); // qa#11: reload → first frame with the map, logged as `perf`
   timing.mark('script');
@@ -87,6 +88,9 @@
   const patternOn = $derived(session.state.table.pattern.on);
   /** The game's curtain is down: the TV shows nothing but it (no busy card, no map name). */
   const curtainDown = $derived(session.state.game?.curtain?.down ?? false);
+  /** The handout on the table and where (features.md "table moments"); hidden under the curtain. */
+  const handoutShown = $derived(session.state.game?.handoutShown ?? null);
+  const handout = $derived(handoutShown ? (session.state.game?.handouts ?? []).find((h) => h.id === handoutShown.id) ?? null : null);
   const screen = $derived(screenFor(game !== null, wanted));
   const companions = $derived(session.peers.filter((p) => p.role === 'companion').length);
   const badgeInput = $derived({ connection: session.connection, companions, problem, offlineMs: offlineLong ? OFFLINE_RED_MS : 0 });
@@ -171,11 +175,12 @@
   /** One press of Back; returns whether the app handled it (else the shell closes the app). */
   function onBack(): boolean {
     if (!gate.accept()) return lastBackHandled; // the same press, delivered twice
-    const action = backAction(screen, patternOn, curtainDown);
+    const action = backAction(screen, patternOn, curtainDown, handout !== null);
     log.info('tv', 'Back', { action, screen });
     lastBackHandled = action !== 'exit';
     if (action === 'pattern-off') setPattern(false);
     else if (action === 'lift-curtain') session.host.applyLocal({ type: 'curtain.set', down: false });
+    else if (action === 'close-handout') session.host.applyLocal({ type: 'handout.show', shown: null });
     else if (action === 'close-game') closeGame();
     else if (action === 'home') showHome();
     return lastBackHandled;
@@ -307,7 +312,7 @@
       await refreshLists();
     });
 
-    view = openTableView(stage!, { log, files: (ref) => ports.files.get(ref), onEvent: onViewEvent });
+    view = openTableView(stage!, { log, files: (ref) => ports.files.get(ref), onEvent: onViewEvent, now: () => session.conn.serverNow() });
     view.ready.then(() => timing.mark('renderer'), () => timing.noMap());
     view.update(session.state);
 
@@ -378,6 +383,9 @@
     >
       <Icon name="back" size="1.5rem" />
     </button>
+    {#if handout && handoutShown && !curtainDown && !patternOn}
+      <TvHandout {handout} shown={handoutShown} files={(ref) => ports.files.get(ref)} />
+    {/if}
     {#if badge && !patternOn}
       <div class="problem"><TvBadge {badge} onTakeOver={() => session.conn.takeOver()} /></div>
     {/if}

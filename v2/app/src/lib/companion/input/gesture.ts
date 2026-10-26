@@ -8,6 +8,10 @@
  *   step) and the camera takes over until every finger is up.
  * - A tool that has no drag at that spot (`dragStart` returns false) lets the finger pan the view.
  * - `panOnly` presses (right mouse button, space held) are camera from the start.
+ * - One finger held still for {@link HOLD_MS} is a **long press** (the second action, design.md
+ *   "touch"): the handler's `hold` decides whether it takes it (a DM note, `docs/features.md`
+ *   "table moments"); taken, the rest of the gesture does nothing — no tap, no drag. Not taken,
+ *   the press goes on as if nothing happened.
  *
  * Plain TypeScript with no DOM: the map's pointer events are fed in, the decisions come out
  * through a {@link GestureHandler}. Tested under `bun test`.
@@ -16,6 +20,23 @@ import type { Point } from '@battlemap/shared';
 
 /** One-finger travel (CSS px) after which a touch is a drag, not a tap. */
 export const TOOL_SLOP_PX = 8;
+
+/** How long one finger stays still before it is a long press, ms (a little past the kit's 420 ms hold fill). */
+export const HOLD_MS = 550;
+
+/** The clock the tracker waits for a long press with (tests pass their own). */
+export interface HoldTimers {
+  /** Calls `fn` after `ms`; returns a handle for {@link HoldTimers.clear}. */
+  set(fn: () => void, ms: number): unknown;
+  /** Cancels a pending call. */
+  clear(handle: unknown): void;
+}
+
+/** The page's own timers. */
+const PAGE_TIMERS: HoldTimers = {
+  set: (fn, ms) => setTimeout(fn, ms),
+  clear: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+};
 
 /** What the tracker decides, in screen (CSS) px. */
 export interface GestureHandler {
@@ -41,9 +62,15 @@ export interface GestureHandler {
   cameraMove(fingers: Point[]): void;
   /** Every finger is up after a camera gesture. */
   cameraEnd(): void;
+  /**
+   * One finger stayed still for {@link HOLD_MS} (optional).
+   *
+   * @returns true when the handler took the long press — the gesture then ends without a tap
+   */
+  hold?(at: Point): boolean;
 }
 
-type Phase = 'idle' | 'pending' | 'tool' | 'camera';
+type Phase = 'idle' | 'pending' | 'tool' | 'camera' | 'held';
 
 /** Tracks the pointers on the map and turns them into tool and camera gestures. */
 export class GestureTracker {
@@ -51,9 +78,16 @@ export class GestureTracker {
   private readonly pointers = new Map<number, Point>();
   private start: Point = { x: 0, y: 0 };
   private first = -1;
+  private holdTimer: unknown = null;
 
-  /** @param handler - receives the decisions */
-  constructor(private readonly handler: GestureHandler) {}
+  /**
+   * @param handler - receives the decisions
+   * @param timers - the clock for long presses (default the page's timers)
+   */
+  constructor(
+    private readonly handler: GestureHandler,
+    private readonly timers: HoldTimers = PAGE_TIMERS,
+  ) {}
 
   /** The current phase (for tests and logs). */
   get state(): Phase {
@@ -79,8 +113,10 @@ export class GestureTracker {
         }
         this.phase = 'pending';
         this.handler.press(at);
+        this.armHold();
         return;
       case 'pending':
+        this.disarmHold();
         this.toCamera();
         return;
       case 'tool':
@@ -90,6 +126,8 @@ export class GestureTracker {
       case 'camera':
         this.handler.cameraStart(this.fingers()); // restart with the new set of fingers
         return;
+      case 'held':
+        return; // the long press took the gesture: more fingers change nothing
     }
   }
 
@@ -106,6 +144,7 @@ export class GestureTracker {
       case 'pending': {
         if (id !== this.first) return;
         if (Math.hypot(at.x - this.start.x, at.y - this.start.y) < TOOL_SLOP_PX) return;
+        this.disarmHold();
         if (this.handler.dragStart(this.start, at)) this.phase = 'tool';
         else this.toCamera();
         return;
@@ -134,8 +173,12 @@ export class GestureTracker {
     this.pointers.delete(id);
     switch (this.phase) {
       case 'pending':
+        this.disarmHold();
         this.phase = 'idle';
         this.handler.tap(this.start);
+        return;
+      case 'held':
+        if (this.pointers.size === 0) this.phase = 'idle';
         return;
       case 'tool':
         this.phase = 'idle';
@@ -162,6 +205,11 @@ export class GestureTracker {
   cancel(id: number): void {
     if (!this.pointers.has(id)) return;
     this.pointers.delete(id);
+    this.disarmHold();
+    if (this.phase === 'held') {
+      if (this.pointers.size === 0) this.phase = 'idle';
+      return;
+    }
     if (this.phase === 'tool') this.handler.dragCancel();
     if (this.phase === 'camera' && this.pointers.size > 0) {
       this.handler.cameraStart(this.fingers());
@@ -170,6 +218,24 @@ export class GestureTracker {
     if (this.phase === 'camera') this.handler.cameraEnd();
     if (this.pointers.size === 0) this.phase = 'idle';
     else if (this.phase !== 'camera') this.toCamera();
+  }
+
+  /** Starts waiting for a long press (only when the handler wants them). */
+  private armHold(): void {
+    this.disarmHold();
+    if (!this.handler.hold) return;
+    this.holdTimer = this.timers.set(() => {
+      this.holdTimer = null;
+      if (this.phase !== 'pending' || this.pointers.size !== 1) return;
+      if (this.handler.hold?.(this.start)) this.phase = 'held';
+    }, HOLD_MS);
+  }
+
+  /** Stops waiting for a long press. */
+  private disarmHold(): void {
+    if (this.holdTimer === null) return;
+    this.timers.clear(this.holdTimer);
+    this.holdTimer = null;
   }
 
   private toCamera(): void {
