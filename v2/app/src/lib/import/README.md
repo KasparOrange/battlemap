@@ -10,7 +10,7 @@ companion only.
 | Kind | What happens |
 |---|---|
 | `.dd2vtt` / `.uvtt` | parsed in the worker (`uvtt.ts`): picture out of the base64, walls (both sight lists), doors (portal bounds), lights (kept for dynamic lighting) in squares with `map_origin` subtracted, `battlemap.draw_doors` → a geometry JSON file. Squares exact, no dialog. |
-| PDF | page 1 with pdf.js (lazy, its own worker under `/app/`), long side 4096 px, onto an OffscreenCanvas → bitmap transferred to the import worker → stored as WebP 0.95 (PNG without WebP), then like a picture |
+| PDF | the picked page with pdf.js in the PDF worker (`pdf-worker.ts`: parse and draw there, onto an OffscreenCanvas; on the page only where a browser can't draw in a worker), long side 4096 px → bitmap transferred to the import worker → stored as WebP 0.95 (PNG without WebP), then like a picture |
 | PNG / JPEG / WebP | header read (`sniff.ts`), decoded, grid detection (`grid-detect.ts`, port of `grid_detect.dart`), else squares from the file name (`name-counts.ts`), else 20 across (`grid-choice.ts`) — `needsGrid: true`, the squares dialog follows; `upload` remakes the table copy first when the chosen squares need another density |
 
 Every map gets a **table copy** when its picture is over 72 px per square, 4096² px in all or 8192
@@ -18,8 +18,9 @@ on a side (`sizing.ts`), and a **288 px thumbnail**; then — on `upload` — pi
 up through `$lib/api` `uploadFile` (`format` only for the picture).
 
 **Threads.** A fresh worker per import (`worker-client.ts` → `worker.ts` → `prepare.ts`), ended
-afterwards so a big picture's memory comes back at once. The main thread only slices the first
-KB, renders the PDF (pdf.js slices its work) and uploads. The e2e (`e2e/import-worker.e2e.ts`)
+afterwards so a big picture's memory comes back at once; a PDF page is drawn in a PDF worker of
+its own first (`pdf-offthread.ts` → `pdf-worker.ts`, qa#28 — pdf.js on the page had single
+drawing steps of 55–143 ms). The main thread only slices the first KB and uploads. The e2e (`e2e/import-worker.e2e.ts`)
 checks no long task over 50 ms.
 
 **Tests.** `bun test` here: detection (the Dart cases), parser, headers, sizes, the pipeline with

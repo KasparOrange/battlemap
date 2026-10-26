@@ -1,14 +1,16 @@
 /**
  * PDF pages → bitmaps, with pdf.js: the picked page at full size for the import, and small
  * thumbnails of every page for the page picker (`pdfPageThumbs`). Loaded lazily (pdf.js is ~1 MB; only an import of a PDF
- * pays for it). pdf.js parses in its own worker (its URL resolved by Vite under the app's base
- * `/app/`) and renders onto a canvas in slices of a few ms, so the main thread stays free; the
- * bitmap then goes to the import worker (transferred). The TV never sees a PDF.
+ * pays for it). The import's page is drawn in the PDF worker (`pdf-offthread.ts`, qa#28: on the
+ * page single drawing steps ran 55–143 ms); where a browser can't draw in a worker, pdf.js parses in
+ * its own worker (its URL resolved by Vite under the app's base `/app/`) and draws here in slices.
+ * The bitmap then goes to the import worker (transferred). The TV never sees a PDF.
  *
  * @see ./sizing.ts pdfRenderScale — the long side becomes 4096 px, as in v1
  */
 import { ImportError } from './errors.ts';
 import { pdfRenderScale } from './sizing.ts';
+import { renderPdfPageOffThread } from './pdf-offthread.ts';
 
 /** A rendered first page. */
 export interface RenderedPage {
@@ -71,6 +73,9 @@ export function renderPdfFirstPage(file: Blob): Promise<RenderedPage> {
  * @throws ImportError `pdf` when pdf.js can't open or render it (password, damage)
  */
 export async function renderPdfPage(file: Blob, pageNumber: number): Promise<RenderedPage> {
+  // qa#28: pdf.js draws in a worker where the browser can (no long tasks on the page)
+  const off = await renderPdfPageOffThread(file, pageNumber);
+  if (off) return off;
   const { task, doc } = await openPdf(file);
   try {
     const page = await doc.getPage(Math.min(doc.numPages, Math.max(1, Math.round(pageNumber))));
