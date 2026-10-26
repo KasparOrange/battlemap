@@ -629,9 +629,11 @@ the box): `docs/mockups/outdoor/lit/lit.html` (board `battlemap-mockups`).
 |---|---|
 | Look | *Painted* (today's slice, light painted in — the fallback) · *Lit trees* (painted ground, unlit crowns lit with the painting's noon sun) · *All lit* (unlit ground too: any time of day, any sun direction, lamps at dusk) |
 | Painting | *Light removed* (an edit of the lit painting: "same map, flat overcast light", $0.05 at 2K) · *Painted unlit* (`outdoor.py paint --albedo`: painted flat from the guide in one pass, $0.05) — both kept the layout |
-| Tree shape | *Dome* (computed: a dome over the outline + a bump per leaf clump) · *Model* (Depth Anything V2 Small on the sprite) · *Luma* (brighter = higher) |
+| Tree shape | *Dome* (computed: a dome over the outline + a bump per leaf clump) · *Model* (Depth Anything V2 Small on the sprite) · *Luma* (brighter = higher). At map scale the three differ only in fine detail; *Side by side* draws one forest patch (the densest one clear of the party) zoomed, once per shape, in three columns — a tap picks one; with *Debug ▸ Normals* the difference is plain |
 | Relief | the ground's height: *Layout* (water sinks, banks slope, walls 2 squares, boulders, bridge) and/or *Model* (Depth Anything's local relief, ±⅛ square) |
-| Pipeline | *Fast* (below) · *Deferred* (everything every frame; has the debug views height / shadow / crevices / normals and the canopy outline) |
+| Pipeline | *Fast* (below) · *Deferred* (everything every frame; the only one with the debug views and the outline) |
+| Debug | *Height* / *Shadow* / *Crevices* / *Normals* and *Outline* — picking one switches to *Deferred*, picking *Fast* turns them off |
+| Bench (folded) | *Shadows run* (every frame / on change) and *Still under clumps*: they change the GPU cost, hardly the picture |
 
 **How it works.** Every surface gets a height in squares: the ground from the layout + the depth
 model, every crown `top − thickness × (1 − its height picture)` (tiers stand 4.5–7.5 squares, shrubs

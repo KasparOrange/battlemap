@@ -6,6 +6,11 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-26 14:30 - e4cfeff7 - light lab: every control checked, three fixes
+- Konrad: the tree shape buttons seem not to work — check that every control does what it says
+	- clicked every control headless (frozen clock, Chromium + WebKit) and diffed the pictures: all work, but tree shape changes only fine detail at map scale, *Outline* and the four debug views did nothing in the default fast pipeline, *Shadows run* and *Under* change only the cost
+	- `lit.html`/`lit.js`: debug views + outline switch to the deferred pipeline by themselves (and off again with *Fast*); *Side by side* draws one forest patch zoomed in all three tree shapes, a tap picks one; *Shadows run* and *Under* folded into *Bench*; `ai-art.md` "Light lab" controls table
+
 ### 26-10-26 13:30 - 7eacc726 - light lab: unlit art, the light from the table
 - Konrad: try shaders instead of painted light — unlit assets (reusable, no ink rim), sun, time of day, crowns blended into one canopy; the whole map or only the vegetation; efficient on the box; the painted map stays the fallback
 	- `docs/mockups/outdoor/lit/` (`lit.html`, `lit.js`, `prepare_lit.py`, `depth.py`): three looks (painted · lit trees · all lit), two unlit grounds, three tree shapes, a fast and a deferred pipeline, a GPU bench; on board `battlemap-mockups`

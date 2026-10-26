@@ -4,19 +4,20 @@
 <style>
   html,body{margin:0;height:100%;background:#121214;color:#ddd;font:13px/1.4 system-ui,sans-serif;overflow:hidden}
   canvas.stage{position:absolute;inset:0;width:100%;height:100%;display:block}
-  .cap{position:absolute;left:10px;bottom:8px;right:10px;background:#000a;padding:6px 9px;border-radius:7px;pointer-events:none;z-index:2}
+  .cap{position:absolute;left:10px;bottom:8px;right:10px;background:#000a;padding:6px 9px;border-radius:7px;pointer-events:none;z-index:3}
+  canvas.cmp{position:absolute;inset:0;width:100%;height:100%;display:none;z-index:2;cursor:pointer}
   .cap b{color:#fff}
-  .bar{position:absolute;left:10px;top:8px;display:flex;flex-direction:column;gap:5px;z-index:2}
+  .bar{position:absolute;left:10px;top:8px;display:flex;flex-direction:column;gap:5px;z-index:3}
   .row{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
   .row label{font:11px system-ui;color:#aaa;width:62px}
   .bar button{background:#2a2a30;color:#ddd;border:1px solid #444;border-radius:6px;padding:2px 8px;font:12px system-ui;cursor:pointer}
   .bar button.on{background:#3d5afe;border-color:#3d5afe;color:#fff}
   .bar input[type=range]{width:200px}
   .bar output{font:12px ui-monospace,monospace;color:#fff;min-width:46px}
-  .stats{position:absolute;right:10px;top:8px;background:#000a;padding:4px 8px;border-radius:6px;font:11px ui-monospace,monospace;color:#cfc;z-index:2;text-align:right;white-space:pre}
+  .stats{position:absolute;right:10px;top:8px;background:#000a;padding:4px 8px;border-radius:6px;font:11px ui-monospace,monospace;color:#cfc;z-index:3;text-align:right;white-space:pre}
   .tok{position:absolute;z-index:1;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px #000c;cursor:grab;touch-action:none;
        display:grid;place-items:center;font:700 12px system-ui;color:#fff;transform:translate(-50%,-50%)}
-  .dial{position:absolute;z-index:2;right:14px;width:84px;height:84px;touch-action:none;cursor:grab;user-select:none}
+  .dial{position:absolute;z-index:3;right:14px;width:84px;height:84px;touch-action:none;cursor:grab;user-select:none}
   .dial svg{width:100%;height:100%;display:block}
   .dial .ring{fill:#000b;stroke:#fff6;stroke-width:2}
   .dial .aim{stroke:#f5c542;stroke-width:3;stroke-dasharray:4 4}
@@ -25,12 +26,12 @@
   .dial span{position:absolute;left:0;right:0;bottom:-16px;text-align:center;font:11px system-ui;color:#ccc}
   .grid{position:absolute;z-index:1;pointer-events:none;background-image:linear-gradient(#0003 1px,transparent 1px),linear-gradient(90deg,#0003 1px,transparent 1px)}
 </style>
-<canvas class="stage"></canvas>
+<canvas class="stage"></canvas><canvas class="cmp"></canvas>
 <div class="bar" id="bar"></div><div class="stats" id="stats"></div>
 <div class="cap"><b>Light lab — the light comes from the table, not the painting.</b> <i>Painted</i>: today's slice (light painted in, the
   fallback). <i>Lit trees</i>: the painted ground, crowns from unlit sprites lit by the table with the painting's sun — shadows,
   crevices where crowns meet. <i>All lit</i>: an unlit ground too, so the time of day and the sun move freely; lamps at dusk.
-  Tree shape: <i>dome</i> (computed from the outline and leaf clumps), <i>model</i> (Depth Anything V2), <i>luma</i> (brighter = higher).
+  Tree shape: <i>dome</i> (computed from the outline and leaf clumps), <i>model</i> (Depth Anything V2), <i>luma</i> (brighter = higher) — <i>Side by side</i> shows one forest patch in all three.
   Drag the party; tap the roof.</div>
 <script type="module">
 import { start } from "./lit.js";
@@ -39,28 +40,44 @@ const state = {
   look: "all", ground: "unlit", height: "model", relief: "both", view: "final",
   hour: 15, heightScale: 1, lightRes: 0.5, steps: 12, lightRate: "change", pipe: "fast", repeat: 1,
   Trees: true, Under: false, Water: true, Shadows: true, Crevices: true, Outline: false, Clouds: false, Gusts: true,
-  "Strong wind": false, "Canopy opens": true, "Sun moves": false, Grid: false,
+  "Strong wind": false, "Canopy opens": true, "Sun moves": false, Grid: false, compare: false,
   windAngle: 0.35, sunAngle: Math.atan2(-0.62, -0.78),
 };
 const bar = document.getElementById("bar");
-function row(label) { const r = document.createElement("div"); r.className = "row"; if (label) { const l = document.createElement("label"); l.textContent = label; r.append(l); } bar.append(r); return r; }
-function radio(label, key, opts) {
-  const r = row(label), bs = [];
+const cmp = document.querySelector("canvas.cmp"), cap = document.querySelector(".cap");
+const SHAPES = ["dome", "model", "luma"];
+// every button redraws its state from `state` after any click: one control can change another's
+const refresh = [];
+function sync() {
+  refresh.forEach((f) => f());
+  grid.style.display = state.Grid ? "block" : "none";
+  cmp.style.display = state.compare ? "block" : "none"; cap.style.display = state.compare ? "none" : "";
+}
+// a control that only one pipeline draws switches to it; leaving that pipeline turns it off
+function rules(key) {
+  if ((key === "view" && state.view !== "final") || (key === "Outline" && state.Outline)) state.pipe = "deferred";
+  if (key === "pipe" && state.pipe === "fast") { state.view = "final"; state.Outline = false; }
+  if (key === "compare" && state.compare && state.look === "painted") state.look = "all";
+  if (key === "look" && state.look === "painted") state.compare = false;
+}
+function row(label, parent = bar) { const r = document.createElement("div"); r.className = "row"; if (label) { const l = document.createElement("label"); l.textContent = label; r.append(l); } parent.append(r); return r; }
+function radio(label, key, opts, parent) {
+  const r = row(label, parent);
   for (const [v, text] of opts) {
-    const b = document.createElement("button"); b.textContent = text; bs.push([b, v]);
-    b.onclick = () => { state[key] = v; bs.forEach(([x, w]) => (x.className = state[key] === w ? "on" : "")); };
+    const b = document.createElement("button"); b.textContent = text;
+    b.onclick = () => { state[key] = v; rules(key); sync(); };
+    refresh.push(() => (b.className = state[key] === v ? "on" : ""));
     r.append(b);
   }
-  bs.forEach(([x, w]) => (x.className = state[key] === w ? "on" : ""));
+  return r;
 }
-function toggles(label, names) {
-  const r = row(label);
-  for (const k of names) {
-    const b = document.createElement("button"); b.textContent = k; b.className = state[k] ? "on" : "";
-    b.onclick = () => { state[k] = !state[k]; b.className = state[k] ? "on" : ""; grid.style.display = state.Grid ? "block" : "none"; };
-    r.append(b);
-  }
+function toggle(r, k, text = k, title = "") {
+  const b = document.createElement("button"); b.textContent = text; b.title = title;
+  b.onclick = () => { state[k] = !state[k]; rules(k); sync(); };
+  refresh.push(() => (b.className = state[k] ? "on" : ""));
+  r.append(b);
 }
+function toggles(label, names, parent) { const r = row(label, parent); for (const k of names) toggle(r, k); return r; }
 function slider(label, key, min, max, step, fmt) {
   const r = row(label), i = document.createElement("input"), o = document.createElement("output");
   Object.assign(i, { type: "range", min, max, step, value: state[key] });
@@ -70,17 +87,27 @@ function slider(label, key, min, max, step, fmt) {
 }
 radio("Look", "look", [["painted", "Painted"], ["trees", "Lit trees"], ["all", "All lit"]]);
 radio("Painting", "ground", [["delit", "Light removed"], ["unlit", "Painted unlit"]]);
-radio("Tree shape", "height", [["dome", "Dome"], ["model", "Model"], ["luma", "Luma"]]);
+toggle(radio("Tree shape", "height", [["dome", "Dome"], ["model", "Model"], ["luma", "Luma"]]), "compare", "Side by side ⧉",
+  "One forest patch, zoomed, in all three shapes; tap a column to pick it");
 radio("Relief", "relief", [["off", "Flat"], ["layout", "Layout"], ["depth", "Model"], ["both", "Both"]]);
 const hourIn = slider("Time", "hour", 5, 24, 0.05, (h) => `${String(Math.floor(h) % 24).padStart(2, "0")}:${String(Math.round((h % 1) * 60) % 60).padStart(2, "0")}`);
 slider("Heights", "heightScale", 0.4, 1.6, 0.05, (v) => `×${v.toFixed(2)}`);
-toggles("Light", ["Shadows", "Crevices", "Outline", "Clouds", "Sun moves"]);
-toggles("Scene", ["Trees", "Under", "Water", "Gusts", "Strong wind", "Canopy opens", "Grid"]);
+toggles("Light", ["Shadows", "Crevices", "Clouds", "Sun moves"]);
+toggles("Scene", ["Trees", "Water", "Gusts", "Strong wind", "Canopy opens", "Grid"]);
 radio("Light res", "lightRes", [[1, "Full"], [0.5, "½"], [0.25, "¼"]]);
 radio("Sun steps", "steps", [[6, "6"], [12, "12"], [20, "20"]]);
 radio("Pipeline", "pipe", [["fast", "Fast (light on change)"], ["deferred", "Deferred (debug views)"]]);
-radio("Shadows run", "lightRate", [["frame", "Every frame"], ["change", "On change (≤ 8/s)"]]);
-radio("Show", "view", [["final", "Final"], ["height", "Height"], ["shadow", "Shadow"], ["crevices", "Crevices"], ["normals", "Normals"]]);
+// debug views and the outline exist only in the deferred pipeline: picking one switches to it
+toggle(radio("Debug", "view", [["final", "Off"], ["height", "Height"], ["shadow", "Shadow"], ["crevices", "Crevices"], ["normals", "Normals"]]),
+  "Outline", "Outline", "A dark line round the canopy (deferred pipeline)");
+// the bench: controls that change only the cost, not the picture — folded away
+const benchRow = row(""), bench = document.createElement("div"); bench.style.display = "none"; bar.append(bench);
+const benchBtn = document.createElement("button"); benchBtn.textContent = "Bench ▸"; benchRow.append(benchBtn);
+benchBtn.onclick = () => { const open = bench.style.display === "none"; bench.style.display = open ? "" : "none"; benchBtn.textContent = open ? "Bench ▾" : "Bench ▸"; };
+radio("Shadows run", "lightRate", [["frame", "Every frame"], ["change", "On change (≤ 8/s)"]], bench);
+toggle(row("Crowns", bench), "Under", "Still under clumps", "A darkened copy of each crown under its leaf clumps; shows only in the gaps");
+const note = document.createElement("div"); note.style.cssText = "font:11px system-ui;color:#999;max-width:420px";
+note.textContent = "These change the GPU cost (top right), hardly the picture."; bench.append(note);
 
 // dials: hold and drag; the wind follows ~1 s behind, the sun at once
 function dial(cls, bottom, label, key, follow) {
@@ -136,10 +163,15 @@ function draw() {
 const q = new URLSearchParams(location.hash.slice(1));
 for (const [k, v] of q) if (k in state) state[k] = typeof state[k] === "number" ? +v : typeof state[k] === "boolean" ? v === "1" : v;
 hourIn.value = state.hour; hourIn.oninput();
+// a hash may ask for a debug view or the outline: the same rules as a click
+for (const k of ["view", "Outline", "compare"]) if (q.has(k)) rules(k);
+sync();
+// side by side: a tap on a column picks its tree shape
+cmp.onclick = (e) => { state.height = SHAPES[Math.min(2, Math.floor((e.offsetX / cmp.clientWidth) * 3))]; sync(); };
 
 window.lab = { state };   // for scripted screenshots
-await start(document.querySelector("canvas"), {
-  state,
+await start(document.querySelector("canvas.stage"), {
+  state, compareCanvas: cmp, shapes: SHAPES,
   party: () => party.map(([x, y]) => [x, y]),
   layout: (g) => { geo = g; place(); },
   info: ({ crowns, quads, targetsMB, texMB, W, H, lw, lh }) => {

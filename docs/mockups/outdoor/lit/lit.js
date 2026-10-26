@@ -621,6 +621,46 @@ export async function start(canvas, ui) {
     if (x > fx - 0.3 && x < fx + fw + 0.3 && y > fy - 0.3 && y < fy + fh + 0.3) roofOpen = !roofOpen;
   });
 
+  // side by side: one forest patch, zoomed, drawn once per tree shape; the middle third of each
+  // render goes into its column of the compare canvas, which lies over the stage
+  const SHAPES = ui.shapes || ["dome", "model", "luma"], NAMES = { dome: "Dome · computed", model: "Model · depth model", luma: "Luma · brightness" };
+  let patchKey = "", patch = null;
+  /** The centre of the patch (`across` × `down` squares) holding the most trees and none of the
+   *  party (the canopy opens around them, which would hide the shapes). */
+  function forestPatch(party, across, down) {
+    const key = JSON.stringify([across.toFixed(2), down.toFixed(2), party.map(([x, y]) => [Math.round(x), Math.round(y)])]);
+    if (key === patchKey) return patch;
+    const hx = across / 2, hy = Math.min(down, rows) / 2, trees = scene.crowns.filter((c) => c.tier !== "shrub");
+    let best = -1;
+    for (let cy = hy; cy <= rows - hy + 1e-6; cy += 0.5) for (let cx = hx; cx <= cols - hx + 1e-6; cx += 0.5) {
+      if (party.some(([x, y]) => Math.abs(x - cx) < hx + 2.8 && Math.abs(y - cy) < hy + 2.8)) continue;
+      const n = trees.filter((c) => Math.abs(c.x - cx) < hx && Math.abs(c.y - cy) < hy).length;
+      if (n > best) { best = n; patch = [cx, cy]; }
+    }
+    if (best < 0) patch = [cols / 2, rows / 2];
+    patchKey = key; return patch;
+  }
+  function compare(party, look, drawShape) {
+    const cv = ui.compareCanvas, cx = cv.getContext("2d");
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+    const colW = Math.floor(W / 3), px = colW / 5;              // five squares across a column
+    const [mx, my] = forestPatch(party, 5, H / px), keep = view;
+    view = [(2 * px) / W, (-2 * px) / H, (-2 * px * mx) / W, (2 * px * my) / H];
+    SHAPES.forEach((k, i) => { drawShape(k); cx.drawImage(canvas, (W - colW) / 2, 0, colW, H, i * colW, 0, colW, H); });
+    view = keep;
+    const u = W / canvas.clientWidth, chosen = ui.state.height;
+    cx.fillStyle = "#121214"; cx.fillRect(3 * colW, 0, W - 3 * colW, H);
+    cx.font = `600 ${Math.round(14 * u)}px system-ui`; cx.textAlign = "center"; cx.textBaseline = "middle";
+    SHAPES.forEach((k, i) => {
+      if (i) { cx.fillStyle = "#121214"; cx.fillRect(i * colW - 2 * u, 0, 4 * u, H); }
+      const text = k === chosen ? `${NAMES[k]} ✓` : NAMES[k], w = cx.measureText(text).width + 24 * u, h = 30 * u;
+      const x = i * colW + colW / 2, y = H - 28 * u;
+      cx.fillStyle = k === chosen ? "#3d5afe" : "#000c"; cx.beginPath(); cx.roundRect(x - w / 2, y - h / 2, w, h, 8 * u); cx.fill();
+      cx.fillStyle = "#fff"; cx.fillText(text, x, y);
+    });
+    if (look === 0) { cx.fillStyle = "#000c"; cx.fillRect(0, H / 2 - 20 * u, W, 40 * u); cx.fillStyle = "#fff"; cx.fillText("Painted look: the trees carry painted light, the shape has no effect", W / 2, H / 2); }
+  }
+
   function frame(now) {
     fit();
     const t = (now - t0) / 1000, dt = Math.min(0.1, (now - last) / 1000); last = now;
@@ -634,6 +674,10 @@ export async function start(canvas, ui) {
     const inside = roofOpen || (s["Canopy opens"] && party.some(([x, y]) => x > fx && x < fx + fw && y > fy && y < fy + fh));
     roofAlpha += ((inside ? 0 : 1) - roofAlpha) * Math.min(1, dt * 6);
 
+    if (s.compare && ui.compareCanvas) compare(party, look, (k) => draw(k));
+    else draw(s.height);
+    // everything below draws the map once with the tree shape `shape`, through the current `view`
+    function draw(shape) {
     const unlit = s.ground === "unlit" ? 1 : 0;
     const groundTex = look === 2 ? (unlit ? T.albedoUnlit : T.albedo) : T.painted;
     const relief = look === 2 ? { off: 0, layout: 0, both: 1, depth: 1 }[s.relief] : 0;
@@ -669,7 +713,7 @@ export async function start(canvas, ui) {
     const toScreen = () => { gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H); gl.clearColor(0.07, 0.07, 0.08, 1); gl.clear(gl.COLOR_BUFFER_BIT); };
     const crownUniforms = (p) => {
       bind(p, "u_atlas", 0, T.atlas); bind(p, "u_hatlas", 1, T.hatlas);
-      gl.uniform1i(p.u("u_hsrc"), { dome: 0, model: 1, luma: 2 }[s.height]);
+      gl.uniform1i(p.u("u_hsrc"), { dome: 0, model: 1, luma: 2 }[shape]);
       gl.uniform1f(p.u("u_hscale"), s.heightScale);
       gl.uniform2fv(p.u("u_party"), party8(party)); gl.uniform1i(p.u("u_nparty"), Math.min(8, party.length));
       gl.uniform1f(p.u("u_lift"), s["Canopy opens"] ? 1 : 0);
@@ -701,8 +745,8 @@ export async function start(canvas, ui) {
     };
     // the light reruns when something it depends on changed (sun, heights, the party, the roof),
     // and at most 8 times a second while the wind moves the crowns — or every frame, if asked
-    const sig = JSON.stringify([sk.sun.map((x) => x.toFixed(3)), look, s.relief, s.ground, s.height, s.heightScale, s.steps, s.lightRes,
-      s.Shadows, s.Crevices, s.Trees, roofAlpha > 0.5, party.map(([x, y]) => [x.toFixed(1), y.toFixed(1)]), W, H, s.pipe]);
+    const sig = JSON.stringify([sk.sun.map((x) => x.toFixed(3)), look, s.relief, s.ground, shape, s.heightScale, s.steps, s.lightRes,
+      s.Shadows, s.Crevices, s.Trees, roofAlpha > 0.5, party.map(([x, y]) => [x.toFixed(1), y.toFixed(1)]), W, H, s.pipe, view]);
     const due = look > 0 && (s.lightRate === "frame" || sig !== lightSig || (s.Trees && t - lightAt > 0.125));
     if (due) { lightSig = sig; lightAt = t; lightRuns++; }
 
@@ -760,7 +804,7 @@ export async function start(canvas, ui) {
         blend(true);
         if (s.Trees) {
           const p = P.crownFwd; common(p, t); lighting(p); crownUniforms(p); bind(p, "u_light", 2, RT.light.tex[0]);
-          bind(p, "u_slope", 3, T.slope[s.height]); gl.uniform1f(p.u("u_gs"), scene.atlas.gs);
+          bind(p, "u_slope", 3, T.slope[shape]); gl.uniform1f(p.u("u_gs"), scene.atlas.gs);
           gl.uniform1i(p.u("u_look"), look);
           gl.bindVertexArray(V.crownFwd);
           if (s.Under) gl.drawArrays(gl.TRIANGLES, 0, nVerts); else gl.drawArrays(gl.TRIANGLES, nStill, nVerts - nStill);
@@ -775,6 +819,7 @@ export async function start(canvas, ui) {
         }
         blend(false);
       });
+    }
     }
     if (query && queryPass >= 0 && gl.getQueryParameter(query, gl.QUERY_RESULT_AVAILABLE)) {
       if (!gl.getParameter(timer.GPU_DISJOINT_EXT)) {
