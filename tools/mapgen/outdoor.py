@@ -2,8 +2,10 @@
 """Outdoor maps: layout → guide → Nano Banana → the ground layer + the masks battlemap animates.
 
 The outdoor counterpart of mapgen.py (design: docs/ai-art.md "outdoor maps"). The painting is the
-GROUND only: no tree crowns, bushes, reeds or roofs — those are sprites placed from our layout and
-animated on the table (wind), and roofs/crowns can lift when the party walks under them. The
+GROUND only: no tree crowns, bushes, reeds or roofs — those are laid on top from our layout and
+animated on the table (wind), and roofs/crowns can lift when the party walks under them. Roofs and
+the forest canopy are edit passes on the finished ground, cut out by our own shapes (`roof`,
+`canopy`); the other plants are sprites. The
 river is painted as a still; its motion comes from the masks written here (where the water is,
 which way and how fast it flows, where it is shallow, where it breaks on rocks).
 

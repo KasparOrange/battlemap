@@ -6,8 +6,10 @@ plant stands (scene.json, read by riverbend.html).
 
 Inputs: a tools/mapgen/outdoor.py run (out_1.jpg, water*.png, roof_*.png, roofs.json), the layout
 it was painted from, and veg/veg.json (the summer vegetation stills + clump label maps).
-Plants are placed from the layout, never from the painting: trees in the forest zones (alders
-near the water), ferns under them, bushes along the forest edge, reeds and cattails on the calm
+Plants are placed from the layout, never from the painting. The forest canopy, when the run has
+one (`canopy.pick` → outdoor.py canopy), is a painting of its own that `canopy_trees` cuts back into
+trees and leaf clumps; without it, crown sprites in the forest zones (alders near the water). Ferns
+under them, bushes along the forest edge, reeds and cattails on the calm
 muddy banks, lilies on calm water. Painted light comes from the upper left, so a plant is only
 turned a little and never mirrored. Clumpy crowns are cut into their clumps here (grown 3 px into
 their neighbours, feathered), plus a darkened copy that shows through the gaps and a blurred

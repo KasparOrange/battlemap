@@ -536,7 +536,9 @@ redraw it before the big map. **Trunk bases** (Konrad's idea): a trunk with spre
 under every tree, so where the crown opens around the party the players still see a tree
 stands there; the crown doesn't vanish either — it stays as a 22 % ghost. Atlas at 64 px per
 square (the TV draws ~56), shadows at half that: 2048 × 2112, 16.5 MB GPU, 644 KB WebP; the
-slice holds 93 plants as 3,121 quads in one draw call. The slice page shows the 2K ground
+slice held 93 plants as 3,121 quads in one draw call. Since the painted canopy (below) the forest
+crown sprites (oak, beech, alder, lime, …) stay out of the atlas and the canopy's trees come in:
+2048 × 3584, 28 MB GPU, ~2,700 quads. The slice page shows the 2K ground
 (22 MB with mipmaps); a TV copy at 56 px per square is 8 MB.
 
 **Konrad's first look (2026-10-26) and the fixes:**
@@ -550,7 +552,7 @@ slice holds 93 plants as 3,121 quads in one draw call. The slice page shows the 
   still — fast water needs features shorter than their travel.
 - *Too many kinds of plants, it didn't look real.* A real wood is a stand: each forest zone now
   has a stand mix in the layout (`"stand": {"beech": 0.75, "oak": 0.25}`), alders line the water
-  (`river.bank_trees`), one old lime stands alone on the meadow; no spruce, birch or willow mixed
+  (`river.bank_trees`), one old lime stands alone on the meadow (the layout's `trees`); no spruce, birch or willow mixed
   in; hazel and elder at the edges; brightness-only tint (hue jitter made it patchy).
 - *Roof lifting did nothing.* It lifted only when a token stood inside; a tap on the roof now
   opens or closes it too (in horizon the page must be entered first).
@@ -593,8 +595,12 @@ clump quads instead of 750 and faster in headless Chromium (16 vs 11 fps there; 
 the Mac before); the atlas grew from 16.5 to 28 MB GPU because every tree's pixels are unique now
 (a 3 × 3 map would need per-window atlases, like the ground). Run `261026-001219-ground`: canopy
 drafts `d1` (1K × 2, round discs) and `v2` (2K × 2, lobed shapes + shrubs); `v2` #2 is on the
-slice. Open: Konrad's look on the TV; whether the bush sprites in the garden and the reeds should
-be painted the same way.
+slice. Walk: board `tabletop`, zone "Forest canopy" (presentation `forest-canopy`); references
+on `battlemap-mapgen`. Open:
+- Konrad's look on the TV (the box); if the thin dark leaf edges inside the crowns read too
+  cartoony there, tune `edit-canopy.txt` (they come from the ground painting's own style).
+- Paint the garden bushes and reeds the same way, or redraw them in the canopy's look.
+- A big map: load the canopy atlas per window like the ground (every tree is unique pixels).
 
 **Built:** `tools/mapgen/outdoor.py` (`guide`, `paint`, `roof`, `canopy`), `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
