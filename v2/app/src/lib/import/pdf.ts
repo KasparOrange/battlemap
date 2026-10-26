@@ -139,13 +139,23 @@ export async function pdfPageThumbs(file: Blob, side = 240, onPage?: (done: numb
       try {
         const base = page.getViewport({ scale: 1 });
         const viewport = page.getViewport({ scale: side / Math.max(base.width, base.height) });
-        const canvas = Object.assign(document.createElement('canvas'), { width: Math.max(1, Math.floor(viewport.width)), height: Math.max(1, Math.floor(viewport.height)) });
-        const ctx = canvas.getContext('2d');
+        const width = Math.max(1, Math.floor(viewport.width));
+        const height = Math.max(1, Math.floor(viewport.height));
+        // An OffscreenCanvas: pdf.js then draws without waiting for animation frames (a DOM
+        // canvas of a page in the background never finished in a headless browser).
+        const offscreen = typeof OffscreenCanvas === 'function' ? new OffscreenCanvas(width, height) : null;
+        const canvas = offscreen ? null : Object.assign(document.createElement('canvas'), { width, height });
+        const ctx = (offscreen ?? canvas!).getContext('2d') as CanvasRenderingContext2D | null;
         if (!ctx) throw new ImportError('pdf', "This device can't draw the PDF (no canvas).");
         await page.render({ canvas, canvasContext: ctx, viewport, background: '#ffffff' }).promise;
-        thumbs.push(await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new ImportError('pdf', 'Could not draw a page preview.'))), 'image/jpeg', 0.8)));
-        canvas.width = 0;
-        canvas.height = 0;
+        const blob = offscreen
+          ? await offscreen.convertToBlob({ type: 'image/jpeg', quality: 0.8 })
+          : await new Promise<Blob>((resolve, reject) => canvas!.toBlob((b) => (b ? resolve(b) : reject(new ImportError('pdf', 'Could not draw a page preview.'))), 'image/jpeg', 0.8));
+        thumbs.push(blob);
+        if (canvas) {
+          canvas.width = 0;
+          canvas.height = 0;
+        }
       } finally {
         page.cleanup();
       }

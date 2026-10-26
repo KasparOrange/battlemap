@@ -34,6 +34,7 @@
   import { exportGame } from '../../library/game-files.ts';
   import SessionSettingsDialog from '../../session-settings/SessionSettingsDialog.svelte';
   import { theme } from './theme.svelte.ts';
+  import PlayersShare from '../../../players/PlayersShare.svelte';
 
   let { ctx }: TabPanelProps = $props();
 
@@ -213,6 +214,7 @@
     chevron
     onclick={() => (calibrating = true)}
   />
+  {#if ctx.config.tableId}<PlayersShare serverUrl={ctx.config.serverUrl} room={ctx.config.tableId} />{/if}
 </Section>
 
 <Section title="This game">

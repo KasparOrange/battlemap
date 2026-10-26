@@ -1,6 +1,6 @@
 <!--
   App — the root of index.html: the start screen (TV or companion) when no mode is known, else
-  that mode's screen. Hosts the one notice of the app; with `?debug=1` records the notices for
+  that mode's screen (`?mode=players` opens the players' view, S12). Hosts the one notice of the app; with `?debug=1` records the notices for
   the test hook (lib/debug-hook.ts).
   Props:
   - config: AppConfig — the page's configuration (lib/config.ts)
@@ -16,6 +16,7 @@
   // Each mode is its own chunk: the TV box never loads the companion's code and vice versa.
   const loadTv = () => import('./lib/tv/TvApp.svelte');
   const loadCompanion = () => import('./lib/companion/CompanionApp.svelte');
+  const loadPlayers = () => import('./lib/players/PlayersApp.svelte');
 
   interface Props {
     /** The page's configuration. */
@@ -46,6 +47,8 @@
   {#await loadTv() then { default: TvApp }}<TvApp />{/await}
 {:else if config.mode === 'companion'}
   {#await loadCompanion() then { default: CompanionApp }}<CompanionApp />{/await}
+{:else if config.mode === 'players'}
+  {#await loadPlayers() then { default: PlayersApp }}<PlayersApp />{/await}
 {:else}
   <main class="start">
     <h1>battlemap</h1>

@@ -16,8 +16,11 @@
 import { newId } from '@battlemap/shared';
 import { onShellEvent, shellBridge, shellInfo, type LanStatus, type LanTable } from './shell.ts';
 
-/** TV mode (the table) or companion mode (the DM's device). */
-export type Mode = 'tv' | 'companion';
+/**
+ * TV mode (the table), companion mode (the DM's device), or the players' view (S12: read-only,
+ * only from the URL `?mode=players&table=…` — never remembered, never the shell's start mode).
+ */
+export type Mode = 'tv' | 'companion' | 'players';
 
 /** Everything the page needs to know about where it runs. */
 export interface AppConfig {
@@ -116,7 +119,8 @@ export function readConfig(url: URL = new URL(globalThis.location?.href ?? 'http
   const q = url.searchParams;
   const info = shellInfo();
 
-  const mode = asMode(q.get('mode')) ?? asMode(info?.startMode) ?? asMode(stored(KEY_MODE));
+  const fromUrl = q.get('mode');
+  const mode: Mode | null = fromUrl === 'players' ? 'players' : asMode(fromUrl) ?? asMode(info?.startMode) ?? asMode(stored(KEY_MODE));
 
   const envServer = (import.meta.env?.VITE_SERVER_URL as string | undefined) ?? null;
   const ownOrigin = url.protocol === 'http:' || url.protocol === 'https:' ? url.origin : null;
@@ -151,7 +155,7 @@ export function readConfig(url: URL = new URL(globalThis.location?.href ?? 'http
     deviceName: q.get('name') ?? guessName(),
     tableId,
     wsUrl: wsUrlFor(serverUrl),
-    clientId: `${mode === 'tv' ? 'tv' : 'c'}-${newId(10)}`,
+    clientId: `${mode === 'tv' ? 'tv' : mode === 'players' ? 'p' : 'c'}-${newId(10)}`,
     build: typeof __BUILD__ === 'string' ? __BUILD__ : 'dev',
   };
   // The shell announces the hosted table on the LAN under this id and name.

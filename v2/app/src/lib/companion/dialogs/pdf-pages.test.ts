@@ -16,7 +16,7 @@ describe('pdf page picker', () => {
     expect(pickerSummary(1, 3, 3)).toEqual({ description: '3 pages — tap the maps', commit: 'Import this page' });
     expect(pickerSummary(2, 80, 60).commit).toBe('Import 2 pages as 2 maps');
     expect(pickerSummary(2, 80, 60).description).toBe('80 pages (the first 60 shown) — tap the maps');
-    expect(pageCommitLabel('Upload and play', 0, 2)).toBe('Upload, then page 2 of 2');
+    expect(pageCommitLabel('Upload and play', 0, 2)).toBe('Upload, next page (2 of 2)');
     expect(pageCommitLabel('Upload and play', 1, 2)).toBe('Upload and play');
     expect(pageCommitLabel('Add to the game', 0, 1)).toBe('Add to the game');
   });

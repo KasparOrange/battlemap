@@ -46,6 +46,8 @@ export class TvSession {
   readonly host: SyncHost;
   /** The connection. */
   readonly conn: Connection;
+  /** A players' page asked for the players' state (`players.request`, S12); gets its client id. */
+  onPlayersRequest: ((from: string) => void) | null = null;
 
   /**
    * @param config - the page's configuration (mode tv, its table id)
@@ -67,7 +69,11 @@ export class TvSession {
     this.host.onRequest = (req, from) => onRequest(req, from, this);
     this.conn.onState = (s) => (this.connection = s);
     this.conn.onPeers = (peers) => (this.peers = peers);
-    this.conn.onPeerMessage = (msg) => this.host.receive(msg);
+    this.conn.onPeerMessage = (msg) => {
+      // the players' view's one message is not the sync host's (it isn't a command or request)
+      if (msg.type === 'players.request') this.onPlayersRequest?.(typeof msg.from === 'string' ? msg.from : '');
+      else this.host.receive(msg);
+    };
     this.conn.onServerMessage = (msg) => {
       if (msg.type === 'welcome' || msg.type === 'server.build') this.newBuild = buildToReload(config, msg.build);
     };

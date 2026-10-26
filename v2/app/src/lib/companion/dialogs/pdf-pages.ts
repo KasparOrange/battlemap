@@ -47,7 +47,7 @@ export function pickerSummary(picked: number, pageCount: number, shown: number):
  * @returns the text
  */
 export function pageCommitLabel(base: string, index: number, count: number): string {
-  return count > 1 && index < count - 1 ? `Upload, then page ${index + 2} of ${count}` : base;
+  return count > 1 && index < count - 1 ? `Upload, next page (${index + 2} of ${count})` : base;
 }
 
 /**

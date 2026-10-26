@@ -31,6 +31,7 @@
   import { drawFogThumb } from './fog-thumbs-draw.ts';
   import { realTimers } from './timers.ts';
   import { answerRequest } from './requests.ts';
+  import { PlayersFeed } from '../players/feed.ts';
   import { realPorts, requestPersistentStorage } from './seams.ts';
   import { backAction, backGate, CHROME_MS, homeBadge, OFFLINE_RED_MS, PROBLEM_MS, problemBadge, screenFor } from './screen.ts';
   import type { TableViewEvent } from '../render/index.ts';
@@ -62,9 +63,13 @@
   thumbs.onChange = (id, url) => (thumbUrls = { ...thumbUrls, [id]: url });
   const gameThumb = (g: GameSummary): string | undefined => thumbUrls[g.id];
   const sessionOnChange = session.host.onChange;
+  // S12: players' pages in the room get what the table shows (`playersView`), never the full state.
+  const players = new PlayersFeed({ send: (msg) => session.send(msg), log });
+  session.onPlayersRequest = (from) => players.request(from);
   session.host.onChange = (state, cmd) => {
     sessionOnChange?.(state, cmd);
     games.changed(state);
+    players.changed(state, session.host.rev);
   };
 
   let booted = $state(false);
@@ -95,6 +100,7 @@
   const handout = $derived(handoutShown ? (session.state.game?.handouts ?? []).find((h) => h.id === handoutShown.id) ?? null : null);
   const screen = $derived(screenFor(game !== null, wanted));
   const companions = $derived(session.peers.filter((p) => p.role === 'companion').length);
+  $effect(() => players.peers(session.peers));
   const badgeInput = $derived({ connection: session.connection, companions, problem, offlineMs: offlineLong ? OFFLINE_RED_MS : 0 });
   const badge = $derived(problemBadge(badgeInput));
   const home = $derived(homeBadge(badgeInput));
