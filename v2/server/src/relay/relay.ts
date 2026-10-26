@@ -343,6 +343,12 @@ export class Relay {
       this.refuse(conn, CLOSE.protocol, `protocol ${hello.protocol} is not ${PROTOCOL_VERSION} — reload the app`);
       return;
     }
+    if (hello.role === 'players') {
+      // The players' view (S12) needs the Rust server's routing (players get `players.*` only);
+      // here a player would be routed like a companion and see the DM's state, so refuse.
+      this.refuse(conn, CLOSE.badHello, "the players' view needs the Rust server");
+      return;
+    }
     let room = this.rooms.get(hello.room);
     if (!room && this.rooms.size >= this.limits.maxRooms) {
       this.refuse(conn, CLOSE.full, `the server is full (${this.limits.maxRooms} tables)`);

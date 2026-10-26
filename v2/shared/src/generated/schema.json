@@ -1709,7 +1709,8 @@
     "Role": {
       "enum": [
         "tv",
-        "companion"
+        "companion",
+        "players"
       ],
       "type": "string"
     },

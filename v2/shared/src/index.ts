@@ -17,6 +17,7 @@ export * from './model/scene.ts';
 export * from './model/moments.ts';
 export * from './model/secrets.ts';
 export * from './model/sound.ts';
+export * from './model/players-view.ts';
 
 export * from './protocol/commands.ts';
 export * from './protocol/messages.ts';

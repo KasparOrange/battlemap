@@ -20,8 +20,11 @@ import { Command } from './commands.ts';
 /** The protocol's version; a client with another one is refused in `server.error`. */
 export const PROTOCOL_VERSION = 1;
 
-/** Who is talking: the table or a DM device. */
-export const Role = v.picklist(['tv', 'companion']);
+/**
+ * Who is talking: the table, a DM device, or a players' page (S12: read-only, gets only
+ * `players.*` messages from the TV and may send only `players.request`).
+ */
+export const Role = v.picklist(['tv', 'companion', 'players']);
 /** A role; see the schema of the same name. */
 export type Role = v.InferOutput<typeof Role>;
 
@@ -129,7 +132,7 @@ export const Undelivered = v.object({
   msgType: v.string(),
   /** Its `seq` if it was a `sync.cmd`. */
   seq: v.optional(Count),
-  /** Why: `no-tv`, `no-such-client`. */
+  /** Why: `no-tv`, `no-such-client`, `rate-limited`, `not-allowed` (a players' page sending more than `players.request`). */
   reason: v.string(),
 });
 
@@ -301,6 +304,32 @@ export const DiagReport = v.object({
 
 /** The TV saved and is ready to be updated. */
 export const DeployReady = v.object({ type: v.literal('deploy.ready'), ...envelope, gameId: v.nullable(Id) });
+
+// ── players' view (S12) ─────────────────────────────────────────────────────────────────────
+
+/** A players' page asks the TV for the players' state (on joining, after the TV came back). */
+export const PlayersRequest = v.object({ type: v.literal('players.request'), ...envelope });
+
+/**
+ * The TV → players' pages: what the table shows, made with `playersView` (never the full
+ * state). Sent to every players' page after each change (throttled), or to the one that asked.
+ */
+export const PlayersStateMessage = v.object({
+  type: v.literal('players.state'),
+  ...envelope,
+  /** The TV's revision this view is of. */
+  rev: Count,
+  /** The players' state. */
+  state: RootState,
+});
+
+/** Any message for a players' page. */
+export const ToPlayers = v.variant('type', [PlayersStateMessage]);
+/** Any message for a players' page; see the schema of the same name. */
+export type ToPlayers = v.InferOutput<typeof ToPlayers>;
+
+/** The only peer message a players' page may send (the server drops anything else). */
+export const PLAYERS_MAY_SEND = ['players.request'] as const;
 
 /** Any message for a companion. */
 export const ToCompanion = v.variant('type', [

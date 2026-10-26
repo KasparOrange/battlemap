@@ -153,6 +153,8 @@ struct Traffic {
 struct Room {
     tv: Option<u64>,
     companions: Vec<(String, u64)>,
+    /// Players' pages (S12), by client id.
+    players: Vec<(String, u64)>,
     traffic: Traffic,
 }
 
@@ -161,11 +163,26 @@ impl Room {
         self.companions.iter().find(|(c, _)| c == client).map(|(_, id)| *id)
     }
 
+    fn player(&self, client: &str) -> Option<u64> {
+        self.players.iter().find(|(c, _)| c == client).map(|(_, id)| *id)
+    }
+
     /// Every member's socket id, the TV first.
     fn everyone(&self) -> impl Iterator<Item = u64> + '_ {
-        self.tv.into_iter().chain(self.companions.iter().map(|(_, id)| *id))
+        self.tv
+            .into_iter()
+            .chain(self.companions.iter().map(|(_, id)| *id))
+            .chain(self.players.iter().map(|(_, id)| *id))
     }
 }
+
+/// Whether a TV message is for the players' pages (`players.*`); only those ever reach them.
+fn for_players(msg_type: &str) -> bool {
+    msg_type.starts_with("players.")
+}
+
+/// The only peer message a players' page may send (shared `PLAYERS_MAY_SEND`).
+const PLAYERS_MAY_SEND: &str = "players.request";
 
 struct Waiting {
     ip: String,
@@ -307,6 +324,7 @@ impl Relay {
                 room.tv = None;
             }
             room.companions.retain(|(_, id)| *id != conn.id);
+            room.players.retain(|(_, id)| *id != conn.id);
         }
         Self::to_room(
             &inner,
@@ -317,7 +335,7 @@ impl Relay {
             },
             Some(conn.id),
         );
-        if inner.rooms.get(&room_id).is_some_and(|r| r.tv.is_none() && r.companions.is_empty()) {
+        if inner.rooms.get(&room_id).is_some_and(|r| r.tv.is_none() && r.companions.is_empty() && r.players.is_empty()) {
             inner.rooms.remove(&room_id);
         }
     }
@@ -495,6 +513,7 @@ impl Relay {
         let old = inner.rooms.get(&hello.room).and_then(|r| match hello.role {
             Role::Tv => r.tv,
             Role::Companion => r.companion(&hello.client),
+            Role::Players => r.player(&hello.client),
         });
         if let Some(room) = inner.rooms.get(&hello.room)
             && hello.role == Role::Companion
@@ -508,10 +527,24 @@ impl Relay {
                 &format!("this table has {} companions already", self.limits.companions_per_room),
             );
         }
+        // Players' pages share the companions' cap (a table has a handful of players).
+        if let Some(room) = inner.rooms.get(&hello.room)
+            && hello.role == Role::Players
+            && old.is_none()
+            && room.players.len() >= self.limits.companions_per_room
+        {
+            return Self::refuse(
+                inner,
+                conn,
+                close::FULL,
+                &format!("this table has {} players' views already", self.limits.companions_per_room),
+            );
+        }
         Self::done_waiting(inner, conn.id);
         inner.rooms.entry(hello.room.clone()).or_insert_with(|| Room {
             tv: None,
             companions: Vec::new(),
+            players: Vec::new(),
             traffic: Traffic::default(),
         });
         if let Some(old) = old {
@@ -525,6 +558,10 @@ impl Relay {
             Role::Companion => {
                 room.companions.retain(|(c, _)| *c != hello.client);
                 room.companions.push((hello.client.clone(), conn.id));
+            }
+            Role::Players => {
+                room.players.retain(|(c, _)| *c != hello.client);
+                room.players.push((hello.client.clone(), conn.id));
             }
         }
         let others: Vec<u64> = room.everyone().filter(|id| *id != conn.id).collect();
@@ -625,9 +662,26 @@ impl Relay {
             Role::Tv => {
                 room.traffic.tv_messages += 1;
                 room.traffic.tv_bytes += bytes as u64;
-                match &to {
-                    Some(to) => room.companion(to).map(|id| vec![id]).ok_or("no-such-client"),
-                    None => Ok(room.companions.iter().map(|(_, id)| *id).collect()),
+                // `players.*` goes to players' pages only, everything else to companions only:
+                // the full state can't reach a player even when the TV names one in `to`.
+                if for_players(&msg_type) {
+                    match &to {
+                        Some(to) => room.player(to).map(|id| vec![id]).ok_or("no-such-client"),
+                        None => Ok(room.players.iter().map(|(_, id)| *id).collect()),
+                    }
+                } else {
+                    match &to {
+                        Some(to) => room.companion(to).map(|id| vec![id]).ok_or("no-such-client"),
+                        None => Ok(room.companions.iter().map(|(_, id)| *id).collect()),
+                    }
+                }
+            }
+            Role::Players => {
+                if msg_type == PLAYERS_MAY_SEND {
+                    room.tv.map(|tv| vec![tv]).ok_or("no-tv")
+                } else {
+                    tracing::warn!(target: "relay", client = %client, r#type = %msg_type, "A players' view may only ask for the players' state, dropped");
+                    Err("not-allowed")
                 }
             }
         };
@@ -723,5 +777,36 @@ mod tests {
         assert_eq!(texts(&mut tv_rx)[0]["type"], "peer.left");
         r.close(&tv, 1000);
         assert_eq!(r.stats().rooms, 0);
+    }
+
+    #[tokio::test]
+    async fn players_get_only_players_messages_and_may_only_ask() {
+        let r = relay();
+        let (tv, mut tv_rx) = Conn::new(1, "1.2.3.4".into());
+        let (c, mut c_rx) = Conn::new(2, "1.2.3.4".into());
+        let (p, mut p_rx) = Conn::new(3, "1.2.3.4".into());
+        for (conn, role, id) in [(&tv, "tv", "tv"), (&c, "companion", "c"), (&p, "players", "p")] {
+            r.open(conn);
+            r.message(conn, &hello(role, id));
+        }
+        texts(&mut tv_rx);
+        texts(&mut c_rx);
+        texts(&mut p_rx);
+        // the TV's full state goes to companions only, also when it names the player
+        r.message(&tv, r#"{"type":"sync.snapshot","state":{"secret":1}}"#);
+        r.message(&tv, r#"{"type":"sync.snapshot","to":"p","state":{"secret":2}}"#);
+        assert!(texts(&mut p_rx).is_empty());
+        assert_eq!(texts(&mut c_rx).len(), 1);
+        assert_eq!(texts(&mut tv_rx).last().unwrap()["reason"], "no-such-client");
+        // players.* goes to players only
+        r.message(&tv, r#"{"type":"players.state","rev":1,"state":{}}"#);
+        assert_eq!(texts(&mut p_rx)[0]["type"], "players.state");
+        assert!(texts(&mut c_rx).is_empty());
+        // a player may ask, nothing else
+        r.message(&p, r#"{"type":"players.request"}"#);
+        assert_eq!(texts(&mut tv_rx)[0]["from"], "p");
+        r.message(&p, r#"{"type":"sync.cmd","seq":1,"cmd":{"type":"fog.clear"}}"#);
+        assert!(texts(&mut tv_rx).is_empty());
+        assert_eq!(texts(&mut p_rx)[0]["reason"], "not-allowed");
     }
 }

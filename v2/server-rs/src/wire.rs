@@ -121,7 +121,7 @@ pub struct GameSummary {
     pub where_: String,
 }
 
-/// TV or companion (shared `Role`).
+/// TV, companion or players' page (shared `Role`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Role {
@@ -129,6 +129,9 @@ pub enum Role {
     Tv,
     /// A DM device.
     Companion,
+    /// A players' page (S12): read-only, gets only `players.*` messages, may send only
+    /// `players.request`.
+    Players,
 }
 
 impl Role {
@@ -137,6 +140,7 @@ impl Role {
         match self {
             Self::Tv => "tv",
             Self::Companion => "companion",
+            Self::Players => "players",
         }
     }
 }
@@ -228,7 +232,7 @@ pub enum ServerMessage {
         /// Its `seq` if it was a `sync.cmd`.
         #[serde(skip_serializing_if = "Option::is_none")]
         seq: Option<u64>,
-        /// Why: `no-tv`, `no-such-client`, `rate-limited`.
+        /// Why: `no-tv`, `no-such-client`, `rate-limited`, `not-allowed` (a players' view sending more than `players.request`).
         reason: String,
     },
     /// The server now serves a newer app build.
