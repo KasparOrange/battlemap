@@ -1,30 +1,19 @@
 # battlemap v2 — live work
 
-The orchestrating session's plan. Done waves move to `archive.md` when it exists; this file
-holds only what is open.
+The orchestrating session's plan. Done waves live in `archive.md`; this file holds only what is open.
 
-## Where we are (2026-10-25 evening)
+## Where we are (2026-10-26)
 
-| Wave | What | State |
-|---|---|---|
-| 1 | architecture + shared + scaffold, parity inventory + roadmap, fluent kit, effects library (150), Android shell + WebGL probe | done |
-| 2 | server (live: `https://battlemap.srv1189697.hstgr.cloud/app/`), storage + API, map import, TV mode | done |
-| 2 | renderer, companion game/tools (4a), companion library/tabs (4b), effects runtime, QA harness | ~80–90 %, cut off by the session limit; work committed (`33b2d8a`) |
-| 2.5 | integration pass (test hook; e2e 44 pass / 8 fail; soak 2,900 commands converge; 25 bugs in `qa.md`) + code review (0 blockers, 8 major in `review.md`) + Rust server (contract 72/72, VPS port 5930 side by side) | done |
-| 3 | W3-A core/TV/harness · W3-B1 companion game + map tabs · W3-B2 companion frame, library, dialogs, settings, developer screen · W3-C renderer, effects runtime, import, torch glow · W3-D Effects tab · W3-E shell, embedded Rust server, LAN play, VPS switch to Rust | done (545 unit tests; LAN play on the emulators; production on the Rust server) |
-| 4 | W4-Q regression (unit 584/0, e2e Rust 77/79, soak 0 lost on Rust, LAN ok) · W4-C companion fixes, "Tables nearby" picker, import after confirm, looping previews, visual pass · W4-T TV LAN join code + QR, label turning, grid contrast · W4-F curtain + scene presets | done |
-| 5 | W5-P start-up + import speed, e2e on Rust by default, flaky flows · W5-1 fog-honest thumbnails, reveal animations, prepared reveal areas, secret doors + traps · W5-2 spotlight, TV timer, handouts, DM notes · W5-3 sound library + soundscapes · W5-4 v1 import, PDF page picker, players' view, installable companion | done 2026-10-26 (cut off 21:45 by the usage limit, restarted, then API timeouts at 02:00; closed by four finishers): app 532 / shared 169 unit tests, contract Rust 81 · Bun 71, every W5 feature flow green |
+Waves 1–5 are done (history in `archive.md`): parity with v1 plus curtain, scenes, effects,
+LAN play, Rust server in production, fog reveals and secrets, table moments, sound, players' view,
+installable companion, v1 import. Nothing has run on the real box and tablet yet.
 
 ## Next
 
-1. **Wave 3 — finish and fix** (about five helpers at a time, fresh, from `qa.md` + `review.md`):
-   renderer finish + bench on the emulators; companion 4a/4b gaps; effects in the companion
-   (cast an effect at a spot or area, weather, map loops); bug fixes by area; a second review;
-   **the server in Rust** (roadmap N13: one binary for the VPS and the TV box's shell, the Bun
-   server's tests as the contract, wire types generated from one source).
-2. **Wave 4 — polish:** a UI pass against `design.md` with screenshots on tablet, phone and TV.
-3. **Wave 5 — roadmap** (`roadmap.md` tiers): curtain + scene presets, lighting from walls,
-   ambient sound, LAN play through the shell, v1 games import.
+1. **Fix the wave-5 leftovers** below — qa#36 first (it breaks the tablet's Undo/Redo).
+2. **Real devices at Juri's:** the WebView gate (roadmap N1) and the table test (N4) decide plan B.
+3. **Roadmap** — the open items of `roadmap.md` (light from walls S5, select a token by tapping N10,
+   several-maps gaps N9, prep mode S17, …), a few helpers at a time, from short exact briefs.
 
 ## Wave 5 leftovers
 
@@ -32,18 +21,7 @@ holds only what is open.
 - TV save on page hide/reload doesn't await the storage write — the last ~2 s before a reload can be lost (`tv/games.ts`).
 - Sound: one-shot pads have no volume of their own.
 - Players' view and installable companion: never tried on real phones; sound, moments, secrets never on the real box.
-
-## Wave 3 leftovers (collected from the reports, for wave 4)
-
-- import: upload only after the squares dialog is confirmed (W3-B2 request; W3-C done).
-- Effects browser: small looping previews instead of stills.
-- Bench run on the emulator and, when reachable, the box.
-- **Spoiler:** game thumbnails on the TV home and library show the whole unfogged map to the players — fog-honest thumbnails (roadmap S24) or none on the TV.
-- Reveal animations (roadmap S4) — not started (W4-T stopped near its budget).
-- renderer: the first fit on a phone uses a too-small host size (the companion refits after the first draw as a workaround).
-- companion table picker: list `discoverLanTables()` when `canDiscoverLan()`, else a code field (`decodeLanCode` → `joinTable`); run `checkServerChoice()` once after the companion boots (W3-E's LAN API in `config.ts`).
-- e2e: the full run against the Rust server: 23 of 25 failures pass with emulators off and one worker; two app-timing failures left.
-- e2e: a game-night run wrote under another helper's ports (6411/6412) — check the harness respects `BATTLEMAP_*_PORT`.
+- e2e: a game-night run once wrote under another helper's ports (6411/6412) — check the harness respects `BATTLEMAP_*_PORT` (from wave 3).
 
 ## Plan B for the TV renderer
 
