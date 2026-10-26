@@ -15,6 +15,7 @@ with the true peak kept at or below -1 dBTP, encode Opus in Ogg (Chromium/Androi
 WebKit decode it with the exact length, `probe_formats.ts`), and write `../index.json`.
 
 Run: python3 -I v2/assets/sounds/tools/build.py [id …]   (no ids = all)
+     python3 -I v2/assets/sounds/tools/build.py --table  (the catalogue table of docs/sounds.md)
 """
 import json
 import math
@@ -288,7 +289,21 @@ def build(s, tmp):
     return entry
 
 
+def table():
+    """Prints the catalogue table of docs/sounds.md from `../index.json`."""
+    with open(os.path.join(LIB, 'index.json')) as f:
+        sounds = json.load(f)['sounds']
+    print('| Id | Kind | Name | Group | Length | Effects | Author | Licence |')
+    print('|---|---|---|---|---|---|---|---|')
+    for e in sounds:
+        fx = ', '.join(e.get('effects', [])) or '—'
+        print(f"| `{e['id']}` | {e['kind']} | {e['name']} | {e['group']} | {e['seconds']:.1f} s | {fx} | [{e['author']}]({e['source']}) | {e['licence']['id']} |")
+
+
 def main():
+    if sys.argv[1:] == ['--table']:
+        table()
+        return
     with open(os.path.join(HERE, 'sources.toml'), 'rb') as f:
         sources = tomllib.load(f)['sound']
     want = set(sys.argv[1:])

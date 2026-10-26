@@ -104,8 +104,8 @@ store and the TV keeps exactly what the DM saw). Commands (no undo steps, not ma
 
 **Limits.**
 
-- Ambient sound (S1) and time of day / dim (S3) are not in a scene yet — they don't exist; when
-  they land they join `Scene` as optional fields.
+- A scene saved while sound plays carries its ambient beds (`Scene.sound`, "Sound" below);
+  applying it starts them. Time of day / dim (S3) is not in a scene yet.
 - A scene whose map left the game stays in the list, dimmed ("Its map left the game"), so the DM
   decides; it can't be applied.
 - Applying a scene makes no undo step (like a map switch); the effects it replaced come back by
@@ -253,6 +253,62 @@ notice's Undo saves back), `secret.found {id, found, shot?}` (the shot plays on 
 
 ![The Secrets tab: a trap with its note, a found door](qa/w5-1-secrets.jpg)
 
+## Sound (roadmap S1)
+
+**What.** The TV's speakers play the room's atmosphere: up to **three ambient beds** at once
+(rain + campfire + distant drums), each at its own volume, crossfading when the mix changes, and
+**one-shots** on demand (a door creak, thunder, a roar) that duck the beds for a moment. 13 beds
+and 12 one-shots ship with the app, all CC0 (`sounds.md`). New games start silent.
+
+**Where: a Sound tab, in the panels group after Scenes.** Considered: a section of Effects
+(the screen buttons are there) or of Settings. Rejected: mid-game the DM reaches for a sound in
+one tap — the door creaks *now* — so the pads need a fixed, big place one tap from the rail, and
+Effects is already the longest panel. A panel, not a mode: the map keeps the Tokens behaviour.
+
+**The tab.**
+
+- **Mix on the TV:** a slider per bed in the mix (sent while dragging, every 200 ms, so the DM
+  mixes by ear), × takes one out. At most three; a fourth tap says so.
+- **Volume:** master and one-shots.
+- **One-shots:** big pads, favourites first (★, this tablet only; door creak, thunder, roar by
+  default). A tap plays on the TV; while the sound is off the notice offers "Turn on".
+- **Places · Nature · Weather · Mood:** the library's beds; a tap puts one into the mix or takes
+  it out (the tile glows while in the mix).
+- **Long press** on a pad or bed tile (the cross-project second action): Play / Add, **Listen
+  here** (a quiet preview on this tablet only — 30 % ceiling, a bed for 15 s), ★.
+- **Effects play their sound** (per game, off by default): an effects one-shot from the Effects
+  tab (fireball, lightning bolt, cure wounds …) plays its matching sound (`effects` in the
+  catalogue).
+- Footer: **Play on the TV** (primary) while off, **Stop all** while on — everything fades out
+  in 1.5 s, the mix stays listed for the next Play.
+
+**Scenes carry the mix.** A scene saved while sound plays keeps its beds (`Scene.sound.beds`);
+applying the scene turns the sound on with those beds. A scene saved in silence leaves the
+sound alone when applied.
+
+**The TV.** `app/src/lib/sound/`: Web Audio, one graph — beds → duck → master → ceiling →
+speakers, one-shots → their layer → master. Volumes are tapered (gain = slider²). A bed is a
+looping buffer cut at its exact loop length (`samples` in the catalogue), started at a random
+offset and ramped in (2–2.5 s; 0.4 s for a level change); one-shots have a limit of 6 voices (the
+oldest stolen, the same sound within 90 ms skipped) and duck the beds to 50 % (80 ms in, 0.8 s
+back). Sounds are fetched and decoded on first use, kept in a 48 MB cap and trimmed on the
+shell's memory warning. A one-shot plays once per id, aged by the **server's clock** (rv#16) —
+older than 8 s, or already in the state when the TV loaded, it stays silent. Silent with no beds:
+no audio context is made at all. The shell lets audio start without a key press
+(`mediaPlaybackRequiresUserGesture = false`); a browser TV that blocks autoplay starts at the
+first key or tap.
+
+**Protocol.** `Game.sound: Soundscape {on, master, shots, beds ≤ 3, fxSounds}` (saved);
+`live.sounds` the last 8 one-shots (not saved). `sound.set {on?, master?, shots?, beds?,
+fxSounds?}` and `sound.play {shot}` — no undo steps (sound is not table history).
+`protocol.md` "sound".
+
+**Limits.**
+
+- One-shots have no per-pad volume on the tablet (the wire has it: `shot.volume`).
+- No music; the war drums are the only rhythmic bed.
+- The tablet can't hear the TV: it shows what the TV was told, not what came out of its speakers.
+
 ## Table moments (roadmap S6, S8, S10, S11)
 
 Built in wave 5 (W5-2). Four short things a DM does to the table mid-game.
@@ -363,6 +419,12 @@ players' view (`playersView`, S12) is built through it.
   draws); `shared/test/secrets.test.ts` (found, sprung, the players' state never holds an unfound
   secret or a note). e2e "secrets": the TV unchanged while hidden, changed once found / sprung.
   Shots: `docs/qa/w5-1-secrets.jpg`, `docs/qa/w5-1-secrets-tv.jpg`.
+- Sound: `bun test src/lib/sound src/lib/companion/tabs/sound` in `app/` (taper, crossfade plan,
+  ducking, voice limit, shot gate, memory cap; the tab's mix rules, pads, commands; the shipped
+  catalogue: groups, effects ids, licences, sizes) and `shared/test/sound.test.ts`. e2e
+  `e2e/feature-sound.e2e.ts`: the TV's audio graph through its test hook — beds loop at their
+  length and reach their targets, a slider, a pad (a voice, the beds ducked), a scene carries the
+  mix, effects sounds off then on, Stop all. Shots: `docs/qa/w5-3-tab.jpg`, `docs/qa/w5-3-pad-menu.jpg`.
 - Table moments: `bun test` in `shared/` (`test/moments.test.ts`: reducer cases, refusals, notes
   undo per gesture, `withoutDmNotes`, timer maths across a reload) and in `app/`
   (`render/moments.test.ts`: spotlight centre, the countdown face on the server clock, end effect

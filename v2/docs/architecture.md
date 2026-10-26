@@ -92,10 +92,11 @@ v2/
     src/lib/storage/      IndexedDB: games, table settings, file cache
     src/lib/import/       .dd2vtt, PDF (pdf.js), pictures, grid detection, WebP, table copies
     src/lib/effects/      effects runtime: registry, anchors, layer slots
+    src/lib/sound/        sound runtime: Web Audio beds + one-shots on the TV, the tablet's preview (features.md "Sound")
     src/lib/ui/           the fluent component kit (tokens, components, the notice store; no game logic)
   server/   relay rooms, static app, files, library, backups, link fetch, /log
   shell/    Android WebView shell (TV + tablet), its bridge types in shell/bridge.d.ts
-  assets/   effects library and other shipped art, with manifest + licences
+  assets/   effects and sound libraries and other shipped art, with manifest + licences (effects.md, sounds.md)
   e2e/      Playwright flows across a TV page and a companion page
 ```
 
