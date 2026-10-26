@@ -65,7 +65,7 @@ async function driver(room: string): Promise<{ send(msg: object): void; snapshot
   return {
     send: (msg) => ws.send(JSON.stringify(msg)),
     async snapshot() {
-      const snap = next('sync.snapshot');
+      const snap = next('sync.snapshot', 15_000); // a TV busy opening the map answers late (qa#31)
       ws.send(JSON.stringify({ type: 'sync.request' }));
       return (await snap).state as RootState;
     },
@@ -101,7 +101,7 @@ async function setup(browser: import('@playwright/test').Browser, size = { width
   const game = { id: `g${Date.now().toString(36)}`, name: 'Night one', createdAt: new Date().toISOString(), map: lairMap() };
   // the TV may still be opening its storage (it then answers with its start state): ask again
   await expect.poll(async () => {
-    const name = (await drv.snapshot()).game?.name ?? null;
+    const name = (await drv.snapshot().catch(() => null))?.game?.name ?? null; // no answer yet: ask again
     if (name !== 'Night one') drv.send({ type: 'game.new', game });
     return name;
   }, { timeout: 20_000, intervals: [200, 1000, 2000] }).toBe('Night one');
@@ -112,10 +112,11 @@ async function setup(browser: import('@playwright/test').Browser, size = { width
   if (process.env.E2E_CONSOLE) page.on('console', (m) => { const t = m.text(); if (/companion|sync/.test(t)) console.log('[companion]', t.slice(0, 200)); });
   await serveLair(page);
   await page.goto(`/app/?mode=companion&table=${room}&debug=1`);
-  await expect(page.getByTestId('game-screen')).toBeVisible();
+  await expect(page.getByTestId('game-screen')).toBeVisible({ timeout: 30_000 }); // the companion's start under load
   await connected(page);
   // the map is fitted once the view is measured (then map points have a place on the page)
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __bmMap?: { camera(): { centerX: number } | null } }).__bmMap?.camera()?.centerX ?? 0), { timeout: 45_000 }) // WebGL starts slowly under SwiftShader on a loaded Mac.toBe(COLS / 2);
+  // WebGL starts slowly under SwiftShader on a loaded Mac
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __bmMap?: { camera(): { centerX: number } | null } }).__bmMap?.camera()?.centerX ?? 0), { timeout: 45_000 }).toBe(COLS / 2);
   await page.waitForTimeout(400); // the kit Button's start-up debounce
   const close = async () => {
     drv.close();
@@ -154,7 +155,9 @@ async function drag(page: Page, from: [number, number], to: [number, number], st
 const mapOf = (s: RootState) => s.game!.maps[s.game!.activeMapId]!;
 const revealedOn = (s: RootState) => maskCount(mapOf(s).fog.revealed, COLS * ROWS);
 
-test.describe.configure({ mode: 'serial', timeout: 120_000 });
+// Each flow sets up its own TV, companion and table: they run in order but independently, so one
+// slow start fails only its own flow instead of skipping the rest of the file (qa#31).
+test.describe.configure({ timeout: 120_000 });
 
 /** Chooses a tool tab (a tap on the chosen one would fold the panel). */
 async function openTab(page: Page, name: string): Promise<void> {

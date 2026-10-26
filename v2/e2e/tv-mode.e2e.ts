@@ -11,6 +11,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { BareCompanion, MISSING, testMap, uploadTestPicture, type Ref } from './tv-companion.ts';
+import { waitStored } from './support/table.ts';
 
 const SHOTS = process.env.TV_SHOTS ?? null;
 
@@ -52,7 +53,7 @@ test('a new game comes back after a reload', async ({ page }) => {
   c.command({ type: 'fog.all', value: 'reveal' });
   c.command({ type: 'view.grid', on: false });
   await expect(page.getByTestId('tv-status')).toContainText('rev 2');
-  await page.waitForTimeout(2600); // the autosave runs 2 s after the last change
+  await waitStored(page); // the autosave (2 s after the last change) has written it
 
   const t0 = Date.now();
   await page.reload();
@@ -62,7 +63,10 @@ test('a new game comes back after a reload', async ({ page }) => {
     return (r?.frames ?? 0) > 0 && (r?.detail?.textures?.map ?? 0) > 0;
   }), { timeout: 20_000, message: 'the map never came back after the reload' }).toBe(true);
   const firstMapFrameMs = Date.now() - t0;
-  // The page's own split (boot-timing.ts, User Timing marks `bm:<step>`, ms since navigation).
+  // The page's own split (boot-timing.ts, User Timing marks `bm:<step>`, ms since navigation). The
+  // `frame` mark lands a frame after the map's textures count — under load later than the poll
+  // above sees them (qa#34): wait for it.
+  await expect.poll(() => page.evaluate(() => performance.getEntriesByName('bm:frame').length), { timeout: 10_000 }).toBeGreaterThan(0);
   const marks = await page.evaluate(() => performance.getEntriesByType('mark')
     .filter((m) => m.name.startsWith('bm:')).map((m) => `${m.name.slice(3)} ${Math.round(m.startTime)}`).join(' · '));
   test.info().annotations.push({ type: 'timing', description: `reload → first frame with the map: ${firstMapFrameMs} ms (${marks})` });
@@ -195,14 +199,17 @@ test('a box reset gets the game back from the server backup', async ({ browser }
   expect(games.find((g) => g.id === gameId)?.where).toBe('server');
 
   c.send({ type: 'game.open', gameId });
-  await expect(tv2.getByTestId('tv-status')).toContainText('game Backed up');
+  // the TV fetches the backup and its map files from the server, then stores them (slow under load)
+  await expect(tv2.getByTestId('tv-status')).toContainText('game Backed up', { timeout: 20_000 });
   const snap = await c.snapshot();
   const state = snap.state as { game: { maps: Record<string, { fog: { revealed: string } }> } };
   expect(Object.values(state.game.maps)[0]!.fog.revealed).toMatch(/^\/\/\//);
 
-  // and it is on this TV now: a reload reopens it without the server's help
+  // and it is on this TV now: a reload reopens it without the server's help — once the TV has
+  // remembered it as its last game (qa#35: a reload before that came back idle)
+  await waitStored(tv2);
   await tv2.reload();
-  await expect(tv2.getByTestId('tv-status')).toContainText('game Backed up');
+  await expect(tv2.getByTestId('tv-status')).toContainText('game Backed up', { timeout: 20_000 });
   c.close();
   await after.close();
 });

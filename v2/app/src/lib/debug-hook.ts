@@ -54,6 +54,12 @@ export interface TestHook {
   notices(): HookNotice[];
   /** TV: the renderer's counters, null before it runs (companion: always null). */
   render(): HookRenderStats | null;
+  /**
+   * TV: whether a reload now reopens what the table shows — the open game saved on the device and
+   * remembered as its last game (`TvGames.stored`); companion: always null. Flows wait on it before
+   * a reload (qa#34, qa#35).
+   */
+  stored(): boolean | null;
 }
 
 /** How many notices the hook keeps. */
@@ -70,9 +76,10 @@ export const debugEnabled: boolean = (() => {
 
 const noticeLog: HookNotice[] = [];
 let renderStats: (() => RenderStats | null) | null = null;
+let tvStored: (() => boolean) | null = null;
 
 /** The session parts the hook reads, as the sessions pass them. */
-export type HookSession = Omit<TestHook, 'notices' | 'render'>;
+export type HookSession = Omit<TestHook, 'notices' | 'render' | 'stored'>;
 
 /**
  * Puts the hook on `window` for this session (does nothing without `?debug=1`).
@@ -91,6 +98,7 @@ export function attachSession(session: HookSession): void {
       const parts = [s.textures.map, s.textures.fog, s.textures.tokens, s.textures.layers, s.textures.effects];
       return { frames: s.frames, textures: parts.filter((b) => b > 0).length, textureBytes: s.textures.total, detail: s };
     },
+    stored: () => tvStored?.() ?? null,
   };
   (globalThis as unknown as { __battlemap?: TestHook }).__battlemap = hook;
 }
@@ -102,6 +110,15 @@ export function attachSession(session: HookSession): void {
  */
 export function attachRenderStats(read: () => RenderStats | null): void {
   if (debugEnabled) renderStats = read;
+}
+
+/**
+ * Lets the hook say whether the TV's table is on the device as a reload would reopen it (TV mode).
+ *
+ * @param read - `TvGames.stored`
+ */
+export function attachTvStored(read: () => boolean): void {
+  if (debugEnabled) tvStored = read;
 }
 
 /**

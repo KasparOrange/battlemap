@@ -46,6 +46,22 @@ export interface BattlemapHook {
   notices?(): { text: string; kind: string; at: number }[];
   /** TV: renderer counters — frames drawn so far, textures held. */
   render?(): { frames: number; textures: number; textureBytes: number } | null;
+  /** TV: whether a reload now reopens what the table shows (saved + the device's last game). */
+  stored?(): boolean | null;
+}
+
+/**
+ * Waits until a reload of the TV page would reopen what it shows — the open game saved on the
+ * device and remembered as its last one (the hook's `stored()`, qa#34/#35). Wait on this before
+ * a reload instead of sleeping past the autosave.
+ *
+ * @param tv - the TV page (runs with `?debug=1`)
+ * @param timeoutMs - how long to wait
+ */
+export async function waitStored(tv: Page, timeoutMs = 20_000): Promise<void> {
+  await expect.poll(() => tv.evaluate(() => (window as unknown as { __battlemap?: BattlemapHook }).__battlemap?.stored?.() ?? null), {
+    timeout: timeoutMs, message: 'the TV never had its game stored for a reload',
+  }).toBe(true);
 }
 
 /** A TV page, companion pages and a bot on one table. */

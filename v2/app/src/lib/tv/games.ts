@@ -98,6 +98,8 @@ export class TvGames {
   /** The calibration last read or stored; `null` until `boot()` has read it (qa#3). */
   private savedTable: { widthInches: number; overscanPercent: number } | null = null;
   private saveTimer: unknown = null;
+  /** The game the device reopens at its next start (`undefined` until `boot()` read it). */
+  private lastStored: string | null | undefined = undefined;
   private saving: Promise<void> = Promise.resolve();
   private work: Promise<void> = Promise.resolve();
   private readonly backups: BackupQueue;
@@ -158,6 +160,7 @@ export class TvGames {
     let lastId: string | null = null;
     try {
       lastId = await savedLast;
+      this.lastStored = lastId;
       if (lastId) game = await this.load(lastId);
     } catch (e) {
       this.log.error('tv', 'Last game could not be reopened', { gameId: lastId, error: errorText(e) });
@@ -175,6 +178,15 @@ export class TvGames {
   }
 
   // ── autosave ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Whether a start now would bring back what the table shows: the open game (or none) is the
+   * device's last game and has no unsaved changes. The test hook's `stored()` — the e2e flows
+   * wait on it before a reload instead of guessing the autosave's delay (qa#34, qa#35).
+   */
+  get stored(): boolean {
+    return this.lastStored !== undefined && !this.dirty && this.lastStored === (this.host.state.game?.id ?? null);
+  }
 
   /** Whether the open game has changes that aren't saved yet. */
   get dirty(): boolean {
@@ -541,6 +553,7 @@ export class TvGames {
   private async rememberLast(gameId: string | null): Promise<void> {
     try {
       await this.ports.settings.put(KEY_LAST_GAME, gameId);
+      this.lastStored = gameId;
     } catch (e) {
       this.log.warn('tv', 'Last game could not be remembered', { gameId, error: errorText(e) });
     }

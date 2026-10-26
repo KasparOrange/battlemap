@@ -20,6 +20,7 @@
   import type { GameSummary, LibraryEntry } from '@battlemap/shared';
   import { appConfig, lanJoinInfo, onLanChange, type AppConfig, type LanJoinInfo } from '../config.ts';
   import { log } from '../log.ts';
+  import { attachTvStored } from '../debug-hook.ts';
   import { markShellReady, onShellEvent, shellBridge } from '../shell.ts';
   import { TvSession } from '../state/sessions.svelte.ts';
   import { rememberTried } from '../net/build-check.ts';
@@ -53,6 +54,7 @@
   // The session hands requests to `games` only once it is connected, after both exist.
   const session = new TvSession(config, (req, from) => void answerRequest(req, from, games, log));
   const games = new TvGames(ports, session.host, (msg) => session.send(msg), log, { build: config.build });
+  attachTvStored(() => games.stored); // test hook: a reload now reopens the table (qa#34/#35)
   // S24: the TV's cards show games as the players last saw them (fog applied), made after saves.
   const thumbs = new FogThumbs({ settings: ports.settings, files: (ref) => ports.files.get(ref), draw: drawFogThumb, log, timers: realTimers, now: Date.now });
   games.onSaved = (g, reason) => thumbs.saved(g, reason);

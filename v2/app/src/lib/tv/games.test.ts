@@ -98,6 +98,20 @@ describe('requests', () => {
     expect(r.sent.some((m) => m.type === 'sync.snapshot')).toBe(true);
   });
 
+  test('stored: true only while a start would bring back what the table shows (qa#34/#35)', async () => {
+    const r = rig();
+    expect(r.games.stored).toBe(false); // before boot read the last game
+    await r.games.boot();
+    expect(r.games.stored).toBe(true); // nothing open, nothing remembered
+    fromCompanion(r, { type: 'game.new', game: gameInput() });
+    await settle();
+    expect(r.games.stored).toBe(true);
+    r.host.applyLocal({ type: 'fog.all', value: 'reveal' });
+    expect(r.games.stored).toBe(false); // unsaved change
+    await r.games.flush('test');
+    expect(r.games.stored).toBe(true);
+  });
+
   test('game.open loads from the device, saving the open game first', async () => {
     const r = rig();
     r.ports.stored.set('g2', { game: newGame(gameInput('g2', 'Second')), savedAt: '2026-10-24T00:00:00.000Z' });
