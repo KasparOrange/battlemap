@@ -525,7 +525,11 @@ then 16 tiles at 2K, each refining its crop of the master with its guide crop, o
 What limits it is the TV: v2 decodes the whole map picture at ~56 px per square, which for
 136 × 76 is ≈ 7,600 × 4,300 px ≈ 130 MB — exactly its 128 MB map budget (`v2/docs/render.md`).
 The TV only ever shows one screen (8 MB), so v2 should load the window plus a ring around it;
-until then 3 × 3 (102 × 57) fits comfortably.
+until then 3 × 3 (102 × 57) fits comfortably. Tile size for that (worked out 2026-10-26): 512 px
+tiles (~9 squares, an eighth of a screen) keep the window + half a screen round it at ~35 MB,
+whatever the map's size; v2's 2048 px tiles would still hold over 100 MB, one file per square is
+absurd (10,000 files, poor compression). Tiles as separate files stored on the TV — the box can't
+decode one huge picture and cut out a corner without holding all of it once.
 
 **Plants (2026-10-26):** 14 summer types + 2 trunk bases, `ige` project `summer-vegetation`
 (style ref = a crop of the slice's ground; 1K, 2 draws each, all usable in round one, $0.94 +
@@ -601,8 +605,10 @@ on `battlemap-mapgen`. Open:
   cartoony there, tune `edit-canopy.txt` (they come from the ground painting's own style).
 - Paint the garden bushes and reeds the same way, or redraw them in the canopy's look.
 - A big map: load the canopy atlas per window like the ground (every tree is unique pixels).
+- The 4 × 4 map's layout (forest with a path and a clearing, the river with bridge and ford, the
+  ruin with the way down, the village) — not written yet; only the riverbend slice exists.
 
-**Built:** `tools/mapgen/outdoor.py` (`guide`, `paint`, `roof`, `canopy`), `prompts/outdoor.txt`,
+**Built:** `tools/mapgen/outdoor.py` (`guide`, `paint` [`--albedo`: unlit], `roof`, `canopy`), `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,
 banks, bridge, boulders and walls; draw 2 dropped the road south of the bridge, draw 1 is the
@@ -669,7 +675,14 @@ would ship, not three), render targets 21–34 MB at 1080p.
 
 **Next:** run the fast path on the box (fps, and whether the light reruns hitch); the canopy edit
 pass with an unlit prompt + a depth pass, so the painted forest gets the table's light; one slope
-picture per shipped sprite set; the roof painted unlit (today it keeps its painted noon light).
+picture per shipped sprite set; the roof painted unlit (today it keeps its painted noon light);
+the canopy outline in the fast path (only the deferred one has it); a pick between the two unlit
+grounds and the look for the big map.
+
+Gotchas: `ige paint` takes the base picture's aspect only if asked — pass `--aspect 16:9` or the
+map comes back square (two edits lost); Depth Anything on a big map needs tiles high-passed one
+by one, else every tile seam shows; timing a nearly idle Apple GPU reads 2–3× too slow (it
+clocks down) — repeat the pass (`#repeat=20`) before comparing.
 
 ## UX later (companion)
 

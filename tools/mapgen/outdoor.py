@@ -12,6 +12,7 @@ which way and how fast it flows, where it is shallow, where it breaks on rocks).
 Usage:
   tools/mapgen/outdoor.py guide layouts/riverbend.json             # guide + masks, free
   tools/mapgen/outdoor.py paint layouts/riverbend.json --size 2K --n 2 --why "…"
+  tools/mapgen/outdoor.py paint layouts/riverbend.json --albedo …  # unlit, for the table's light (docs/ai-art.md "Light lab")
   tools/mapgen/outdoor.py roof  out/riverbend/<run> [out_1.jpg]    # roof sprites from the painting
   tools/mapgen/outdoor.py canopy out/riverbend/<run> [--size 1K] [--plan]   # the forest canopy as one layer
 
