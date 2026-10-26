@@ -292,6 +292,7 @@ us own the loop: `autoStart: false`, we call `render()` only when something chan
 | hidden tokens | left out | drawn faded |
 | DM layers | never loaded | drawn above the fog |
 | door markers | no (maps paint their doors); drawn door leaves above the fog only next to revealed squares | markers on every door |
+| secrets (S9) | only found ones: a found door's leaf, a mark's gold sigil, a sprung trap's red glyph — above the fog | every secret's glyph, hollow while hidden |
 | players' frame | — | the table window (with grip) |
 | table mask, calibration pattern | yes (screen space) | — |
 | camera | derived from the state (`tvCamera`) | the DM's own, independent |
@@ -306,7 +307,7 @@ us own the loop: `autoStart: false`, we call `render()` only when something chan
 | 4 | `drawings` | strokes + the live stroke |
 | 5 | `tokens` | token-attached effects are children of their token |
 | 6 | `fog` | the mask shader |
-| 7 | `doors` | door leaves (players, AI maps) / door markers (DM) |
+| 7 | `doors` | door leaves (players, AI maps) / door markers (DM); then the secrets (`secrets-layer.ts`: players see found doors, marks and sprung traps only — unfound secret doors lose their leaf; the DM sees every secret, hollow until found) |
 | 8 | `fx.air` | effects above the fog: weather, a spell burst the players must see |
 | 9 | `dmLayers` | DM only |
 | 10 | `tools` | template disc, ruler, measure line |

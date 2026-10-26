@@ -172,6 +172,87 @@ vanishing at once."). Off = a hard cut, as before.
 
 ![Fog rolling back 400 ms into a reveal](qa/w5-1-reveal.jpg)
 
+## Prepared reveal areas (roadmap S7)
+
+**What.** In prep the DM outlines named areas — "the crypt", "behind the secret door" — and at
+the table one tap reveals (or hides) a whole area, with the reveal animation. An area is just a
+name and a set of squares; whether it is shown is read from the fog (all, some or none of its
+squares), never stored, so it can't disagree with what the players see.
+
+**On the tablet.** The Fog tab's "Areas" section lists them: name (or "Area n"), size and what
+the players see ("12 squares · 5 shown"), and one button — **Reveal** while hidden or partly
+shown, **Hide** once fully shown — with Undo in its notice (under "Preview first" the squares
+wait in the preview like any fog change). A tap on the row selects the area (gold on the map) and
+centres the view on it; "⋯" offers Edit squares, Rename… and Delete (Undo in the notice).
+**New area** (or Edit squares) turns the Fog tab into the area's editor: the finger edits the
+area instead of the fog — **Paint** (tap or drag over squares), **Room** (a tap fills the room,
+stopped by walls and closed doors; maps with walls only) or **Outline** (taps set corners snapped
+to square corners, a tap on the first corner or Close outline takes the squares whose centres are
+inside) — each in **Add** or **Take out**; the footer is Cancel · **Save area**. Nothing is sent
+before Save; leaving the tab or another map coming on the table drops the draft. The tab's
+overlay draws every area's outline (a dashed hairline) with its name, the selected one gold and
+the draft filled gold — SVG paths in squares under one camera transform, rebuilt only when the
+areas change. Corners snap so the outline runs along the grid lines the DM sees: which squares
+end up inside is predictable, and a shaky finger can't miss a corner by a hair.
+
+**On the TV.** Nothing of the areas — only the fog they change.
+
+**Protocol.** `area.save {area, index?}`, `area.remove {id}` (no undo steps: an area is prep,
+not play — the notice's Undo saves the old one back, as scenes do), `area.reveal {id, value,
+gesture}` = `fog.apply` with the area's squares (one fog undo step). `MapPlay.areas` (optional on
+the wire, ≤ 64); `playersState` drops them.
+
+**Limits.**
+
+- An area is squares, not walls: revealing it ignores doors and walls (that is the point).
+- Areas belong to one map; an area can't be moved to another map.
+- Two DMs editing the same area at once: the last Save wins.
+
+![The Fog tab with two areas, one selected](qa/w5-1-areas.jpg)
+
+## Secret doors and traps (roadmap S9)
+
+**What.** Traps, hidden marks (a lever, loot, a clue) and secret doors the players don't see
+until the DM marks them found — then they appear on the TV with a small effect. A trap is a DM
+mark on a square with an optional note ("DC 15 to spot, 2d6 piercing") that the DM **springs**:
+its effect plays and its warning glyph appears for the players.
+
+**Where: a Secrets tab** (between Fog and Draw), not a Fog section: placing secrets is its own
+finger action (tabs are modes — in this tab a tap places or selects a secret and never toggles a
+door), and mid-game the list with its Found / Spring buttons is one tap from the rail. The Fog
+tab stays about fog.
+
+**On the tablet.** "Place": Trap · Mark · Secret door — a tap on an empty square places the
+chosen kind there (Undo in the notice); with Secret door chosen, a tap on one of the map's own
+doors makes that door secret. A tap on a secret selects it: its editor holds the name, the note
+(never shown to the players), the effect it plays (a short list per kind — dust, a gold or red
+pulse, a glyph, an explosion, poison — or none), a drawn door's direction (Across | Down), its
+one-tap button and Delete (Undo). The lists "Hidden from the players" (one-tap **Found** /
+**Spring**) and "Found" (Hide again) — every action with Undo in its notice. On the DM's map every
+secret shows as its kind's glyph — a red triangle, a gold diamond, a door slab — hollow while
+hidden, filled once found; the selected one gets a gold ring.
+
+**On the TV.** Nothing of an unfound secret: a secret door that is one of the map's own doors
+loses its drawn leaf (AI maps). Found: a door appears as a closed wooden leaf (on its square, or
+along the map's doorway when the map doesn't draw doors anyway), a mark as a small gold sigil, a
+sprung trap as a red warning glyph — above the fog (the players know about it now), and the
+secret's effect plays once on the square. Finding changes no fog. `render/secrets-layer.ts`,
+built only when the secrets change.
+
+**Protocol.** `secret.save {secret, index?}` and `secret.remove {id}` (no undo steps — prep; the
+notice's Undo saves back), `secret.found {id, found, shot?}` (the shot plays on every screen like
+`fx.trigger`'s; Undo is `found: false`). `MapPlay.secrets` (optional on the wire, ≤ 128);
+`playersState` keeps only found secrets, without notes.
+
+**Limits.**
+
+- A secret door painted into the map's picture is in the picture: hiding it is the map maker's
+  job (published maps draw secret doors as walls).
+- A found secret door is drawn closed; it opens as a map door only when it is one.
+- The effects are the catalogue's; a secret with an effect that left the catalogue plays none.
+
+![The Secrets tab: a trap with its note, a found door](qa/w5-1-secrets.jpg)
+
 ## Checks
 
 - `bun test` in `shared/` (`test/scenes.test.ts`: curtain down / up, kept fields, changes behind
@@ -187,3 +268,13 @@ vanishing at once."). Off = a hard cut, as before.
   Shot: `docs/qa/w5-1-reveal.jpg`.
 - Fog-honest thumbnails: `bun test src/lib/tv/fog-thumbs.test.ts` in `app/` (signature, revealed
   box, crop, plan: keep / neutral / draw, curtain keeps, scheduling per game, throttle).
+- Reveal areas: `bun test src/lib/companion/tabs/fog/areas` in `app/` (state from the fog, outline
+  paths, polygon → squares, centres; the flow: paint / room / outline, save, reveal / hide with
+  Undo, delete with Undo at its place, a map switch drops the draft); `shared/test/secrets.test.ts`
+  (area.save / remove / reveal). e2e `e2e/feature-fog-secrets.e2e.ts` "reveal areas". Shot:
+  `docs/qa/w5-1-areas.jpg`.
+- Secrets: `bun test src/lib/companion/tabs/secrets src/lib/render/secrets-logic.test.ts` in `app/`
+  (placing, map doors, labels, shots, found / spring with Undo, delete with Undo; what each view
+  draws); `shared/test/secrets.test.ts` (found, sprung, the players' state never holds an unfound
+  secret or a note). e2e "secrets": the TV unchanged while hidden, changed once found / sprung.
+  Shots: `docs/qa/w5-1-secrets.jpg`, `docs/qa/w5-1-secrets-tv.jpg`.

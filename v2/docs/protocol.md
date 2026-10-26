@@ -148,6 +148,12 @@ row} | {kind: token, tokenId}, dim}` or null); the `Game` has `timer` (`{duratio
 startedAt, endEffect}` or null — `startedAt` on the **server's clock**, so every screen computes
 what is left with `timerLeft`), `handouts` (≤ 32 of `{id, name, kind: picture|letter, file, text}`)
 and `handoutShown` (`{id, place: edge|full, side: bottom|top|left|right}` or null).
+**Reveal areas and secrets** (features.md "Prepared reveal areas", "Secret doors and traps",
+optional on the wire, read as none): each `MapPlay` has `areas` (≤ 64 of `{id, name, cells}` —
+`cells` a fog-sized mask; whether an area is shown is read from the fog, not stored) and `secrets`
+(≤ 128 of `{id, kind: door|mark|trap, name, note ≤ 500, col, row, door: map door index | null,
+vertical, effect: catalogue id | null, found}`). Anything handed to players goes through
+`playersState`: no area, no unfound secret, no note.
 
 ## Commands
 
@@ -209,6 +215,12 @@ they say otherwise; without a game they are refused ("No game is open."), except
 | `handout.show` | `shown` (`{id, place, side}`) or null — back to the map | — | new |
 | `note.set` | `note` (clamped onto the map), `gesture?` — adds or replaces by id (edit, move); ≤ 200 per map | yes, per gesture | new |
 | `note.remove` | `id` | yes | new |
+| `area.save` | `area` (`{id, name, cells}`, the mask sized for the map), `index?` — adds, or replaces by id; ≤ 64 per map | — (the notice's Undo saves the old one back) | new |
+| `area.remove` | `id` (an unknown id changes nothing) | — (Undo: `area.save` at its index) | new |
+| `area.reveal` | `id`, `value` (`reveal`\|`hide`), `gesture` — exactly `fog.apply` with the area's squares (staged under Preview first) | yes, per gesture | new |
+| `secret.save` | `secret` (a door's `door` must be a map door), `index?` — adds, or replaces by id; ≤ 128 per map | — (Undo: save back) | new |
+| `secret.remove` | `id` | — (Undo: save back at its index) | new |
+| `secret.found` | `id`, `found`, `shot?` (`OneShot` played with a find, kept in `live.shots` like `fx.trigger`'s) | — (Undo: `found: false`) | new |
 | `history.undo` / `history.redo` | — | — | `vtt.undo` / `vtt.redo` |
 
 ## Old messages that are gone, and why

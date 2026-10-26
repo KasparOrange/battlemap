@@ -5,8 +5,8 @@
  * branches), places the camera (the TV's from `tvView`, the DM's own), and asks the scheduler
  * for a frame only when something on screen changed.
  *
- * Layer order, bottom to top: map · fx.ground · grid · drawings · tokens · fog · doors · fx.air
- * · dmLayers · tools · dmFrame (the spotlight sits under fx.air, DM notes under tools —
+ * Layer order, bottom to top: map · fx.ground · grid · drawings · tokens · fog · doors (+ secrets,
+ * `secrets-layer.ts`) · fx.air · dmLayers · tools · dmFrame (the spotlight sits under fx.air, DM notes under tools —
  * `moments-layer.ts`) — then in screen space: tableMask · fx.screen · countdown · curtain (TV only,
  * `curtain-layer.ts`: while it falls the scene keeps drawing the state from before).
  */
@@ -18,6 +18,7 @@ import {
 import { clampDmCamera, fitDmCamera, NO_INSETS, panCamera, sameCamera, screenToSquares, squaresToScreen, SQUARE, visibleSquares, worldTransform, zoomCameraAt, type Insets, type Size } from './camera.ts';
 import { DmLayers, PlayersFrame } from './dm-layers.ts';
 import { DoorsLayer } from './doors-layer.ts';
+import { SecretsLayer } from './secrets-layer.ts';
 import { DrawingsLayer } from './drawings-layer.ts';
 import { FogLayer, type RevealQuality } from './fog-layer.ts';
 import { GridLayer } from './grid-layer.ts';
@@ -65,6 +66,8 @@ export class TableScene {
   private readonly tokens: TokensLayer;
   private readonly fog: FogLayer;
   private readonly doorsLayer: DoorsLayer;
+  /** Secret doors, marks and traps, above the doors (S9 — `secrets-layer.ts`). */
+  private readonly secretsLayer: SecretsLayer;
   private readonly tools: ToolsLayer;
   private readonly dmLayers: DmLayers | null;
   private readonly frame: PlayersFrame | null;
@@ -152,6 +155,7 @@ export class TableScene {
     this.tokens = new TokensLayer(this.slots.tokens, this.dm);
     this.fog = new FogLayer(this.slots.fog, this.dm ? { opacity: 0.7, deep: 0.9, tints: true } : { opacity: 1, deep: 1, tints: false }, r.scheduler);
     this.doorsLayer = new DoorsLayer(this.slots.doors, this.dm, r.scheduler);
+    this.secretsLayer = new SecretsLayer(this.slots.doors, this.dm);
     this.tools = new ToolsLayer(this.slots.tools, this.dm);
     this.dmLayers = this.dm
       ? new DmLayers(this.slots.dmLayers, files, opts.log, invalidate, {
@@ -310,6 +314,8 @@ export class TableScene {
       if (newMap || game.settings !== prevGame?.settings) this.fog.setRevealQuality(this.revealQuality(game.settings.effects));
       changed = this.fog.set(map.fog, cols, rows, game.settings, newMap) || changed;
       changed = this.doorsLayer.set(this.geometry, map.info.drawDoors, map.doorsOpen, map.fog, cols, rows, newMap) || changed;
+      changed = this.secretsLayer.set(map, this.geometry) || changed;
+      changed = this.doorsLayer.setHidden(this.secretsLayer.hidden) || changed;
       changed = this.tools.set(map.disc, map.ruler, state.live.measure) || changed;
       if (this.dmLayers) changed = this.dmLayers.set(map.layers, map.info) || changed;
     } else {
@@ -318,6 +324,7 @@ export class TableScene {
       this.tokens.set(null);
       this.fog.set(null, 1, 1, game?.settings ?? NO_SETTINGS, true);
       this.doorsLayer.set(null, false, [], null, 1, 1, true);
+      this.secretsLayer.set(null, null);
       this.tools.set(null, null, null);
       this.dmLayers?.set(null, null);
     }
@@ -369,6 +376,7 @@ export class TableScene {
         this.opts.onEvent?.({ type: 'geometry-loaded', doors: g.doors.length, walls: g.walls.length, lights: g.lights.length });
         const m = this.map;
         if (m) this.doorsLayer.set(this.geometry, m.info.drawDoors, m.doorsOpen, m.fog, m.info.grid.cols, m.info.grid.rows, true);
+        if (m) this.secretsLayer.set(m, this.geometry);
         this.onGeometry();
         this.r.scheduler.invalidate();
       })
@@ -673,6 +681,7 @@ export class TableScene {
     this.tokens.destroy();
     this.fog.destroy();
     this.doorsLayer.destroy();
+    this.secretsLayer.destroy();
     this.tools.destroy();
     this.dmLayers?.destroy();
     this.frame?.destroy();

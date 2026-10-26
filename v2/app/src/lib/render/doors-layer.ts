@@ -4,8 +4,9 @@
  * wooden leaves on both screens: a leaf with grain, iron straps at 20/80 %, a hinge pin and a
  * shadow, swinging 0.4 s ease-in-out to 85° (south/east), reversing from where it is when
  * toggled mid-swing, no swing on load. On the TV a drawn door shows only while the fog is off or
- * a square beside the doorway is revealed, so doors deep in the fog give nothing away. The DM's
- * walls debug view draws here too.
+ * a square beside the doorway is revealed, so doors deep in the fog give nothing away, and never
+ * for an unfound secret door (`setHidden`, roadmap S9 — `secrets-layer.ts`). The DM's walls debug
+ * view draws here too.
  */
 import { Container, Graphics } from 'pixi.js';
 import { bitIsSet, maskToBytes, type Door, type FogState, type MapGeometry } from '@battlemap/shared';
@@ -79,6 +80,7 @@ export class DoorsLayer {
   private release: (() => void) | null = null;
   private readonly stopTicker: () => void;
   private wallsOn = false;
+  private hidden: ReadonlySet<number> = new Set();
 
   /**
    * @param parent - the scene's doors slot
@@ -144,6 +146,19 @@ export class DoorsLayer {
   }
 
   /**
+   * Players' view: the map doors drawn without a leaf whatever the fog — unfound secret doors.
+   *
+   * @param hidden - door indices (the same set object means unchanged)
+   * @returns whether it changed
+   */
+  setHidden(hidden: ReadonlySet<number>): boolean {
+    if (hidden === this.hidden) return false;
+    this.hidden = hidden;
+    this.applyFogRule();
+    return true;
+  }
+
+  /**
    * DM: shows the walls debug lines.
    *
    * @param on - whether walls show
@@ -181,13 +196,13 @@ export class DoorsLayer {
     if (this.dm || !this.leaves.length) return;
     const fog = this.fog;
     if (!fog || !fog.on) {
-      for (const l of this.leaves) l.root.visible = true;
+      this.leaves.forEach((l, i) => (l.root.visible = !this.hidden.has(i)));
       return;
     }
     const bytes = maskToBytes(fog.revealed, this.cols * this.rows);
     this.geometry!.doors.forEach((d, i) => {
       const [s1, s2] = doorSides(d, this.cols, this.rows);
-      this.leaves[i]!.root.visible = (s1 >= 0 && bitIsSet(bytes, s1)) || (s2 >= 0 && bitIsSet(bytes, s2));
+      this.leaves[i]!.root.visible = !this.hidden.has(i) && ((s1 >= 0 && bitIsSet(bytes, s1)) || (s2 >= 0 && bitIsSet(bytes, s2)));
     });
   }
 
@@ -244,8 +259,13 @@ export class DoorsLayer {
   }
 }
 
-/** A wooden leaf from the hinge (0, 0) along +x, `len` world units. */
-function leafGraphics(len: number): Graphics {
+/**
+ * A wooden leaf from the hinge (0, 0) along +x — also the found secret doors' (`secrets-layer.ts`).
+ *
+ * @param len - its length, world units
+ * @returns the graphics
+ */
+export function leafGraphics(len: number): Graphics {
   const t = LEAF * SQUARE;
   const g = new Graphics();
   g.rect(t * 0.25, -t / 2 + t * 0.3, len, t).fill({ color: 0x000000, alpha: 0.35 }); // shadow
