@@ -601,12 +601,30 @@ def canopy(spec, run, file=None, n=1, size="1K", tag=""):
 # ---------------------------------------------------------------- CLI
 
 
-def paint(spec, size, n, tag, why, thinking):
+# --albedo: paint the ground UNLIT, for a table that adds its own sun (docs/ai-art.md "Light lab")
+ALBEDO_LIGHT = """Lighting: this painting is an ALBEDO texture for a game engine that adds its own sunlight,
+shadows and time of day later. Paint everything under flat, even, shadowless overcast light from
+directly above: no light direction, no cast shadows (not beside walls, rocks, the bridge, furniture
+or anything else), no bright side and no shadow side on anything; only small crevices a little
+darker, equally all round. Keep the colours rich and the textures crisp, contrast high enough to
+read on a TV. Keep open ground calm and readable: miniatures stand on this map."""
+
+
+def albedo_prompt(prompt):
+    """The paint prompt with its lighting paragraph swapped for ALBEDO_LIGHT (and no "warm sunlight" style)."""
+    i = prompt.index("Lighting:")
+    j = prompt.index("\n\n", i)
+    return (prompt[:i] + ALBEDO_LIGHT + prompt[j:]).replace("warm sunlight, ", "")
+
+
+def paint(spec, size, n, tag, why, thinking, albedo=False):
     name = spec["name"]
     run = OUT / name / (time.strftime("%y%m%d-%H%M%S") + (f"-{tag}" if tag else ""))
     run.mkdir(parents=True)
     guide = write_layers(spec, run)
     prompt = build_prompt(spec)
+    if albedo:
+        prompt = albedo_prompt(prompt)
     (run / "prompt.txt").write_text(prompt)
     aspect = mapgen.pick_aspect(spec)
     results = []
@@ -637,6 +655,7 @@ def main():
     p.add_argument("--size", default="2K", choices=mapgen.PRICE); p.add_argument("--n", type=int, default=1)
     p.add_argument("--tag", default=""); p.add_argument("--why", default="")
     p.add_argument("--thinking", choices=["minimal", "medium", "high"])
+    p.add_argument("--albedo", action="store_true", help="paint it unlit (flat light) for a table that lights it")
     r = sub.add_parser("roof"); r.add_argument("run"); r.add_argument("image", nargs="?")
     r.add_argument("--n", type=int, default=1)
     c = sub.add_parser("canopy"); c.add_argument("run"); c.add_argument("image", nargs="?")
@@ -667,7 +686,7 @@ def main():
         (folder / "prompt.txt").write_text(build_prompt(spec))
         print(folder / "guide.png", mapgen.pick_aspect(spec))
     elif a.cmd == "paint":
-        paint(spec, a.size, a.n, a.tag, a.why, a.thinking)
+        paint(spec, a.size, a.n, a.tag, a.why, a.thinking, a.albedo)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-26 13:30 - 7eacc726 - light lab: unlit art, the light from the table
+- Konrad: try shaders instead of painted light — unlit assets (reusable, no ink rim), sun, time of day, crowns blended into one canopy; the whole map or only the vegetation; efficient on the box; the painted map stays the fallback
+	- `docs/mockups/outdoor/lit/` (`lit.html`, `lit.js`, `prepare_lit.py`, `depth.py`): three looks (painted · lit trees · all lit), two unlit grounds, three tree shapes, a fast and a deferred pipeline, a GPU bench; on board `battlemap-mockups`
+	- `outdoor.py paint --albedo` paints the ground unlit from the guide; Depth Anything V2 Small installed in `~/.local/share/battlemap/depth-venv`
+	- fast path ≈ 1.5× the painted slice per frame (Mac, full clock); findings and next steps in `ai-art.md` "Light lab"; images about $0.64 (10 unlit crowns $0.34, 4 delit grounds — 2 lost to a square aspect — and 2 painted unlit, about $0.30)
+
 ### 26-10-26 06:30 - 907410 - forests that look like forests
 - Konrad (handed over from the outdoor slice): the crowns read as stacked puffballs — find top-down forests on published battle maps, work out strategies
 	- 12 references (itch.io, 2-Minute Tabletop, Forgotten Adventures, a Rügen drone photo) on board `battlemap-mapgen`, zone "Forest canopy references", with what makes them read as forest

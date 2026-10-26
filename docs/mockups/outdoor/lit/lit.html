@@ -1,0 +1,151 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Light lab — riverbend lit by the table</title>
+<style>
+  html,body{margin:0;height:100%;background:#121214;color:#ddd;font:13px/1.4 system-ui,sans-serif;overflow:hidden}
+  canvas.stage{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .cap{position:absolute;left:10px;bottom:8px;right:10px;background:#000a;padding:6px 9px;border-radius:7px;pointer-events:none;z-index:2}
+  .cap b{color:#fff}
+  .bar{position:absolute;left:10px;top:8px;display:flex;flex-direction:column;gap:5px;z-index:2}
+  .row{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+  .row label{font:11px system-ui;color:#aaa;width:62px}
+  .bar button{background:#2a2a30;color:#ddd;border:1px solid #444;border-radius:6px;padding:2px 8px;font:12px system-ui;cursor:pointer}
+  .bar button.on{background:#3d5afe;border-color:#3d5afe;color:#fff}
+  .bar input[type=range]{width:200px}
+  .bar output{font:12px ui-monospace,monospace;color:#fff;min-width:46px}
+  .stats{position:absolute;right:10px;top:8px;background:#000a;padding:4px 8px;border-radius:6px;font:11px ui-monospace,monospace;color:#cfc;z-index:2;text-align:right;white-space:pre}
+  .tok{position:absolute;z-index:1;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px #000c;cursor:grab;touch-action:none;
+       display:grid;place-items:center;font:700 12px system-ui;color:#fff;transform:translate(-50%,-50%)}
+  .dial{position:absolute;z-index:2;right:14px;width:84px;height:84px;touch-action:none;cursor:grab;user-select:none}
+  .dial svg{width:100%;height:100%;display:block}
+  .dial .ring{fill:#000b;stroke:#fff6;stroke-width:2}
+  .dial .aim{stroke:#f5c542;stroke-width:3;stroke-dasharray:4 4}
+  .dial .now line{stroke:#fff;stroke-width:4;stroke-linecap:round} .dial .now path{fill:#fff}
+  .dial.sun .now line{stroke:#ffd54a} .dial.sun .now circle{fill:#ffd54a}
+  .dial span{position:absolute;left:0;right:0;bottom:-16px;text-align:center;font:11px system-ui;color:#ccc}
+  .grid{position:absolute;z-index:1;pointer-events:none;background-image:linear-gradient(#0003 1px,transparent 1px),linear-gradient(90deg,#0003 1px,transparent 1px)}
+</style>
+<canvas class="stage"></canvas>
+<div class="bar" id="bar"></div><div class="stats" id="stats"></div>
+<div class="cap"><b>Light lab — the light comes from the table, not the painting.</b> <i>Painted</i>: today's slice (light painted in, the
+  fallback). <i>Lit trees</i>: the painted ground, crowns from unlit sprites lit by the table with the painting's sun — shadows,
+  crevices where crowns meet. <i>All lit</i>: an unlit ground too, so the time of day and the sun move freely; lamps at dusk.
+  Tree shape: <i>dome</i> (computed from the outline and leaf clumps), <i>model</i> (Depth Anything V2), <i>luma</i> (brighter = higher).
+  Drag the party; tap the roof.</div>
+<script type="module">
+import { start } from "./lit.js";
+
+const state = {
+  look: "all", ground: "unlit", height: "model", relief: "both", view: "final",
+  hour: 15, heightScale: 1, lightRes: 0.5, steps: 12, lightRate: "change", pipe: "fast", repeat: 1,
+  Trees: true, Under: false, Water: true, Shadows: true, Crevices: true, Outline: false, Clouds: false, Gusts: true,
+  "Strong wind": false, "Canopy opens": true, "Sun moves": false, Grid: false,
+  windAngle: 0.35, sunAngle: Math.atan2(-0.62, -0.78),
+};
+const bar = document.getElementById("bar");
+function row(label) { const r = document.createElement("div"); r.className = "row"; if (label) { const l = document.createElement("label"); l.textContent = label; r.append(l); } bar.append(r); return r; }
+function radio(label, key, opts) {
+  const r = row(label), bs = [];
+  for (const [v, text] of opts) {
+    const b = document.createElement("button"); b.textContent = text; bs.push([b, v]);
+    b.onclick = () => { state[key] = v; bs.forEach(([x, w]) => (x.className = state[key] === w ? "on" : "")); };
+    r.append(b);
+  }
+  bs.forEach(([x, w]) => (x.className = state[key] === w ? "on" : ""));
+}
+function toggles(label, names) {
+  const r = row(label);
+  for (const k of names) {
+    const b = document.createElement("button"); b.textContent = k; b.className = state[k] ? "on" : "";
+    b.onclick = () => { state[k] = !state[k]; b.className = state[k] ? "on" : ""; grid.style.display = state.Grid ? "block" : "none"; };
+    r.append(b);
+  }
+}
+function slider(label, key, min, max, step, fmt) {
+  const r = row(label), i = document.createElement("input"), o = document.createElement("output");
+  Object.assign(i, { type: "range", min, max, step, value: state[key] });
+  const show = () => (o.textContent = fmt(state[key]));
+  i.oninput = () => { state[key] = +i.value; show(); };
+  r.append(i, o); show(); return i;
+}
+radio("Look", "look", [["painted", "Painted"], ["trees", "Lit trees"], ["all", "All lit"]]);
+radio("Painting", "ground", [["delit", "Light removed"], ["unlit", "Painted unlit"]]);
+radio("Tree shape", "height", [["dome", "Dome"], ["model", "Model"], ["luma", "Luma"]]);
+radio("Relief", "relief", [["off", "Flat"], ["layout", "Layout"], ["depth", "Model"], ["both", "Both"]]);
+const hourIn = slider("Time", "hour", 5, 24, 0.05, (h) => `${String(Math.floor(h) % 24).padStart(2, "0")}:${String(Math.round((h % 1) * 60) % 60).padStart(2, "0")}`);
+slider("Heights", "heightScale", 0.4, 1.6, 0.05, (v) => `×${v.toFixed(2)}`);
+toggles("Light", ["Shadows", "Crevices", "Outline", "Clouds", "Sun moves"]);
+toggles("Scene", ["Trees", "Under", "Water", "Gusts", "Strong wind", "Canopy opens", "Grid"]);
+radio("Light res", "lightRes", [[1, "Full"], [0.5, "½"], [0.25, "¼"]]);
+radio("Sun steps", "steps", [[6, "6"], [12, "12"], [20, "20"]]);
+radio("Pipeline", "pipe", [["fast", "Fast (light on change)"], ["deferred", "Deferred (debug views)"]]);
+radio("Shadows run", "lightRate", [["frame", "Every frame"], ["change", "On change (≤ 8/s)"]]);
+radio("Show", "view", [["final", "Final"], ["height", "Height"], ["shadow", "Shadow"], ["crevices", "Crevices"], ["normals", "Normals"]]);
+
+// dials: hold and drag; the wind follows ~1 s behind, the sun at once
+function dial(cls, bottom, label, key, follow) {
+  const d = document.createElement("div"); d.className = "dial " + cls; d.style.bottom = bottom + "px"; d.title = "Hold and drag";
+  const head = cls === "sun" ? `<circle cx="30" cy="0" r="9"/>` : `<path d="M38 0 L24 -9 L24 9 Z"/>`;
+  d.innerHTML = `<svg viewBox="-50 -50 100 100"><circle r="46" class="ring"/><line class="aim" x1="0" y1="0" x2="38" y2="0"/><g class="now"><line x1="${cls === "sun" ? 0 : -30}" y1="0" x2="30" y2="0"/>${head}</g></svg><span>${label}</span>`;
+  document.body.append(d);
+  let aim = state[key];
+  const turn = (e) => { const r = d.getBoundingClientRect(); aim = Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2); if (!follow) state[key] = aim; };
+  d.onpointerdown = (e) => { d.setPointerCapture(e.pointerId); turn(e); d.onpointermove = turn; };
+  d.onpointerup = () => (d.onpointermove = null);
+  let last = performance.now();
+  (function ease(now) {
+    const dt = Math.min(0.1, (now - last) / 1000); last = now;
+    if (follow) { const k = Math.atan2(Math.sin(aim - state[key]), Math.cos(aim - state[key])); state[key] += k * Math.min(1, dt * 1.6); }
+    d.querySelector(".aim").setAttribute("transform", `rotate(${(aim * 180) / Math.PI})`);
+    d.querySelector(".now").setAttribute("transform", `rotate(${(state[key] * 180) / Math.PI})`);
+    requestAnimationFrame(ease);
+  })(last);
+  return d;
+}
+dial("wind", 112, "wind", "windAngle", true);
+const sunDial = dial("sun", 232, "sun", "sunAngle", false);
+
+// the party
+const party = [[11.3, 1.6, "#d33"], [12.6, 2.4, "#36c"], [11.2, 3.3, "#3a3"], [12.7, 0.8, "#c90"]];
+let geo = { left: 0, top: 0, sq: 40 };
+const grid = document.createElement("div"); grid.className = "grid"; grid.style.display = "none"; document.body.append(grid);
+const toks = party.map((p, i) => {
+  const el = document.createElement("div"); el.className = "tok"; el.style.background = p[2]; el.textContent = "ABCD"[i];
+  el.onpointerdown = (e) => {
+    el.setPointerCapture(e.pointerId);
+    el.onpointermove = (m) => { p[0] = (m.clientX - geo.left) / geo.sq; p[1] = (m.clientY - geo.top) / geo.sq; place(); };
+    el.onpointerup = () => (el.onpointermove = null);
+  };
+  document.body.append(el); return el;
+});
+function place() {
+  toks.forEach((el, i) => Object.assign(el.style, { left: `${geo.left + party[i][0] * geo.sq}px`, top: `${geo.top + party[i][1] * geo.sq}px`,
+    width: `${geo.sq * 0.8}px`, height: `${geo.sq * 0.8}px` }));
+  Object.assign(grid.style, { left: `${geo.left}px`, top: `${geo.top}px`, width: `${geo.sq * 34}px`, height: `${geo.sq * 19}px`, backgroundSize: `${geo.sq}px ${geo.sq}px` });
+}
+
+// stats: fps, GPU ms (where the browser has the timer), sizes; and the URL remembers the settings
+const stats = document.getElementById("stats");
+let info = "", gpu = null, fps = 0, n = 0, f0 = performance.now(), skyNow = null;
+(function tick(t) { n++; if (t - f0 >= 1000) { fps = Math.round((n * 1000) / (t - f0)); n = 0; f0 = t; draw(); } requestAnimationFrame(tick); })(f0);
+function draw() {
+  const e = skyNow ? `sun ${skyNow.night ? "moon" : Math.round(skyNow.elev) + "°"}` : "";
+  const g = gpu ? `GPU ${gpu.reduce((a, [, ms]) => a + ms, 0).toFixed(2)} ms/frame (${gpu.filter(([, ms]) => ms > 0).map(([n, ms]) => `${n} ${ms.toFixed(2)}`).join(" · ")})` : "GPU timer n/a";
+  stats.textContent = `${fps} fps · ${e}\n${g}\n${info}`;
+}
+const q = new URLSearchParams(location.hash.slice(1));
+for (const [k, v] of q) if (k in state) state[k] = typeof state[k] === "number" ? +v : typeof state[k] === "boolean" ? v === "1" : v;
+hourIn.value = state.hour; hourIn.oninput();
+
+window.lab = { state };   // for scripted screenshots
+await start(document.querySelector("canvas"), {
+  state,
+  party: () => party.map(([x, y]) => [x, y]),
+  layout: (g) => { geo = g; place(); },
+  info: ({ crowns, quads, targetsMB, texMB, W, H, lw, lh }) => {
+    info = `${crowns} crowns · ${quads} · 1 draw\nrender ${W}×${H} · light ${lw}×${lh}\ntextures ${texMB.toFixed(1)} MB · targets ${targetsMB.toFixed(1)} MB`; draw();
+  },
+  gpu: (ms) => { gpu = ms; },
+  sky: (s) => { skyNow = s; },
+});
+</script>

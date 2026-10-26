@@ -609,6 +609,68 @@ banks, bridge, boulders and walls; draw 2 dropped the road south of the bridge, 
 slice. Roof: 2 edits at 1K ($0.07); the first, sent at the crop's own aspect, came back 4 %
 stretched → the crop is now grown to an offered aspect first (`aspect_box`).
 
+## Light lab: unlit pictures, the light from the table (2026-10-26)
+
+Konrad's question: can the art be painted WITHOUT light (and without the ink rim that keeps sprites
+from merging into one forest), and shaders add sunlight, time of day, the blending of crowns into
+one canopy and an outline round it — so assets are reusable and the look is flexible, with the
+painted map kept as the fallback? Built and measured on the riverbend slice (Mac only, not yet on
+the box): `docs/mockups/outdoor/lit/lit.html` (board `battlemap-mockups`).
+
+**What the page compares** (buttons, the URL hash keeps them, e.g. `#look=all&hour=19.3`):
+
+| | choices |
+|---|---|
+| Look | *Painted* (today's slice, light painted in — the fallback) · *Lit trees* (painted ground, unlit crowns lit with the painting's noon sun) · *All lit* (unlit ground too: any time of day, any sun direction, lamps at dusk) |
+| Painting | *Light removed* (an edit of the lit painting: "same map, flat overcast light", $0.05 at 2K) · *Painted unlit* (`outdoor.py paint --albedo`: painted flat from the guide in one pass, $0.05) — both kept the layout |
+| Tree shape | *Dome* (computed: a dome over the outline + a bump per leaf clump) · *Model* (Depth Anything V2 Small on the sprite) · *Luma* (brighter = higher) |
+| Relief | the ground's height: *Layout* (water sinks, banks slope, walls 2 squares, boulders, bridge) and/or *Model* (Depth Anything's local relief, ±⅛ square) |
+| Pipeline | *Fast* (below) · *Deferred* (everything every frame; has the debug views height / shadow / crevices / normals and the canopy outline) |
+
+**How it works.** Every surface gets a height in squares: the ground from the layout + the depth
+model, every crown `top − thickness × (1 − its height picture)` (tiers stand 4.5–7.5 squares, shrubs
+0.4), the roof a gable over the footprint. Drawn into one height field (depth test: the highest
+surface wins), the GPU then marches each pixel a few steps toward the sun (soft shadows, longer
+when the sun is low) and compares it with its surroundings (crevices — the dark seams where crowns
+meet come out of this by themselves, no outline needed). Light = sky × crevice + sun × slope ×
+shadow; a low sun is scaled so flat ground stays bright and warm (the golden hour is contrast, not
+dimness), and slopes are capped at 1.45× so a low sun can't emboss every flower.
+
+**Fast pipeline — what makes it cheap.** Shadows, crevices and the lit ground change only when the
+sun, a token or the roof changes, so they run then (and at most 8× a second while the wind moves
+the crowns), at half resolution for the shadows. Every frame draws only: the lit ground (1 read),
+the water (lit in its own shader), and the crowns' leaf clumps, each pixel lit on the spot from
+ONE texel holding its slope and clump label (`crowns_n_<shape>.png`) + one read of the shadow
+buffer; clouds are computed per corner. Clumps are drawn as ≤8-corner hulls, not boxes (1.5×
+instead of 2.1× their pixels); the darkened still under the clumps is optional (*Under*).
+
+**Measured** (Mac M2 Max, Chromium/Metal, 1920 × 1080, each pass repeated 20× so the GPU runs at
+full clock — a nearly idle GPU makes everything look slow; the box will be far slower, so read
+the ratios): painted slice 0.52–0.61 ms a frame · fast all-lit 0.84 per frame (ground + water
+0.23, trees 0.61) + 0.3–0.45 for the light reruns ≈ **1.5× the painted slice per frame, ~2× with
+the light reruns** at 60 fps · deferred 1.6–2.9 ms. Memory: textures 35 MB (one slope picture
+would ship, not three), render targets 21–34 MB at 1080p.
+
+**Findings.**
+- Unlit crowns from Nano Banana work on the first try (10 of 10, $0.34; ige project
+  `unlit-vegetation`): the prompt asks for an *albedo sprite* under flat overcast light, no bright or
+  shadow side. They keep a dark ink rim; `prepare_lit.py` pulls the outline in 2 px and gives the
+  edge the leaves' colour, so crowns meet without a drawn border.
+- Depth Anything V2 Small (venv `~/.local/share/battlemap/depth-venv`, `lit/depth.py`, ~1 s a
+  picture on the Mac) reads leaf clumps on crowns very well — *Model* is the best tree shape; *Dome*
+  blends crowns into one softer canopy; *Luma* is flat. On the map it only knows local relief (it
+  thinks the top of a picture is far away): run in tiles, each high-passed, it finds walls, the
+  bridge, boulders, pebbles, roots and the log cleanly.
+- Unlit crowns may be turned any way and mirrored (the painted ones only ±15°, never mirrored), and
+  the same 10 sprites light correctly at 06:00, noon, the golden hour and by moonlight with lamps.
+- The sprite canopy is now one canopy *by lighting* (crevices and shadows across crowns), but it is
+  still built of discrete crowns; the painted canopy (`outdoor.py canopy`) stays the richer
+  picture — it can be lit by the same pipeline too if it is painted unlit.
+
+**Next:** run the fast path on the box (fps, and whether the light reruns hitch); the canopy edit
+pass with an unlit prompt + a depth pass, so the painted forest gets the table's light; one slope
+picture per shipped sprite set; the roof painted unlit (today it keeps its painted noon light).
+
 ## UX later (companion)
 
 Describe a map in words → layout spec → editable on the phone grid → "paint" → 1K drafts to
