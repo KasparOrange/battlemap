@@ -1,9 +1,11 @@
 <!--
   FogPanel — the Fog tab's panel (design.md "the tool tabs", parity §8), top to bottom:
   Tool (Brush · Room · Circle tiles, Reveal | Hide, brush size or circle radius), Players see
-  changes (Instantly | Preview first, the staged count), Whole map (Reveal all · Hide all, each
-  with an Undo notice), Look (folded: fog on the map, fog style, trim revealed edges). The
-  commit row (Discard · Apply n squares) is FogFooter.
+  changes (Instantly | Preview first, the staged count), Areas (the prepared reveal areas, one
+  tap each — areas/AreasSection), Whole map (Reveal all · Hide all, each with an Undo notice),
+  Look (folded: fog on the map, fog style, trim revealed edges). While an area is drawn or
+  edited the panel is that area's editor (areas/AreaEditor). The commit row (Discard · Apply n
+  squares, or Cancel · Save area) is FogFooter.
 
   Props:
   - ctx: GameContext — the game screen's context
@@ -24,6 +26,9 @@
   import { BRUSH_RADII, CIRCLE_MAX, CIRCLE_MIN } from './cells.ts';
   import { fogLocal, type FogTool, type FogValue } from './local.svelte.ts';
   import { resizeLiveCircle } from './tool.ts';
+  import AreaEditor from './areas/AreaEditor.svelte';
+  import AreasSection from './areas/AreasSection.svelte';
+  import { areasLocal } from './areas/local.svelte.ts';
 
   let { ctx }: TabPanelProps = $props();
 
@@ -101,6 +106,9 @@
   }
 </script>
 
+{#if areasLocal.draft}
+<AreaEditor {ctx} />
+{:else}
 <Section title="Tool" description={hint}>
   <Segmented
     label="Fog tool"
@@ -165,6 +173,8 @@
   {/if}
 </Section>
 
+<AreasSection {ctx} />
+
 <Section title="Whole map">
   <div class="two">
     <Button icon="reveal" label="Reveal all" onclick={() => wholeMap('reveal')} />
@@ -194,6 +204,7 @@
   <NumberStepper label="Trim revealed edges" value={trim} min={0} max={45} steps={[1, 2, 5, 10]} unit="%" onchange={setTrim} />
   <p class="note">Shows a little less at the rim of every revealed area — in % of a square.</p>
 </Section>
+{/if}
 
 <style>
   .staged {

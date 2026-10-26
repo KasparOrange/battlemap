@@ -1,6 +1,7 @@
 <!--
   FogFooter — the Fog tab's commit row while "Preview first" is on (parity FG-10): Discard
   (flat) and Apply n squares (primary, the panel's one gold fill). Debounced by the kit Button.
+  While a reveal area is drawn or edited it is that area's row instead (AreaFooter).
 
   Props:
   - ctx: GameContext — the game screen's context
@@ -12,6 +13,8 @@
   import Button from '../../../ui/Button.svelte';
   import { notify } from '../../../ui/notice.svelte.ts';
   import { fogLocal } from './local.svelte.ts';
+  import AreaFooter from './areas/AreaFooter.svelte';
+  import { areasLocal } from './areas/local.svelte.ts';
 
   let { ctx }: TabPanelProps = $props();
 
@@ -39,5 +42,9 @@
   }
 </script>
 
-<Button icon="close" label="Discard" variant="flat" disabled={staged === 0} onclick={discard} />
-<Button icon="check" label={staged === 1 ? 'Apply 1 square' : `Apply ${staged} squares`} variant="primary" block disabled={staged === 0} onclick={apply} />
+{#if areasLocal.draft}
+  <AreaFooter {ctx} />
+{:else}
+  <Button icon="close" label="Discard" variant="flat" disabled={staged === 0} onclick={discard} />
+  <Button icon="check" label={staged === 1 ? 'Apply 1 square' : `Apply ${staged} squares`} variant="primary" block disabled={staged === 0} onclick={apply} />
+{/if}
