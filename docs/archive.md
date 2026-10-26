@@ -6,6 +6,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
 
+### 26-10-26 06:30 - 907410 - forests that look like forests
+- Konrad (handed over from the outdoor slice): the crowns read as stacked puffballs — find top-down forests on published battle maps, work out strategies
+	- 12 references (itch.io, 2-Minute Tabletop, Forgotten Adventures, a Rügen drone photo) on board `battlemap-mapgen`, zone "Forest canopy references", with what makes them read as forest
+	- built the recommended strategy: the canopy painted as one layer — `outdoor.py canopy` (crown plan in tiers, flat crown shapes on the ground painting, one edit pass, cut by our shapes), `prepare.py` cuts it back into trees and leaf clumps; wind, trunks and the party ghost kept; `ai-art.md` "Forests: the canopy painted as one layer"
+	- layout `riverbend.json`: `edge_shrubs`, `trees` (the lone lime); `Ground` moved from `prepare.py` into `outdoor.py`; images $0.17
+
 ### 26-10-24 18:45 - abbf827c - TV Mode in a browser tab
 - Konrad: start battlemap in the browser, load a random map, set up an example game
 	- `tv_shell.dart` downloads through `httpDownloadWeb` (web: XHR, native: unchanged `httpDownload`) — the web TV's download was a stub returning null, so it could never load a map

@@ -11,6 +11,7 @@ Usage:
   tools/mapgen/outdoor.py guide layouts/riverbend.json             # guide + masks, free
   tools/mapgen/outdoor.py paint layouts/riverbend.json --size 2K --n 2 --why "…"
   tools/mapgen/outdoor.py roof  out/riverbend/<run> [out_1.jpg]    # roof sprites from the painting
+  tools/mapgen/outdoor.py canopy out/riverbend/<run> [--size 1K] [--plan]   # the forest canopy as one layer
 
 Layout (squares, origin top-left): `zones` (forest · meadow · … polygons), `river` (centre-line
 points [x, y, width, speed 0 calm…1 rapids, shallow 0 deep…1 ford]), `rocks` ([x, y, r] boulders
@@ -20,6 +21,7 @@ doors on a side, walls drawn like mapgen's, roof style). Run folders: tools/mapg
 
 import argparse
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -376,6 +378,224 @@ def aspect_box(size, want):
     return [round(x0 + dx), round(y0 + dy), round(x1 + dx), round(y1 + dy), best]
 
 
+# ---------------------------------------------------------------- canopy
+
+
+def inside(poly, x, y):
+    """Ray-casting point-in-polygon."""
+    c = False
+    for (x0, y0), (x1, y1) in zip(poly, poly[1:] + poly[:1]):
+        if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
+            c = not c
+    return c
+
+
+class Ground:
+    """What the layout says about a point: in which zone, how far from water, roads, buildings."""
+
+    def __init__(self, spec, pps=8):
+        self.spec, self.pps = spec, pps
+        cols, rows = spec["grid"]
+        water, _, _ = masks(spec, pps)
+        self.water = np.asarray(water)[..., 3] > 127
+        self.flow = np.asarray(water).astype(float) / 255
+        self.to_water = ndi.distance_transform_edt(~self.water) / pps   # 0 in water
+        self.in_water = ndi.distance_transform_edt(self.water) / pps    # 0 on land
+        self.paths = [(catmull(p["points"], 0.2)[:, :2], p["width"] / 2) for p in spec.get("paths", [])]
+        self.blocks = [b["rect"] for b in spec.get("buildings", []) + spec.get("props", []) + spec.get("bridges", [])]
+        self.cols, self.rows = cols, rows
+
+    def at(self, a, x, y):
+        X = int(np.clip(x * self.pps, 0, a.shape[1] - 1))
+        Y = int(np.clip(y * self.pps, 0, a.shape[0] - 1))
+        return a[Y, X]
+
+    def road(self, x, y):
+        """Distance from the nearest road or path's edge (negative on it)."""
+        return min([np.hypot(*(pts - [x, y]).T).min() - hw for pts, hw in self.paths] or [99])
+
+    def blocked(self, x, y, margin):
+        return any(bx - margin < x < bx + bw + margin and by - margin < y < by + bh + margin
+                   for bx, by, bw, bh in self.blocks)
+
+    def zone(self, x, y):
+        for z in reversed(self.spec.get("zones", [])):
+            if inside([tuple(p) for p in z["poly"]], x, y):
+                return z
+        return None
+
+
+# Crown diameters in squares per tier: a real canopy has a few big old crowns on top, younger
+# ones under and between them, and small ones filling the last gaps — never one size.
+TIERS = [("top", 5.2, 7.0, 0.72), ("mid", 3.4, 4.8, 0.55), ("fill", 2.2, 3.2, 0.42)]
+BANK_TIER = ("bank", 2.8, 4.0, 0.5)   # alders along the water: smaller, a closed band
+
+
+def canopy_plan(spec, seed=5):
+    """Where every tree of the forest zones stands and how big its crown is (squares):
+    [{x, y, d, tier, species}], the trees first placed (biggest) on top. Trunks keep off roads,
+    water and buildings; a crown may hang over the water by most of a square and a path's edge a little, as real
+    trees do (less over a path: it must stay readable). Placed by dart throwing per tier — top crowns apart, lower ones overlapping them —
+    then small crowns fill what is still open, so the canopy closes."""
+    import random
+    rng = random.Random(seed)
+    g = Ground(spec)
+    cols, rows = spec["grid"]
+    bank_trees = (spec.get("river") or {}).get("bank_trees") or {}
+    pick = lambda stand: rng.choices(list(stand), weights=list(stand.values()))[0] if stand else "oak"
+
+    def site(x, y, d):
+        z = g.zone(x, y)
+        if not z or z["kind"] != "forest":
+            return None
+        r = d / 2
+        if g.road(x, y) < 0.9 or g.road(x, y) - r < -0.4:
+            return None
+        tw = g.at(g.to_water, x, y)
+        if tw < 0.6 or tw - r < -0.9 or g.blocked(x, y, 1.0):
+            return None
+        return z
+
+    crowns = []
+
+    def fits(x, y, d, k):
+        return all(math.hypot(x - c["x"], y - c["y"]) > k * (d + c["d"]) / 2 for c in crowns)
+
+    for name, d0, d1, k in TIERS:
+        for _ in range(5000 if name != "top" else 2500):
+            x, y = rng.uniform(-1.5, cols + 1.5), rng.uniform(-1.5, rows + 1.5)
+            near_water = g.at(g.to_water, x, y) < 2.6 and bank_trees
+            if near_water and name == "top":
+                continue
+            lo, hi, kk = (BANK_TIER[1], BANK_TIER[2], BANK_TIER[3]) if near_water else (d0, d1, k)
+            d = rng.uniform(lo, hi)
+            z = site(x, y, d)
+            if z and fits(x, y, d, kk):
+                crowns.append({"x": round(x, 2), "y": round(y, 2), "d": round(d, 2),
+                               "tier": "bank" if near_water else name,
+                               "species": pick(bank_trees if near_water else z.get("stand"))})
+    # shrubs step the wood down to the open ground: hazel and elder in the gaps the crowns
+    # leave at the wood's edge, along paths and banks
+    shrubs = spec.get("edge_shrubs") or {}
+    for _ in range(4000 if shrubs else 0):
+        x, y = rng.uniform(-0.5, cols + 0.5), rng.uniform(-0.5, rows + 0.5)
+        if not any((g.zone(x + dx, y + dy) or {}).get("kind") == "forest" for dx, dy in ((0, 0), (0, -1.3), (0, 1.3), (1.3, 0), (-1.3, 0))):
+            continue
+        d = rng.uniform(1.4, 2.2)
+        if g.road(x, y) < d / 2 - 0.2 or g.at(g.to_water, x, y) < 0.5 or g.blocked(x, y, 0.8):
+            continue
+        if any(math.hypot(x - c["x"], y - c["y"]) < c["d"] / 2 + 0.15 for c in crowns if c["tier"] != "shrub"):
+            continue   # under a crown: no light for a shrub
+        if all(math.hypot(x - c["x"], y - c["y"]) > 0.8 * (d + c["d"]) / 2 for c in crowns if c["tier"] == "shrub"):
+            crowns.append({"x": round(x, 2), "y": round(y, 2), "d": round(d, 2), "tier": "shrub", "species": pick(shrubs)})
+    # single trees the layout names (an old lime on the meadow)
+    for t in spec.get("trees", []):
+        crowns.append({"x": t["x"], "y": t["y"], "d": t["d"], "tier": "lone", "species": t["species"]})
+    crowns.sort(key=lambda c: c["d"])   # small first: the biggest are drawn last, on top
+    return crowns
+
+
+def crown_outline(c, k, n=48):
+    """A crown's outline in picture px (k px per square): a disc with a few slow lobes, so
+    no two crowns are the same circle; the lobes are fixed by where the tree stands."""
+    import random
+    rng = random.Random(int(c["x"] * 1000 + c["y"] * 7))
+    waves = [(f, rng.uniform(0, 6.283), rng.uniform(0.02, 0.045)) for f in (3, 5, 7)]
+    r0 = c["d"] / 2 * k
+    return [(c["x"] * k + math.cos(t) * r0 * (1 + sum(a * math.sin(f * t + ph) for f, ph, a in waves)),
+             c["y"] * k + math.sin(t) * r0 * (1 + sum(a * math.sin(f * t + ph) for f, ph, a in waves)))
+            for t in (2 * math.pi * i / n for i in range(n))]
+
+
+def canopy_mask(crowns, size, cols, rows, grow=0.0):
+    """Soft union of the crown discs (radius + `grow` squares) at the size of a picture: L image."""
+    W, H = size
+    k = W / cols
+    img = Image.new("L", (W * 2, H * 2), 0)
+    d = ImageDraw.Draw(img)
+    for c in crowns:
+        d.polygon(crown_outline({**c, "d": c["d"] + 2 * grow}, k * 2), 255)
+    return img.resize(size, Image.BOX)
+
+
+CANOPY_GREEN = (58, 104, 44)
+SHRUB_GREEN = (88, 128, 52)   # shrubs a lighter green: the model paints them as their own low layer
+
+
+def canopy_guide(ground, crowns, cols, rows):
+    """The ground painting with every crown laid on as a flat green shape (a lobed disc; bigger
+    crowns over smaller, each throwing a soft shadow down-right onto what lies under it; shrubs
+    lighter): the edit pass paints each shape as that tree's crown."""
+    img = ground.convert("RGB").copy()
+    W, H = img.size
+    k = W / cols
+    import random
+    rng = random.Random(3)
+    for c in crowns:
+        r = c["d"] / 2 * k
+        cx, cy = c["x"] * k, c["y"] * k
+        poly = crown_outline(c, k)
+        sh = Image.new("L", img.size, 0)
+        ImageDraw.Draw(sh).polygon([(x + 0.18 * k, y + 0.25 * k) for x, y in poly], 120)
+        sh = sh.filter(ImageFilter.GaussianBlur(0.25 * k))
+        img = Image.composite(Image.new("RGB", img.size, (14, 26, 12)), img, sh)
+        v = rng.uniform(0.9, 1.1)
+        base = SHRUB_GREEN if c["tier"] == "shrub" else CANOPY_GREEN
+        ImageDraw.Draw(img).polygon(poly, tuple(int(min(255, ch * v)) for ch in base))
+    return img
+
+
+def canopy(spec, run, file=None, n=1, size="1K", tag=""):
+    """The forest canopy as one painting: an edit pass on the ground painting turns the flat
+    crown discs of `canopy_plan` into a closed summer canopy (same style and sun as the map);
+    cut out by our crown mask (+ a leafy fringe, only where the edit changed something) →
+    canopy[_tag]_<i>.png with alpha at the ground's size, and canopy.json (the trees)."""
+    meta = json.loads((run / "meta.json").read_text())
+    file = file or meta["results"][0]["file"]
+    ground = Image.open(run / file).convert("RGB")
+    cols, rows = spec["grid"]
+    crowns = canopy_plan(spec)
+    guide = canopy_guide(ground, crowns, cols, rows)
+    guide.save(run / "canopy_guide.jpg", quality=92)
+    stands = {}
+    for c in crowns:
+        stands.setdefault(c["species"], 0)
+        stands[c["species"]] += 1
+    trees = sorted(k for k in stands if k not in (spec.get("edge_shrubs") or {}))
+    shrubs = sorted(k for k in stands if k in (spec.get("edge_shrubs") or {}))
+    prompt = (HERE / "prompts" / "edit-canopy.txt").read_text().format(
+        setting=spec["setting"], species=", ".join(trees), shrubs=" and ".join(shrubs) or "hazel")
+    (run / "canopy_prompt.txt").write_text(prompt)
+    keep = canopy_mask(crowns, ground.size, cols, rows, grow=0.45)
+    core = canopy_mask(crowns, ground.size, cols, rows, grow=-0.1)
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(i):
+        t0 = time.time()
+        data, mime, usage = mapgen.generate(prompt, [guide], mapgen.pick_aspect(spec), size, None)
+        raw = run / f"canopy{'_' + tag if tag else ''}_{i + 1}_raw{'.png' if 'png' in mime else '.jpg'}"
+        raw.write_bytes(data)
+        edit = Image.open(raw).convert("RGB").resize(ground.size, Image.LANCZOS)
+        # keep what the edit made of the discs, plus a leafy fringe where it changed the ground
+        diff = np.abs(np.asarray(edit, float) - np.asarray(ground, float)).mean(-1)
+        changed = ndi.gaussian_filter((diff > 26).astype(float), 1.5)
+        a = np.maximum(np.asarray(core, float) / 255, np.clip(changed * 1.6, 0, 1) * np.asarray(keep, float) / 255)
+        a = ndi.gaussian_filter(a, 0.8)
+        sprite = edit.convert("RGBA")
+        sprite.putalpha(Image.fromarray((np.clip(a, 0, 1) * 255).astype(np.uint8)))
+        out = raw.name.replace("_raw", "").rsplit(".", 1)[0] + ".png"
+        sprite.save(run / out)
+        print(f"{run / out}  {time.time() - t0:.0f}s")
+        return {"file": out, "raw": raw.name, "seconds": round(time.time() - t0, 1), "usage": usage}
+
+    with ThreadPoolExecutor(min(n, 4)) as ex:
+        results = list(ex.map(one, range(n)))
+    (run / f"canopy{'_' + tag if tag else ''}.json").write_text(json.dumps({
+        "ground": file, "size": size, "model": mapgen.MODEL, "cost_usd": round(mapgen.PRICE[size] * n, 3),
+        "crowns": crowns, "results": results}, indent=1))
+    print(run / f"canopy{'_' + tag if tag else ''}.json", len(crowns), "crowns", stands)
+
+
 # ---------------------------------------------------------------- CLI
 
 
@@ -417,7 +637,21 @@ def main():
     p.add_argument("--thinking", choices=["minimal", "medium", "high"])
     r = sub.add_parser("roof"); r.add_argument("run"); r.add_argument("image", nargs="?")
     r.add_argument("--n", type=int, default=1)
+    c = sub.add_parser("canopy"); c.add_argument("run"); c.add_argument("image", nargs="?")
+    c.add_argument("--n", type=int, default=1); c.add_argument("--size", default="1K", choices=mapgen.PRICE)
+    c.add_argument("--tag", default=""); c.add_argument("--plan", action="store_true", help="only write the guide, no call")
     a = ap.parse_args()
+    if a.cmd == "canopy":
+        run = Path(a.run).resolve()
+        spec = mapgen.load_spec(json.loads((run / "meta.json").read_text())["layout"])
+        if a.plan:
+            ground = Image.open(run / (a.image or "out_1.jpg"))
+            crowns = canopy_plan(spec)
+            canopy_guide(ground, crowns, *spec["grid"]).save(run / "canopy_guide.jpg", quality=92)
+            print(run / "canopy_guide.jpg", len(crowns), "crowns")
+        else:
+            canopy(spec, run, a.image, a.n, a.size, a.tag)
+        return
     if a.cmd == "roof":
         run = Path(a.run).resolve()
         spec = mapgen.load_spec(json.loads((run / "meta.json").read_text())["layout"])

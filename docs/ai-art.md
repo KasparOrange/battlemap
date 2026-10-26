@@ -496,7 +496,7 @@ bridge; forest edges; a cottage whose roof lifts.
 | ground | `outdoor.py paint`: the guide repainted, **no crowns, bushes, tall reeds or roofs** | clouds' shadows drift over it | — |
 | water | masks from our layout (`water.png` flow + speed, `water2.png` shallow / bank / boulder wake) over the painted riverbed | flow map: two phases half a cycle apart, noise in the flow's own frame; calm = slow wobble + glints, rapids = fast white streaks + foam trailing the boulders, ford = caustic nets, banks = a lapping line | — |
 | plant shadows | a blurred silhouette per plant type, offset away from the sun | sway with their plant | with the canopy |
-| plants | one atlas of painted stills (`ige` project `summer-vegetation`), placed from our layout | one wind field for the map, in the vertex shader; crowns cut into their leaf clumps (each sways off its branch end), bushes / reeds / willow bend as meshes, lilies turn on the water | crowns go see-through around the party |
+| plants | the forest canopy: one edit pass on the ground painting, from our crown plan, cut back into trees; the rest: one atlas of painted stills (`ige` project `summer-vegetation`), placed from our layout | one wind field for the map, in the vertex shader; crowns cut into their leaf clumps (each sways off its branch end), bushes / reeds / willow bend as meshes, lilies turn on the water | crowns go see-through around the party |
 | roofs | an edit pass on the painted house's crop ("put its roof back on"), cut by our footprint + what the edit changed | — | fades when a party token is inside |
 
 **Answers to the design questions (2026-10-26):**
@@ -561,8 +561,43 @@ slice holds 93 plants as 3,121 quads in one draw call. The slice page shows the 
   `branch_pieces`), so every tree sways by the clump method; only bushes too small to cut,
   ferns, reeds and cattails bend as meshes.
 
-**Built:** `tools/mapgen/outdoor.py` (`guide`, `paint`, `roof`), `prompts/outdoor.txt`,
-`prompts/edit-roof.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
+**Forests: the canopy painted as one layer (2026-10-26).** Konrad on the sprite forest: "we really
+have to find a way to make these forests look more foresty." Twelve published top-down forests
+(board `battlemap-mapgen`, zone "Forest canopy references", study only) all share what ours lacked:
+one continuous canopy with the ground showing only on paths and in clearings; crowns that melt
+into each other with a **dark crevice** at the seam, never an outline; fine leaf clusters on big
+crowns (not 20–30 one-square puffballs); sun on the upper-left facets and near-black shade in the
+gaps; a real size spread; ragged edges that throw a dark band onto the path or bank. Sprite
+tweaks (tiers, spread, softer rims) can't fix the cauliflower look itself, so the forest now uses
+**the roof trick**:
+
+1. `outdoor.py canopy <run>` — `canopy_plan` places every crown from the layout (three tiers:
+   top 5.2–7 squares apart, mid 3.4–4.8 and fill 2.2–3.2 overlapping them; alders 2.8–4 along
+   the water from `river.bank_trees`; `edge_shrubs` in the light gaps at the wood's edge; the
+   layout's single `trees`, e.g. the old lime). Trunks keep off paths and water; a crown may hang
+   0.9 squares over the water and 0.4 over a path's edge, so paths stay readable.
+2. Each crown is laid on the ground painting as a flat lobed green shape with a soft shadow
+   (`canopy_guide.jpg`); one edit pass (`prompts/edit-canopy.txt`) paints them as a closed summer
+   canopy in the map's own style and sun. 2K: $0.05 per screen; 1K drafts $0.034.
+3. Cut out by our crown shapes (+ a leafy fringe only where the edit changed the ground) →
+   `canopy_<tag>_<n>.png`; `canopy.pick` names the draw the slice uses.
+4. `prepare.py` cuts it back into trees: every pixel to the biggest crown covering it, seams
+   moved onto the painting's dark crevices (watershed from each crown's core), each tree into
+   ~10 leaf clumps (the radial cutter); one type per tree, placed once at its trunk. The canopy
+   runs half a square past the map edge so a swaying crown never shows a cut; the shade under the
+   clumps is unfeathered so seams between trees stay closed (half resolution, it is blurred).
+
+Kept: the clump wind (same shader), a trunk under every tree, the ghost around the party; where the
+painting left a real gap, the floor, ferns and trunks show through. Measured on the slice: 394
+clump quads instead of 750 and faster in headless Chromium (16 vs 11 fps there; the page ran 60 on
+the Mac before); the atlas grew from 16.5 to 28 MB GPU because every tree's pixels are unique now
+(a 3 × 3 map would need per-window atlases, like the ground). Run `261026-001219-ground`: canopy
+drafts `d1` (1K × 2, round discs) and `v2` (2K × 2, lobed shapes + shrubs); `v2` #2 is on the
+slice. Open: Konrad's look on the TV; whether the bush sprites in the garden and the reeds should
+be painted the same way.
+
+**Built:** `tools/mapgen/outdoor.py` (`guide`, `paint`, `roof`, `canopy`), `prompts/outdoor.txt`,
+`prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,
 banks, bridge, boulders and walls; draw 2 dropped the road south of the bridge, draw 1 is the
 slice. Roof: 2 edits at 1K ($0.07); the first, sent at the crop's own aspect, came back 4 %

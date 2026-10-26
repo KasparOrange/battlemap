@@ -1,0 +1,22 @@
+This is a top-down battle map for a tabletop role-playing game, seen straight down from
+directly above ({setting}). The flat dark-green shapes laid over it mark where trees stand: each
+shape is the crown of one tree, at exactly that position and size. The smaller, lighter green
+shapes along the forest's edge are {shrubs} shrubs, lower than the trees, with the sun on them. Paint them as the closed canopy of
+an old summer forest seen straight down, in the same painting style, palette and sunlight (from
+the upper left) as the rest of the map.
+
+- One continuous canopy: crowns press against each other and merge; where two crowns meet there
+  is a deep, dark shaded crevice, never an outline. No outlines anywhere.
+- Where shapes overlap, the bigger crown stands higher and casts its shadow onto the lower one;
+  through the few gaps you look down into near-black shade.
+- Each crown is built of many small leaf clusters (each about the size of a hand-span on the
+  map, much smaller than the crown) that catch the sun on their upper-left side and fall into
+  shadow on the lower right. Big crowns are broad and irregular, never a pile of round balls.
+- Colour: rich summer greens of one family ({species}); variety comes from light and shade,
+  not from different hues.
+- The crowns' outer edges are ragged and leafy and may reach a little beyond their disc; the
+  canopy throws a soft dark shadow onto the ground to the lower right along its edge.
+- No trunks, branches or ground visible inside the canopy.
+
+Keep everything outside the green shapes exactly as it is: the river, its banks, the road, the
+paths, the bridge, the meadow and the cottage. Do not add text, a grid, people or animals.

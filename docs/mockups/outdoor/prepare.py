@@ -2,7 +2,7 @@
 """The riverbend slice's assets: ground, water masks, roofs, the vegetation atlas and where every
 plant stands (scene.json, read by riverbend.html).
 
-    python3 prepare.py [run folder]   # default: the picked riverbend ground run
+    python3 prepare.py [run folder] [canopy_<tag>.json[#n]]   # default: the riverbend run, its canopy.json
 
 Inputs: a tools/mapgen/outdoor.py run (out_1.jpg, water*.png, roof_*.png, roofs.json), the layout
 it was painted from, and veg/veg.json (the summer vegetation stills + clump label maps).
@@ -178,51 +178,96 @@ def build_types(veg, atlas):
     return types
 
 
+# ---------------------------------------------------------------- the painted canopy
+
+
+CANOPY_SPRITES = {"oak", "beech", "alder", "willow", "birch", "spruce", "linden"}   # painted with the canopy instead
+
+
+def canopy_trees(run, spec, atlas, which=None):
+    """The forest canopy painted as one layer (outdoor.py canopy) cut back into trees: every
+    canopy pixel goes to the crown on top of it (the biggest disc that covers it), the seams
+    then follow the painting's dark crevices (watershed from each crown's core); each tree is
+    cut into leaf clumps the same way (seeds on two rings, the watershed along the crevices),
+    so the canopy sways in the same wind as every other crown. Returns (types, plants): one
+    type per tree, placed once at its trunk."""
+    which, _, pick = (which or "canopy.json").partition("#")   # canopy_<tag>.json#2 = its second draw
+    meta = json.loads((run / which).read_text())
+    crowns = meta["crowns"]
+    img = Image.open(run / meta["results"][int(pick or 1) - 1]["file"]).convert("RGBA")
+    cols, rows = spec["grid"]
+    img = img.resize((cols * PPS, rows * PPS), Image.LANCZOS)
+    # the canopy runs on past the map's edge (edge pixels repeated half a square), so a crown
+    # swaying in from the edge never shows a cut
+    E = PPS // 2
+    A = np.pad(np.asarray(img), ((E, E), (E, E), (0, 0)), mode="edge")
+    alpha = A[..., 3].astype(float) / 255
+    lum = A[..., :3].astype(float) @ [0.3, 0.59, 0.11] / 255
+    H, W = alpha.shape
+    yy, xx = np.mgrid[0:H, 0:W]
+    on = alpha > 0.04
+    # who is on top where: biggest disc covering the pixel (they were laid small to big)
+    top = np.zeros((H, W), int)
+    near = np.full((H, W), np.inf)
+    for i, c in enumerate(crowns):
+        d = np.hypot(xx - c["x"] * PPS - E, yy - c["y"] * PPS - E) / (c["d"] / 2 * PPS)
+        top[d < 1] = i + 1
+        better = d < near
+        near[better] = d[better]
+        if i == 0:
+            nearest = np.ones((H, W), int)
+        nearest[better] = i + 1
+    markers = np.zeros((H, W), int)
+    for i, c in enumerate(crowns):
+        d = np.hypot(xx - c["x"] * PPS - E, yy - c["y"] * PPS - E) / (c["d"] / 2 * PPS)
+        markers[(top == i + 1) & (d < 0.5)] = i + 1
+    fill = np.where(on, lum, lum[on].mean())
+    crev = np.clip(0.55 - (ndi.gaussian_filter(fill, 2) - ndi.gaussian_filter(fill, PPS * 0.8)) * 3, 0, 1)
+    cost = (255 * crev).astype(np.uint8)
+    lab = flood(cost, markers, on)
+    lab[(lab == 0) & on] = nearest[(lab == 0) & on]   # islands the flood could not reach
+    lab[~on] = 0
+    types, plants = {}, []
+    for i, c in enumerate(crowns):
+        region = lab == i + 1
+        if region.sum() < PPS * PPS * 0.3:
+            continue
+        grown = ndi.binary_dilation(region, iterations=GROW)
+        ys, xs = np.nonzero(grown)
+        x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+        piece = A[y0:y1, x0:x1].copy()
+        solid = piece.copy()   # for the shade under the clumps: no feather, so seams between trees stay closed
+        solid[..., 3] = (solid[..., 3] * grown[y0:y1, x0:x1]).astype(np.uint8)
+        feather = np.clip(1 - ndi.distance_transform_edt(~region[y0:y1, x0:x1]) / (GROW + 1), 0, 1)
+        piece[..., 3] = (piece[..., 3] * np.minimum(1, feather * 1.6)).astype(np.uint8)
+        still = Image.fromarray(piece, "RGBA")
+        sub = Image.fromarray(np.where(region[y0:y1, x0:x1], 255, 0).astype(np.uint8))
+        masked = still.copy()
+        masked.putalpha(sub)
+        arms = int(np.clip(round(c["d"] * 1.7), 6, 13))
+        labels = np.asarray(branch_pieces(masked, arms)).copy()
+        labels[~region[y0:y1, x0:x1]] = 0
+        name = f"canopy{i}"
+        t = {"kind": "tree", "squares": max(still.size) / PPS, "w": still.width, "h": still.height,
+             "centre": [c["x"] * PPS + E - x0, c["y"] * PPS + E - y0], "crown": c["d"], "species": c["species"]}
+        sh = shadow_of(still)
+        t["shadow"] = atlas.add(sh.resize((max(1, round(sh.width * SHADOW_SCALE)), max(1, round(sh.height * SHADOW_SCALE))), Image.LANCZOS))
+        u = under_copy(Image.fromarray(solid, "RGBA"))   # blurred anyway: half the pixels
+        t["under"] = atlas.add(u.resize((max(1, u.width // 2), max(1, u.height // 2)), Image.LANCZOS))
+        t["clumps"] = []
+        for p in clump_pieces(still, Image.fromarray(labels.astype(np.uint8), "L")):
+            rect = atlas.add(p.pop("img"))
+            t["clumps"].append({"rect": rect, **p})
+        types[name] = t
+        plants.append({"type": name, "x": c["x"], "y": c["y"], "layer": "tree", "rot": 0, "scale": 1,
+                       "tint": [1, 1, 1], "crown": c["d"]})
+    return types, plants
+
+
 # ---------------------------------------------------------------- placement
 
 
-def inside(poly, x, y):
-    """Ray-casting point-in-polygon."""
-    c = False
-    for (x0, y0), (x1, y1) in zip(poly, poly[1:] + poly[:1]):
-        if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
-            c = not c
-    return c
-
-
-class Ground:
-    """What the layout says about a point: in which zone, how far from water, roads, buildings."""
-
-    def __init__(self, spec, pps=8):
-        self.spec, self.pps = spec, pps
-        cols, rows = spec["grid"]
-        water, water2, _ = outdoor.masks(spec, pps)
-        self.water = np.asarray(water)[..., 3] > 127
-        self.flow = np.asarray(water).astype(float) / 255
-        self.to_water = ndi.distance_transform_edt(~self.water) / pps   # 0 in water
-        self.in_water = ndi.distance_transform_edt(self.water) / pps    # 0 on land
-        self.paths = [(outdoor.catmull(p["points"], 0.2)[:, :2], p["width"] / 2) for p in spec.get("paths", [])]
-        self.blocks = [b["rect"] for b in spec.get("buildings", []) + spec.get("props", []) + spec.get("bridges", [])]
-        self.cols, self.rows = cols, rows
-
-    def at(self, a, x, y):
-        X = int(np.clip(x * self.pps, 0, a.shape[1] - 1))
-        Y = int(np.clip(y * self.pps, 0, a.shape[0] - 1))
-        return a[Y, X]
-
-    def road(self, x, y):
-        """Distance from the nearest road or path's edge (negative on it)."""
-        return min([np.hypot(*(pts - [x, y]).T).min() - hw for pts, hw in self.paths] or [99])
-
-    def blocked(self, x, y, margin):
-        return any(bx - margin < x < bx + bw + margin and by - margin < y < by + bh + margin
-                   for bx, by, bw, bh in self.blocks)
-
-    def zone(self, x, y):
-        for z in reversed(self.spec.get("zones", [])):
-            if inside([tuple(p) for p in z["poly"]], x, y):
-                return z
-        return None
+inside, Ground = outdoor.inside, outdoor.Ground   # where things may stand: shared with the canopy plan
 
 
 def poisson(n_try, ok, min_d, placed, bounds):
@@ -241,11 +286,13 @@ def poisson(n_try, ok, min_d, placed, bounds):
     return out
 
 
-def scatter(spec, types):
+def scatter(spec, types, canopy=None):
+    """Every plant of the slice; `canopy` = the trees cut from the painted canopy (then no
+    crown sprites are scattered in the forest zones)."""
     g = Ground(spec)
     cols, rows = spec["grid"]
     have = lambda *names: [n for n in names if n in types]
-    plants = []
+    plants = list(canopy or [])
 
     # trees: trunks off the roads (crowns may hang over them), out of the water, 0.6 sq from it
     def tree_ok(x, y):
@@ -260,18 +307,19 @@ def scatter(spec, types):
         return rng.choices(list(stand), weights=list(stand.values()))[0] if stand else None
 
     size = lambda name: types[name]["squares"] * 0.62 if name in types else 3
-    plants += poisson(4000, tree_ok, size, plants, (-1.5, -1.5, cols + 1.5, rows + 1.5))
-    # one old lime alone on the meadow
-    for name, x, y in (("linden", 27.5, 17.0),):
-        if name in types:
-            plants.append({"type": name, "x": x, "y": y, "layer": "tree"})
+    if not canopy:
+        plants += poisson(4000, tree_ok, size, plants, (-1.5, -1.5, cols + 1.5, rows + 1.5))
+    # the layout's single trees (an old lime on the meadow); painted with the canopy when there is one
+    for t in [] if canopy else spec.get("trees", []):
+        if t["species"] in types:
+            plants.append({"type": t["species"], "x": t["x"], "y": t["y"], "layer": "tree"})
 
     # a trunk with its roots under every tree (seen when the crown lifts)
     trunks = have("trunk1", "trunk2")
     for p in [p for p in plants if p["layer"] == "tree"]:
         if trunks:
             plants.append({"type": rng.choice(trunks), "x": p["x"], "y": p["y"], "layer": "trunk",
-                           "size": round(0.55 * types[p["type"]]["squares"] / 2.2 * rng.uniform(0.9, 1.1), 2),
+                           "size": round(0.55 * p.get("crown", types[p["type"]]["squares"]) / 2.2 * rng.uniform(0.9, 1.1), 2),
                            "rot": round(rng.uniform(0, 360), 1)})
 
     # ferns under the forest canopy (seen when it lifts)
@@ -290,6 +338,7 @@ def scatter(spec, types):
         edge = (not z or z["kind"] != "forest") and any(
             g.zone(x + dx, y + dy) and g.zone(x + dx, y + dy)["kind"] == "forest" for dx, dy in ((0, -1.4), (0, 1.4), (1.4, 0), (-1.4, 0)))
         garden = 0.5 < x < 1.6 and 12 < y < 18.5
+        edge = edge and not canopy   # the painted canopy brings its own shrubs at the wood's edge
         if bushes and (edge or garden) and g.road(x, y) > 0.5 and g.at(g.to_water, x, y) > 1.0 and not g.blocked(x, y, 0.6):
             if all(math.hypot(x - p["x"], y - p["y"]) > 2.2 for p in plants if p["layer"] == "bush"):
                 plants.append({"type": rng.choice(bushes), "x": round(x, 2), "y": round(y, 2), "layer": "bush"})
@@ -324,14 +373,14 @@ def scatter(spec, types):
         v = rng.uniform(0.96, 1.04)   # brightness only: hue shifts made the wood look patchy
         p["tint"] = [round(v, 3)] * 3
     order = {"lily": 0, "reed": 1, "trunk": 2, "low": 3, "bush": 4, "tree": 5}
-    plants.sort(key=lambda p: (order[p["layer"]], types[p["type"]]["squares"] * p["scale"] if p["layer"] == "tree" else p["y"]))
+    plants.sort(key=lambda p: (order[p["layer"]], p.get("crown", types[p["type"]]["squares"] * p["scale"]) if p["layer"] == "tree" else p["y"]))
     return plants
 
 
 # ---------------------------------------------------------------- main
 
 
-def main(run):
+def main(run, canopy_file=None):
     meta = json.loads((run / "meta.json").read_text())
     spec = mapgen.load_spec(meta["layout"])
     roofs = json.loads((run / "roofs.json").read_text()) if (run / "roofs.json").exists() else {"image": "out_1.jpg", "roofs": []}
@@ -344,10 +393,17 @@ def main(run):
         r["file"] = r["file"].replace(".png", ".webp")
     veg_index = HERE / "veg" / "veg.json"
     veg = json.loads(veg_index.read_text()) if veg_index.exists() else []
+    canopy_file = canopy_file or ((run / "canopy.pick").read_text().strip() if (run / "canopy.pick").exists() else None)
+    if canopy_file:
+        veg = [v for v in veg if v["name"] not in CANOPY_SPRITES]
     atlas = Atlas()
     types = build_types(veg, atlas)
+    canopy = None
+    if canopy_file:
+        ctypes, canopy = canopy_trees(run, spec, atlas, canopy_file)
+        types.update(ctypes)
     aw, ah = atlas.save(HERE / "atlas.webp") if veg else (0, 0)
-    plants = scatter(spec, types) if veg else []
+    plants = scatter(spec, types, canopy) if veg else []
     cols, rows = spec["grid"]
     scene = {"cols": cols, "rows": rows, "ground": "ground.webp", "groundPx": list(ground.size),
              "water": "water.png", "water2": "water2.png",
@@ -362,4 +418,4 @@ def main(run):
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else RUN)
+    main(Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else RUN, sys.argv[2] if len(sys.argv) > 2 else None)
