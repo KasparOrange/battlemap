@@ -394,6 +394,113 @@ players' view (`playersView`, S12) is built through it.
 - The spotlight is one per map; a second tap elsewhere moves it (by design: no order, no list).
 - Handouts are not sent to player phones yet (S12 shows the one on the TV).
 
+## v1 import (roadmap N2, W5-4)
+
+Brings the old app's games and maps over, so switching to v2 loses nothing ("Juri's dungeon",
+the three-map game). `bun v2/tools/import-v1.ts --server <v2 server>` joins v1's relay
+(`ws://72.62.88.197:9090`) as a **bot** — it sits next to the tablet, the v1 TV keeps running —
+asks the v1 TV for its library (`lib.requestList` → `lib.listing`: every game's full session
+JSON), fetches each map's file from the old dev server (shared library, the map's upload link)
+or, when neither has it, from the TV itself (it opens the game the way a tablet resume does and
+catches `vtt.downloadMap` / `vtt.mapStart…mapEnd`; a game it had to start is deleted again and
+the TV goes back to its library). Map files run through the companion's own import pipeline
+with sharp (`app/src/lib/import`), so an imported map is exactly what the tablet would make;
+picture maps keep v1's squares (its `rasterGrid` or counts), never a fresh detection — v1's
+fog cells are numbered on them. Each game is stored on the v2 server as a backup
+(`PUT /api/games/<id>`); a v2 TV lists it ("on the server") and opens it like its own. The maps
+also join v2's shared library (`--no-library` to skip).
+
+**Converted:** maps (`.dd2vtt` with walls, doors and lights; pictures; PDF pages as the v1 TV
+rendered them), fog (cells and on/off), open doors, tokens (HP and conditions dropped — digital
+mode), drawings (world px → squares), DM layers (pictures copied), ruler, template disc, the
+table window / whole-map / free camera and rotation, grid lines, game settings (fog look, trim,
+fade, effects, map lights, preview first, Draw/Measure tabs), several maps per game, the TV's
+calibration (`--calibrate <v2 table id>` sends picture width and overscan to a v2 TV).
+**Not converted, listed per game:** a map whose file is gone everywhere (dev server cleaned and
+TV offline), open doors or revealed squares outside the map, settings v2 doesn't have (HP bars,
+conditions, initiative, ambient sound, weather). Running it again overwrites the backups with
+v1's state (the server keeps ten versions).
+
+**How Konrad runs it** (the v1 box on, battlemap v1 in TV mode, at the friend's place is fine —
+it only needs the internet):
+
+```sh
+cd ~/code/battlemap/v2
+bun tools/import-v1.ts --server https://<v2 server> --save-listing ~/battlemap-v1-listing.json --dry-run   # see what converts
+bun tools/import-v1.ts --server https://<v2 server> [--calibrate table-xxxx]                            # do it
+```
+
+`--listing <file>` imports from a saved listing without the TV (maps then only from the dev
+server); `--no-tv-transfer` never makes the TV open a game; `--json` prints the report as JSON.
+Exit code 0 = everything stored, 1 = something left out (the report says what), 2 = could not
+start (TV not on the relay). Logs: MwLog app `battlemap-v2-import-v1`. Don't run it while
+someone plays on the v1 box: a map only the TV has makes the TV open that game.
+
+**Checked:** 16 tests (`tools/import-v1/`): every converter on v1-shaped JSON built from
+`lib/model/session.dart`'s `toJson` (fog, doors, tokens, strokes in world px, layers, disc,
+camera, settings, broken input), and a whole run against a real v2 test server with a fake v1
+relay (a `.dd2vtt` from the shared library, a picture behind an upload link, a picture only the
+TV has sent in chunks, a missing file, a DM layer, two games) — the stored games pass the
+shared schema. Not yet run against the real v1 box (offline at the friend's place).
+
+## PDF page picker (roadmap S16, W5-4)
+
+A PDF of several pages (a published adventure) first shows **"Which pages are maps?"**: every
+page as a small thumbnail (pdf.js at 240 px onto an OffscreenCanvas, one page at a time; the
+first 60 pages), page 1
+picked. The DM taps the maps; **Import N pages as N maps** takes them one after another through
+the usual squares dialog (its button says "Upload, next page (2 of 3)" until the last). Each page
+becomes its own map, named after the file, tidied, plus its page ("crypt_20x15.pdf" → "Crypt — page 3"), rendered at 4096 px like before
+(`renderPdfPage`). From the library the first page starts the game and the others join it
+(`game.new` carries `moreMaps`); from Settings ▸ Maps in this game the first goes on the table
+and the others join behind it. Stopping at page k keeps the maps already uploaded. A one-page
+PDF goes straight to the squares dialog as before.
+
+Code: `app/src/lib/import/pdf.ts` (`pdfPageThumbs`, `renderPdfPage`), `pipeline.ts`
+(`pdfPage` option), `companion/dialogs/PdfPagePicker.svelte` + `pdf-pages.ts`, `MapImport.svelte`
+(the page queue), `shared` `newGame` / `GameNew.moreMaps`.
+
+## Players' view (roadmap S12, W5-4)
+
+A read-only page for the players' phones or a second screen: **exactly what the TV shows** —
+revealed fog, open doors, placed tokens, drawings, ruler and disc, effects, spotlight, timer,
+the handout on show, the curtain — and nothing the DM keeps. Open it from the companion:
+Settings ▸ The table ▸ **Players' view** shows the link as a QR code (drawn by the server,
+`/api/qr.svg`) with Copy; or open `/app/?mode=players` and type the table code the TV home shows.
+The table is drawn by the TV's renderer (players' profile) in a box of the TV's shape as large
+as the screen allows: the state's viewport becomes the box, so the same 34 × 19 window shows,
+only smaller.
+
+**It never gets DM state** — enforced by the server, not by the page:
+- a new relay role **`players`**: the server delivers it only the TV's `players.*` messages
+  (also when the TV names it in `to`), and drops everything it sends except `players.request`
+  (`relay.undelivered` reason `not-allowed`);
+- the TV sends `players.state` made by `playersView` (`shared/src/model/players-view.ts`): only
+  the map on the table; no DM layers, hidden or unplaced tokens, fog preview, DM notes, reveal
+  areas, unfound secrets (found ones without their note), other handouts, scene presets or undo
+  history; an unfound secret door that is one of the map's own doors stays in only as its door
+  index (no name, note or square), so the players' page leaves that door undrawn like the TV;
+- the TV sends only while a players' page is in the room, at most every 150 ms after changes
+  (the last change always), and at once to a page that joins or asks (`app/src/lib/players/feed.ts`).
+- Known limit: the map's own files are public by hash (the TV loads them too); a player who
+  fetched the geometry file by hand could see a secret door's line.
+
+The legacy Bun server refuses the `players` role (it would route a player like a companion).
+LAN play works the same (the box's table server is the Rust server).
+
+## Installable companion (roadmap S23, W5-4)
+
+The web companion installs on a phone without the APK (an iPhone DM): `app/public/manifest.webmanifest`
+(name "battlemap companion", start `./?mode=companion`, standalone, the shell's icon motif — a
+3 × 3 grid with a gold token — as `icons/icon.svg`, 192 / 512 px PNGs, a maskable 512 and the
+Apple touch icon) and a small service worker `app/public/sw.js`: an offline shell only — the page
+network first (the last copy when offline), the build's hashed `/app/assets/*` cache first —
+and everything else (API, WebSocket, map files, logs, `build.json`, sounds, effects) straight to
+the network. Registered by `app/src/lib/pwa.ts` only for the companion (or the start screen) in
+a browser, production build — never in the Android shell, TV mode or the players' view.
+Old caches go when a new worker takes over. In Safari: Share ▸ Add to Home Screen; in Chrome:
+Install app.
+
 ## Checks
 
 - `bun test` in `shared/` (`test/scenes.test.ts`: curtain down / up, kept fields, changes behind
@@ -434,3 +541,15 @@ players' view (`playersView`, S12) is built through it.
   Back). e2e `e2e/feature-moments.e2e.ts`: spotlight dims the TV (measured), timer rings in the
   margin, paused from the chip and kept across a TV reload, a letter at the edge, turned, full
   screen, off with the TV's Back, a note from a long press. Shots: `docs/qa/w5-2-*.jpg`.
+- W5-4: `bun test tools/import-v1/` (16: the v1 converters and a whole import against a test
+  server with a fake v1 relay); `bun test` in `shared/` (`test/new-game.test.ts`: several maps,
+  `game.new` with `moreMaps`; `test/players-view.test.ts`: nothing DM-only survives — hidden and
+  unplaced tokens, DM layers, notes, areas, unfound secrets, notes of found ones; an unfound
+  secret door stays undrawn — the view is a valid state on the wire) and in `app/` (`import/pipeline.test.ts` the picked page,
+  `companion/dialogs/pdf-pages.test.ts`, `players/feed.test.ts`, `players/players-logic.test.ts`,
+  `pwa.test.ts`); `cargo test` (relay: players get `players.*` only and may only ask); contract
+  `server-contract/tests/players.contract.ts` (routing on Rust, refusal on Bun). e2e
+  `e2e/feature-players-pdf.e2e.ts`: the players' page holds only the players' copy, its middle is
+  as dark as the TV's under fog and as bright once revealed (screenshots measured), a sneaky
+  `sync.cmd` from a players socket changes nothing, no `sync.*` frame or DM name ever reaches its
+  socket; a 3-page PDF shows 3 thumbnails and pages 1 + 3 become a game with two maps.

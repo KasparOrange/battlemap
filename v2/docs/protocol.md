@@ -42,7 +42,11 @@ Why the protocol has this shape is in [`architecture.md`](architecture.md) "sync
 | command | inside `sync.cmd` / `sync.applied` | the reducer's commands (below) |
 
 **Routing** (the server's whole job): a companion's peer message goes to its room's TV; a TV's
-goes to every companion in the room, or to the one named in `to`. The server stamps `from` (the
+goes to every companion in the room, or to the one named in `to`. A **players' page** (role
+`players`, S12) is apart: a TV's `players.*` message goes to every players' page (or the one in
+`to`) and never to a companion; any other TV message never reaches a players' page, not even
+with its `to`; a players' page may send only `players.request` (anything else comes back as
+`relay.undelivered` `not-allowed`). The server stamps `from` (the
 sender's client id) and changes nothing else. A message it can't deliver comes back to the
 sender as `relay.undelivered`. Every peer message may carry the **envelope**: `sent` (sender's
 clock, ms — receivers log anything older than 1.5 s as late), `from`, `to`.
@@ -51,13 +55,13 @@ clock, ms — receivers log anything older than 1.5 s as late), `from`, `to`.
 
 | Message | Direction | Fields |
 |---|---|---|
-| `hello` | client → server, first frame | `protocol`, `role` (`tv` \| `companion`), `room` (the table's id), `client` (this page's id: new on every page load, kept across reconnects of that page — so `seq` can restart at 1 safely), `name`, `build` |
+| `hello` | client → server, first frame | `protocol`, `role` (`tv` \| `companion` \| `players`), `room` (the table's id), `client` (this page's id: new on every page load, kept across reconnects of that page — so `seq` can restart at 1 safely), `name`, `build` |
 | `welcome` | server → client | `client`, `room`, `role`, `peers` (`{client, role, name}[]`, everyone else), `build` (the app build the server serves, or null), `serverTime` |
 | `ping` / `pong` | client → server → client | `t` (client clock, echoed), `serverTime` |
 | `peer.joined` | server → room | `peer` |
 | `peer.left` | server → room | `client`, `role` |
 | `replaced` | server → the old TV, then closed | `by` (the new TV's name) — stop reconnecting until the DM taps "Take over" |
-| `relay.undelivered` | server → sender | `msgType`, `seq` (of a `sync.cmd`), `reason` (`no-tv`, `no-such-client`, `rate-limited`) — the companion drops the command from its prediction and says why ("Too fast — that change was dropped" for `rate-limited`) |
+| `relay.undelivered` | server → sender | `msgType`, `seq` (of a `sync.cmd`), `reason` (`no-tv`, `no-such-client`, `rate-limited`, `not-allowed`) — the companion drops the command from its prediction and says why ("Too fast — that change was dropped" for `rate-limited`) |
 | `server.build` | server → everyone | `build` — a newer app bundle is being served |
 | `server.error` | server → client, then closed | `reason` (bad hello, protocol mismatch) |
 
@@ -86,7 +90,7 @@ from the shell; a browser's guess; `?name=` overrides), "This TV" when empty.
 | `sync.request` | — | `sync.snapshot` to the sender |
 | `lib.list` | — | `lib.listing` to the sender |
 | `game.open` | `gameId` | saves the open game, loads this one (from the server's backup if not on the TV), new epoch → `sync.snapshot` to all |
-| `game.new` | `game: {id, name, createdAt, map, settings?}` | saves, starts the game (`newGame`), new epoch → `sync.snapshot` to all |
+| `game.new` | `game: {id, name, createdAt, map, moreMaps?, settings?}` | saves, starts the game (`newGame`; `moreMaps` — several PDF pages — join after `map`, which is on the table), new epoch → `sync.snapshot` to all |
 | `game.close` | — | saves, closes → snapshot with `game: null` |
 | `game.delete` | `gameId` | deletes it on the TV and in the backup → `lib.listing` |
 | `game.renameStored` | `gameId`, `name` | renames a stored game that isn't open → `lib.listing` |
@@ -124,6 +128,15 @@ protocol: *status* = `diag.status` → `diag.report`; *prepare* = `deploy.prepar
 {"type":"sync.cmd","seq":7,"sent":1761400001234,"cmd":{"type":"fog.apply","cells":[412,413,446],"value":"reveal","gesture":"p3k9a0b1c2d3"}}
 {"type":"sync.applied","from":"tv-7h2k","epoch":"e8f2k1","rev":41,"by":"k2v9x3m7qa1b","seq":7,"cmd":{"type":"fog.apply","cells":[412,413,446],"value":"reveal","gesture":"p3k9a0b1c2d3"}}
 ```
+
+### players' page ↔ TV (S12)
+
+| Message | Direction | Fields | Meaning |
+|---|---|---|---|
+| `players.request` | players' page → TV | — | send me the players' state (on joining, when the TV came back) |
+| `players.state` | TV → players' pages | `rev`, `state` (`RootState` made by `playersView`) | what the table shows and nothing DM-only: only the map on the table, no DM layers, hidden or unplaced tokens, fog preview, notes, reveal areas, unfound secrets (an unfound secret map door only as `{door, found: false}` with no name, note or square, so it stays undrawn), other handouts, scenes or history. Sent while a players' page is in the room, at most every 150 ms after changes, at once to one that joins or asks |
+
+The legacy Bun server refuses the `players` role (`server.error`); the Rust server routes it.
 
 ## The state (what a snapshot carries)
 
