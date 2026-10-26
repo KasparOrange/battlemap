@@ -12,6 +12,13 @@
  *
  * The view's callbacks go through the screen that holds it now (`handlers`), so a parked view
  * never calls into a closed screen.
+ *
+ * **Made ahead** (qa#26): the first WebGL context of a page costs the most — the GPU process
+ * starts its context, Pixi its systems, the first programs link; 1.4 s on a Mac's real GPU for
+ * a fresh browser, 9–13 s of blocked main thread under SwiftShader, where the context waits behind
+ * the page's software raster. So while the DM is still on the library, {@link ViewKeeper.prewarm}
+ * makes the view in a parked host during idle time; the first game screen adopts it like a
+ * reopen (~30 ms) instead of starting WebGL on the tap that opened the game.
  */
 import type { TableView, TableViewEvent } from '../../render/index.ts';
 
@@ -49,8 +56,9 @@ const documentDom: KeeperDom = {
     return el;
   },
   park(host) {
-    const w = host.clientWidth;
-    const h = host.clientHeight;
+    // a host that never showed (made ahead) takes the window's size, close to the map's
+    const w = host.clientWidth || globalThis.innerWidth || 1024;
+    const h = host.clientHeight || globalThis.innerHeight || 768;
     host.style.cssText = `position:fixed;left:-20000px;top:0;width:${w}px;height:${h}px;visibility:hidden;pointer-events:none;`;
     document.body.appendChild(host);
   },
@@ -73,30 +81,7 @@ export class ViewKeeper {
    * @returns the view, once it runs; rejects when it can't start (the next borrow tries again)
    */
   borrow(container: HTMLElement, handlers: ViewHandlers, create: ViewFactory): Promise<TableView> {
-    let kept = this.kept;
-    if (!kept) {
-      const host = this.dom.makeHost();
-      const proxy: ViewHandlers = {
-        onEvent: (e) => this.kept?.holder?.onEvent(e),
-        now: () => this.kept?.holder?.now() ?? Date.now(),
-      };
-      const made: Kept = { host, holder: null, view: null as unknown as Promise<TableView> };
-      made.view = (async () => {
-        const v = await create(host, proxy);
-        try {
-          await v.ready;
-        } catch (e) {
-          v.destroy();
-          throw e;
-        }
-        return v;
-      })();
-      made.view.catch(() => {
-        if (this.kept === made) this.kept = null;
-        host.remove();
-      });
-      this.kept = kept = made;
-    }
+    const kept = this.kept ?? this.make(create);
     kept.host.style.cssText = 'position:absolute;inset:0;';
     container.appendChild(kept.host);
     kept.holder = handlers;
@@ -113,6 +98,50 @@ export class ViewKeeper {
     if (!kept || kept.holder !== handlers) return;
     kept.holder = null;
     this.dom.park(kept.host);
+  }
+
+  /**
+   * Makes the view ahead, in a parked host, so the first game screen only adopts it. Does
+   * nothing when a view is kept (made or being made). A failed start is quiet here (the keeper
+   * forgets it; the game screen's own borrow tries again and tells the DM).
+   *
+   * @param create - makes the view
+   * @returns when the view runs (never rejects)
+   */
+  prewarm(create: ViewFactory): Promise<void> {
+    if (this.kept) return Promise.resolve();
+    const kept = this.make(create);
+    this.dom.park(kept.host);
+    return kept.view.then(
+      () => {},
+      () => {},
+    );
+  }
+
+  /** Starts a view in a fresh host and keeps it; a failed start is forgotten. */
+  private make(create: ViewFactory): Kept {
+    const host = this.dom.makeHost();
+    const proxy: ViewHandlers = {
+      onEvent: (e) => this.kept?.holder?.onEvent(e),
+      now: () => this.kept?.holder?.now() ?? Date.now(),
+    };
+    const made: Kept = { host, holder: null, view: null as unknown as Promise<TableView> };
+    made.view = (async () => {
+      const v = await create(host, proxy);
+      try {
+        await v.ready;
+      } catch (e) {
+        v.destroy();
+        throw e;
+      }
+      return v;
+    })();
+    made.view.catch(() => {
+      if (this.kept === made) this.kept = null;
+      host.remove();
+    });
+    this.kept = made;
+    return made;
   }
 
   /** Whether a view is kept (made or being made). */

@@ -80,4 +80,63 @@ describe('view keeper', () => {
     await Promise.resolve();
     expect(keeper.holding).toBe(false);
   });
+
+  test('made ahead (qa#26): parked, then adopted by the first screen; a second prewarm does nothing', async () => {
+    const { dom, el, parked } = fakeDom();
+    const keeper = new ViewKeeper(dom);
+    let made = 0;
+    let proxied: ViewHandlers | null = null;
+    const create = async (_host: HTMLElement, h: ViewHandlers) => {
+      made++;
+      proxied = h;
+      return { ready: Promise.resolve(), destroy() {} } as unknown as TableView;
+    };
+    await keeper.prewarm(create);
+    await keeper.prewarm(create);
+    expect(made).toBe(1);
+    expect(parked).toHaveLength(1);
+    proxied!.onEvent({ type: 'map-shown' } as never); // nobody holds it yet: dropped
+    const log: string[] = [];
+    const screen = el('screen') as unknown as HTMLElement & { kids: unknown[] };
+    await keeper.borrow(screen, handlers(log, 'a'), create);
+    expect(made).toBe(1);
+    expect(screen.kids).toHaveLength(1);
+    proxied!.onEvent({ type: 'map-shown' } as never);
+    expect(log).toEqual(['a:map-shown']);
+  });
+
+  test('a prewarm that fails is quiet and forgotten; the screen starts its own view', async () => {
+    const { dom, el } = fakeDom();
+    const keeper = new ViewKeeper(dom);
+    const failing = async () => ({ ready: Promise.reject(new Error('no WebGL')), destroy() {} }) as unknown as TableView;
+    await keeper.prewarm(failing); // resolves, doesn't throw
+    await Promise.resolve();
+    expect(keeper.holding).toBe(false);
+    let made = 0;
+    const ok = async () => {
+      made++;
+      return { ready: Promise.resolve(), destroy() {} } as unknown as TableView;
+    };
+    await keeper.borrow(el('s') as unknown as HTMLElement, handlers([], 'a'), ok);
+    expect(made).toBe(1);
+  });
+
+  test('a screen that opens while the view is still being made ahead adopts that start', async () => {
+    const { dom, el } = fakeDom();
+    const keeper = new ViewKeeper(dom);
+    let made = 0;
+    let finish!: () => void;
+    const create = async () => {
+      made++;
+      return { ready: new Promise<void>((r) => (finish = r)), destroy() {} } as unknown as TableView;
+    };
+    const warm = keeper.prewarm(create);
+    const screen = el('screen') as unknown as HTMLElement & { kids: unknown[] };
+    const borrowed = keeper.borrow(screen, handlers([], 'a'), create);
+    expect(screen.kids).toHaveLength(1);
+    await Promise.resolve();
+    finish();
+    await Promise.all([warm, borrowed]);
+    expect(made).toBe(1);
+  });
 });

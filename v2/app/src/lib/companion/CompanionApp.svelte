@@ -8,7 +8,8 @@
   (`frame/peer-message.ts`): `tv.status` — a card over the library while the TV opens something,
   but only a small status pill in a game, so it never covers the map that is already drawn
   (qa#23); `tv.notice` and `deploy.ready` — notices. A server that refuses this app (protocol
-  mismatch) or announces a new build gets a reload offer (rv#13).
+  mismatch) or announces a new build gets a reload offer (rv#13). On the library it makes the
+  map view ahead in idle time (`game/dm-view.ts`, qa#26), so opening a game doesn't start WebGL.
   No props: it reads the page's configuration (lib/config.ts, mode companion).
 -->
 <script lang="ts">
@@ -23,6 +24,7 @@
   import { notify } from '../ui/notice.svelte.ts';
   import { lastUsedTable, rememberUsedTable } from './frame/last-table.ts';
   import { peerMessage } from './frame/peer-message.ts';
+  import { prewarmDmView } from './game/dm-view.ts';
   import GameScreen from './game/GameScreen.svelte';
   import { appServices } from './library/app-services.ts';
   import LibraryScreen from './library/LibraryScreen.svelte';
@@ -112,6 +114,11 @@
 
   $effect(() => {
     log.info('companion', 'Route', { route });
+  });
+
+  // qa#26: the map view (WebGL) starts while the DM is on the library, not on the tap that opens a game
+  $effect(() => {
+    if (route === 'library') return prewarmDmView();
   });
 
   onMount(() => {

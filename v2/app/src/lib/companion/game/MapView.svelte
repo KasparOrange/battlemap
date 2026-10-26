@@ -18,7 +18,7 @@
   import { log } from '../../log.ts';
   import type { TableView, TableViewEvent } from '../../render/index.ts';
   import { viewKeeper, type ViewHandlers } from './view-keeper.ts';
-  import { files } from '../../storage/index.ts';
+  import { createDmView } from './dm-view.ts';
   import { wallsDebug } from '../session-settings/walls-debug.svelte.ts';
   import Spinner from '../../ui/Spinner.svelte';
   import { notify } from '../../ui/notice.svelte.ts';
@@ -119,17 +119,7 @@
     const t0 = performance.now();
     const fresh = !viewKeeper.holding;
     viewKeeper
-      .borrow(el, handlers, async (host, h) => {
-        const [{ createTableView }, { createEffectsRuntime }] = await Promise.all([import('../../render/index.ts'), import('../../effects/index.ts')]);
-        return createTableView(host, {
-          profile: 'dm',
-          log,
-          files: (ref) => files.get(ref),
-          effects: (slots, c) => createEffectsRuntime(slots, c),
-          now: h.now,
-          onEvent: h.onEvent,
-        });
-      })
+      .borrow(el, handlers, createDmView)
       .then(
         (v) => {
           if (gone) return;
