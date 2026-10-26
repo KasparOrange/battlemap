@@ -17,6 +17,8 @@
   - build: string — the app build
   - lan: LanJoinInfo | null — this TV's LAN table (`lanJoinInfo()`, updated by `onLanChange`), null when it doesn't host
   - thumbUrl: (ref) => string — a thumbnail's URL
+  - gameThumb?: (game) => string | undefined — the TV's own fog-honest picture of a game (`fog-thumbs.ts`);
+    when given, the server's unfogged thumbnail is never shown (undefined = a neutral card)
   - onContinue · onLibrary · onMeasure · onReload · onTakeOver: () => void
 -->
 <script lang="ts">
@@ -47,6 +49,8 @@
     lan: LanJoinInfo | null;
     /** A thumbnail's URL. */
     thumbUrl: (ref: FileRef) => string;
+    /** The TV's fog-honest picture of a game; when given, server thumbnails are not used. */
+    gameThumb?: ((game: GameSummary) => string | undefined) | undefined;
     /** Continue the last game. */
     onContinue: () => void;
     /** Open the library. */
@@ -59,7 +63,7 @@
     onTakeOver: () => void;
   }
 
-  let { last, loading, badge, tableName, tableId, build, lan, thumbUrl, onContinue, onLibrary, onMeasure, onReload, onTakeOver }: Props = $props();
+  let { last, loading, badge, tableName, tableId, build, lan, thumbUrl, gameThumb, onContinue, onLibrary, onMeasure, onReload, onTakeOver }: Props = $props();
 
   const qr = $derived(lan ? lanQrUrl(lan) : null);
 
@@ -91,7 +95,7 @@
   <div class="tiles">
     <div class="hero" bind:this={hero}>
       {#if last}
-        <Card title={last.name} {meta} prominent aspect="16 / 8" image={last.thumb ? thumbUrl(last.thumb) : undefined} onclick={onContinue}>
+        <Card title={last.name} {meta} prominent aspect="16 / 8" image={gameThumb ? gameThumb(last) : last.thumb ? thumbUrl(last.thumb) : undefined} onclick={onContinue}>
           {#snippet badges()}<Badge text="Continue" icon="play" tone="accent" />{/snippet}
         </Card>
       {:else}

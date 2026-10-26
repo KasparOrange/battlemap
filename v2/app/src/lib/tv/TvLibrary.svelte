@@ -10,6 +10,10 @@
   - mapsError: string | null — the shared library couldn't be read
   - openId: string | null — the game on the table (marked)
   - thumbUrl: (ref) => string — a thumbnail's URL
+  - gameThumb?: (game) => string | undefined — the TV's fog-honest picture of a game; when given, server
+    thumbnails of games are not used (undefined = a neutral card)
+  - mapPictures?: boolean — show the shared maps' pictures (default true; the TV passes false: a whole
+    unfogged map is a spoiler for the players)
   - onOpenGame: (id) => void · onStartMap: (entry) => void · onBack: () => void
 -->
 <script lang="ts">
@@ -35,6 +39,10 @@
     openId: string | null;
     /** A thumbnail's URL. */
     thumbUrl: (ref: FileRef) => string;
+    /** The TV's fog-honest picture of a game; when given, server thumbnails of games are not used. */
+    gameThumb?: ((game: GameSummary) => string | undefined) | undefined;
+    /** Show the shared maps' pictures (default true). */
+    mapPictures?: boolean;
     /** Open a game. */
     onOpenGame: (id: string) => void;
     /** Start a new game on a shared map. */
@@ -43,7 +51,7 @@
     onBack: () => void;
   }
 
-  let { games, maps, loading, mapsError, openId, thumbUrl, onOpenGame, onStartMap, onBack }: Props = $props();
+  let { games, maps, loading, mapsError, openId, thumbUrl, gameThumb, mapPictures = true, onOpenGame, onStartMap, onBack }: Props = $props();
 
   let shelf = $state('games');
   let grid: HTMLDivElement | undefined = $state();
@@ -115,7 +123,7 @@
             title={g.name}
             meta={`${g.activeMapName} · ${ago(g.savedAt, now)}${where(g)}`}
             selected={g.id === openId}
-            image={g.thumb ? thumbUrl(g.thumb) : undefined}
+            image={gameThumb ? gameThumb(g) : g.thumb ? thumbUrl(g.thumb) : undefined}
             onclick={() => onOpenGame(g.id)}
           >
             {#snippet badges()}{#if g.id === openId}<Badge text="On the table" tone="accent" />{/if}{/snippet}
@@ -131,7 +139,7 @@
           <Card
             title={m.map.name}
             meta={`${m.map.grid.cols} × ${m.map.grid.rows} squares`}
-            image={m.thumb ? thumbUrl(m.thumb) : undefined}
+            image={mapPictures && m.thumb ? thumbUrl(m.thumb) : undefined}
             onclick={() => onStartMap(m)}
           />
       {:else}

@@ -26,6 +26,9 @@
   import Icon from '../ui/Icon.svelte';
   import { focusFirst, installDpad, setSurface } from '../ui/spatial.ts';
   import { TvGames, type BusyStatus } from './games.ts';
+  import { FogThumbs } from './fog-thumbs.ts';
+  import { drawFogThumb } from './fog-thumbs-draw.ts';
+  import { realTimers } from './timers.ts';
   import { answerRequest } from './requests.ts';
   import { realPorts, requestPersistentStorage } from './seams.ts';
   import { backAction, backGate, CHROME_MS, homeBadge, OFFLINE_RED_MS, PROBLEM_MS, problemBadge, screenFor } from './screen.ts';
@@ -48,6 +51,12 @@
   // The session hands requests to `games` only once it is connected, after both exist.
   const session = new TvSession(config, (req, from) => void answerRequest(req, from, games, log));
   const games = new TvGames(ports, session.host, (msg) => session.send(msg), log, { build: config.build });
+  // S24: the TV's cards show games as the players last saw them (fog applied), made after saves.
+  const thumbs = new FogThumbs({ settings: ports.settings, files: (ref) => ports.files.get(ref), draw: drawFogThumb, log, timers: realTimers, now: Date.now });
+  games.onSaved = (g, reason) => thumbs.saved(g, reason);
+  let thumbUrls = $state<Record<string, string | undefined>>({});
+  thumbs.onChange = (id, url) => (thumbUrls = { ...thumbUrls, [id]: url });
+  const gameThumb = (g: GameSummary): string | undefined => thumbUrls[g.id];
   const sessionOnChange = session.host.onChange;
   session.host.onChange = (state, cmd) => {
     sessionOnChange?.(state, cmd);
@@ -101,6 +110,7 @@
     listing = true;
     try {
       listed = await games.listGames();
+      void thumbs.load(listed.map((g) => g.id));
       if (wanted === 'library') {
         try {
           shared = await ports.library.list();
@@ -327,6 +337,7 @@
       build={config.build}
       {lan}
       thumbUrl={ports.files.url}
+      {gameThumb}
       onContinue={() => last && openGame(last.id)}
       onLibrary={showLibrary}
       onMeasure={() => setPattern(true)}
@@ -341,6 +352,8 @@
       mapsError={sharedError}
       openId={game?.id ?? null}
       thumbUrl={ports.files.url}
+      {gameThumb}
+      mapPictures={false}
       onOpenGame={openGame}
       onStartMap={startMap}
       onBack={showHome}

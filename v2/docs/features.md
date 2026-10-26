@@ -115,6 +115,32 @@ store and the TV keeps exactly what the DM saw). Commands (no undo steps, not ma
 - Two companions saving scenes at once is fine (ids are made by the sender); a reorder sent while
   the other one added a scene is refused ("The scenes changed meanwhile") and the DM taps again.
 
+## Fog-honest thumbnails (roadmap S24)
+
+**What.** The TV's own screens no longer spoil the map: the home's Continue card and the
+library's game cards show each game **as the players last saw it** — the picture with its fog,
+cropped to what was revealed plus a square around it — or a neutral card while nothing is
+revealed. Shared maps in the TV library show no picture at all (a whole map is a spoiler). The
+tablet keeps the server's full thumbnails: the DM may see everything.
+
+**On the TV.** Made on the TV after the game saves, off the critical path: 3 s after an
+autosave and at most every 30 s per game while playing, 300 ms after a close or any other
+flush. Never while the curtain is down (the players saw the curtain, not what the DM prepared
+behind it) — the last thumbnail stays. The picture (its table copy when there is one) is decoded
+small, cropped, fogged with a one-pixel-per-square mask drawn smoothed, and stored per game in
+the TV's settings store as a 480 × 270 WebP data URL with a signature of map, picture and
+revealed squares, so an unchanged fog is never drawn twice. Each game waits on its own timer: a
+close of one game and the next game's autosave both get theirs. `tv/fog-thumbs.ts` (planning,
+pure), `tv/fog-thumbs-draw.ts` (canvas), `TvGames.onSaved`.
+
+**Protocol.** None: thumbnails stay on the TV.
+
+**Limits.**
+
+- A game not saved on this TV since this build shows a neutral card until its next save.
+- The thumbnail shows map and fog only (no tokens, drawings, doors); secret doors drawn into the
+  picture itself are in it as they are on the table.
+
 ## Checks
 
 - `bun test` in `shared/` (`test/scenes.test.ts`: curtain down / up, kept fields, changes behind
@@ -124,3 +150,5 @@ store and the TV keeps exactly what the DM saw). Commands (no undo steps, not ma
 - e2e `e2e/feature-curtain-scenes.e2e.ts`: lower → switch map → reveal → plate → lift (TV
   brightness measured on screenshots); two scenes saved and switched under the curtain and
   straight; delete with Undo. Shots: `docs/qa/w4f-*.jpg`.
+- Fog-honest thumbnails: `bun test src/lib/tv/fog-thumbs.test.ts` in `app/` (signature, revealed
+  box, crop, plan: keep / neutral / draw, curtain keeps, scheduling per game, throttle).

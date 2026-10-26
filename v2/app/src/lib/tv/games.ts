@@ -90,6 +90,8 @@ export class TvGames {
   onProblem: ((text: string) => void) | null = null;
   /** Called after the TV closed its game by itself or opened one (for the screens). */
   onGameChanged: ((game: Game | null) => void) | null = null;
+  /** Called after a game was written to the device (`reason`: autosave, close, …) — the fog thumbnails. */
+  onSaved: ((game: Game, reason: string) => void) | null = null;
 
   /** The game object last saved or loaded — `state.game !== savedGame` means unsaved changes. */
   private savedGame: Game | null = null;
@@ -245,6 +247,11 @@ export class TvGames {
     this.savedGame = game;
     this.log.info('tv', 'Game saved', { gameId: game.id, reason, ms: this.now() - t0 });
     this.backups.add(game);
+    try {
+      this.onSaved?.(game, reason);
+    } catch (e) {
+      this.log.warn('tv', 'After-save hook failed', { gameId: game.id, error: errorText(e) });
+    }
   }
 
   // ── backup (backup-queue.ts) ─────────────────────────────────────────────────────────────
