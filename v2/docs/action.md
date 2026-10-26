@@ -13,7 +13,7 @@ holds only what is open.
 | 2.5 | integration pass (test hook; e2e 44 pass / 8 fail; soak 2,900 commands converge; 25 bugs in `qa.md`) + code review (0 blockers, 8 major in `review.md`) + Rust server (contract 72/72, VPS port 5930 side by side) | done |
 | 3 | W3-A core/TV/harness · W3-B1 companion game + map tabs · W3-B2 companion frame, library, dialogs, settings, developer screen · W3-C renderer, effects runtime, import, torch glow · W3-D Effects tab · W3-E shell, embedded Rust server, LAN play, VPS switch to Rust | done (545 unit tests; LAN play on the emulators; production on the Rust server) |
 | 4 | W4-Q regression (unit 584/0, e2e Rust 77/79, soak 0 lost on Rust, LAN ok) · W4-C companion fixes, "Tables nearby" picker, import after confirm, looping previews, visual pass · W4-T TV LAN join code + QR, label turning, grid contrast · W4-F curtain + scene presets | done |
-| 5 | W5-P start-up + import speed, e2e on Rust by default, flaky flows · W5-1 fog-honest thumbnails, reveal animations, prepared reveal areas, secret doors + traps · W5-2 spotlight, TV timer, handouts, DM notes · W5-3 sound library + soundscapes · W5-4 v1 import, PDF page picker, players' view, installable companion | cut off by the usage limit 2026-10-25 21:45; restarted 2026-10-26 00:30 as five fresh helpers that read the old transcripts, judge the plan, commit the inherited work and finish |
+| 5 | W5-P start-up + import speed, e2e on Rust by default, flaky flows · W5-1 fog-honest thumbnails, reveal animations, prepared reveal areas, secret doors + traps · W5-2 spotlight, TV timer, handouts, DM notes · W5-3 sound library + soundscapes · W5-4 v1 import, PDF page picker, players' view, installable companion | done 2026-10-26 (cut off 21:45 by the usage limit, restarted, then API timeouts at 02:00; closed by four finishers): app 532 / shared 169 unit tests, contract Rust 81 · Bun 71, every W5 feature flow green |
 
 ## Next
 
@@ -25,6 +25,13 @@ holds only what is open.
 2. **Wave 4 — polish:** a UI pass against `design.md` with screenshots on tablet, phone and TV.
 3. **Wave 5 — roadmap** (`roadmap.md` tiers): curtain + scene presets, lighting from walls,
    ambient sound, LAN play through the shell, v1 games import.
+
+## Wave 5 leftovers
+
+- **qa#36 (major):** the rail's 11 tabs (Moments, Secrets, Sound added) push Undo/Redo off a 1280 × 800 tablet; 3 companion-game-flow tests fail on it.
+- TV save on page hide/reload doesn't await the storage write — the last ~2 s before a reload can be lost (`tv/games.ts`).
+- Sound: one-shot pads have no volume of their own.
+- Players' view and installable companion: never tried on real phones; sound, moments, secrets never on the real box.
 
 ## Wave 3 leftovers (collected from the reports, for wave 4)
 
