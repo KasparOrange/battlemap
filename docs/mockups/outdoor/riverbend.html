@@ -1,0 +1,61 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Outdoor slice — riverbend</title>
+<link rel="stylesheet" href="../effects/fx.css">
+<style>
+  canvas.stage { position: absolute; inset: 0; width: 100%; height: 100%; display: block }
+  .bar, .fps, .cap, .info { z-index: 2 }
+  .info { position: absolute; right: 10px; top: 38px; background: #000a; padding: 4px 8px; border-radius: 6px; font: 11px ui-monospace, monospace; color: #cfc }
+  .bar .arrow { display: inline-grid; place-items: center; width: 24px; height: 22px; background: #000a; border-radius: 6px; color: #fff; font-size: 15px }
+  .tok { position: absolute; z-index: 1; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 6px #000c; cursor: grab; touch-action: none;
+         display: grid; place-items: center; font: 700 12px system-ui; color: #fff; transform: translate(-50%, -50%) }
+  .grid { position: absolute; z-index: 1; pointer-events: none; background-image: linear-gradient(#0003 1px, transparent 1px), linear-gradient(90deg, #0003 1px, transparent 1px) }
+</style>
+<canvas class="stage"></canvas>
+<div class="bar" id="bar"></div><div class="fps" id="fps"></div><div class="info" id="info"></div>
+<div class="cap"><b>Outdoor slice — one TV screen (34 × 19 squares).</b> The ground is one painting without crowns or roofs; the
+  river, every plant and the roof are drawn on top. Water: a flow map from our layout over the painted riverbed — slow
+  and glinting where calm, white streaks and boiling foam in the rapids, light nets over the ford. Plants: one atlas,
+  one draw call, wind in the vertex shader (gusts roll across the map). Drag the party: crowns open around them, the
+  roof lifts when one steps inside.</div>
+<script type="module">
+import { fpsMeter, toggles } from "../effects/fx.js";
+import { start } from "./outdoor.js";
+
+fpsMeter(document.getElementById("fps"));
+const state = { Water: true, Plants: true, Clouds: true, Gusts: true, "Strong wind": false, "Lift canopy": true, "Lift roofs": true, Grid: false, windAngle: 0.35 };
+const bar = document.getElementById("bar");
+toggles(bar, ["Water", "Plants", "Clouds", "Gusts", "Strong wind", "Lift canopy", "Lift roofs", "Grid"], state, () => grid.style.display = state.Grid ? "block" : "none");
+const turn = document.createElement("button"); turn.textContent = "Turn wind";
+const arrow = document.createElement("span"); arrow.className = "arrow"; arrow.textContent = "→";
+const showArrow = () => (arrow.style.transform = `rotate(${state.windAngle}rad)`);
+turn.onclick = () => { state.windAngle += Math.PI / 2; showArrow(); }; showArrow();
+bar.append(turn, arrow);
+
+// the party: four tokens in squares, dragged on the page
+const party = [[11.3, 1.6, "#d33"], [12.6, 2.4, "#36c"], [11.2, 3.3, "#3a3"], [12.7, 0.8, "#c90"]];
+let geo = { left: 0, top: 0, sq: 40 };
+const grid = document.createElement("div"); grid.className = "grid"; grid.style.display = "none"; document.body.append(grid);
+const toks = party.map((p, i) => {
+  const el = document.createElement("div"); el.className = "tok"; el.style.background = p[2]; el.textContent = "ABCD"[i];
+  el.onpointerdown = (e) => {
+    el.setPointerCapture(e.pointerId);
+    el.onpointermove = (m) => { p[0] = (m.clientX - geo.left) / geo.sq; p[1] = (m.clientY - geo.top) / geo.sq; place(); };
+    el.onpointerup = () => (el.onpointermove = null);
+  };
+  document.body.append(el); return el;
+});
+function place() {
+  toks.forEach((el, i) => Object.assign(el.style, { left: `${geo.left + party[i][0] * geo.sq}px`, top: `${geo.top + party[i][1] * geo.sq}px`,
+    width: `${geo.sq * 0.8}px`, height: `${geo.sq * 0.8}px` }));
+  Object.assign(grid.style, { left: `${geo.left}px`, top: `${geo.top}px`, width: `${geo.sq * 34}px`, height: `${geo.sq * 19}px`, backgroundSize: `${geo.sq}px ${geo.sq}px` });
+}
+
+await start(document.querySelector("canvas"), {
+  state,
+  party: () => party.map(([x, y]) => [x, y]),
+  layout: (g) => { geo = g; place(); },
+  info: ({ plants, quads, gpuMB, types }) => (document.getElementById("info").textContent =
+    `${plants} plants · ${types} kinds · ${quads} quads in 1 draw · ${gpuMB.toFixed(1)} MB GPU`),
+});
+</script>

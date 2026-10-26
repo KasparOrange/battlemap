@@ -1,0 +1,35 @@
+Top-down orthographic battle map for a tabletop role-playing game, seen straight down
+from directly above: 90 degrees, no perspective, no isometric angle, no horizon.
+Setting: {setting}. Season: high summer, lush and green, a warm sunny day.
+
+Repaint the attached layout guide (the first image) as a finished map. The guide is exact:
+keep every area, the river and its banks, every road and path, the bridge, the boulders and
+every building wall at exactly the same position and size. Fill the whole frame edge to edge.
+
+This painting is the GROUND LAYER only. Trees, tree crowns, bushes, tall reeds and roofs are
+laid over it later as separate layers, so paint none of them: no trees or tree crowns
+anywhere, no bushes, no tall reeds, no roofs, no tree shadows. In the forest areas paint the
+open forest floor as it looks under a canopy: moss, leaf litter, small ferns, roots, fallen
+twigs, a few stones, all low and flat. Buildings are shown with their roof taken off: the
+tops of their walls seen from above and the interior with its floor and furniture visible.
+
+Guide legend (render every colour as a natural texture, never as a flat colour): {legend}
+
+Water: paint the river as clear water seen from straight above — darker and blue-green where
+it is deep, the riverbed of pebbles and sand showing through where it is shallow, white water
+and foam only in the rapids around the boulders. No sky reflections, no boats, no ripples
+painted on calm water.
+
+Scale: the map is {cols} squares wide and {rows} squares tall, each square is 5 feet.
+Size everything realistically for that scale: a doorway is one square wide, a cart road two.
+
+Style: {style}.
+Lighting: bright summer sun from the upper left (north-west), soft short shadows to the
+south-east, even exposure, no vignette, no cloud shadows, contrast high enough to read on a TV
+in a lit room. Keep open ground calm and readable: miniatures stand on this map.
+
+Do not draw a grid, grid lines, text, labels, numbers, a compass, a frame, a legend, people,
+animals or creatures.
+
+Details by area (columns counted from the left, rows from the top):
+{areas}

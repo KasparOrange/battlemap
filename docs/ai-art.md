@@ -480,6 +480,60 @@ session, layers over the relay as the `bot` role).
 If this becomes routine: a `mapgen.py edit` command (pad → label pass → magenta hole pass →
 composite → overlay), with the regions marked on the phone instead of measured by hand.
 
+## Outdoor maps: a painted ground, everything that moves drawn on top (2026-10-26)
+
+Goal (Konrad, 2026-10-26): one big summer outdoor map — a forest with a way through and a
+clearing, a river across the whole map with a bridge and a ford (a faster stretch that moves
+differently), a ruin with a way down into a dungeon, a small village — as convincing as possible
+with the cheapest animation. Built first as a **test slice of one TV screen** (34 × 19,
+`layouts/riverbend.json`): river with calm water, rapids between boulders and a pebble ford; a
+bridge; forest edges; a cottage whose roof lifts.
+
+**The layer cake** (bottom up; only the first is a painting of the whole map):
+
+| layer | made by | moves how | lifts |
+|---|---|---|---|
+| ground | `outdoor.py paint`: the guide repainted, **no crowns, bushes, tall reeds or roofs** | clouds' shadows drift over it | — |
+| water | masks from our layout (`water.png` flow + speed, `water2.png` shallow / bank / boulder wake) over the painted riverbed | flow map: two phases half a cycle apart, noise in the flow's own frame; calm = slow wobble + glints, rapids = fast white streaks + foam trailing the boulders, ford = caustic nets, banks = a lapping line | — |
+| plant shadows | a blurred silhouette per plant type, offset away from the sun | sway with their plant | with the canopy |
+| plants | one atlas of painted stills (`ige` project `summer-vegetation`), placed from our layout | one wind field for the map, in the vertex shader; crowns cut into their leaf clumps (each sways off its branch end), bushes / reeds / willow bend as meshes, lilies turn on the water | crowns go see-through around the party |
+| roofs | an edit pass on the painted house's crop ("put its roof back on"), cut by our footprint + what the edit changed | — | fades when a party token is inside |
+
+**Answers to the design questions (2026-10-26):**
+
+- **Paint without crowns and roofs, lay them on top — never paint them and ask the model to
+  remove them later.** Trees must be separate sprites anyway to move. A removed roof makes the
+  model invent an interior that matches neither our walls nor the fog data. The other way round
+  is exact by construction: the guide puts the walls (proven since run 2), the house is painted
+  roofless in place, and its roof is an edit of its own crop — the chimney landed on the painted
+  hearth on the first try. Cut by our footprint, it can't miss.
+- **Houses as separate assets + a "make it fit" pass: not for houses.** The guide already gives
+  full control of where every wall is, and painting in place blends for free; an asset pasted in
+  needs a blend pass whose rim is exactly where seams show. Assets are right for what repeats or
+  moves (trees, bushes, reeds, lilies, later rocks, boats, a well). For iterating one piece (the
+  ruin), re-paint just that region: crop + edit + paste back only that region — the doorway-fix
+  trick, about 3 cents a try.
+- **Our layout places every plant, not the painting.** So the table knows where each tree
+  stands (canopy lift today, later line of sight through a forest).
+- **Light is painted in (from the upper left), so a plant is turned at most ±15° and never
+  mirrored**; variety comes from size (±15 %) and a slight tint.
+- **The ground painting is the style reference for every asset** — one look.
+
+**Size of the big map: 4 × 4 TV screens = 136 × 76 squares (680 × 380 ft).** Painting it costs
+about a dollar a pass (a 4K master of the whole map at ~40 px per square for one coherent world,
+then 16 tiles at 2K, each refining its crop of the master with its guide crop, overlaps blended).
+What limits it is the TV: v2 decodes the whole map picture at ~56 px per square, which for
+136 × 76 is ≈ 7,600 × 4,300 px ≈ 130 MB — exactly its 128 MB map budget (`v2/docs/render.md`).
+The TV only ever shows one screen (8 MB), so v2 should load the window plus a ring around it;
+until then 3 × 3 (102 × 57) fits comfortably.
+
+**Built:** `tools/mapgen/outdoor.py` (`guide`, `paint`, `roof`), `prompts/outdoor.txt`,
+`prompts/edit-roof.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
+`prepare.py` → `scene.json`). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,
+banks, bridge, boulders and walls; draw 2 dropped the road south of the bridge, draw 1 is the
+slice. Roof: 2 edits at 1K ($0.07); the first, sent at the crop's own aspect, came back 4 %
+stretched → the crop is now grown to an offered aspect first (`aspect_box`).
+
 ## UX later (companion)
 
 Describe a map in words → layout spec → editable on the phone grid → "paint" → 1K drafts to
