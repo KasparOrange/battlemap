@@ -253,6 +253,91 @@ notice's Undo saves back), `secret.found {id, found, shot?}` (the shot plays on 
 
 ![The Secrets tab: a trap with its note, a found door](qa/w5-1-secrets.jpg)
 
+## Table moments (roadmap S6, S8, S10, S11)
+
+Built in wave 5 (W5-2). Four short things a DM does to the table mid-game.
+
+**What.**
+
+- **Spotlight** (S8): a tap on a mini lights a soft warm ring under it and dims the rest of the
+  table a little (None / A little / More); it follows the mini when it moves and goes out while
+  the mini is hidden. A tap on an empty square lights the square; a tap on what is lit puts it
+  out (also Put out in the panel). Shows whose turn it is or where the moonlight falls, with no
+  initiative list. The DM's own map dims at 45 % of that so it stays readable.
+- **Timer on the TV** (S11): a countdown ring at the middle of both long edges of the table, each
+  turned upright for its side, with the time in big digits. 30 s / 1 min / 5 min start with one
+  tap, a custom length in seconds with its button; Pause / Resume / Again, Reset, Off the TV. The
+  last 10 seconds pulse gently; at the end the rings flare gold (Glow), the table flashes warm
+  white once (Flash), or it just reads 0:00 (None).
+- **Handouts** (S10): pictures (uploaded with progress, or taken from this map's DM layers) and
+  short letters (≤ 2000 characters) kept per game (≤ 32). A tap on a row shows it **at the
+  table's edge** — a card against the chosen side, the map stays — the default, because a
+  full-screen card covers the minis' area (roadmap ⚠). The row's full-screen button shows it as
+  a **pause card** over a dark table. "Reads upright for the players at the" Bottom / Top / Left /
+  Right turns it (this tablet remembers; a showing handout turns at once). Back to the map: the
+  panel's button, the chip on the map, a second tap on the row, or the remote's Back on the TV.
+  Letters are parchment with the name in the story face; the TV sizes the text by its length.
+- **DM notes** (S6): pins with a short line ("Trap here", "DC 15 lock"), seen only on the tablet,
+  saved per map. A **long press on the map** opens the note dialog — in every tab but Draw and
+  Fog, where a still finger is the start of a stroke. In the Moments tab a pin is tapped to edit
+  and dragged to move (one undo step per drag); the list jumps the view to a pin; delete has Undo.
+
+**Where: one Moments tab, a mode right after Measure.** The spotlight needs its own finger on the
+map (Tokens' taps place and select tokens), so it is a mode; being on the tab is "the finger
+lights". The four live in one tab rather than four: each is a few controls, and four tabs would
+crowd the rail and the phone's tab bar; View and Game hold setup, not moments. The panel opens on
+the spotlight and the timer (the two that must be one tap away), then handouts, then notes. What
+must reach the DM from any tab sits outside the panel: the long press for notes, and two chips at
+the map's top-right beside the curtain while something runs — the timer's time (tap = pause /
+resume, hold = Reset, Off the TV) and "Handout" (tap = off the TV).
+
+**How.** `render/moments-layer.ts` draws all three on the table view (the maths in
+`moments-logic.ts`, tested): the spotlight is one sprite (ring, warm pool and the dim's soft edge
+from a small canvas texture, redrawn only when the dim changes) plus one graphics of four rects
+for the dim around it, under `fx.air`; it glides 260 ms to a new place and fades in / out on a
+lease, so a still spotlight costs no frames. Notes are a pin and a pill of bitmap text at screen
+size, upright whatever the camera's turn, built only on the DM's view. The countdown sits in
+screen space above `fx.screen`, under the curtain: while it runs the layer draws one frame per
+printed second (a timeout at the next whole second, no lease), a 30 fps lease only for the last
+ten seconds' pulse and the 1.6 s end effect. The TV's handout is a DOM card (`tv/TvHandout.svelte`,
+placement in `tv/handout.ts`) over the canvas, hidden while the curtain is down; its picture
+comes from the TV's file cache.
+
+**The clock.** A timer is plain data stamped with the **server's clock**: `startedAt` (null while
+stopped) and `remainingMs` then. The tablet makes each new value with `startTimer` /
+`pauseTimer` / `resetTimer` at `serverNow()`; every screen works out what is left with
+`timerLeft`, so a TV that reloads keeps counting, and a TV that reloads long after the end shows a
+quiet 0:00 instead of replaying the end effect. The TV's table view now ages one-shots by the
+server's clock too (it was the TV's own, rv#16).
+
+**Protocol** (protocol.md; all optional on the wire, read as none for games stored before them).
+`MapPlay.notes` (`{id, x, y, text}` in squares, ≤ 200) and `MapPlay.spotlight` (`{target: square
+{col, row} | token {tokenId}, dim}` or null); `Game.timer` (`{durationMs, remainingMs, startedAt,
+endEffect}` or null), `Game.handouts` (≤ 32 `{id, name, kind: picture | letter, file, text}`),
+`Game.handoutShown` (`{id, place: edge | full, side}` or null).
+
+| Command | Does |
+|---|---|
+| `spotlight.set {spotlight}` | on a square (clamped onto the map) or a token of the map, or null; map-scoped, no undo |
+| `timer.set {timer}` | the whole value or null; game-wide, no undo |
+| `handout.save {handout, index?}` | adds or replaces by id (a picture needs its file); refused past 32 |
+| `handout.remove {id}` | deletes; takes it off the TV if it shows |
+| `handout.show {shown}` | `{id, place, side}` or null; refused for a handout that is gone |
+| `note.set {note, gesture?}` | adds or replaces by id (clamped onto the map); one undo step per gesture; refused past 200 |
+| `note.remove {id}` | deletes, one undo step |
+
+DM notes never reach the players: `withoutDmNotes` drops them and their undo steps, and the
+players' view (`playersView`, S12) is built through it.
+
+**Limits.**
+
+- Notes stay with the map in this game; they don't travel with a shared-library map yet (S6's
+  "travelling with library maps").
+- An edge handout sits over the map's edge squares when the table window leaves no margin there.
+- The timer is one per game; two at once (a round and a ritual) would need a list.
+- The spotlight is one per map; a second tap elsewhere moves it (by design: no order, no list).
+- Handouts are not sent to player phones yet (S12 shows the one on the TV).
+
 ## Checks
 
 - `bun test` in `shared/` (`test/scenes.test.ts`: curtain down / up, kept fields, changes behind
@@ -278,3 +363,12 @@ notice's Undo saves back), `secret.found {id, found, shot?}` (the shot plays on 
   draws); `shared/test/secrets.test.ts` (found, sprung, the players' state never holds an unfound
   secret or a note). e2e "secrets": the TV unchanged while hidden, changed once found / sprung.
   Shots: `docs/qa/w5-1-secrets.jpg`, `docs/qa/w5-1-secrets-tv.jpg`.
+- Table moments: `bun test` in `shared/` (`test/moments.test.ts`: reducer cases, refusals, notes
+  undo per gesture, `withoutDmNotes`, timer maths across a reload) and in `app/`
+  (`render/moments.test.ts`: spotlight centre, the countdown face on the server clock, end effect
+  only right after the end, ring places, note hits; `companion/tabs/moments/moments.test.ts`: the
+  tap rule, the panel's words, the timer buttons, the once-a-second readout, the tool on a fake
+  screen, the long press; `companion/input/hold.test.ts`; `tv/handout.test.ts`; `tv/screen.test.ts`
+  Back). e2e `e2e/feature-moments.e2e.ts`: spotlight dims the TV (measured), timer rings in the
+  margin, paused from the chip and kept across a TV reload, a letter at the edge, turned, full
+  screen, off with the TV's Back, a note from a long press. Shots: `docs/qa/w5-2-*.jpg`.

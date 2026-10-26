@@ -296,12 +296,13 @@ export class MomentsLayer {
     const x1 = this.mapSize.cols * SQUARE + reach;
     const y1 = this.mapSize.rows * SQUARE + reach;
     const a = { x0: x - half, y0: y - half, x1: x + half, y1: y + half };
+    // one fill per rect (as table-mask.ts does): the four bands around the light
+    const fill = { color: 0x000000, alpha: this.spotDimValue };
     this.spotDim.clear()
-      .rect(x0, y0, x1 - x0, a.y0 - y0)
-      .rect(x0, a.y1, x1 - x0, y1 - a.y1)
-      .rect(x0, a.y0, a.x0 - x0, a.y1 - a.y0)
-      .rect(a.x1, a.y0, x1 - a.x1, a.y1 - a.y0)
-      .fill({ color: 0x000000, alpha: this.spotDimValue });
+      .rect(x0, y0, x1 - x0, a.y0 - y0).fill(fill)
+      .rect(x0, a.y1, x1 - x0, y1 - a.y1).fill(fill)
+      .rect(x0, a.y0, a.x0 - x0, a.y1 - a.y0).fill(fill)
+      .rect(a.x1, a.y0, x1 - a.x1, a.y1 - a.y0).fill(fill);
   }
 
   /** Starts the glide / fade lease when something moves. */

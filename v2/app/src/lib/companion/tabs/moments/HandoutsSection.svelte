@@ -18,6 +18,7 @@
   import { log } from '../../../log.ts';
   import Badge from '../../../ui/Badge.svelte';
   import Button from '../../../ui/Button.svelte';
+  import Icon from '../../../ui/Icon.svelte';
   import IconButton from '../../../ui/IconButton.svelte';
   import ListRow from '../../../ui/ListRow.svelte';
   import ProgressBar from '../../../ui/ProgressBar.svelte';
@@ -162,12 +163,11 @@
           <ListRow
             title={h.name}
             sub={handoutSub(h)}
-            icon={h.kind === 'letter' ? 'edit' : undefined}
             selected={on}
             onclick={() => tapRow(h)}
           >
             {#snippet leading()}
-              {#if h.kind === 'picture' && h.file}<img class="th" src={ctx.fileUrl(h.file)} alt="" />{/if}
+              {#if h.kind === 'picture' && h.file}<img class="th" src={ctx.fileUrl(h.file)} alt="" />{:else}<span class="th letter"><Icon name="edit" /></span>{/if}
             {/snippet}
             {#snippet trailing()}
               {#if on}<Badge text={shown?.place === 'full' ? 'Full screen' : 'On the TV'} tone="ok" />{/if}
@@ -248,6 +248,13 @@
     object-fit: cover;
     border-radius: var(--r-sm);
     box-shadow: inset 0 0 0 1px var(--hair);
+  }
+
+  .th.letter {
+    display: grid;
+    place-items: center;
+    background: var(--m2);
+    color: var(--accent-text);
   }
 
   .empty,

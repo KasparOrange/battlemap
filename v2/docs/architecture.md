@@ -294,6 +294,7 @@ us own the loop: `autoStart: false`, we call `render()` only when something chan
 | door markers | no (maps paint their doors); drawn door leaves above the fog only next to revealed squares | markers on every door |
 | secrets (S9) | only found ones: a found door's leaf, a mark's gold sigil, a sprung trap's red glyph — above the fog | every secret's glyph, hollow while hidden |
 | players' frame | — | the table window (with grip) |
+| table moments | spotlight ring + full dim; the countdown rings in screen space | spotlight at 45 % of the dim; DM note pins (never on the TV) |
 | table mask, calibration pattern | yes (screen space) | — |
 | camera | derived from the state (`tvCamera`) | the DM's own, independent |
 
@@ -308,12 +309,12 @@ us own the loop: `autoStart: false`, we call `render()` only when something chan
 | 5 | `tokens` | token-attached effects are children of their token |
 | 6 | `fog` | the mask shader |
 | 7 | `doors` | door leaves (players, AI maps) / door markers (DM); then the secrets (`secrets-layer.ts`: players see found doors, marks and sprung traps only — unfound secret doors lose their leaf; the DM sees every secret, hollow until found) |
-| 8 | `fx.air` | effects above the fog: weather, a spell burst the players must see |
+| 8 | `fx.air` | effects above the fog: weather, a spell burst the players must see; the spotlight sits right under it (`moments-layer.ts`) |
 | 9 | `dmLayers` | DM only |
-| 10 | `tools` | template disc, ruler, measure line |
+| 10 | `tools` | template disc, ruler, measure line; DM note pins right under it (DM only, `moments-layer.ts`) |
 | 11 | `dmFrame` | DM only: players' window, walls debug |
 | 12 | `tableMask` | screen space, TV only: masks the leftover around the window; calibration pattern |
-| 13 | `fx.screen` | screen space: flash, fade to black, vignette (screen shake moves the world container) |
+| 13 | `fx.screen` | screen space: flash, fade to black, vignette (screen shake moves the world container); the countdown rings right above it (TV only) |
 
 ## Table view maths
 
@@ -353,6 +354,9 @@ A *gesture* lasts from the first finger down to the last finger up.
   a token (Tokens tab), a door (tap), then the tab's tool.
 - Rates: a brush sends one `fog.apply` per square entered; window drags ≤ one per 80 ms; disc,
   ruler, measure and live stroke ≤ 30 per second. Everything predicts locally at full rate.
+- A **long press** (one finger still for 550 ms, `gesture.ts` `HOLD_MS`) pins a DM note in every
+  tab but Draw and Fog (there a still finger starts a stroke); taken, the gesture neither taps
+  nor drags. Not on the disc, the ruler or a door (features.md "table moments").
 - Desktop: wheel zooms at the cursor, right-drag or space-drag pans.
 - **One camera owner:** the DM camera lives in the table view (`lib/render/camera.ts`); the
   companion keeps no camera state or limits of its own. Gestures use the pure helpers there
@@ -363,7 +367,8 @@ A *gesture* lasts from the first finger down to the last finger up.
 **TV** (`lib/tv/`): no chrome while all is well. Every control is focusable and works with D-pad
 + OK (the start screen's buttons, "Take over", "Back to library"); the back arrow appears for 5 s
 after a remote key; the top-right badge only for problems (no companion, server unreachable,
-replaced, an error). Keys map to commands (`Back` → close the game) through the same host.
+replaced, an error). Keys map to commands (`Back` → close the game; first the curtain, then a
+handout on show) through the same host.
 
 ## Effects runtime — the hook points
 
