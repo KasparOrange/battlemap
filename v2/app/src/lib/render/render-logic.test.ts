@@ -319,6 +319,8 @@ function mapPlay(over: Partial<MapPlay> = {}): MapPlay {
     effects: [],
     view: { mode: 'table', col: null, row: null, quarterTurns: 0, free: null },
     showGrid: true,
+    notes: [],
+    spotlight: null,
     ...over,
   };
 }

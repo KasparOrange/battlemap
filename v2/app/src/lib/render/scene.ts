@@ -6,7 +6,8 @@
  * for a frame only when something on screen changed.
  *
  * Layer order, bottom to top: map · fx.ground · grid · drawings · tokens · fog · doors · fx.air
- * · dmLayers · tools · dmFrame — then in screen space: tableMask · fx.screen · curtain (TV only,
+ * · dmLayers · tools · dmFrame (the spotlight sits under fx.air, DM notes under tools —
+ * `moments-layer.ts`) — then in screen space: tableMask · fx.screen · countdown · curtain (TV only,
  * `curtain-layer.ts`: while it falls the scene keeps drawing the state from before).
  */
 import { Container } from 'pixi.js';
@@ -29,6 +30,7 @@ import { TokensLayer } from './tokens-layer.ts';
 import { edgeFacing } from './label-facing.ts';
 import { ToolsLayer } from './tools-layer.ts';
 import { CurtainLayer } from './curtain-layer.ts';
+import { MomentsLayer } from './moments-layer.ts';
 import type { CameraChange, EffectSlots, EffectsRuntime, FileLoader, TableViewOptions, ViewProfile } from './types.ts';
 
 /** The named containers of the scene, bottom to top. */
@@ -70,6 +72,8 @@ export class TableScene {
   private effects: EffectsRuntime | null = null;
   /** The TV's curtain (null on the DM's view). */
   private readonly curtain: CurtainLayer | null;
+  /** Table moments: spotlight, DM notes (DM view), countdown (TV) — `moments-layer.ts`. */
+  private moments: MomentsLayer | null = null;
   /** A state that came while the curtain fell, drawn once it is down. */
   private heldBack: RootState | null = null;
   /** Whether the map on the table is on screen (the curtain lifts once it is). */
@@ -157,6 +161,18 @@ export class TableScene {
       : null;
     this.frame = this.dm ? new PlayersFrame(this.slots.dmFrame) : null;
     this.mask = this.dm ? null : new TableMask(this.slots.tableMask);
+    this.moments = new MomentsLayer({
+      dm: this.dm,
+      world,
+      spotBelow: this.slots.fxAir,
+      notesBelow: this.slots.tools,
+      stage: r.app.stage,
+      timerAbove: this.slots.fxScreen,
+      scheduler: r.scheduler,
+      log: opts.log,
+      viewport: () => this.size,
+      now: () => (opts.now ?? Date.now)(),
+    });
     this.curtain = this.dm
       ? null
       : new CurtainLayer(r.app.stage, {
@@ -168,6 +184,7 @@ export class TableScene {
           r.world.visible = !covered;
           this.slots.tableMask.visible = !covered;
           this.slots.fxScreen.visible = !covered;
+          this.moments?.setCovered(covered);
         },
         release: () => {
           const held = this.heldBack;
@@ -289,6 +306,8 @@ export class TableScene {
       this.tools.set(null, null, null);
       this.dmLayers?.set(null, null);
     }
+
+    if (this.moments) changed = this.moments.set(game, map, newMap) || changed;
 
     // The first fit reads the host's size now: the ResizeObserver reports a settling layout only
     // after the next layout, and a fit on the older size looked half as wide on a phone (qa#8).
@@ -417,6 +436,7 @@ export class TableScene {
     this.tokens.setCameraRotation(t.rotation);
     if (!this.dm) this.tokens.setFacing(this.labelFacing(cam));
     this.tools.setCameraRotation(t.rotation);
+    this.moments?.setCamera(t.rotation, cam.zoom);
     this.frame?.set(this.frameRect, cam.zoom);
     const v = visibleSquares(cam, this.size);
     this.mapLayer.cull(v.x0, v.y0, v.x1, v.y1);
@@ -631,6 +651,7 @@ export class TableScene {
     this.cameraListeners.clear();
     this.effects?.destroy();
     this.curtain?.destroy();
+    this.moments?.destroy();
     this.mapLayer.destroy();
     this.grid.destroy();
     this.drawings.destroy();
