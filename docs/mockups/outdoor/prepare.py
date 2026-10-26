@@ -29,6 +29,11 @@ REPO = HERE.parents[2]
 sys.path.insert(0, str(REPO / "tools" / "mapgen"))
 import mapgen  # noqa: E402
 import outdoor  # noqa: E402
+import importlib.util  # noqa: E402
+_spec = importlib.util.spec_from_file_location("tree_prepare", HERE.parent / "effects" / "trees" / "prepare.py")
+_trees = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_trees)
+flood = _trees.flood  # the marker watershed of the tree demos
 
 RUN = REPO / "tools/mapgen/out/riverbend/261026-001219-ground"
 ATLAS_W = 2048
@@ -37,7 +42,8 @@ PPS = 64            # atlas pixels per square: the TV draws ~56 at 1080p, so mor
 SHADOW_SCALE = 0.5  # shadows are blurred anyway
 MESH = {"bush": 5, "reed": 8, "lily": 3, "fern": 5, "willow": 8, "spruce": 6, "tree": 6}
 
-rng = random.Random(7)
+rng = random.Random(7)          # placement
+seeds = random.Random(11)      # clump phases: separate, so recutting a tree never moves the forest
 
 
 # ---------------------------------------------------------------- atlas pieces
@@ -66,9 +72,42 @@ def clump_pieces(still, labels):
         rx, ry = (px - cx) / R, (py - cy) / R
         out.append({"img": Image.fromarray(piece, "RGBA"), "x0": int(x0), "y0": int(y0),
                     "pivot": [round(px - rx * R * 0.18, 1), round(py - ry * R * 0.18, 1)],
-                    "r": round(min(1, math.hypot(rx, ry)), 3), "seed": round(rng.random(), 3)})
+                    "r": round(min(1, math.hypot(rx, ry)), 3), "seed": round(seeds.random(), 3)})
     out.sort(key=lambda p: -p["r"])
     return out
+
+
+def branch_pieces(still, arms=10):
+    """Label map for crowns without round clumps (willow fronds, spruce tiers): seeds on two rings
+    of `arms` spokes (outer ring turned half a spoke), a watershed along the painting's dark gaps
+    between needles and fronds, a core disc. Same output as the clump cutter: one grey per piece."""
+    A = np.asarray(still, float) / 255
+    alpha, lum = A[..., 3], A[..., :3] @ [0.3, 0.59, 0.11]
+    H, W = alpha.shape
+    cy, cx = ndi.center_of_mass(alpha)
+    R = max(W, H) / 2
+    markers = np.zeros((H, W), int)
+    k = 1
+    yy, xx = np.mgrid[0:H, 0:W]
+    markers[np.hypot(xx - cx, yy - cy) < R * 0.14] = k
+    for ring, (rad, turn) in enumerate(((0.42, 0.0), (0.74, 0.5))):
+        for i in range(arms):
+            a = 2 * math.pi * (i + turn) / arms
+            x, y = int(cx + math.cos(a) * rad * R), int(cy + math.sin(a) * rad * R)
+            if 0 <= x < W and 0 <= y < H and alpha[y, x] > 0.5:
+                k += 1
+                markers[max(0, y - 2):y + 3, max(0, x - 2):x + 3] = k
+    fill = np.where(alpha > 0.5, lum, lum[alpha > 0.5].mean())
+    fine = ndi.gaussian_filter(fill, 1.5) - ndi.gaussian_filter(fill, max(W, H) / 13)
+    crevice = np.clip(0.5 - fine * 2.4, 0, 1)
+    near = np.minimum(ndi.distance_transform_edt(markers == 0) / (R * 0.45), 1)
+    cost = np.clip(255 * (0.45 * crevice + 0.55 * near), 0, 255).astype(np.uint8)
+    lab = flood(cost, markers, alpha > 0.05)
+    lab[alpha < 0.05] = 0
+    return Image.fromarray(lab.astype(np.uint8), "L")
+
+
+BRANCHY = {"willow", "spruce"}   # trees cut into radial branch pieces instead of leaf clumps
 
 
 def under_copy(still):
@@ -125,8 +164,9 @@ def build_types(veg, atlas):
         if kind != "trunk":
             sh = shadow_of(still)
             t["shadow"] = atlas.add(sh.resize((round(sh.width * SHADOW_SCALE), round(sh.height * SHADOW_SCALE)), Image.LANCZOS))
-        if v.get("parts"):
-            labels = Image.open(HERE / "veg" / v["parts"]["file"]).resize(size, Image.NEAREST)
+        if v.get("parts") or v["name"] in BRANCHY:
+            labels = (Image.open(HERE / "veg" / v["parts"]["file"]).resize(size, Image.NEAREST)
+                      if v.get("parts") else branch_pieces(still))
             t["under"] = atlas.add(under_copy(still))
             t["clumps"] = []
             for p in clump_pieces(still, labels):
@@ -214,14 +254,15 @@ def scatter(spec, types):
             return None
         if g.blocked(x, y, 1.0):
             return None
-        near_water = g.at(g.to_water, x, y) < 3.0
-        pool = have("alder", "alder", "willow", "beech") if near_water else have("oak", "beech", "linden", "birch", "oak", "beech", "spruce")
-        return rng.choice(pool) if pool else None
+        # a real wood is a stand of one or two species; alders line the water
+        stand = spec["river"].get("bank_trees") if g.at(g.to_water, x, y) < 2.5 else z.get("stand")
+        stand = {k: v for k, v in (stand or {"oak": 1}).items() if k in types}
+        return rng.choices(list(stand), weights=list(stand.values()))[0] if stand else None
 
     size = lambda name: types[name]["squares"] * 0.62 if name in types else 3
     plants += poisson(4000, tree_ok, size, plants, (-1.5, -1.5, cols + 1.5, rows + 1.5))
-    # one old lime on the meadow and a willow on the calm south bank
-    for name, x, y in (("linden", 27.5, 17.0), ("willow", 1.2, 10.4)):
+    # one old lime alone on the meadow
+    for name, x, y in (("linden", 27.5, 17.0),):
         if name in types:
             plants.append({"type": name, "x": x, "y": y, "layer": "tree"})
 
@@ -242,7 +283,7 @@ def scatter(spec, types):
                 plants.append({"type": "fern", "x": round(x, 2), "y": round(y, 2), "layer": "low"})
 
     # bushes along the forest edge and around the cottage garden
-    bushes = have("hazel", "elder", "bramble")
+    bushes = have("hazel", "hazel", "hazel", "elder", "elder", "bramble")
     for _ in range(1500):
         x, y = rng.uniform(0, cols), rng.uniform(0, rows)
         z = g.zone(x, y)
@@ -280,7 +321,8 @@ def scatter(spec, types):
     for p in plants:
         p.setdefault("rot", round(rng.uniform(-15, 15), 1))
         p["scale"] = p.pop("size", None) or round(rng.uniform(0.85, 1.15), 2)
-        p["tint"] = [round(rng.uniform(0.94, 1.06), 3), round(rng.uniform(0.95, 1.05), 3), round(rng.uniform(0.94, 1.04), 3)]
+        v = rng.uniform(0.96, 1.04)   # brightness only: hue shifts made the wood look patchy
+        p["tint"] = [round(v, 3)] * 3
     order = {"lily": 0, "reed": 1, "trunk": 2, "low": 3, "bush": 4, "tree": 5}
     plants.sort(key=lambda p: (order[p["layer"]], types[p["type"]]["squares"] * p["scale"] if p["layer"] == "tree" else p["y"]))
     return plants

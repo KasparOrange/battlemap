@@ -24,6 +24,12 @@
   .bar .arrow { display: inline-grid; place-items: center; width: 24px; height: 22px; background: #000a; border-radius: 6px; color: #fff; font-size: 15px }
   .tok { position: absolute; z-index: 1; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 6px #000c; cursor: grab; touch-action: none;
          display: grid; place-items: center; font: 700 12px system-ui; color: #fff; transform: translate(-50%, -50%) }
+  .dial { position: absolute; z-index: 2; right: 14px; bottom: 120px; width: 96px; height: 96px; touch-action: none; cursor: grab; user-select: none }
+  .dial svg { width: 100%; height: 100%; display: block }
+  .dial .ring { fill: #000b; stroke: #fff6; stroke-width: 2 }
+  .dial .aim { stroke: #f5c542; stroke-width: 3; stroke-dasharray: 4 4 }
+  .dial .now line { stroke: #fff; stroke-width: 4; stroke-linecap: round } .dial .now path { fill: #fff }
+  .dial span { position: absolute; left: 0; right: 0; bottom: -16px; text-align: center; font: 11px system-ui; color: #ccc }
   .grid { position: absolute; z-index: 1; pointer-events: none; background-image: linear-gradient(#0003 1px, transparent 1px), linear-gradient(90deg, #0003 1px, transparent 1px) }
 </style>
 <canvas class="stage"></canvas>
@@ -32,7 +38,7 @@
   river, every plant and the roof are drawn on top. Water: a flow map from our layout over the painted riverbed — slow
   and glinting where calm, white streaks and boiling foam in the rapids, light nets over the ford. Plants: one atlas,
   one draw call, wind in the vertex shader (gusts roll across the map). Drag the party: crowns open around them, the
-  roof lifts when one steps inside.</div>
+  roof lifts when one steps inside — or tap the roof. Hold the wind dial and drag to turn the wind.</div>
 <script type="module">
 // fpsMeter and toggles as in ../effects/fx.js (inlined: a board embed serves only this folder)
 function fpsMeter(el) {
@@ -49,14 +55,28 @@ function toggles(bar, names, state, onChange) {
 import { start } from "./outdoor.js";
 
 fpsMeter(document.getElementById("fps"));
-const state = { Water: true, Plants: true, Clouds: true, Gusts: true, "Strong wind": false, "Lift canopy": true, "Lift roofs": true, Grid: false, windAngle: 0.35 };
+const state = { Water: true, Plants: true, Clouds: true, Gusts: true, "Strong wind": false, "Canopy opens": true, "Roof opens": true, Grid: false, windAngle: 0.35 };
 const bar = document.getElementById("bar");
-toggles(bar, ["Water", "Plants", "Clouds", "Gusts", "Strong wind", "Lift canopy", "Lift roofs", "Grid"], state, () => grid.style.display = state.Grid ? "block" : "none");
-const turn = document.createElement("button"); turn.textContent = "Turn wind";
-const arrow = document.createElement("span"); arrow.className = "arrow"; arrow.textContent = "→";
-const showArrow = () => (arrow.style.transform = `rotate(${state.windAngle}rad)`);
-turn.onclick = () => { state.windAngle += Math.PI / 2; showArrow(); }; showArrow();
-bar.append(turn, arrow);
+toggles(bar, ["Water", "Plants", "Clouds", "Gusts", "Strong wind", "Canopy opens", "Roof opens", "Grid"], state, () => grid.style.display = state.Grid ? "block" : "none");
+
+// the wind dial: hold and drag around it; the wind itself turns after your hand (~1 s behind),
+// so you watch the trees, reeds and clouds swing round. Gold = where you point, white = the wind now.
+const dial = document.createElement("div"); dial.className = "dial"; dial.title = "Hold and drag to turn the wind";
+dial.innerHTML = `<svg viewBox="-50 -50 100 100"><circle r="46" class="ring"/><line class="aim" x1="0" y1="0" x2="38" y2="0"/><g class="now"><line x1="-30" y1="0" x2="30" y2="0"/><path d="M38 0 L24 -9 L24 9 Z"/></g></svg><span>wind</span>`;
+document.body.append(dial);
+let aim = state.windAngle;
+const turnTo = (e) => { const r = dial.getBoundingClientRect(); aim = Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2); };
+dial.onpointerdown = (e) => { dial.setPointerCapture(e.pointerId); turnTo(e); dial.onpointermove = turnTo; };
+dial.onpointerup = () => (dial.onpointermove = null);
+let lastT = performance.now();
+(function ease(now) {
+  const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  const d = Math.atan2(Math.sin(aim - state.windAngle), Math.cos(aim - state.windAngle));
+  state.windAngle += d * Math.min(1, dt * 1.6);
+  dial.querySelector(".aim").setAttribute("transform", `rotate(${(aim * 180) / Math.PI})`);
+  dial.querySelector(".now").setAttribute("transform", `rotate(${(state.windAngle * 180) / Math.PI})`);
+  requestAnimationFrame(ease);
+})(lastT);
 
 // the party: four tokens in squares, dragged on the page
 const party = [[11.3, 1.6, "#d33"], [12.6, 2.4, "#36c"], [11.2, 3.3, "#3a3"], [12.7, 0.8, "#c90"]];

@@ -539,6 +539,28 @@ square (the TV draws ~56), shadows at half that: 2048 × 2112, 16.5 MB GPU, 644 
 slice holds 93 plants as 3,121 quads in one draw call. The slice page shows the 2K ground
 (22 MB with mipmaps); a TV copy at 56 px per square is 8 MB.
 
+**Konrad's first look (2026-10-26) and the fixes:**
+
+- *The rapids didn't move, the calm water did; white rings round the boulders.* The rapids' noise
+  was sampled at a scale finer than a pixel, so the mipmaps greyed it out — nothing visible was
+  left to travel. Now small choppy blobs (~0.3 squares) ride the flow at 3 squares a second and
+  wobble the painted white water; boulder foam is flecks that thin down the wake, not a solid
+  collar. Measured on two frames 150 ms apart: the rapids now change ~10 grey levels a pixel,
+  the calm water ~6 (before: 1.8 vs 6). Rule: a long smooth streak moving along itself looks
+  still — fast water needs features shorter than their travel.
+- *Too many kinds of plants, it didn't look real.* A real wood is a stand: each forest zone now
+  has a stand mix in the layout (`"stand": {"beech": 0.75, "oak": 0.25}`), alders line the water
+  (`river.bank_trees`), one old lime stands alone on the meadow; no spruce, birch or willow mixed
+  in; hazel and elder at the edges; brightness-only tint (hue jitter made it patchy).
+- *Roof lifting did nothing.* It lifted only when a token stood inside; a tap on the roof now
+  opens or closes it too (in horizon the page must be entered first).
+- *Turning the wind jumped.* A dial you hold and drag; the wind follows your hand about a second
+  behind (gold = where you point, white = the wind now), and the clouds' drift is integrated so
+  a turn doesn't throw them across the map.
+- Willow and spruce are now cut too (radial branch pieces along their painted gaps,
+  `branch_pieces`), so every tree sways by the clump method; only bushes too small to cut,
+  ferns, reeds and cattails bend as meshes.
+
 **Built:** `tools/mapgen/outdoor.py` (`guide`, `paint`, `roof`), `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,

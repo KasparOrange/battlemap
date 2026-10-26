@@ -14,6 +14,7 @@ uniform vec2 u_dir;       // wind direction
 uniform float u_wind;     // base strength (0.45 breeze, 1 strong)
 uniform float u_gusts;    // 1 = gusts roll across the map
 uniform float u_cloud;    // cloud shadow strength 0..1
+uniform vec2 u_cloudOff;  // how far the clouds have drifted (integrated on the CPU)
 uniform sampler2D u_noise;
 float hash1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 float noise1(float x) { float i = floor(x), f = fract(x), u = f * f * (3.0 - 2.0 * f); return mix(hash1(i), hash1(i + 1.0), u); }
@@ -24,7 +25,7 @@ float windAt(vec2 sq) {
 }
 // big soft cloud shadows drifting with the wind
 float cloud(vec2 sq) {
-  vec2 p = sq / 30.0 - u_dir * u_t * 0.018;
+  vec2 p = sq / 30.0 - u_cloudOff;
   float n = texture(u_noise, p).r * 0.65 + texture(u_noise, p * 2.7 + 0.31).r * 0.35;
   return 1.0 - u_cloud * 0.30 * smoothstep(0.50, 0.70, n);
 }
@@ -45,6 +46,8 @@ void main() { o = vec4(texture(u_ground, v_sq / u_map).rgb * cloud(v_sq), 1.0); 
 const WATER_FS = HEAD + `
 uniform sampler2D u_ground, u_flow, u_flow2; uniform float u_move;
 in vec2 v_sq; out vec4 o;
+// noise in the flow's frame; one tile of the 256² noise = s squares (channel R ~3 blobs a tile,
+// G ~7, B ~16, A ~4 ridges) — too small an s and the mipmaps grey it out: nothing visibly moves
 vec4 tap(vec2 q, vec2 dir, vec2 stretch, float s) {
   vec2 perp = vec2(-dir.y, dir.x);
   return texture(u_noise, vec2(dot(q, dir), dot(q, perp)) * stretch / s);
@@ -56,23 +59,27 @@ void main() {
   vec2 dir = normalize(f.rg * 2.0 - 1.0 + 1e-4); float speed = f.b;
   vec4 f2 = texture(u_flow2, uv); float shallow = f2.r, bank = f2.g, rockfoam = f2.b;
   float t = u_t * u_move;
-  float vel = mix(0.30, 3.2, speed * speed);          // squares a second
-  float cyc = mix(2.2, 0.9, speed);
+  float vel = mix(0.30, 3.0, speed);                  // squares a second
+  float cyc = mix(2.2, 1.3, speed);
   float ph0 = fract(t / cyc), ph1 = fract(t / cyc + 0.5), w1 = abs(ph0 * 2.0 - 1.0);
   vec2 q0 = v_sq - dir * vel * ph0 * cyc, q1 = v_sq - dir * vel * ph1 * cyc + 0.37;
   // ripples: distortion of the bed + glints
   vec4 r0 = tap(q0, dir, vec2(0.7, 1.4), 2.6), r1 = tap(q1, dir, vec2(0.7, 1.4), 2.6);
   vec4 r = mix(r0, r1, w1);
   float still = smoothstep(0.0, 0.35, bank);
-  vec2 disp = (r.gb - 0.5) * (0.05 + 0.10 * speed) * still * (1.0 - 0.5 * shallow);
+  // the painted bed (and its painted white water) wobbles — hard and fast in the rapids
+  vec4 c0 = tap(q0, dir, vec2(0.8, 1.4), 5.0), c1 = tap(q1, dir, vec2(0.8, 1.4), 5.0);   // B blobs ~0.3 sq
+  vec4 chop = mix(c0, c1, w1);                        // small choppy blobs: their travel is what you see move
+  vec2 disp = ((r.gb - 0.5) * (0.05 + 0.06 * speed) + (chop.rg - 0.5) * 0.16 * speed) * still * (1.0 - 0.5 * shallow);
   vec3 bed = texture(u_ground, (v_sq + disp) / u_map).rgb;
   // streaks along the flow (rapids)
-  vec4 s0 = tap(q0, dir, vec2(0.22, 1.9), 1.0), s1 = tap(q1, dir, vec2(0.22, 1.9), 1.0);
+  vec4 s0 = tap(q0, dir, vec2(0.22, 1.9), 6.0), s1 = tap(q1, dir, vec2(0.22, 1.9), 6.0);
   float streak = mix(s0.b, s1.b, w1);
-  float foam = smoothstep(0.52, 0.80, streak) * smoothstep(0.35, 0.9, speed);
-  // foam in the boulders' wakes, carried downstream and breaking up as it goes
-  float boil = mix(tap(q0, dir, vec2(0.45, 1.3), 0.7).g, tap(q1, dir, vec2(0.45, 1.3), 0.7).g, w1);
-  foam = max(foam, 0.85 * smoothstep(0.42, 0.8, rockfoam * (0.25 + boil * 0.95)));
+  float fast = smoothstep(0.3, 0.9, speed);
+  // white water: broken flecks riding the chop (never long smooth streaks — those hide their motion)
+  float foam = fast * max(smoothstep(0.60, 0.80, chop.b) * 0.9, smoothstep(0.62, 0.82, streak) * smoothstep(0.5, 0.8, chop.g) * 0.7);
+  // boulders: flecks thick at the rock, thinning down the wake — always moving, never a solid ring
+  foam = max(foam, smoothstep(0.35, 0.75, chop.a * 0.6 + chop.b * 0.4) * smoothstep(0.05, 0.6, rockfoam) * 0.95);
   // caustics in the shallows: a ridge net drifting slowly
   float cn = mix(tap(q0, dir, vec2(1.0), 1.4).a, tap(q1, dir, vec2(1.0), 1.4).a, w1);
   float caus = pow(1.0 - abs(cn * 2.0 - 1.0), 10.0) * shallow * (1.0 - speed);
@@ -82,7 +89,8 @@ void main() {
   float lap = smoothstep(0.10, 0.0, abs(bank - 0.06 - 0.03 * sin(t * 1.3 + dot(v_sq, vec2(1.7, 2.3))))) * (1.0 - speed);
   vec3 col = bed * (1.0 + 0.28 * caus);
   col += vec3(0.9, 0.95, 1.0) * crest * 0.09 * (1.0 - 0.6 * speed);
-  col = mix(col, vec3(0.93, 0.97, 1.0), clamp(foam * 0.9 + lap * 0.22, 0.0, 1.0));
+  col *= 1.0 - 0.12 * fast * (chop.r - 0.5);         // troughs and crests darken / lighten the run
+  col = mix(col, vec3(0.93, 0.97, 1.0), clamp(foam * 0.85 + lap * 0.22, 0.0, 1.0));
   col *= cloud(v_sq);
   o = vec4(col * mask, mask);
 }`;
@@ -302,14 +310,15 @@ export async function start(canvas, ui) {
   ui.info({ plants: scene.plants.length, quads: nVerts / 6, gpuMB: gpu / 1048576, types: Object.keys(scene.types).length });
 
   const { cols, rows } = scene;
-  let view = [1, 1, 0, 0], W = 0, H = 0;
+  let view = [1, 1, 0, 0], W = 0, H = 0, geo = { left: 0, top: 0, sq: 1 };
   function fit() {
     const dpr = Math.min(devicePixelRatio || 1, 2), w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
     if (w === W && h === H) return;
     W = canvas.width = w; H = canvas.height = h;
     const s = Math.min(W / cols, H / rows), mw = (cols * s) / W, mh = (rows * s) / H;   // fraction of the canvas
     view = [(2 * mw) / cols, (-2 * mh) / rows, -mw, mh];
-    ui.layout({ left: ((1 - mw) / 2) * canvas.clientWidth, top: ((1 - mh) / 2) * canvas.clientHeight, sq: (s / dpr) });
+    geo = { left: ((1 - mw) / 2) * canvas.clientWidth, top: ((1 - mh) / 2) * canvas.clientHeight, sq: s / dpr };
+    ui.layout(geo);
   }
 
   const common = (p, t) => {
@@ -318,17 +327,28 @@ export async function start(canvas, ui) {
     const s = ui.state, a = s.windAngle;
     gl.uniform2f(p.u("u_dir"), Math.cos(a), Math.sin(a));
     gl.uniform1f(p.u("u_wind"), s["Strong wind"] ? 1.0 : 0.45); gl.uniform1f(p.u("u_gusts"), s.Gusts ? 1 : 0);
-    gl.uniform1f(p.u("u_cloud"), s.Clouds ? 1 : 0);
+    gl.uniform1f(p.u("u_cloud"), s.Clouds ? 1 : 0); gl.uniform2f(p.u("u_cloudOff"), cloudOff[0], cloudOff[1]);
     gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, T.noise); gl.uniform1i(p.u("u_noise"), 3);
   };
   const bind = (p, name, unit, tex) => { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, tex); gl.uniform1i(p.u(name), unit); };
 
   const t0 = performance.now();
   let last = t0;
+  const cloudOff = [0, 0];
+  // a tap on a house opens or closes its roof (the DM's hand); a party token inside opens it too
+  canvas.addEventListener("click", (e) => {
+    const r = canvas.getBoundingClientRect(), x = (e.clientX - r.left - geo.left) / geo.sq, y = (e.clientY - r.top - geo.top) / geo.sq;
+    for (const roof of roofs) {
+      const [fx, fy, fw, fh] = roof.footprint;
+      if (x > fx - 0.3 && x < fx + fw + 0.3 && y > fy - 0.3 && y < fy + fh + 0.3) roof.open = !roof.open;
+    }
+  });
   function frame(now) {
     fit();
     const t = (now - t0) / 1000, dt = Math.min(0.1, (now - last) / 1000); last = now;
     const s = ui.state, party = ui.party();
+    const cs = (s["Strong wind"] ? 0.05 : 0.022) * dt;   // clouds drift with the wind (in units of 30 squares)
+    cloudOff[0] += Math.cos(s.windAngle) * cs; cloudOff[1] += Math.sin(s.windAngle) * cs;
     gl.viewport(0, 0, W, H); gl.clearColor(0.07, 0.07, 0.08, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.disable(gl.BLEND);
     common(P.ground, t); bind(P.ground, "u_ground", 0, T.ground);
@@ -344,12 +364,12 @@ export async function start(canvas, ui) {
       gl.uniform2f(P.veg.u("u_sun"), 0.22, 0.30);
       const flat = new Float32Array(16); party.slice(0, 8).forEach(([x, y], i) => { flat[i * 2] = x; flat[i * 2 + 1] = y; });
       gl.uniform2fv(P.veg.u("u_party"), flat); gl.uniform1i(P.veg.u("u_nparty"), Math.min(8, party.length));
-      gl.uniform1f(P.veg.u("u_lift"), s["Lift canopy"] ? 1 : 0);
+      gl.uniform1f(P.veg.u("u_lift"), s["Canopy opens"] ? 1 : 0);
       gl.bindVertexArray(V.veg); gl.drawArrays(gl.TRIANGLES, 0, nVerts);
     }
     for (const r of roofs) {
       const [fx, fy, fw, fh] = r.footprint;
-      const inside = s["Lift roofs"] && party.some(([x, y]) => x > fx && x < fx + fw && y > fy && y < fy + fh);
+      const inside = r.open || (s["Roof opens"] && party.some(([x, y]) => x > fx && x < fx + fw && y > fy && y < fy + fh));
       r.alpha += ((inside ? 0 : 1) - r.alpha) * Math.min(1, dt * 6);
       if (r.alpha < 0.01) continue;
       const box = [(r.x / r.px[0]) * cols, (r.y / r.px[1]) * rows, (r.w / r.px[0]) * cols, (r.h / r.px[1]) * rows];
