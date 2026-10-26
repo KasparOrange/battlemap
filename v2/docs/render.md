@@ -142,6 +142,20 @@ three bitmap fonts (155 ms of `measureText`), one storage round trip at boot. St
 first render's shader links (~50–140 ms in SwiftShader), the TV loading the companion's code
 (`App.svelte` imports both modes statically).
 
+2026-10-26 (W5-P): the bitmap fonts draw their glyphs on demand (0982e2c; the install drew ASCII
++ Latin into the atlases on every start). Same Mac, built app, Rust server, 6000 px tavern cached,
+CPU throttled 4× (a box-like CPU), load ~12, 7 reloads each: reload → first map frame median
+**849 → 665 ms** (766–1089 → 610–809).
+
+**The tablet's first map view** (qa#26): the companion makes its one table view ahead while the
+DM is on the library (`companion/game/dm-view.ts`, `?prewarm=0` turns it off). Fresh browser per
+run, 1280 × 800 @2, 8 s on the library, then `game.new` with the tavern → map view fitted:
+
+| | made on the tap | made ahead |
+|---|---|---|
+| Mac GPU (Metal) | 122–1142 ms (cold GPU process ~1.1 s) | **73 ms**, main thread held ≤ 30 ms |
+| SwiftShader | 1.8–2.1 s, main thread held 1.4–2.0 s | **1.0–1.1 s** (the rest is the map's upload) |
+
 ## Bench
 
 `app/bench.html` (`Bench.svelte`, scenes in `bench-scenes.ts`):

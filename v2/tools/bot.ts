@@ -226,8 +226,12 @@ async function launchTv(): Promise<void> {
   log.info('bot', 'TV page launched', { app, table: TABLE });
 }
 
-/** Waits until the room has a TV and the bot holds a snapshot. */
-async function waitForTv(bot: ProtoClient, timeoutMs = 20_000): Promise<void> {
+/**
+ * Waits until the room has a TV and the bot holds a snapshot. 60 s: a headless TV page under
+ * SwiftShader on a loaded Mac (load 45–80) once took over 20 s to answer its first snapshot, and
+ * the soak stopped with exit 2 before it began (W5-P, 2026-10-26).
+ */
+async function waitForTv(bot: ProtoClient, timeoutMs = 60_000): Promise<void> {
   const end = Date.now() + timeoutMs;
   while (Date.now() < end) {
     if (bot.tvOnline) {

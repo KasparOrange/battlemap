@@ -4,28 +4,28 @@ How v2 is checked, what passes today, what fails (with where), and how to run ev
 the emulators and the real devices. Work package 8 (`architecture.md` "work packages").
 Status as of **2026-10-25 evening** (wave 4 QA, tree `a6989ef`).
 
-## Open (W4 QA, 2026-10-25)
+## Open (W4 QA, 2026-10-25; W5-P update 2026-10-26)
 
-No blocker. Majors: none open in the app — but the **Bun fallback server** still lacks five
+No blocker. Majors: #36 (Undo / redo off screen on a tablet) — and the **Bun fallback server** still lacks five
 review fixes the Rust server has (rv#5 pixel bomb, rv#7 body cap, rv#26 parallel fetches, rv#27
 ids, rv#30 version slots): switching production back with `switch.sh to-bun` brings them back.
 
-1. **qa#11 TV start** — reload → first frame with the map: Chromium 0.6–3.9 s, the TV emulator
-   2.9–6.0 s (median ~4.5 s, budget 2 s); the marks say script ~0.7 s, map load + upload 1–2 s
-   (load 25–38 on the Mac — measure on the box).
-2. **#26 companion first view** — b2d0d2e fixed the reopen hang, but a companion page's *first*
-   WebGL view still blocks its main thread for 13–20 s under SwiftShader (one flow per run fails
-   with companions `busy`); check on a real tablet before acting.
-3. **#28 PDF import long tasks** 55–143 (budget 50) in every run — pdf.js on the main thread.
-4. **#27 lost commands on the Bun server** — `map.add` + the next undo timed out in the soak; Rust none.
-5. **#31 companion e2e files run serial** — one slow start skips the file's other flows.
-6. **#34 / #35 flaky flows under load** — tv-mode reload's `frame` mark, the box-reset flow (both
-   pass alone on Bun and Rust).
-7. Polish: #30 broken thumbnails on a LAN table without upstream, #32 table server start 3–4 s on the
+1. **#36 Undo / redo off screen on a 1280 × 800 tablet** — the rail's 11 tabs push its foot
+   below the screen; three companion-game flows fail on it (W5-P).
+2. **qa#11 TV start** — reload → first frame with the map: Chromium 0.6–3.9 s, the TV emulator
+   2.9–6.0 s (median ~4.5 s, budget 2 s); W5-P cut the glyph install (median 849 → 665 ms at 4×
+   CPU on the Mac, `render.md`) — measure on the box.
+3. **#27 lost commands on the Bun server** — `map.add` + the next undo timed out in the soak; Rust none.
+4. Polish: #30 broken thumbnails on a LAN table without upstream, #32 table server start 3–4 s on the
    emulator.
 
-Counts: bugs 1–25 → 23 fixed, 1 decided (#25), 1 open (#11); new 26–35 → 3 fixed (#29, #33,
-#26 mostly), 7 open. Review 1–38 → 32 fixed, 5 only in Rust, #36 half (`review.md`).
+Fixed in W5-P: #26 (the tablet's first map view made ahead on the library), #28 (PDF drawn in a
+worker), #31 / #34 / #35 (flows wait on real signals). The Rust soak (2000 commands, 4 TV reloads,
+seed 42) passes: 0 failures, 0 offline leaks; its one stop at "no TV within 20 000 ms" was the
+harness — a TV page at load 45–80 answered no snapshot in 20 s; `tools/bot.ts` now waits 60 s.
+
+Counts: bugs 1–25 → 23 fixed, 1 decided (#25), 1 open (#11); new 26–36 → 7 fixed (#26, #28, #29,
+#31, #33, #34, #35), 4 open (#27, #30, #32, #36). Review 1–38 → 32 fixed, 5 only in Rust, #36 half (`review.md`).
 
 ## What there is
 
@@ -306,7 +306,7 @@ is open. Screenshots: `docs/qa/*.jpg`.
 | 8 | minor | companion-game | phone (390 × 844): the map is fitted to about a third of the width, between the TV-window band lines, with large empty space | open a game on a phone-size companion | `game/context.svelte.ts` `fit()` / `GameScreen.svelte:81` | `docs/qa/phone-map-small.jpg` | fixed in 6282ad9, a13af91 |
 | 9 | minor | tv / storage | the library lists a game under the map it had *before* the last switch ("Tower ground" instead of "Tower upper") | game-night "the library lists the game under the map on the table" | game summary written by `tv/games.ts` | e2e run 3 | fixed in 120cd04 |
 | 10 | minor | import | the 114 × 64 castle's table copy takes 17.9 s in `bun test` (`table-copy` 17 228 ms of 17 906) | `bun test` import timings line for `07-STRESS-castle` | `app/src/lib/import` | `bun test` output | fixed in 4fe5910 (castle table copy 0.9 s in bun test) |
-| 11 | minor | tv | a TV reload brings the open game back after ~7 s (SwiftShader, loaded Mac; budget: first frame from cache ≤ 2 s) — measure on the box before acting | reload the TV page in a game | `tv/games.ts` boot + map load | DM pass | open — W4: Chromium 0.6–3.9 s, TV emulator median ~4.5 s (b79ea12's start-time work in); Results |
+| 11 | minor | tv | a TV reload brings the open game back after ~7 s (SwiftShader, loaded Mac; budget: first frame from cache ≤ 2 s) — measure on the box before acting | reload the TV page in a game | `tv/games.ts` boot + map load | DM pass | open — W4: Chromium 0.6–3.9 s, TV emulator median ~4.5 s (b79ea12's start-time work in); Results; W5-P: glyphs drawn on demand (0982e2c) — median 849 → 665 ms at 4× CPU (`render.md`); measure on the box |
 | 12 | minor | e2e | `smoke.e2e.ts` still clicks the skeleton's "Calibrate 40 in" / "Start a test game" buttons, which are gone (its missing `debug=1` was fixed here) | `bun run e2e smoke` | `e2e/smoke.e2e.ts:24-31` | e2e run 3 timeout | fixed in aaded63 |
 | 13 | minor | tv / e2e | `tv-mode` "every TV screen works with the D-pad" expects "shared library" in the TV library, which shows Games \| Maps tabs instead — test or UI out of step | `bun run e2e tv-mode` | `e2e/tv-mode.e2e.ts:73`, `tv/TvLibrary.svelte` | e2e run 3 | fixed in aaded63 (test follows the Games \| Maps switch) |
 | 14 | minor | e2e | the pixel probe `tvDrawsMap` says "the TV renderer draws no map" under SwiftShader, so 3 game-night flows stay fixme although the TV draws (DM pass screenshots) | `bun run e2e game-night` | `e2e/game-night.e2e.ts:75-92` | fixme annotations | fixed in 7b0c309 |
@@ -321,16 +321,17 @@ is open. Screenshots: `docs/qa/*.jpg`.
 | 23 | polish | companion-game | the "Loading "map"…" card (the TV's busy state) sits over the already drawn map for 2–3 s after a switch — recheck now that bug 1 is fixed | switch maps | `CompanionApp.svelte` busy card | DM pass | fixed in 6e60531 (busy pill instead of a card) |
 | 24 | polish | tools | `tsc -p e2e` reports `tools/bench-run.ts(81,12): Property 'done' does not exist on type 'never'` | `bunx tsc --noEmit -p e2e/tsconfig.json` | `tools/bench-run.ts:78-81` | — | fixed in b167bf8 |
 | 25 | polish | shell docs | the debug APK is 33 MB with the app and effects inside; `shell.md` says ~2 MB | `shell/build.sh debug` | `docs/shell.md` "Build" | build output | decided in 3d2696d (effects stay inside; shell.md says so) |
-| 26 | major | companion-game | the companion page's main thread blocks (no answer to `evaluate` within 3–4 s) in multi-map flows: game-night "several maps" and "picture maps … refit" failed with companions `busy` on Bun and Rust; the reopen flow was `fixme` | `bun run e2e game-night -g "several maps"` (tree 2cc74dc, load ~30) | each game screen started a new WebGL context (8–11 s blocked under SwiftShader) | W4 e2e runs 1–2 (Bun + Rust), `harness-fixes` rv#4 once | mostly fixed in b2d0d2e (W4-C: one table view per page) — the three flows pass, reopen flow un-fixme'd (6722912); the *first* view still blocks 13–20 s under SwiftShader (final Bun run: game-night L7 `busy` at rev 0) |
+| 26 | major | companion-game | the companion page's main thread blocks (no answer to `evaluate` within 3–4 s) in multi-map flows: game-night "several maps" and "picture maps … refit" failed with companions `busy` on Bun and Rust; the reopen flow was `fixme` | `bun run e2e game-night -g "several maps"` (tree 2cc74dc, load ~30) | each game screen started a new WebGL context (8–11 s blocked under SwiftShader) | W4 e2e runs 1–2 (Bun + Rust), `harness-fixes` rv#4 once | mostly fixed in b2d0d2e (W4-C: one table view per page) — the three flows pass, reopen flow un-fixme'd (6722912); the *first* view still blocks 13–20 s under SwiftShader (final Bun run: game-night L7 `busy` at rev 0); the first view is now made ahead on the library (ffeca55): fitted in 73 ms on the Mac GPU, 1.0–1.1 s under SwiftShader (was 1.8–2.1 s) — fixed |
 | 27 | minor | tv / state | the soak on the **Bun** server lost 2 commands (`map.add` at i = 35 and the `history.undo` after it: "command lost: timeout", `undelivered` 0); the same seed on Rust lost none | `bun tools/bot.ts --server <bun> --commands 2000 --tv-reload-every 400 --seed 42` | not analysed — the TV's map load under load (headless TV page, load ~30) or Bun's file serving | W4 soak (Bun) | open |
-| 28 | minor | import | the PDF import's long-task budget fails in every W4 run: 55, 69, 72–143 long tasks (budget 50) | `bun run e2e import-worker -g PDF` | `e2e/import-worker.e2e.ts:122`, `app/src/lib/import` (pdf.js on the main thread) | W4 runs (Bun + Rust, load 30–38) | open (load makes it worse; recheck on a quiet machine) |
+| 28 | minor | import | the PDF import's long-task budget fails in every W4 run: 55, 69, 72–143 long tasks (budget 50) | `bun run e2e import-worker -g PDF` | `e2e/import-worker.e2e.ts:122`, `app/src/lib/import` (pdf.js on the main thread) | W4 runs (Bun + Rust, load 30–38) | fixed in 8518a56 (pdf.js draws in a worker of its own; the e2e sees no long task) |
 | 29 | minor | tools | `tools/tv-ctl.ts resume` reopened `games[0]` of `lib.list`, which holds other TVs' server backups too — on a shared server it opened a parallel test's game | `bun run e2e tools` beside other flows (Rust run) | `tools/tv-ctl.ts:64` | W4 Rust run: expected `nixgh…`, got `8h0a…` | fixed in 95f6808 (the TV's own newest; a server backup only after a box reset) |
 | 30 | polish | companion-lib | library cards show the browser's broken-image icon when a backup's thumbnail file isn't on the server (a LAN table server without its upstream) | TV hosting with no upstream; tablet library ▸ Backups on the server | library card thumbnail (`companion/library`) — wants the map mark as fallback (`onerror`) | `docs/qa/w4-lan-backup-thumbs.jpg` | open |
-| 31 | minor | e2e (companion package) | `companion-game-flow` and `companion-effects-flow` run serial: one slow start (the game screen's 7 s wait, "no sync.snapshot") skips the file's other 5 flows | `bun run e2e companion-game companion-effects` under load | `e2e/companion-game-flow.e2e.ts:166`, `companion-effects-flow.e2e.ts:188` | W4 Bun run 1: 2 failed, 10 not run | open — recheck after b2d0d2e |
+| 31 | minor | e2e (companion package) | `companion-game-flow` and `companion-effects-flow` run serial: one slow start (the game screen's 7 s wait, "no sync.snapshot") skips the file's other 5 flows | `bun run e2e companion-game companion-effects` under load | `e2e/companion-game-flow.e2e.ts:166`, `companion-effects-flow.e2e.ts:188` | W4 Bun run 1: 2 failed, 10 not run | fixed in 34a782d (flows independent; their map-fit poll had lost its `.toBe`, a comment swallowed it) |
 | 32 | polish | shell | the table server took 3.9 s to listen on the TV emulator ("table server listening on port 5930 (3939 ms …, rss 229664 kB)"); `shell.md` says 0.5 s | start `bm_tv` with `--es host on` | `shell/…/TableServer` start | logcat `battlemap` | open (emulator under load 30) |
 | 33 | minor | e2e | `caps.ts` probed TV storage with `game.open` of `e2e-no-such-game`, which raised the TV's "neither on the TV nor on the server" badge for the rest of the flow (W4-C) | any flow with `needs(t, 'tvStorage')` | `e2e/support/caps.ts:55` | W4-C report | fixed in 6722912 (probes with `lib.list`) |
-| 34 | minor | e2e (TV package) | tv-mode "a new game comes back after a reload" expects a `frame` mark in the start marks; on the loaded Rust run the marks ended at `map-shown 406` (the frame mark lands later) | `BATTLEMAP_E2E_SERVER=rust bun run e2e tv-mode` beside other runs | `e2e/tv-mode.e2e.ts:42` (reads the marks once) | W4 final Rust run | open (passes alone) |
-| 35 | minor | tv / storage | the box-reset flow saw the TV `idle` instead of the backed-up game within 7 s (final Bun run, 2 workers) | `bun run e2e tv-mode -g "box reset"` under load | `e2e/tv-mode.e2e.ts:164`, `tv/games.ts` restore | W4 final Bun run | open (passes alone on Bun and Rust) |
+| 34 | minor | e2e (TV package) | tv-mode "a new game comes back after a reload" expects a `frame` mark in the start marks; on the loaded Rust run the marks ended at `map-shown 406` (the frame mark lands later) | `BATTLEMAP_E2E_SERVER=rust bun run e2e tv-mode` beside other runs | `e2e/tv-mode.e2e.ts:42` (reads the marks once) | W4 final Rust run | fixed in 34a782d (waits for the mark) |
+| 35 | minor | tv / storage | the box-reset flow saw the TV `idle` instead of the backed-up game within 7 s (final Bun run, 2 workers) | `bun run e2e tv-mode -g "box reset"` under load | `e2e/tv-mode.e2e.ts:164`, `tv/games.ts` restore | W4 final Bun run | fixed in 34a782d (waits on the hook's `stored()` before the reload) |
+| 36 | major | companion-game | **Undo / redo can't be reached on a 1280 × 800 tablet**: the rail now holds 11 tabs (Secrets, Sound, Moments, Scenes added) and its foot with Undo / Redo is pushed below the screen; `game-screen` takes the click. companion-game-flow fog, fog preview and draw fail on it | `bun run e2e companion-game-flow -g fog` (1280 × 800) | `companion/game/GameScreen.svelte` `.rail` (no scroll / overflow rule for the tab list) | `test-failed-2.png` of the fog flow (W5-P) | open — for the owner of the game screen |
 
 ### Missing (parity.md items with no implementation at all)
 
