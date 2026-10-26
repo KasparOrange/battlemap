@@ -2,11 +2,17 @@
  * The renderer's bitmap fonts, installed once: token labels (bold, outlined), token names and
  * the tools' text (white glyphs, tinted per use). Installed fonts share one glyph atlas per face
  * instead of Pixi making a dynamic font per text object, and stay small for the TV's budget:
- * 48 px glyphs, ASCII plus the Latin letters names use (other characters are left out).
+ * 48 px glyphs.
  *
- * No kerning tables (`skipKerning`): Pixi measures every pair of the ~160 characters with
- * `measureText` for them — 155 ms of main thread per start (qa#11), for labels of one to a few
- * characters where kerning doesn't show.
+ * **Glyphs are drawn on demand** (qa#11): the install draws none; Pixi draws a character into
+ * the face's atlas the first time a text shows it (a token label of one to three characters
+ * costs a millisecond or so, once). Drawing ASCII plus the Latin letters up front put five
+ * canvas rasterisations (~90 ms of main thread under SwiftShader) on the TV's start, before the
+ * map's first frame, for glyphs a table without tokens never shows.
+ *
+ * No kerning tables (`skipKerning`): Pixi measures every pair of characters with `measureText`
+ * for them — 155 ms of main thread per start (qa#11), for labels of one to a few characters
+ * where kerning doesn't show.
  */
 import { BitmapFont } from 'pixi.js';
 
@@ -20,7 +26,8 @@ export const FONT_NAME = 'bm-name';
 /** Ruler numbers, disc labels, measure text (tinted). */
 export const FONT_TEXT = 'bm-text';
 
-const CHARS = [[' ', '~'], 'ÄÖÜäöüßÀÁÂÉÈÊËÍÎÏÓÔÒÚÙÛàáâãåçéèêëíìîïñóòôõúùûýÿæøÆØœŒ·×—–’‘“”…°'] as (string | [string, string])[];
+/** Glyphs drawn at install: none — each one is drawn the first time a text needs it. */
+const CHARS = '';
 
 let installed = false;
 
