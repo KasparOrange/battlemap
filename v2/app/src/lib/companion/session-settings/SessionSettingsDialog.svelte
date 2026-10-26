@@ -109,7 +109,7 @@
       options={FOG_STYLES}
       onchange={(id) => set({ fogStyle: id as SessionSettings['fogStyle'] })}
     />
-    <ToggleSwitch label="Fade in revealed squares" description="Squares appear softly instead of at once." checked={s.fogFade} onchange={(on) => set({ fogFade: on })} />
+    <ToggleSwitch label="Reveal animation" description="Revealed fog rolls back in soft wisps instead of vanishing at once." checked={s.fogFade} onchange={(on) => set({ fogFade: on })} />
   </Section>
 
   <Section title="Effects">

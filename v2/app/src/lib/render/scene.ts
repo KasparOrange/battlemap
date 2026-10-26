@@ -19,7 +19,7 @@ import { clampDmCamera, fitDmCamera, NO_INSETS, panCamera, sameCamera, screenToS
 import { DmLayers, PlayersFrame } from './dm-layers.ts';
 import { DoorsLayer } from './doors-layer.ts';
 import { DrawingsLayer } from './drawings-layer.ts';
-import { FogLayer } from './fog-layer.ts';
+import { FogLayer, type RevealQuality } from './fog-layer.ts';
 import { GridLayer } from './grid-layer.ts';
 import { hitsAt, type Hit } from './hit.ts';
 import { MapLayer } from './map-layer.ts';
@@ -204,6 +204,20 @@ export class TableScene {
     this.size = this.hostSize();
   }
 
+  /**
+   * How this screen animates reveals (S4): wisps on the TV while the game's effects are on and
+   * the effects quality is full; otherwise — and always on the DM's view, cheaper on tablets and
+   * the DM sees the fog at 70 % anyway — the plain fade.
+   *
+   * @param effectsOn - the game's `effects` setting
+   * @returns the fog layer's reveal quality
+   */
+  private revealQuality(effectsOn: boolean): RevealQuality {
+    if (this.dm || !effectsOn) return 'low';
+    const q = this.effects?.stats?.().quality ?? 'full';
+    return q === 'full' ? 'full' : 'low';
+  }
+
   /** The slots handed to the effects runtime. */
   private effectSlots(): EffectSlots {
     return {
@@ -293,6 +307,7 @@ export class TableScene {
       changed = this.grid.set(map.showGrid, cols, rows) || changed;
       changed = this.drawings.set(map.strokes, state.live.stroke) || changed;
       changed = this.tokens.set(map.tokens) || changed;
+      if (newMap || game.settings !== prevGame?.settings) this.fog.setRevealQuality(this.revealQuality(game.settings.effects));
       changed = this.fog.set(map.fog, cols, rows, game.settings, newMap) || changed;
       changed = this.doorsLayer.set(this.geometry, map.info.drawDoors, map.doorsOpen, map.fog, cols, rows, newMap) || changed;
       changed = this.tools.set(map.disc, map.ruler, state.live.measure) || changed;

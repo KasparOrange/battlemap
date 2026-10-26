@@ -141,6 +141,37 @@ pure), `tv/fog-thumbs-draw.ts` (canvas), `TvGames.onSaved`.
 - The thumbnail shows map and fog only (no tokens, drawings, doors); secret doors drawn into the
   picture itself are in it as they are on the table.
 
+## Reveal animation (roadmap S4)
+
+**What.** When the DM reveals, the TV's fog no longer just fades: it rolls back in soft wisps of
+smoke, starting next to what the players already see and spreading outward, so a door opening
+onto a hall reads as the darkness drawing back. Hiding stays instant.
+
+**On the TV.** Each newly revealed square keeps full fog for a moment and dissolves over 900 ms
+(ease-out). Squares start staggered by their Chebyshev distance from the fog revealed before
+(nothing revealed yet: from the centre of the change), 40 ms per square, compressed so the
+whole reveal ends within 1.6 s. The fog shader samples the "fog still to go" between square
+centres (a smooth front, no blocky squares) and cuts it with three octaves of slowly drifting
+value noise in map squares; the dissolving band gets a faint warm-grey smoke tint. The shader
+pays for this only while a reveal runs (a uniform-gated branch, fragments of squares not
+animating skip it); the render lease is held only while squares animate, idle is 0 frames.
+Wisps need the game's effects on and the screen's effects quality at full; otherwise the TV
+shows the plain 500 ms fade. The DM's view keeps the plain fade — cheaper on tablets, and its
+fog is 70 % anyway. `render/reveal-anim.ts` (timing), `render/fog-layer.ts` (shader),
+`FogLayer.setRevealQuality` set by `TableScene`.
+
+**Protocol.** None: the switch is the existing game setting `fogFade` (default on), relabelled
+"Reveal animation" in the game settings ("Revealed fog rolls back in soft wisps instead of
+vanishing at once."). Off = a hard cut, as before.
+
+**Limits.**
+
+- The stagger ignores walls: the front spreads by square distance, not through doorways.
+- A square hidden and revealed again mid-animation starts over.
+- No per-screen quality switch exists yet; the effects runtime's quality (default full) is read.
+
+![Fog rolling back 400 ms into a reveal](qa/w5-1-reveal.jpg)
+
 ## Checks
 
 - `bun test` in `shared/` (`test/scenes.test.ts`: curtain down / up, kept fields, changes behind
@@ -150,5 +181,9 @@ pure), `tv/fog-thumbs-draw.ts` (canvas), `TvGames.onSaved`.
 - e2e `e2e/feature-curtain-scenes.e2e.ts`: lower → switch map → reveal → plate → lift (TV
   brightness measured on screenshots); two scenes saved and switched under the curtain and
   straight; delete with Undo. Shots: `docs/qa/w4f-*.jpg`.
+- Reveal animation: `bun test src/lib/render/reveal-anim.test.ts` in `app/` (stagger order, the
+  1.6 s cap, hide instant, re-reveal, idle after); e2e `e2e/feature-reveal-anim.e2e.ts` (TV shots
+  at ~150 / 400 / 700 / 1000 ms, the far side darker than the near one mid-way, all map after).
+  Shot: `docs/qa/w5-1-reveal.jpg`.
 - Fog-honest thumbnails: `bun test src/lib/tv/fog-thumbs.test.ts` in `app/` (signature, revealed
   box, crop, plan: keep / neutral / draw, curtain keeps, scheduling per game, throttle).

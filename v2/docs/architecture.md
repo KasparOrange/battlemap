@@ -280,7 +280,8 @@ us own the loop: `autoStart: false`, we call `render()` only when something chan
   changes (a 200 × 200 map is 40 KB), and drawn by one fragment shader over the map: opaque on
   the TV, 70 % on the DM's view, staged squares tinted blue/red on the DM's view only. The shader
   does the fog styles (standard, soft, cloud, atmospheric), "trim revealed edges" (neighbour
-  lookups, the old `fogRevealRects` rule) and the reveal fade (previous mask + time uniform).
+  lookups, the old `fogRevealRects` rule) and the reveal animation (G channel = fog still to go, staggered
+  by `reveal-anim.ts`; on the TV at full effects quality a noise dissolve with smoke wisps, else a plain fade).
   One full-screen quad instead of thousands of path cells.
 - **One scene, two view profiles.** `TableScene` (in `lib/render/`) builds the same scene graph
   from `RootState` for both screens; a `ViewProfile` decides what differs:

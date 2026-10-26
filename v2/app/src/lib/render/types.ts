@@ -60,6 +60,8 @@ export interface EffectsRuntime {
   cost?(): { drawCalls?: number; textureBytes: number; instances?: number };
   /** The map's own light pools (RD-120): the geometry's lights while the game's switch is on, else null. */
   setMapLights?(lights: readonly Light[] | null): void;
+  /** What runs; the renderer reads only the screen's effects quality (S4: wisps reveal at `full`). */
+  stats?(): { quality: 'off' | 'low' | 'full' };
   /** Stops everything, frees textures. */
   destroy(): void;
 }

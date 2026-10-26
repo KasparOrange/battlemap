@@ -3,15 +3,17 @@
  * one RGBA texel per square (`fog-texels.ts`). It does the fog styles (standard 4 px soft edge,
  * soft 16 px, cloud with drifting bumps, atmospheric by distance), "trim revealed edges" (each
  * fogged square grows by the inset — the old `fogRevealRects` rule, map border never trimmed),
- * the reveal fade (G channel, stepped by `FogFade` under a render lease) and, on the DM's view,
- * 70 % fog with the preview's staged squares tinted blue (reveal) or red (hide).
+ * the reveal animation (G channel, stepped by `RevealAnim` under a render lease: a plain fade, or
+ * at full quality a noise dissolve with a faint smoke tint — fog rolling back in wisps) and, on
+ * the DM's view, 70 % fog with the preview's staged squares tinted blue (reveal) or red (hide).
  *
  * Only changed rows are uploaded (`changedRows` → `source.update(start, end)`).
  */
 import { Buffer, BufferUsage, Geometry, Mesh, Shader, Texture, BufferImageSource, type Container } from 'pixi.js';
 import type { FogState, GameSettings } from '@battlemap/shared';
 import { SQUARE } from './camera.ts';
-import { changedRows, FogFade, writeFogTexels } from './fog-texels.ts';
+import { changedRows, writeFogTexels } from './fog-texels.ts';
+import { RevealAnim } from './reveal-anim.ts';
 import type { RenderScheduler } from './scheduler.ts';
 
 const vertex = /* glsl */ `#version 300 es
@@ -38,6 +40,7 @@ uniform sampler2D uFog;
 uniform vec2 uSize;
 uniform vec4 uLook;  // x inset (squares), y edge blur (px), z fog opacity, w deepest atmospheric fog
 uniform vec4 uMode;  // x style (0 standard, 1 soft, 2 cloud, 3 atmospheric), y time (s), z DM tints on
+uniform vec4 uAnim;  // x 1 while a wisps reveal runs (else the plain G fade), y its clock (s)
 
 ivec2 clampCell(ivec2 c) { return clamp(c, ivec2(0), ivec2(uSize) - 1); }
 
@@ -47,6 +50,38 @@ float boxSdf(vec2 p, vec2 lo, vec2 hi) {
   vec2 c = (lo + hi) * 0.5;
   vec2 d = abs(p - c) - (hi - lo) * 0.5;
   return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
+}
+
+// Wisps reveal: G as fog still to dissolve; a fogged square counts as full fog so the front
+// never dips at the remaining fog's rim.
+float animFog(ivec2 c) {
+  if (!inMap(c)) return 0.0;
+  vec4 t = texelFetch(uFog, c, 0);
+  return t.r > 0.5 ? t.g : 1.0;
+}
+
+float hash(ivec2 i) {
+  uint h = uint(i.x) * 374761393u + uint(i.y) * 668265263u;
+  h = (h ^ (h >> 13u)) * 1274126177u;
+  h ^= h >> 16u;
+  return float(h & 0xffffu) / 65535.0;
+}
+
+float vnoise(vec2 x) {
+  vec2 i = floor(x);
+  vec2 f = x - i;
+  vec2 u = f * f * (3.0 - 2.0 * f);
+  ivec2 b = ivec2(i);
+  return mix(mix(hash(b), hash(b + ivec2(1, 0)), u.x), mix(hash(b + ivec2(0, 1)), hash(b + ivec2(1, 1)), u.x), u.y);
+}
+
+// 3 octaves of drifting value noise over world squares, warped by the first so it streaks.
+float wisps(vec2 p, float t) {
+  float n1 = vnoise(p * 0.9 + vec2(t * 0.35, t * 0.2));
+  vec2 w = p + 0.8 * vec2(n1, -n1);
+  float n2 = vnoise(w * 1.9 - vec2(t * 0.25, t * 0.45));
+  float n3 = vnoise(w * 4.1 + vec2(t * 0.6, -t * 0.3));
+  return n1 * 0.5 + n2 * 0.33 + n3 * 0.17;
 }
 
 float level(ivec2 c) { return texelFetch(uFog, clampCell(c), 0).a * 255.0 / 63.0; }
@@ -104,8 +139,23 @@ void main() {
       a = 1.0 - smoothstep(-0.5 * w, 0.5 * w, sd - bump);
     }
   }
-  a = max(a, revealed ? here.g : 0.0) * uLook.z;
-  vec4 col = vec4(0.0, 0.0, 0.0, a);
+  float smoke = 0.0;
+  if (uAnim.x > 0.5 && revealed && here.g > 0.0) {
+    // Wisps: G sampled bilinearly between square centres (a smooth front), then dissolved by
+    // noise — fog where the fog still to go exceeds the noise; the dissolving band gets smoke.
+    vec2 q = p - 0.5;
+    ivec2 b = ivec2(floor(q));
+    vec2 f = q - vec2(b);
+    float g = mix(mix(animFog(b), animFog(b + ivec2(1, 0)), f.x), mix(animFog(b + ivec2(0, 1)), animFog(b + ivec2(1, 1)), f.x), f.y);
+    float n = 0.15 + 0.7 * wisps(p, uAnim.y);
+    float fa = smoothstep(n - 0.12, n + 0.12, g);
+    smoke = fa * (1.0 - fa) * 4.0;
+    a = max(a, fa);
+  } else {
+    a = max(a, revealed ? here.g : 0.0);
+  }
+  a *= uLook.z;
+  vec4 col = vec4(vec3(0.62, 0.58, 0.52) * (0.3 * smoke * a), a);
   if (uMode.z > 0.5) {
     int staged = bits & 3;
     if (staged == 1) col = vec4(0.482, 0.408, 0.933, 1.0) * 0.30 + col * 0.70;
@@ -119,6 +169,9 @@ void main() {
 const BLUR_PX: Record<GameSettings['fogStyle'], number> = { standard: 4, soft: 16, cloud: 0, atmospheric: 0 };
 
 const STYLE_INDEX: Record<GameSettings['fogStyle'], number> = { standard: 0, soft: 1, cloud: 2, atmospheric: 3 };
+
+/** How a screen animates reveals: `full` wisps, `low` the plain fade, `off` a hard cut. */
+export type RevealQuality = 'off' | 'low' | 'full';
 
 /** What the fog layer draws for one profile. */
 export interface FogLook {
@@ -142,12 +195,13 @@ export class FogLayer {
   private cols = 0;
   private rows = 0;
   private fog: FogState | null = null;
-  private readonly fade = new FogFade();
+  private readonly fade = new RevealAnim();
   private releaseFade: (() => void) | null = null;
   private releaseDrift: (() => void) | null = null;
-  private readonly uniforms: { uSize: Float32Array; uLook: Float32Array; uMode: Float32Array };
+  private readonly uniforms: { uSize: Float32Array; uLook: Float32Array; uMode: Float32Array; uAnim: Float32Array };
   private style: GameSettings['fogStyle'] = 'standard';
   private fadeOn = true;
+  private quality: RevealQuality = 'full';
   private inset = 0;
   private readonly stopTicker: () => void;
 
@@ -165,6 +219,7 @@ export class FogLayer {
       uSize: new Float32Array([1, 1]),
       uLook: new Float32Array([0, 4, look.opacity, look.deep]),
       uMode: new Float32Array([0, 0, look.tints ? 1 : 0, 0]),
+      uAnim: new Float32Array([0, 0, 0, 0]),
     };
     this.source = this.makeSource(1, 1);
     this.texture = new Texture({ source: this.source });
@@ -175,6 +230,7 @@ export class FogLayer {
           uSize: { value: uniforms.uSize, type: 'vec2<f32>' },
           uLook: { value: uniforms.uLook, type: 'vec4<f32>' },
           uMode: { value: uniforms.uMode, type: 'vec4<f32>' },
+          uAnim: { value: uniforms.uAnim, type: 'vec4<f32>' },
         },
         uFog: this.source,
       },
@@ -189,6 +245,20 @@ export class FogLayer {
   /** Texture bytes held. */
   get bytes(): number {
     return this.texels.length;
+  }
+
+  /**
+   * Sets how the reveal animates on this screen (with the game's `fogFade` switch on):
+   * `full` = fog rolls back in wisps (staggered noise dissolve), `low` = the plain 500 ms fade,
+   * `off` = a hard cut. Takes effect with the next reveal.
+   *
+   * @param q - the quality
+   * @returns whether it changed
+   */
+  setRevealQuality(q: RevealQuality): boolean {
+    if (q === this.quality) return false;
+    this.quality = q;
+    return true;
   }
 
   /**
@@ -230,11 +300,12 @@ export class FogLayer {
     this.scratch.set(this.texels);
     writeFogTexels(fog, cols, rows, this.scratch, this.dist);
     const now = performance.now();
-    if (fresh || !this.fadeOn) {
+    if (fresh || !this.fadeOn || this.quality === 'off') {
       for (let i = 1; i < this.scratch.length; i += 4) this.scratch[i] = 0;
       this.fade.clear();
-    } else if (this.fade.start(this.texels, this.scratch, now) > 0 && !this.releaseFade) {
-      this.releaseFade = this.scheduler.hold('fog-fade');
+    } else {
+      this.fade.style = this.quality === 'full' ? 'wisps' : 'fade';
+      if (this.fade.start(this.texels, this.scratch, now, cols) > 0 && !this.releaseFade) this.releaseFade = this.scheduler.hold('fog-fade');
     }
     const rowsChanged = changedRows(this.texels, this.scratch, cols);
     this.fog = fog;
@@ -247,8 +318,15 @@ export class FogLayer {
   /** Steps the fade and the cloud drift (before each frame). */
   private tick(now: number): void {
     if (this.uniforms.uMode[0] === 2) this.uniforms.uMode[1] = now / 1000;
-    if (this.fade.active === 0) return;
+    if (this.fade.active === 0) {
+      this.uniforms.uAnim[0] = 0;
+      return;
+    }
     if (this.fade.step(this.texels, this.cols, now)) this.source!.update(this.fade.first * this.cols, (this.fade.last + 1) * this.cols);
+    // The wisps branch runs only while squares animate; the last frame (all G = 0) is the idle look.
+    const wisps = this.fade.active > 0 && this.fade.style === 'wisps';
+    this.uniforms.uAnim[0] = wisps ? 1 : 0;
+    if (wisps) this.uniforms.uAnim[1] = (now / 1000) % 1000;
     if (this.fade.active === 0 && this.releaseFade) {
       this.releaseFade();
       this.releaseFade = null;

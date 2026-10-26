@@ -9,8 +9,8 @@
  * | A | atmospheric level: Chebyshev distance to the nearest revealed square, 0–4, × 63 |
  *
  * The renderer keeps one buffer per map, writes a new state's texels into a scratch buffer,
- * copies only the rows that changed and uploads just those (`changedRows`). The fade is driven
- * by `FogFade`, which writes G for the squares still fading.
+ * copies only the rows that changed and uploads just those (`changedRows`). The reveal animation
+ * is driven by `RevealAnim` (`reveal-anim.ts`), which writes G for the squares still animating.
  *
  * @see ./fog-shader.ts for how the channels are drawn
  */
@@ -162,107 +162,10 @@ function rowEqual(a: Uint8Array, b: Uint8Array, at: number, n: number): boolean 
   return true;
 }
 
-/** How long a revealed square fades, ms. */
-export const FADE_MS = 500;
-
 /**
- * The reveal fade: squares that turn revealed start with full fog in G and lose it over
- * `FADE_MS` (ease-out); hiding is instant. No allocation per frame: fading squares live in
- * typed arrays that only grow.
+ * The reveal fade, now `RevealAnim` (its default style `fade` is the old plain 500 ms fade).
+ * Kept under this name for older callers and tests.
+ *
+ * @see ./reveal-anim.ts
  */
-export class FogFade {
-  private cells = new Int32Array(256);
-  private starts = new Float64Array(256);
-  private count = 0;
-  /** First row the last `step` wrote. */
-  first = 0;
-  /** Last row the last `step` wrote. */
-  last = -1;
-
-  /** Squares still fading. */
-  get active(): number {
-    return this.count;
-  }
-
-  /**
-   * Starts fading every square that is revealed in `next` but was not in `prev` (R channel).
-   *
-   * @param prev - the texels before
-   * @param next - the texels after (G of new squares is set to 255 here)
-   * @param now - the clock, ms
-   * @returns how many squares started
-   */
-  start(prev: Uint8Array, next: Uint8Array, now: number): number {
-    let started = 0;
-    const cells = Math.floor(next.length / 4);
-    for (let i = 0; i < cells; i++) {
-      const o = i * 4;
-      if (next[o]! && !prev[o]!) {
-        next[o + 1] = 255;
-        this.push(i, now);
-        started++;
-      } else if (!next[o]!) {
-        next[o + 1] = 0; // fog again: nothing to fade
-      }
-    }
-    return started;
-  }
-
-  /**
-   * Advances the fade: writes G for every fading square, drops finished ones.
-   *
-   * @param texels - the buffer to write
-   * @param cols - texels per row
-   * @param now - the clock, ms
-   * @returns whether rows were written (then `first`…`last`); allocates nothing
-   */
-  step(texels: Uint8Array, cols: number, now: number): boolean {
-    if (this.count === 0) return false;
-    let first = Infinity;
-    let last = -1;
-    let keep = 0;
-    for (let k = 0; k < this.count; k++) {
-      const cell = this.cells[k]!;
-      const o = cell * 4;
-      const t = Math.min(1, (now - this.starts[k]!) / FADE_MS);
-      const revealed = texels[o]! !== 0;
-      const g = revealed ? Math.round(255 * (1 - t) * (1 - t)) : 0;
-      if (texels[o + 1] !== g) {
-        texels[o + 1] = g;
-        const row = Math.floor(cell / cols);
-        if (row < first) first = row;
-        if (row > last) last = row;
-      }
-      if (t < 1 && revealed) {
-        this.cells[keep] = cell;
-        this.starts[keep] = this.starts[k]!;
-        keep++;
-      }
-    }
-    this.count = keep;
-    this.first = last < 0 ? 0 : first;
-    this.last = last;
-    return last >= 0;
-  }
-
-  /** Forgets every fading square (a new map, a snapshot). */
-  clear(): void {
-    this.count = 0;
-  }
-
-  private push(cell: number, now: number): void {
-    // A square hidden and revealed again while fading may sit here twice; the later entry is
-    // written last in `step`, so it wins — harmless, and no O(n²) search.
-    if (this.count === this.cells.length) {
-      const c = new Int32Array(this.cells.length * 2);
-      c.set(this.cells);
-      this.cells = c;
-      const s = new Float64Array(this.starts.length * 2);
-      s.set(this.starts);
-      this.starts = s;
-    }
-    this.cells[this.count] = cell;
-    this.starts[this.count] = now;
-    this.count++;
-  }
-}
+export { FADE_MS, RevealAnim as FogFade } from './reveal-anim.ts';
