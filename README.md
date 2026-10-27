@@ -160,6 +160,10 @@ python3 tools/vtt_relay.py     # port 9090 — WebSocket hub between TV and phon
 python3 tools/dev_server.py    # port 4242 — web build, APK, map uploads (DM layer pictures and the shared map library kept), link fetch + WebP conversion (needs Pillow)
 ```
 
+On Konrad's Mac the application firewall is on (since 2026-10-27): the first start of either
+server makes macOS ask whether Python may accept incoming connections — Allow, or the TV and
+phone can't reach them. Stop both after a session; they're open to everyone on the network.
+
 The relay listens for WebSocket connections from both the TV and the companion
 phone, forwarding messages between them. Map files (`.dd2vtt`, images; PDFs are
 rasterized to PNG on the phone first) go through the HTTP server, not the relay.
