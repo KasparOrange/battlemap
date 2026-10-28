@@ -1,0 +1,704 @@
+{
+  "name": "summervale",
+  "kind": "outdoor",
+  "grid": [136, 76],
+  "setting": "a green summer valley: a river crosses it from west to east — calm and deep past a watermill and a fisher's hut, under a stone bridge by a small village, through rocky rapids at the edge of a great beech forest, then wide and shallow over a ford; fields and meadows round the village, a forest path to a ring of standing stones, and south of the river the ruin of an old keep with a stair down into a dungeon",
+  "ground": "meadow",
+  "zones": [
+    {
+      "id": "great forest",
+      "kind": "forest",
+      "poly": [[67, -1], [137, -1], [137, 48.5], [126, 46], [120, 41], [114, 38], [106, 38], [100, 41], [94, 44.5], [86, 46.5], [76, 46.5], [70, 45.5], [68.5, 38], [70, 30], [69.5, 22], [67, 12]],
+      "desc": "open forest floor under a closed canopy: moss, leaf litter, small ferns, roots, a few mossy stones",
+      "stand": {
+        "beech": 0.7,
+        "oak": 0.3
+      }
+    },
+    {
+      "id": "south-west wood",
+      "kind": "forest",
+      "poly": [[-1, 53], [8, 51.5], [16, 54], [24, 57.5], [33, 59.5], [36.5, 64], [35, 70], [33, 77], [-1, 77]],
+      "desc": "open forest floor under a closed canopy: moss, leaf litter, small ferns, roots, a few mossy stones",
+      "stand": {
+        "oak": 0.6,
+        "beech": 0.4
+      }
+    },
+    {
+      "id": "beech grove",
+      "kind": "forest",
+      "poly": [[84, 77], [85, 70], [90, 67], [97, 66.5], [101, 69], [101.5, 77]],
+      "desc": "open forest floor under a closed canopy: moss, leaf litter, small ferns, roots, a few mossy stones",
+      "stand": {
+        "beech": 1.0
+      }
+    },
+    {
+      "id": "south-east thicket",
+      "kind": "forest",
+      "poly": [[137, 60], [131, 61], [128, 66], [129, 72], [127, 77], [137, 77]],
+      "desc": "open forest floor under a closed canopy: moss, leaf litter, small ferns, roots, a few mossy stones",
+      "stand": {
+        "oak": 0.6,
+        "beech": 0.4
+      }
+    },
+    {
+      "id": "standing stones clearing",
+      "kind": "meadow",
+      "poly": [[103.5, 26.5], [107.5, 22], [116, 20.5], [122.5, 23.5], [124, 29.5], [119, 34.5], [109, 34.5], [104, 31.5]],
+      "desc": "a round forest clearing of short grass and wild flowers, sunlit"
+    },
+    {
+      "id": "woodcutters' clearing",
+      "kind": "meadow",
+      "poly": [[77.5, 1], [90, 0.5], [94.5, 3.5], [94, 9.5], [87, 11.5], [79, 9.5]],
+      "desc": "a clearing of trampled grass, wood chips and old stumps"
+    },
+    {
+      "id": "shrine glade",
+      "kind": "meadow",
+      "poly": [[82.5, 28], [89, 26.5], [92.5, 30.5], [91, 35], [86, 36], [82, 33]],
+      "desc": "a small mossy glade, shaded grass and ferns"
+    },
+    {
+      "id": "hermit's glade",
+      "kind": "meadow",
+      "poly": [[107, 6], [113, 3.5], [120, 5], [121.5, 10.5], [117, 14.5], [109.5, 14], [106.5, 10]],
+      "desc": "a quiet glade of long grass and foxgloves"
+    },
+    {
+      "id": "charcoal clearing",
+      "kind": "meadow",
+      "poly": [[9.5, 62.5], [15, 59.5], [21.5, 61.5], [22.5, 66.5], [18, 70], [11, 69.5]],
+      "desc": "a clearing of trampled grass, ash and charcoal dust"
+    },
+    {
+      "id": "north-west wheat",
+      "kind": "field",
+      "poly": [[1, -1], [16, -1], [16.5, 8], [1, 8.5]],
+      "desc": "ripe golden wheat"
+    },
+    {
+      "id": "north wheat",
+      "kind": "field",
+      "poly": [[24, -1], [34, -1], [34.5, 9.5], [24.5, 9]],
+      "desc": "ripe golden wheat"
+    },
+    {
+      "id": "barley",
+      "kind": "field",
+      "poly": [[2, 13], [16.5, 13], [15, 18.5], [3, 18]],
+      "desc": "pale gold ripe barley"
+    },
+    {
+      "id": "rye",
+      "kind": "field",
+      "poly": [[26, 18], [34, 18.5], [33, 25], [26.5, 25.5]],
+      "desc": "ripe grey-gold rye"
+    },
+    {
+      "id": "south wheat",
+      "kind": "field",
+      "poly": [[37.5, 60], [52.5, 59], [53, 69.5], [38.5, 70]],
+      "desc": "ripe golden wheat"
+    },
+    {
+      "id": "hay meadow",
+      "kind": "meadow",
+      "poly": [[58, 64.5], [76, 64], [75, 76], [58, 76]],
+      "desc": "a mown hay meadow: short stubble in stripes, cut hay drying in rows"
+    },
+    {
+      "id": "graveyard",
+      "kind": "garden",
+      "poly": [[39, 1.5], [45.5, 1.5], [45.5, 6.5], [39, 6.5]],
+      "desc": "a tiny churchyard: short grass, a few mossy headstones and two stone crosses (no grave mounds)"
+    },
+    {
+      "id": "village square",
+      "kind": "path",
+      "poly": [[45, 8], [56, 8], [56.5, 18], [45, 18.5]],
+      "desc": "the village square: trodden earth with worn cobbles in the middle"
+    },
+    {
+      "id": "village gardens",
+      "kind": "garden",
+      "poly": [[37, 25.5], [49, 25.5], [49, 30], [37, 30]],
+      "desc": "vegetable gardens: rows of cabbages, beans on poles, onions and herbs"
+    },
+    {
+      "id": "farm garden",
+      "kind": "garden",
+      "poly": [[62, 33], [67.5, 33], [67.5, 38], [62, 38]],
+      "desc": "a vegetable garden: rows of cabbages, carrots and beans"
+    },
+    {
+      "id": "mill garden",
+      "kind": "garden",
+      "poly": [[26.5, 28.5], [31, 28.5], [31, 32], [26.5, 32]],
+      "desc": "a small herb and vegetable garden"
+    }
+  ],
+  "river": {
+    "desc": "a clear summer river flowing west to east across the whole map: wide, deep and calm in its western bends past the mill and the fisher's hut and under the stone bridge; squeezed between boulders into white rapids at the forest's edge; then spreading wide and shallow over a pebble ford before it leaves the map calm again",
+    "points": [[-3, 21, 5.0, 0, 0], [6, 22.5, 5.0, 0, 0], [13, 27, 5.5, 0, 0], [17, 34, 6, 0, 0], [21, 41, 6, 0, 0], [27, 46.5, 6, 0, 0], [35, 48.5, 6, 0, 0], [44, 47.5, 5.5, 0.05, 0], [54, 45.5, 5, 0.1, 0], [62, 45.5, 4.6, 0.2, 0], [68, 46, 3.8, 0.6, 0.05], [73, 47, 3.0, 1.0, 0.1], [78, 48, 3.0, 1.0, 0.1], [83, 48, 3.4, 0.9, 0.1], [88, 47, 4.4, 0.4, 0.15], [94, 46, 5.5, 0.1, 0.25], [102, 45.5, 7, 0.05, 0.6], [109, 46, 8.5, 0.08, 1.0], [115, 46.5, 8, 0.08, 1.0], [121, 47.5, 6, 0.05, 0.4], [129, 49, 5.5, 0, 0.05], [139, 50.5, 5.5, 0, 0]],
+    "bank_trees": {
+      "alder": 1.0
+    }
+  },
+  "edge_shrubs": {
+    "hazel": 0.6,
+    "elder": 0.4
+  },
+  "trees": [
+    {
+      "x": 42.0,
+      "y": 34.0,
+      "d": 5.0,
+      "species": "linden"
+    },
+    {
+      "x": 9.0,
+      "y": 44.0,
+      "d": 5.5,
+      "species": "oak"
+    },
+    {
+      "x": 81.0,
+      "y": 67.0,
+      "d": 5.5,
+      "species": "oak"
+    },
+    {
+      "x": 110.5,
+      "y": 8.0,
+      "d": 7.0,
+      "species": "oak"
+    },
+    {
+      "x": 20.2,
+      "y": 4.0,
+      "d": 4.0,
+      "species": "linden"
+    },
+    {
+      "x": 101.0,
+      "y": 53.0,
+      "d": 4.5,
+      "species": "alder"
+    },
+    {
+      "x": 132.0,
+      "y": 56.0,
+      "d": 4.5,
+      "species": "linden"
+    }
+  ],
+  "rocks": [[69.29, 47.21, 0.5], [71.4, 45.9, 0.6], [72.72, 47.33, 0.45], [74.6, 46.43, 0.55], [75.62, 48.44, 0.5], [77.33, 47.69, 0.6], [78.53, 48.96, 0.4], [82.14, 47.24, 0.55], [83.7, 48.62, 0.5], [85.16, 47.23, 0.45], [86.9, 48.5, 0.4], [113.45, 43.8, 0.35], [114.92, 43.66, 0.3], [116.31, 44.36, 0.35]],
+  "paths": [
+    {
+      "id": "west road",
+      "kind": "road",
+      "width": 2.2,
+      "points": [[-2, 9.5], [10, 10.5], [22, 11.5], [30, 15.5], [38, 17], [45.5, 16.5]],
+      "desc": "packed dirt cart road with two wheel ruts and grass on the crown"
+    },
+    {
+      "id": "north road",
+      "kind": "road",
+      "width": 2.0,
+      "points": [[61, -2], [59, 3.5], [56, 8], [53, 11]],
+      "desc": "packed dirt cart road with wheel ruts"
+    },
+    {
+      "id": "bridge road",
+      "kind": "road",
+      "width": 2.2,
+      "points": [[50.5, 17], [51, 24], [53, 32], [54.5, 39], [54.5, 51], [55.2, 58], [56, 66], [57, 78]],
+      "desc": "the main cart road: packed dirt with wheel ruts, across the stone bridge and on south"
+    },
+    {
+      "id": "ruin road",
+      "kind": "road",
+      "width": 2.0,
+      "points": [[55.5, 59], [64, 60], [76, 60.5], [90, 62.5], [99, 64.5], [105, 65]],
+      "desc": "an old overgrown road, grass between the wheel ruts and a few sunken paving stones"
+    },
+    {
+      "id": "forest path",
+      "kind": "path",
+      "width": 2.0,
+      "points": [[55.5, 16.5], [63, 17], [70, 19.5], [78, 18], [86, 20.5], [94, 23], [100, 27], [105.5, 27], [110, 23.5], [117, 23], [122.5, 23.5], [126, 19], [130, 13], [138, 9]],
+      "desc": "a trodden forest path of bare earth and roots"
+    },
+    {
+      "id": "woodcutters' track",
+      "kind": "path",
+      "width": 2.0,
+      "points": [[81, 18.5], [83, 13], [84.5, 7.5]],
+      "desc": "a rutted track of bare earth and wood chips"
+    },
+    {
+      "id": "hermit's path",
+      "kind": "path",
+      "width": 1.6,
+      "points": [[126, 19.5], [122, 14.5], [117.5, 13]],
+      "desc": "a narrow trodden footpath"
+    },
+    {
+      "id": "deer track",
+      "kind": "path",
+      "width": 1.6,
+      "points": [[87, 21], [87.5, 27.5]],
+      "desc": "a faint footpath through ferns"
+    },
+    {
+      "id": "ford trail",
+      "kind": "path",
+      "width": 2.0,
+      "points": [[105.5, 27.5], [107.5, 33], [110.5, 38], [111, 43], [110.5, 49], [109.5, 54], [109.5, 60]],
+      "desc": "a trodden trail down to the ford and up again towards the ruin"
+    },
+    {
+      "id": "riverside trail",
+      "kind": "path",
+      "width": 2.0,
+      "points": [[54.6, 52.5], [46, 54], [36, 56.5], [28, 60], [20, 64.5], [10, 67], [-2, 69]],
+      "desc": "a trodden trail along the river's south bank and on into the wood"
+    },
+    {
+      "id": "mill lane",
+      "kind": "path",
+      "width": 2.0,
+      "points": [[22.3, 12], [22.6, 19], [22.6, 26.5]],
+      "desc": "a rutted lane of trodden earth"
+    },
+    {
+      "id": "fisher's path",
+      "kind": "path",
+      "width": 1.4,
+      "points": [[29.5, 32], [29.5, 38.5]],
+      "desc": "a narrow trodden footpath"
+    },
+    {
+      "id": "house paths",
+      "kind": "path",
+      "width": 1.2,
+      "points": [[56, 22.5], [52, 22.8]],
+      "desc": "a short trodden path"
+    }
+  ],
+  "fences": [
+    {
+      "id": "garden fence",
+      "points": [[36.8, 25.3], [36.8, 30.2], [49.2, 30.2], [49.2, 25.3]],
+      "desc": "low wattle fences round the vegetable gardens"
+    },
+    {
+      "id": "farm fence",
+      "points": [[61.8, 32.8], [61.8, 38.2], [67.7, 38.2], [67.7, 32.8], [65, 32.8]],
+      "desc": "a low wattle fence"
+    },
+    {
+      "id": "churchyard wall",
+      "points": [[46.3, 6.6], [38.8, 6.6], [38.8, 1.3], [46.3, 1.3]],
+      "desc": "a low dry-stone churchyard wall"
+    },
+    {
+      "id": "paddock fence",
+      "points": [[3, 40], [14, 39], [15, 48], [3, 49], [3, 43.5]],
+      "desc": "a post-and-rail sheep paddock fence with a gap for a gate on its west side"
+    },
+    {
+      "id": "field fences",
+      "points": [[1, 8.8], [16.5, 8.3]],
+      "desc": "post-and-rail field fences along the road"
+    },
+    {
+      "id": "sheepfold",
+      "points": [[70, 67], [77, 66.5], [77.5, 72.5], [70, 73], [70, 70.5]],
+      "desc": "a round-cornered dry-stone sheepfold wall, open on one side"
+    }
+  ],
+  "bridges": [
+    {
+      "id": "stone bridge",
+      "rect": [53.0, 40.5, 3.0, 10.0],
+      "desc": "an old stone bridge seen from above: grey flagstone deck with cart ruts, a low stone parapet along both long sides, resting on the banks"
+    },
+    {
+      "id": "fisher's jetty",
+      "rect": [29.0, 42.0, 1.5, 4.0],
+      "desc": "a narrow wooden plank jetty on posts reaching into the river"
+    },
+    {
+      "id": "fallen tree",
+      "rect": [80.0, 44.5, 1.0, 7.0],
+      "desc": "a great fallen tree trunk lying across the rapids from bank to bank, bark mossy, a perilous crossing"
+    }
+  ],
+  "buildings": [
+    {
+      "id": "inn",
+      "rect": [36.0, 8.0, 8.0, 6.5],
+      "doors": [
+        {
+          "side": "E",
+          "at": 2.5
+        },
+        {
+          "side": "S",
+          "at": 5.5
+        }
+      ],
+      "roof": "thatched",
+      "desc": "the village inn shown with its roof removed: a taproom with a long bar, a big hearth on the west wall, tables and benches, barrels"
+    },
+    {
+      "id": "chapel",
+      "rect": [47.0, 1.5, 6.0, 5.5],
+      "doors": [
+        {
+          "side": "S",
+          "at": 2.5
+        }
+      ],
+      "roof": "slate",
+      "desc": "a small stone chapel shown with its roof removed: thick stone walls, rows of wooden pews, a stone altar at the north end"
+    },
+    {
+      "id": "smithy",
+      "rect": [57.5, 9.0, 6.0, 5.0],
+      "doors": [
+        {
+          "side": "W",
+          "at": 2.0,
+          "width": 2
+        }
+      ],
+      "roof": "wooden shingles",
+      "desc": "a blacksmith's forge shown with its roof removed: a stone forge with glowing coals, an anvil, a water trough, tools on the walls"
+    },
+    {
+      "id": "cottage west",
+      "rect": [37.0, 20.0, 6.0, 4.5],
+      "doors": [
+        {
+          "side": "N",
+          "at": 2.5
+        }
+      ],
+      "roof": "thatched",
+      "desc": "a villager's cottage shown with its roof removed: a hearth, a bed, a table with stools, shelves"
+    },
+    {
+      "id": "cottage south",
+      "rect": [44.0, 20.5, 5.0, 4.5],
+      "doors": [
+        {
+          "side": "E",
+          "at": 2.0
+        }
+      ],
+      "roof": "thatched",
+      "desc": "a villager's cottage shown with its roof removed: a hearth, a bed, a table, a loom"
+    },
+    {
+      "id": "weaver's house",
+      "rect": [56.0, 20.0, 6.0, 4.5],
+      "doors": [
+        {
+          "side": "W",
+          "at": 2.0
+        }
+      ],
+      "roof": "thatched",
+      "desc": "a weaver's house shown with its roof removed: a big loom, baskets of wool, a hearth, a bed"
+    },
+    {
+      "id": "barn",
+      "rect": [59.0, 26.5, 7.0, 5.0],
+      "doors": [
+        {
+          "side": "W",
+          "at": 1.5,
+          "width": 2
+        }
+      ],
+      "roof": "thatched",
+      "desc": "a timber barn shown with its roof removed: plank floor, hay stacked along the walls, a cart"
+    },
+    {
+      "id": "farmhouse",
+      "rect": [56.5, 33.0, 5.0, 4.5],
+      "doors": [
+        {
+          "side": "W",
+          "at": 2.0
+        }
+      ],
+      "roof": "thatched",
+      "desc": "a farmhouse shown with its roof removed: a hearth, a table with benches, a bed, a butter churn"
+    },
+    {
+      "id": "watermill",
+      "rect": [19.5, 27.0, 6.0, 5.5],
+      "doors": [
+        {
+          "side": "N",
+          "at": 2.5
+        },
+        {
+          "side": "E",
+          "at": 2.0
+        }
+      ],
+      "roof": "wooden shingles",
+      "desc": "a stone watermill shown with its roof removed: a big round millstone in the middle, sacks of grain and flour, wooden gears by the west wall"
+    },
+    {
+      "id": "fisher's hut",
+      "rect": [27.0, 38.5, 5.0, 4.0],
+      "doors": [
+        {
+          "side": "N",
+          "at": 2.0
+        },
+        {
+          "side": "S",
+          "at": 2.0
+        }
+      ],
+      "roof": "thatched",
+      "desc": "a fisher's one-room hut shown with its roof removed: nets hung on the walls, a small hearth, a cot, baskets"
+    },
+    {
+      "id": "woodcutter's hut",
+      "rect": [86.0, 2.5, 5.0, 4.0],
+      "doors": [
+        {
+          "side": "W",
+          "at": 1.5
+        }
+      ],
+      "roof": "wooden shingles",
+      "desc": "a woodcutter's log hut shown with its roof removed: a hearth, a bunk, axes and saws on the walls"
+    },
+    {
+      "id": "hermit's hut",
+      "rect": [112.0, 11.5, 4.0, 3.5],
+      "doors": [
+        {
+          "side": "E",
+          "at": 1.5
+        }
+      ],
+      "roof": "turf",
+      "desc": "a hermit's tiny stone hut shown with its roof removed: a straw bed, a small hearth, jars of herbs on a shelf"
+    },
+    {
+      "id": "ruined keep",
+      "rect": [104.0, 59.0, 20.0, 13.0],
+      "doors": [
+        {
+          "side": "W",
+          "at": 5.0,
+          "width": 2
+        },
+        {
+          "side": "N",
+          "at": 4.5,
+          "width": 2
+        },
+        {
+          "side": "N",
+          "at": 12.0,
+          "width": 3
+        },
+        {
+          "side": "E",
+          "at": 3.5,
+          "width": 4
+        },
+        {
+          "side": "S",
+          "at": 5.0,
+          "width": 3
+        },
+        {
+          "side": "S",
+          "at": 14.0,
+          "width": 2
+        }
+      ],
+      "roof": "none",
+      "desc": "the ruin of an old keep: the broken stumps of thick grey stone walls (gaps are breaches and gates), the courtyard inside of cracked flagstones overgrown with grass, weeds and moss"
+    },
+    {
+      "id": "ruined tower",
+      "rect": [116.0, 61.0, 6.0, 6.0],
+      "doors": [
+        {
+          "side": "W",
+          "at": 2.5
+        },
+        {
+          "side": "S",
+          "at": 3.5,
+          "width": 2
+        }
+      ],
+      "roof": "none",
+      "desc": "the roofless stump of a square tower inside the ruin: thick grey stone walls, a cracked flagstone floor"
+    }
+  ],
+  "props": [
+    {
+      "id": "well",
+      "rect": [49.3, 12.3, 1.6, 1.6],
+      "desc": "a round stone well with a little wooden roof frame and a bucket"
+    },
+    {
+      "id": "horse trough",
+      "rect": [44.6, 15.0, 1.0, 2.0],
+      "desc": "a wooden horse trough"
+    },
+    {
+      "id": "market stall",
+      "rect": [52.0, 9.0, 3.0, 1.4],
+      "desc": "a market stall: a trestle table with baskets of vegetables under a striped awning"
+    },
+    {
+      "id": "waterwheel",
+      "rect": [17.6, 28.0, 1.6, 3.2],
+      "desc": "a wooden waterwheel turning in a short stone channel between the mill and the river"
+    },
+    {
+      "id": "beehives",
+      "rect": [4.5, 41.0, 3.0, 1.2],
+      "desc": "a row of four straw beehives (skeps) on a plank bench"
+    },
+    {
+      "id": "log piles",
+      "rect": [79.5, 3.0, 4.0, 1.6],
+      "desc": "stacks of cut logs"
+    },
+    {
+      "id": "sawpit",
+      "rect": [81.5, 6.5, 2.0, 1.2],
+      "desc": "a sawhorse and a chopping block with an axe"
+    },
+    {
+      "id": "shrine",
+      "rect": [86.0, 30.0, 2.0, 2.0],
+      "desc": "a small mossy stone shrine with a carved face of a forest spirit"
+    },
+    {
+      "id": "altar stone",
+      "rect": [113.2, 28.8, 1.6, 1.2],
+      "desc": "a flat altar stone in the middle of the stone ring"
+    },
+    {
+      "id": "charcoal kiln",
+      "rect": [14.0, 62.5, 3.0, 3.0],
+      "desc": "a smouldering charcoal kiln: a round mound of earth and turf, wisps of smoke"
+    },
+    {
+      "id": "charcoal stacks",
+      "rect": [18.5, 66.5, 2.5, 1.4],
+      "desc": "stacks of cut logs and a pile of charcoal"
+    },
+    {
+      "id": "haystacks",
+      "rect": [64.0, 68.0, 2.0, 2.0],
+      "desc": "a round haystack"
+    },
+    {
+      "id": "haystack 2",
+      "rect": [62.0, 72.0, 2.0, 2.0],
+      "desc": "a round haystack"
+    },
+    {
+      "id": "wayside shrine",
+      "rect": [57.3, 56.4, 1.0, 1.0],
+      "desc": "a small wooden wayside shrine on a post"
+    },
+    {
+      "id": "burial mound",
+      "rect": [92.0, 51.5, 4.5, 4.0],
+      "desc": "an old grassy burial mound ringed by small stones"
+    },
+    {
+      "id": "rubble west",
+      "rect": [106.0, 60.0, 3.0, 1.6],
+      "desc": "a pile of fallen wall stones"
+    },
+    {
+      "id": "rubble south",
+      "rect": [112.5, 69.5, 2.5, 1.5],
+      "desc": "a pile of fallen wall stones"
+    },
+    {
+      "id": "rubble east",
+      "rect": [124.6, 62.0, 2.0, 4.5],
+      "desc": "fallen wall stones spilled out of the breach onto the grass"
+    },
+    {
+      "id": "rubble tower",
+      "rect": [118.5, 65.0, 2.5, 1.2],
+      "desc": "a heap of fallen tower stones"
+    },
+    {
+      "id": "dungeon stair",
+      "rect": [117.0, 62.0, 2.5, 2.5],
+      "desc": "a dark square stairwell in the tower floor: worn stone steps going down into the dungeon under the ruin, the bottom in darkness"
+    },
+    {
+      "id": "dungeon hatch",
+      "rect": [108.0, 66.5, 1.5, 1.5],
+      "desc": "a heavy iron-bound wooden trapdoor in the courtyard flagstones, half open, a ladder going down into darkness"
+    },
+    {
+      "id": "campfire",
+      "rect": [119.8, 31.5, 1.5, 1.5],
+      "desc": "a ring of stones round the ashes of an old campfire"
+    },
+    {
+      "id": "standing stone 1",
+      "rect": [113.5, 25.3, 1.0, 1.0],
+      "desc": "a weathered grey standing stone, one of a ring of seven"
+    },
+    {
+      "id": "standing stone 2",
+      "rect": [116.31, 26.66, 1.0, 1.0],
+      "desc": "a weathered grey standing stone, one of a ring of seven"
+    },
+    {
+      "id": "standing stone 3",
+      "rect": [117.01, 29.7, 1.0, 1.0],
+      "desc": "a weathered grey standing stone, one of a ring of seven"
+    },
+    {
+      "id": "standing stone 4",
+      "rect": [115.06, 32.14, 1.0, 1.0],
+      "desc": "a weathered grey standing stone, one of a ring of seven"
+    },
+    {
+      "id": "standing stone 5",
+      "rect": [111.94, 32.14, 1.0, 1.0],
+      "desc": "a weathered grey standing stone, one of a ring of seven"
+    },
+    {
+      "id": "standing stone 6",
+      "rect": [109.99, 29.7, 1.0, 1.0],
+      "desc": "a weathered grey standing stone, one of a ring of seven"
+    },
+    {
+      "id": "standing stone 7",
+      "rect": [110.69, 26.66, 1.0, 1.0],
+      "desc": "a weathered grey standing stone, one of a ring of seven"
+    }
+  ]
+}

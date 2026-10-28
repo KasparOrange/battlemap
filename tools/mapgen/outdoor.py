@@ -11,6 +11,8 @@ which way and how fast it flows, where it is shallow, where it breaks on rocks).
 
 Usage:
   tools/mapgen/outdoor.py guide layouts/riverbend.json             # guide + masks, free
+  tools/mapgen/outdoor.py guide layouts/summervale.json            # big map: + crops/ per screen + guide-sheet.jpg
+  tools/mapgen/outdoor.py crops layouts/summervale.json [--margin 2]   # only re-cut the per-screen crops
   tools/mapgen/outdoor.py paint layouts/riverbend.json --size 2K --n 2 --why "…"
   tools/mapgen/outdoor.py paint layouts/riverbend.json --albedo …  # unlit, for the table's light (docs/ai-art.md "Light lab")
   tools/mapgen/outdoor.py roof  out/riverbend/<run> [out_1.jpg]    # roof sprites from the painting
@@ -18,8 +20,12 @@ Usage:
 
 Layout (squares, origin top-left): `zones` (forest · meadow · … polygons), `river` (centre-line
 points [x, y, width, speed 0 calm…1 rapids, shallow 0 deep…1 ford]), `rocks` ([x, y, r] boulders
-in the water), `paths` (polylines with width), `bridges` and `props` (rects), `buildings` (rect +
-doors on a side, walls drawn like mapgen's, roof style). Run folders: tools/mapgen/out/<name>/.
+in the water), `paths` (polylines with width), `fences` (polylines, thin), `bridges` and `props`
+(rects), `buildings` (rect + doors on a side — also a ruin's breaches —, walls drawn like mapgen's,
+roof style; "none" = a ruin, no roof, no footprint), single `trees`, `river.bank_trees`,
+`edge_shrubs`. Zone kinds: meadow, forest (with a `stand` mix), garden, field, road, path. Run
+folders: tools/mapgen/out/<name>/. A map bigger than one TV screen (34 × 19) is painted in tiles:
+`guide` then also writes one guide crop + prompt per screen (`crop_boxes`, docs/ai-art.md).
 """
 
 import argparse
@@ -48,7 +54,7 @@ COLORS = {
     "road": (176, 136, 82), "path": (204, 170, 112),
     "gravel": (204, 190, 150), "mud": (104, 86, 56),
     "deep": (30, 74, 168), "rapids": (70, 150, 230), "ford": (128, 196, 228),
-    "rock": (96, 96, 96), "bridge": (140, 92, 48),
+    "rock": (96, 96, 96), "bridge": (140, 92, 48), "field": (222, 196, 92), "fence": (150, 58, 22),
     "wall": (32, 32, 32), "floor": (128, 128, 128), "prop": (255, 0, 255),
 }
 
@@ -56,6 +62,8 @@ LEGEND = {
     "meadow": "light green = sunny summer meadow grass",
     "forest": "dark green = forest floor under a canopy (see the ground-layer rule)",
     "garden": "brown = tilled garden soil",
+    "field": "golden yellow = a ripe grain field, the rows of the crop running along the field's long side",
+    "fence": "thin rust-brown lines = low fences (post-and-rail, wattle or dry-stone, see below), knee high",
     "road": "tan = dirt road",
     "path": "light tan = trodden footpath",
     "gravel": "sandy band along the water = gravel and pebble bank",
@@ -133,13 +141,13 @@ def walls(b):
 # ---------------------------------------------------------------- guide
 
 
-def render_guide(spec, pps=GUIDE_PPS):
-    """The colour-coded guide the model repaints (smooth edges by supersampling)."""
-    cols, rows = spec["grid"]
-    k = pps * SS
-    img = Image.new("RGB", (cols * k, rows * k), COLORS[spec.get("ground", "meadow")])
-    d = ImageDraw.Draw(img)
-    S = lambda pts: [(px * k, py * k) for px, py in pts]
+GUIDE_CHUNK = 1024   # big maps render in chunks of this many guide px (+ a margin), supersampled
+
+
+def draw_layout(d, spec, k, ox=0, oy=0):
+    """Draws the layout's guide colours with ImageDraw `d` at `k` px per square, the picture's
+    top-left at map px (`ox`, `oy`) — one chunk of a big guide or the whole of a small one."""
+    S = lambda pts: [(px * k - ox, py * k - oy) for px, py in pts]
     for z in spec.get("zones", []):
         d.polygon(S(z["poly"]), COLORS[z["kind"]])
     r = river_samples(spec)
@@ -151,6 +159,10 @@ def render_guide(spec, pps=GUIDE_PPS):
     for p in spec.get("paths", []):
         ps = catmull(p["points"], 0.1)
         d.polygon(S(strip(ps, np.full(len(ps), p["width"] / 2))), COLORS[p["kind"]])
+    for f in spec.get("fences", []):
+        ps = np.asarray(f["points"], float)
+        for a, b in zip(ps[:-1], ps[1:]):
+            d.polygon(S(strip(np.array([a, b]), np.full(2, f.get("width", 0.16) / 2))), COLORS["fence"])
     for i in range(len(r) - 1):
         seg = r[i:i + 2]
         sp, sh = seg[:, 3].mean(), seg[:, 4].mean()
@@ -158,19 +170,44 @@ def render_guide(spec, pps=GUIDE_PPS):
         c = c * (1 - sp) + np.array(COLORS["rapids"]) * sp
         d.polygon(S(strip(seg, seg[:, 2] / 2)), tuple(int(v) for v in c))
     for x, y, rr in spec.get("rocks", []):
-        d.ellipse([(x - rr) * k, (y - rr) * k, (x + rr) * k, (y + rr) * k], COLORS["rock"])
+        d.ellipse([(x - rr) * k - ox, (y - rr) * k - oy, (x + rr) * k - ox, (y + rr) * k - oy], COLORS["rock"])
     for b in spec.get("bridges", []):
         x, y, w, h = b["rect"]
-        d.rectangle([x * k, y * k, (x + w) * k, (y + h) * k], COLORS["bridge"])
+        d.rectangle([x * k - ox, y * k - oy, (x + w) * k - ox, (y + h) * k - oy], COLORS["bridge"])
     for b in spec.get("buildings", []):
         x, y, w, h = b["rect"]
-        d.rectangle([x * k, y * k, (x + w) * k, (y + h) * k], COLORS["floor"])
+        d.rectangle([x * k - ox, y * k - oy, (x + w) * k - ox, (y + h) * k - oy], COLORS["floor"])
         for x0, y0, x1, y1 in walls(b):
-            d.rectangle([x0 * k, y0 * k, x1 * k, y1 * k], COLORS["wall"])
+            d.rectangle([x0 * k - ox, y0 * k - oy, x1 * k - ox, y1 * k - oy], COLORS["wall"])
     for p in spec.get("props", []):
         x, y, w, h = p["rect"]
-        d.rectangle([(x + 0.1) * k, (y + 0.1) * k, (x + w - 0.1) * k, (y + h - 0.1) * k], COLORS["prop"])
-    return img.resize((cols * pps, rows * pps), Image.LANCZOS)
+        d.rectangle([(x + 0.1) * k - ox, (y + 0.1) * k - oy, (x + w - 0.1) * k - ox, (y + h - 0.1) * k - oy],
+                    COLORS["prop"])
+
+
+def render_guide(spec, pps=GUIDE_PPS):
+    """The colour-coded guide the model repaints (smooth edges by supersampling). A small map
+    (one screen) is drawn in one piece; a big one in GUIDE_CHUNK-px chunks, each drawn with a
+    margin past the LANCZOS filter's reach and cropped, so it matches a one-piece render (a
+    136 × 76 map supersampled whole would be 21,760 × 12,160 px, ~800 MB)."""
+    cols, rows = spec["grid"]
+    k = pps * SS
+    W, H = cols * pps, rows * pps
+    bg = COLORS[spec.get("ground", "meadow")]
+    if W * H * SS * SS <= 64e6:
+        img = Image.new("RGB", (W * SS, H * SS), bg)
+        draw_layout(ImageDraw.Draw(img), spec, k)
+        return img.resize((W, H), Image.LANCZOS)
+    out = Image.new("RGB", (W, H), bg)
+    m = 4   # guide px of margin (LANCZOS reaches 3 px when shrinking)
+    for y0 in range(0, H, GUIDE_CHUNK):
+        for x0 in range(0, W, GUIDE_CHUNK):
+            cw, ch = min(GUIDE_CHUNK, W - x0), min(GUIDE_CHUNK, H - y0)
+            img = Image.new("RGB", ((cw + 2 * m) * SS, (ch + 2 * m) * SS), bg)
+            draw_layout(ImageDraw.Draw(img), spec, k, (x0 - m) * SS, (y0 - m) * SS)
+            small = img.resize((cw + 2 * m, ch + 2 * m), Image.LANCZOS)
+            out.paste(small.crop((m, m, m + cw, m + ch)), (x0, y0))
+    return out
 
 
 def squares(x0, y0, x1, y1):
@@ -182,14 +219,27 @@ def bbox(pts, cols, rows):
     return (*a.min(0), *a.max(0))
 
 
-def build_prompt(spec):
-    """Fills prompts/outdoor.txt: the legend for the colours this layout uses + one line per area."""
+def build_prompt(spec, box=None):
+    """Fills prompts/outdoor.txt: the legend for the colours this layout uses + one line per area.
+
+    `box` (x0, y0, x1, y1 in squares) = the prompt for one crop of a big map (tiled painting):
+    only what reaches into the box is listed, its squares counted from the box's top-left, and
+    the size is the box's (whole squares, rounded)."""
     cols, rows = spec["grid"]
+    bx0, by0, bx1, by1 = box or (0, 0, cols, rows)
+    W, H = bx1 - bx0, by1 - by0
+
+    def where(x0, y0, x1, y1):
+        """None when (x0, y0, x1, y1) misses the box, else its squares within the box."""
+        if x1 <= bx0 or x0 >= bx1 or y1 <= by0 or y0 >= by1:
+            return None
+        return squares(max(x0, bx0) - bx0, max(y0, by0) - by0, min(x1, bx1) - bx0, min(y1, by1) - by0)
+
     used = {spec.get("ground", "meadow")} | {z["kind"] for z in spec.get("zones", [])}
     used |= {p["kind"] for p in spec.get("paths", [])}
     if spec.get("river"):
         used |= {"deep", "rapids", "ford", "gravel", "mud"}
-    for key, flag in (("rock", "rocks"), ("bridge", "bridges"), ("prop", "props")):
+    for key, flag in (("rock", "rocks"), ("bridge", "bridges"), ("prop", "props"), ("fence", "fences")):
         if spec.get(flag):
             used.add(key)
     if spec.get("buildings"):
@@ -197,18 +247,21 @@ def build_prompt(spec):
     legend = "; ".join(v for k, v in LEGEND.items() if k in used) + "."
     lines = []
     for z in spec.get("zones", []):
-        if z.get("desc"):
-            lines.append(f"- {z['id']} ({squares(*bbox(z['poly'], cols, rows))}): {z['desc']}")
+        if z.get("desc") and (w := where(*bbox(z["poly"], cols, rows))):
+            lines.append(f"- {z['id']} ({w}): {z['desc']}")
     if spec.get("river"):
-        lines.append(f"- river: {spec['river']['desc']}")
-    for p in spec.get("paths", []):
-        if p.get("desc"):
-            lines.append(f"- {p['id']} ({squares(*bbox(p['points'], cols, rows))}): {p['desc']}")
+        rs = river_samples(spec)
+        if any(where(x - w / 2 - 0.5, y - w / 2 - 0.5, x + w / 2 + 0.5, y + w / 2 + 0.5) for x, y, w in rs[:, :3]):
+            lines.append(f"- river: {spec['river']['desc']}")
+    for p in spec.get("paths", []) + spec.get("fences", []):
+        if p.get("desc") and (w := where(*bbox(p["points"], cols, rows))):
+            lines.append(f"- {p['id']} ({w}): {p['desc']}")
     for b in spec.get("bridges", []) + spec.get("buildings", []) + spec.get("props", []):
         x, y, w, h = b["rect"]
-        lines.append(f"- {b.get('id', 'prop')} ({squares(x, y, x + w, y + h)}): {b['desc']}")
+        if wh := where(x, y, x + w, y + h):
+            lines.append(f"- {b.get('id', 'prop')} ({wh}): {b['desc']}")
     return (HERE / "prompts" / "outdoor.txt").read_text().format(
-        cols=cols, rows=rows, setting=spec["setting"], legend=legend,
+        cols=round(W), rows=round(H), setting=spec["setting"], legend=legend,
         style=spec.get("style", "hand-painted fantasy battle map, rich natural textures, lush summer greens, "
                                 "warm sunlight, crisp readable edges, the look of a premium printed battle map"),
         areas="\n".join(lines))
@@ -263,13 +316,22 @@ def masks(spec, pps=MASK_PPS):
     # foam: a short collar around each boulder and a wake trailing ~1.5 squares downstream
     foam = np.clip(1 - rock_d / 0.3, 0, 1)
     if spec.get("rocks"):
-        # the rapids' mean flow direction at the boulders
-        rx, ry = np.mean([r[np.argmin(np.hypot(r[:, 0] - x, r[:, 1] - y)), 5:7] for x, y, _ in spec["rocks"]], axis=0)
-        steps = 14
-        for i in range(1, steps + 1):
-            d = 1.5 * i / steps
-            moved = ndi.shift(rockm, (ry * d * pps, rx * d * pps), order=1)
-            foam = np.maximum(foam, moved * (1 - i / (steps + 1)) ** 1.3)
+        # each group of boulders (closer than 3 squares) trails its wake along its own stretch's
+        # mean flow — a big map has boulders in the rapids and stepping stones in a ford
+        for group in rock_groups(spec["rocks"]):
+            rx, ry = np.mean([r[np.argmin(np.hypot(r[:, 0] - x, r[:, 1] - y)), 5:7] for x, y, _ in group], axis=0)
+            rm = rockm
+            if len(group) < len(spec["rocks"]):
+                win = np.zeros_like(rockm)
+                gx0, gy0 = (min(x - rr for x, y, rr in group) - 1) * pps, (min(y - rr for x, y, rr in group) - 1) * pps
+                gx1, gy1 = (max(x + rr for x, y, rr in group) + 1) * pps, (max(y + rr for x, y, rr in group) + 1) * pps
+                win[max(0, int(gy0)):int(gy1) + 1, max(0, int(gx0)):int(gx1) + 1] = 1
+                rm = rockm * win
+            steps = 14
+            for i in range(1, steps + 1):
+                d = 1.5 * i / steps
+                moved = ndi.shift(rm, (ry * d * pps, rx * d * pps), order=1)
+                foam = np.maximum(foam, moved * (1 - i / (steps + 1)) ** 1.3)
         foam = ndi.gaussian_filter(foam, pps * 0.12)
     foam = foam * (rockm < 0.5)
     speed = speed * (0.35 + 0.65 * np.sqrt(bank))
@@ -285,12 +347,25 @@ def masks(spec, pps=MASK_PPS):
             Image.fromarray((b * 255).round().astype(np.uint8), "RGBA"), footprints(spec, pps))
 
 
+def rock_groups(rocks, gap=3.0):
+    """The boulders split into groups: single linkage, centres closer than `gap` squares."""
+    groups = []
+    for rk in rocks:
+        near = [g for g in groups if any(math.hypot(rk[0] - o[0], rk[1] - o[1]) < gap for o in g)]
+        merged = [rk] + [o for g in near for o in g]
+        groups = [g for g in groups if g not in near] + [merged]
+    return groups
+
+
 def footprints(spec, pps):
-    """One grey value per building (index + 1) over its outer wall rectangle."""
+    """One grey value per building (index + 1) over its outer wall rectangle; buildings with
+    `"roof": "none"` (ruins) get none, their value stays unused."""
     cols, rows = spec["grid"]
     img = Image.new("L", (cols * pps, rows * pps), 0)
     d = ImageDraw.Draw(img)
     for i, b in enumerate(spec.get("buildings", [])):
+        if b.get("roof") == "none":
+            continue
         x, y, w, h = b["rect"]
         t = WALL / 2
         d.rectangle([(x - t) * pps, (y - t) * pps, (x + w + t) * pps - 1, (y + h + t) * pps - 1], i + 1)
@@ -306,6 +381,72 @@ def write_layers(spec, folder):
     water2.save(folder / "water2.png")
     foot.save(folder / "footprints.png")
     return guide
+
+
+# ---------------------------------------------------------------- big maps: screens and crops
+
+SCREEN = (34, 19)     # one TV screen in squares (the table's window, CLAUDE.md "The table")
+CROP_MARGIN = 2       # squares of overlap a tile's crop reaches past its screen (at least)
+
+
+def screens(spec):
+    """The map's TV screens, row by row: [(r, c, (x0, y0, x1, y1) in squares)]."""
+    cols, rows = spec["grid"]
+    sw, sh = SCREEN
+    return [(r, c, (c * sw, r * sh, min(cols, (c + 1) * sw), min(rows, (r + 1) * sh)))
+            for r in range(math.ceil(rows / sh)) for c in range(math.ceil(cols / sw))]
+
+
+def crop_boxes(spec, margin=CROP_MARGIN, pps=GUIDE_PPS):
+    """One crop per screen for tiled painting: the screen + `margin` squares round it, grown to
+    the nearest aspect the model offers (34 × 19 + 2 → 38 × 23 → 16:9 = 40.9 × 23 squares, so
+    ~3.4 squares of overlap left and right, 2 above and below) and shifted back onto the map at
+    its edges (the overlap then all lies on the inner side). Boxes in guide px (ints) + squares."""
+    cols, rows = spec["grid"]
+    out = []
+    for r, c, (x0, y0, x1, y1) in screens(spec):
+        want = ((x0 - margin) * pps, (y0 - margin) * pps, (x1 + margin) * pps, (y1 + margin) * pps)
+        *box, aspect = aspect_box((cols * pps, rows * pps), want)
+        out.append({"screen": [r, c], "screen_sq": [x0, y0, x1, y1], "box_px": box,
+                    "box_sq": [round(v / pps, 3) for v in box], "aspect": aspect,
+                    "screen_in_crop_px": [x0 * pps - box[0], y0 * pps - box[1], x1 * pps - box[0], y1 * pps - box[1]]})
+    return out
+
+
+def write_crops(spec, folder, guide=None, margin=CROP_MARGIN):
+    """The guide cut into one crop per screen (crops/guide_r<r>c<c>.png, cut from guide.png at
+    GUIDE_PPS), each with its own prompt (crops/prompt_r<r>c<c>.txt: only what reaches into the
+    crop, squares counted from its corner) and crops/crops.json (every box)."""
+    guide = guide or Image.open(folder / "guide.png")
+    (folder / "crops").mkdir(exist_ok=True)
+    boxes = crop_boxes(spec, margin)
+    for b in boxes:
+        tag = "r{}c{}".format(*b["screen"])
+        guide.crop(b["box_px"]).save(folder / "crops" / f"guide_{tag}.png")
+        (folder / "crops" / f"prompt_{tag}.txt").write_text(build_prompt(spec, b["box_sq"]))
+    (folder / "crops" / "crops.json").write_text(json.dumps({
+        "guide": "guide.png", "guide_pps": GUIDE_PPS, "grid": spec["grid"], "screen": SCREEN,
+        "margin": margin, "crops": boxes}, indent=1))
+    return boxes
+
+
+def write_sheet(spec, folder, guide=None, pps=15):
+    """A downscaled contact sheet of the guide (`pps` px per square) with the screens' borders
+    and names (r<row>c<col>) drawn on → guide-sheet.jpg."""
+    guide = guide or Image.open(folder / "guide.png")
+    cols, rows = spec["grid"]
+    img = guide.resize((cols * pps, rows * pps), Image.LANCZOS)
+    d = ImageDraw.Draw(img)
+    for t in spec.get("trees", []):   # the layout's single trees (not in the guide): outlines
+        rr = t["d"] / 2 * pps
+        d.ellipse([t["x"] * pps - rr, t["y"] * pps - rr, t["x"] * pps + rr, t["y"] * pps + rr], outline=(20, 60, 20), width=2)
+    for r, c, (x0, y0, x1, y1) in screens(spec):
+        d.rectangle([x0 * pps, y0 * pps, x1 * pps - 1, y1 * pps - 1], outline=(255, 255, 255), width=3)
+        d.rectangle([x0 * pps + 3, y0 * pps + 3, x1 * pps - 4, y1 * pps - 4], outline=(0, 0, 0), width=1)
+        d.text((x0 * pps + 8, y0 * pps + 6), f"r{r}c{c}", fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0),
+               font_size=max(12, pps * 1.4))
+    img.save(folder / "guide-sheet.jpg", quality=88)
+    return img
 
 
 # ---------------------------------------------------------------- roofs
@@ -652,6 +793,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     g = sub.add_parser("guide"); g.add_argument("spec")
+    k = sub.add_parser("crops", help="cut the guide into one crop per TV screen (big maps; `guide` does it too)")
+    k.add_argument("spec"); k.add_argument("--margin", type=float, default=CROP_MARGIN)
     p = sub.add_parser("paint"); p.add_argument("spec")
     p.add_argument("--size", default="2K", choices=mapgen.PRICE); p.add_argument("--n", type=int, default=1)
     p.add_argument("--tag", default=""); p.add_argument("--why", default="")
@@ -683,9 +826,18 @@ def main():
     if a.cmd == "guide":
         folder = OUT / spec["name"]
         folder.mkdir(parents=True, exist_ok=True)
-        write_layers(spec, folder)
+        t0 = time.time()
+        guide = write_layers(spec, folder)
         (folder / "prompt.txt").write_text(build_prompt(spec))
-        print(folder / "guide.png", mapgen.pick_aspect(spec))
+        print(folder / "guide.png", guide.size, mapgen.pick_aspect(spec), f"{time.time() - t0:.0f}s")
+        if len(screens(spec)) > 1:   # a big map: the per-screen crops and a contact sheet
+            write_crops(spec, folder, guide)
+            write_sheet(spec, folder, guide)
+            print(folder / "crops" / "crops.json", folder / "guide-sheet.jpg")
+    elif a.cmd == "crops":
+        folder = OUT / spec["name"]
+        for b in write_crops(spec, folder, margin=a.margin):
+            print("r{}c{}".format(*b["screen"]), b["box_sq"], b["aspect"])
     elif a.cmd == "paint":
         paint(spec, a.size, a.n, a.tag, a.why, a.thinking, a.albedo)
 

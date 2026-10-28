@@ -605,10 +605,24 @@ on `battlemap-mapgen`. Open:
   cartoony there, tune `edit-canopy.txt` (they come from the ground painting's own style).
 - Paint the garden bushes and reeds the same way, or redraw them in the canopy's look.
 - A big map: load the canopy atlas per window like the ground (every tree is unique pixels).
-- The 4 × 4 map's layout (forest with a path and a clearing, the river with bridge and ford, the
-  ruin with the way down, the village) — not written yet; only the riverbend slice exists.
+- The 4 × 4 map's painting — the layout and guide exist (below, "summervale").
 
-**Built:** `tools/mapgen/outdoor.py` (`guide`, `paint` [`--albedo`: unlit], `roof`, `canopy`), `prompts/outdoor.txt`,
+**summervale — the 4 × 4 map's layout (2026-10-28).** `layouts/summervale.json`, 136 × 76: the
+river enters in the west past a watermill and a fisher's hut, under a stone bridge by an
+8-building village (square, well, inn, chapel, smithy, gardens, fences), through rapids with a
+fallen-tree crossing at the great beech forest's edge, over a wide ford, out east; the forest
+path runs from the village past a woodcutters' clearing, a shrine glade and a hermit's glade to a
+ring of standing stones, where the ford trail turns south to the ruined keep (breached walls, a
+tower with the stair down, a trapdoor); fields, a hay meadow, a south-west wood with a charcoal
+clearing, a sheepfold and a beech grove fill the rest — every screen has something to play on.
+New in the layout schema: zone kind `field`, `fences`, `roof: "none"` (ruin, no footprint).
+`outdoor.py guide` draws a big map in chunks (40 px per square → 5440 × 3040, ~12 s) and also
+writes `guide-sheet.jpg` (screens drawn on) and `crops/`: one guide crop + prompt per screen
+(screen + 2 squares, grown to 16:9 → 40.9 × 23 squares, shifted inward at the map's edge; a 2K
+draw of it is 67 px per square) for the tiled painting. Boulder foam now trails per group of
+boulders. What paint/roof/canopy still need for the big size: `out/summervale/HANDOVER-layout.md`.
+
+**Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `roof`, `canopy`), `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,
 banks, bridge, boulders and walls; draw 2 dropped the road south of the bridge, draw 1 is the
