@@ -17,6 +17,9 @@ Usage:
   tools/mapgen/outdoor.py paint layouts/riverbend.json --albedo …  # unlit, for the table's light (docs/ai-art.md "Light lab")
   tools/mapgen/outdoor.py roof  out/riverbend/<run> [out_1.jpg]    # roof sprites from the painting
   tools/mapgen/outdoor.py canopy out/riverbend/<run> [--size 1K] [--plan]   # the forest canopy as one layer
+  tools/mapgen/outdoor.py paint layouts/summervale.json --size 4K --tag master   # big map: the master (short prompt)
+  tools/mapgen/outdoor.py tiles out/summervale/<run> [--only r1c2,…]   # 2K per screen from guide crop + master crop
+  tools/mapgen/outdoor.py assemble out/summervale/<run> [--pps 56] [--pick r1c2=tiles/r1c2_2.jpg]   # ground.png
 
 Layout (squares, origin top-left): `zones` (forest · meadow · … polygons), `river` (centre-line
 points [x, y, width, speed 0 calm…1 rapids, shallow 0 deep…1 ford]), `rocks` ([x, y, r] boulders
@@ -25,7 +28,8 @@ in the water), `paths` (polylines with width), `fences` (polylines, thin), `brid
 roof style; "none" = a ruin, no roof, no footprint), single `trees`, `river.bank_trees`,
 `edge_shrubs`. Zone kinds: meadow, forest (with a `stand` mix), garden, field, road, path. Run
 folders: tools/mapgen/out/<name>/. A map bigger than one TV screen (34 × 19) is painted in tiles:
-`guide` then also writes one guide crop + prompt per screen (`crop_boxes`, docs/ai-art.md).
+`guide` then also writes one guide crop + prompt per screen (`crop_boxes`, docs/ai-art.md); `paint` makes
+the master, `tiles` paints each crop from it, `assemble` joins them into ground.png.
 """
 
 import argparse
@@ -219,12 +223,15 @@ def bbox(pts, cols, rows):
     return (*a.min(0), *a.max(0))
 
 
-def build_prompt(spec, box=None):
+def build_prompt(spec, box=None, compact=False):
     """Fills prompts/outdoor.txt: the legend for the colours this layout uses + one line per area.
 
     `box` (x0, y0, x1, y1 in squares) = the prompt for one crop of a big map (tiled painting):
     only what reaches into the box is listed, its squares counted from the box's top-left, and
-    the size is the box's (whole squares, rounded)."""
+    the size is the box's (whole squares, rounded).
+    `compact` = the master's prompt for a big map (the 136 × 76 one ran to 86 lines, 13 KB):
+    areas with the same description share one line (the forests, the seven standing stones),
+    building and prop descriptions keep only their first clause (the tiles paint the detail)."""
     cols, rows = spec["grid"]
     bx0, by0, bx1, by1 = box or (0, 0, cols, rows)
     W, H = bx1 - bx0, by1 - by0
@@ -259,7 +266,21 @@ def build_prompt(spec, box=None):
     for b in spec.get("bridges", []) + spec.get("buildings", []) + spec.get("props", []):
         x, y, w, h = b["rect"]
         if wh := where(x, y, x + w, y + h):
-            lines.append(f"- {b.get('id', 'prop')} ({wh}): {b['desc']}")
+            desc = b["desc"]
+            if compact and b not in spec.get("bridges", []):
+                desc = desc.split(":")[0].split(", ")[0]
+            lines.append(f"- {b.get('id', 'prop')} ({wh}): {desc}")
+    if compact:   # one line per description: "- a, b (where; where): desc"
+        merged = {}
+        for ln in lines:
+            if ln.startswith("- river:"):
+                merged[ln] = None
+                continue
+            head, desc = ln[2:].split("): ", 1)
+            name, wh = head.rsplit(" (", 1)
+            merged.setdefault(desc, []).append((name, wh))
+        lines = [k if v is None else
+                 f"- {', '.join(n for n, _ in v)} ({'; '.join(w for _, w in v)}): {k}" for k, v in merged.items()]
     return (HERE / "prompts" / "outdoor.txt").read_text().format(
         cols=round(W), rows=round(H), setting=spec["setting"], legend=legend,
         style=spec.get("style", "hand-painted fantasy battle map, rich natural textures, lush summer greens, "
@@ -740,6 +761,158 @@ def canopy(spec, run, file=None, n=1, size="1K", tag=""):
     print(run / f"canopy{'_' + tag if tag else ''}.json", len(crowns), "crowns", stands)
 
 
+# ---------------------------------------------------------------- big maps: tiled painting
+
+
+TILE_PROMPT = """
+This is one part of a bigger map, painted in tiles. The SECOND image is this same part already
+painted, at low detail, as a crop of the whole map's painting. Keep its colours, light, textures,
+style and the look of every area exactly, so this part joins its neighbours without a seam
+(especially along all four edges of the frame), and paint it at full detail. Where the second
+image and the guide disagree, the guide's positions and shapes win."""
+
+
+def master_crop(master, spec, box_sq):
+    """The master painting's crop for a tile box (squares); the master is mapped onto the whole grid."""
+    cols, rows = spec["grid"]
+    sx, sy = master.width / cols, master.height / rows
+    x0, y0, x1, y1 = box_sq
+    return master.crop((round(x0 * sx), round(y0 * sy), round(x1 * sx), round(y1 * sy)))
+
+
+def tiles(spec, run, master=None, size="2K", n=1, only=None, tag=""):
+    """The tile pass of a big map: per TV screen one edit call (guide crop + the master's crop) that
+    paints the screen's crop at full detail in the master's look → tiles/<r..c..>[_tag]_<i>.<ext>.
+    tiles.json keeps every draw and the pick per tile (the newest draw; `assemble --pick` overrides)."""
+    meta = json.loads((run / "meta.json").read_text())
+    master = master or meta["results"][0]["file"]
+    mname, master = master, Image.open(run / master).convert("RGB")
+    folder = OUT / spec["name"]
+    guide = Image.open(folder / "guide.png")
+    (run / "tiles").mkdir(exist_ok=True)
+    rec_path = run / "tiles.json"
+    rec = json.loads(rec_path.read_text()) if rec_path.exists() else {"master": mname, "draws": [], "pick": {}}
+    jobs = []
+    for b in crop_boxes(spec):
+        t = "r{}c{}".format(*b["screen"])
+        if only and t not in only:
+            continue
+        g = guide.crop(b["box_px"])
+        m = master_crop(master, spec, b["box_sq"])
+        prompt = build_prompt(spec, b["box_sq"]) + "\n" + TILE_PROMPT
+        jobs += [(t, b, g, m, prompt, i) for i in range(n)]
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(job):
+        t, b, g, m, prompt, i = job
+        t0 = time.time()
+        data, mime, usage = mapgen.generate(prompt, [g, m], b["aspect"], size, None)
+        k = sum(1 for d in rec["draws"] if d["tile"] == t) + i + 1
+        path = run / "tiles" / f"{t}{'_' + tag if tag else ''}_{k}{'.png' if 'png' in mime else '.jpg'}"
+        path.write_bytes(data)
+        im = Image.open(path)
+        print(f"{path.name}  {im.width}×{im.height}  {time.time() - t0:.0f}s", flush=True)
+        return {"tile": t, "file": f"tiles/{path.name}", "size": size, "box_sq": b["box_sq"],
+                "seconds": round(time.time() - t0, 1), "usage": usage}
+
+    with ThreadPoolExecutor(4) as ex:
+        done = list(ex.map(one, jobs))
+    rec["draws"] += done
+    for d in done:
+        rec["pick"][d["tile"]] = d["file"]
+    rec["cost_usd"] = round(sum(mapgen.PRICE[d["size"]] for d in rec["draws"]), 3)
+    rec_path.write_text(json.dumps(rec, indent=1))
+    print(rec_path, f"${rec['cost_usd']} for {len(rec['draws'])} tile draws")
+
+
+def _ramp(x, a, b):
+    """0 below a, 1 above b, linear between (a < b)."""
+    return np.clip((x - a) / (b - a), 0, 1).astype(np.float32)
+
+
+def assemble(spec, run, pps=56, pick=None, match=4.0, soft=1.5, sharp=0.4):
+    """The tiles joined into one ground at `pps` px per square (ground.png + .webp, ground-sheet.jpg
+    with the screens drawn on, seams.jpg = every seam's middle at full size).
+
+    Each tile is resized onto its box; `match` (squares, 0 = off) pulls its low frequencies onto the
+    master's (blur(master) − blur(tile)), so every tile shares the master's colour and brightness.
+    Seams are two-band: the blurred part crossfades over ±`soft` squares round the screen border, the
+    detail over ±`sharp` (no ghosting of shifted detail); the weights are complementary ramps, so they
+    add up to 1 everywhere (corners too)."""
+    rec = json.loads((run / "tiles.json").read_text())
+    picks = dict(rec["pick"], **(pick or {}))
+    master = Image.open(run / rec["master"]).convert("RGB")
+    cols, rows = spec["grid"]
+    W, H = cols * pps, rows * pps
+    nr, nc = math.ceil(rows / SCREEN[1]), math.ceil(cols / SCREEN[0])
+    acc = np.zeros((H, W, 3), np.float32)
+    mup = None
+    if match:
+        mup = np.asarray(master.resize((W, H), Image.BICUBIC), np.float32)
+        mup = ndi.gaussian_filter(mup, (match * pps, match * pps, 0))
+    sig = 0.75 * pps   # the band split
+    for b in crop_boxes(spec):
+        r, c = b["screen"]
+        t = f"r{r}c{c}"
+        x0, y0, x1, y1 = b["box_sq"]
+        X0, Y0 = round(x0 * pps), round(y0 * pps)
+        tw, th = round(x1 * pps) - X0, round(y1 * pps) - Y0
+        tile = np.asarray(Image.open(run / picks[t]).convert("RGB").resize((tw, th), Image.LANCZOS), np.float32)
+        if match:
+            tile = tile + mup[Y0:Y0 + th, X0:X0 + tw] - ndi.gaussian_filter(tile, (match * pps, match * pps, 0))
+        low = ndi.gaussian_filter(tile, (sig, sig, 0))
+        xs = (X0 + np.arange(tw) + 0.5) / pps
+        ys = (Y0 + np.arange(th) + 0.5) / pps
+        sx0, sy0, sx1, sy1 = b["screen_sq"]
+        out = 0
+        for h, part in ((soft, low), (sharp, tile - low)):
+            wx = np.ones(tw, np.float32)
+            wy = np.ones(th, np.float32)
+            if c > 0:
+                wx *= _ramp(xs, sx0 - h, sx0 + h)
+            if c < nc - 1:
+                wx *= 1 - _ramp(xs, sx1 - h, sx1 + h)
+            if r > 0:
+                wy *= _ramp(ys, sy0 - h, sy0 + h)
+            if r < nr - 1:
+                wy *= 1 - _ramp(ys, sy1 - h, sy1 + h)
+            out = out + part * (wy[:, None] * wx[None, :])[..., None]
+        acc[Y0:Y0 + th, X0:X0 + tw] += out
+        print(t, picks[t], flush=True)
+    ground = Image.fromarray(np.clip(acc, 0, 255).astype(np.uint8))
+    del acc, mup
+    ground.save(run / "ground.png")
+    ground.save(run / "ground.webp", quality=90, method=4)
+    # sheet: 15 px per square, the screens drawn on
+    sp = 15
+    sheet = ground.resize((cols * sp, rows * sp), Image.LANCZOS)
+    d = ImageDraw.Draw(sheet)
+    for r, c, (a0, b0, a1, b1) in screens(spec):
+        d.rectangle([a0 * sp, b0 * sp, a1 * sp - 1, b1 * sp - 1], outline=(255, 255, 255), width=1)
+        d.text((a0 * sp + 6, b0 * sp + 4), f"r{r}c{c}", fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0), font_size=20)
+    sheet.save(run / "ground-sheet.jpg", quality=88)
+    # seams: the middle of every border between two screens, 6 × 6 squares at full size
+    seams, half = [], 3 * pps
+    for r, c, (a0, b0, a1, b1) in screens(spec):
+        if c < nc - 1:
+            seams.append((a1 * pps, (b0 + b1) / 2 * pps, f"r{r}c{c}|c{c + 1}"))
+        if r < nr - 1:
+            seams.append(((a0 + a1) / 2 * pps, b1 * pps, f"r{r}c{c}/r{r + 1}"))
+    per = 6
+    sz = 2 * half
+    grid = Image.new("RGB", (per * sz, math.ceil(len(seams) / per) * sz))
+    gd = ImageDraw.Draw(grid)
+    for i, (cx, cy, name) in enumerate(seams):
+        cx, cy = round(cx), round(cy)
+        grid.paste(ground.crop((cx - half, cy - half, cx + half, cy + half)), ((i % per) * sz, (i // per) * sz))
+        gd.text(((i % per) * sz + 4, (i // per) * sz + 2), name, fill=(255, 255, 255), stroke_width=2, stroke_fill=(0, 0, 0), font_size=16)
+    grid = grid.resize((grid.width // 2, grid.height // 2), Image.LANCZOS)   # half size: a look at all 24 at once
+    grid.save(run / "seams.jpg", quality=90)
+    (run / "ground.json").write_text(json.dumps({"pps": pps, "size": [W, H], "picks": picks, "match": match,
+                                                 "soft": soft, "sharp": sharp}, indent=1))
+    print(run / "ground.png", ground.size, run / "ground-sheet.jpg", run / "seams.jpg")
+
+
 # ---------------------------------------------------------------- CLI
 
 
@@ -764,7 +937,7 @@ def paint(spec, size, n, tag, why, thinking, albedo=False):
     run = OUT / name / (time.strftime("%y%m%d-%H%M%S") + (f"-{tag}" if tag else ""))
     run.mkdir(parents=True)
     guide = write_layers(spec, run)
-    prompt = build_prompt(spec)
+    prompt = build_prompt(spec, compact=len(screens(spec)) > 1)   # a big map's master: the short prompt
     if albedo:
         prompt = albedo_prompt(prompt)
     (run / "prompt.txt").write_text(prompt)
@@ -805,7 +978,24 @@ def main():
     c = sub.add_parser("canopy"); c.add_argument("run"); c.add_argument("image", nargs="?")
     c.add_argument("--n", type=int, default=1); c.add_argument("--size", default="1K", choices=mapgen.PRICE)
     c.add_argument("--tag", default=""); c.add_argument("--plan", action="store_true", help="only write the guide, no call")
+    t = sub.add_parser("tiles", help="big maps: paint each screen's crop from the master (run of `paint`)")
+    t.add_argument("run"); t.add_argument("--master", help="master file in the run (default: its first draw)")
+    t.add_argument("--size", default="2K", choices=mapgen.PRICE); t.add_argument("--n", type=int, default=1)
+    t.add_argument("--only", help="comma list of tiles, e.g. r1c2,r3c3 (a redo)"); t.add_argument("--tag", default="")
+    s = sub.add_parser("assemble", help="big maps: join the picked tiles into ground.png (+ sheet, seams)")
+    s.add_argument("run"); s.add_argument("--pps", type=int, default=56)
+    s.add_argument("--pick", help="override picks: r1c2=tiles/r1c2_2.jpg,…")
+    s.add_argument("--match", type=float, default=4.0, help="squares; pull each tile's low frequencies onto the master (0 = off)")
     a = ap.parse_args()
+    if a.cmd in ("tiles", "assemble"):
+        run = Path(a.run).resolve()
+        spec = mapgen.load_spec(json.loads((run / "meta.json").read_text())["layout"])
+        if a.cmd == "tiles":
+            tiles(spec, run, a.master, a.size, a.n, a.only.split(",") if a.only else None, a.tag)
+        else:
+            pick = dict(kv.split("=", 1) for kv in a.pick.split(",")) if a.pick else None
+            assemble(spec, run, a.pps, pick, a.match)
+        return
     if a.cmd == "canopy":
         run = Path(a.run).resolve()
         spec = mapgen.load_spec(json.loads((run / "meta.json").read_text())["layout"])
