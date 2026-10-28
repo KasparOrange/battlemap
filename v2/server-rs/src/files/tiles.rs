@@ -9,6 +9,8 @@
 //!   as `<hash>:tiles<level>`; asking again answers it without decoding anything.
 //! - One set is made at a time ([`MAKING`]): a second request for the same set waits and then
 //!   finds it made.
+//! - A picture big enough to stream is cut right after its upload ([`cut_at_upload`]), so the
+//!   TV's first request finds its set made, or waits for that same cut.
 
 use std::sync::LazyLock;
 use std::time::Instant;
@@ -38,6 +40,13 @@ pub const PREVIEW_SIDE: u32 = 1024;
 
 /// Highest level asked for (2^-4 = a sixteenth).
 pub const MAX_LEVEL: u32 = 4;
+
+/// The TV streams a map whose texture at its density would pass this (app
+/// `TV_BUDGET.streamAboveBytes`, 64 MiB) — keep the two equal.
+pub const STREAM_ABOVE_BYTES: u64 = 64 << 20;
+
+/// Bytes per texel of a map texture (RGBA8, app `BYTES_PER_TEXEL`).
+const BYTES_PER_TEXEL: u64 = 4;
 
 /// WebP quality of tiles and preview.
 const QUALITY: f32 = 85.0;
@@ -139,13 +148,40 @@ pub enum TilesError {
 /// [`TilesError::Missing`] when the picture isn't stored, [`TilesError::Bad`] when it can't be
 /// decoded, [`TilesError::Internal`] for disk and worker failures.
 pub async fn tile_set(state: &Shared, source: &FileRef, level: u32) -> Result<TileManifest, TilesError> {
-    let key = format!("{}:tiles{level}", source.hash);
-    if let Some(m) = known(&state.files, &key).await {
-        return Ok(m);
+    let mut sets = tile_sets(state, source, &[level]).await?;
+    sets.pop().ok_or_else(|| TilesError::Internal(anyhow::anyhow!("no tile set made")))
+}
+
+/// The tile sets of a stored picture at several levels, in the order asked; the missing ones are
+/// cut from one decode of the picture.
+///
+/// Every cut holds [`MAKING`] and looks for a made set again once it has the lock, so a request
+/// that comes while the same set is being cut (the cut at upload, another TV) waits for that cut
+/// and answers its set — a set is never cut twice.
+///
+/// # Errors
+/// As [`tile_set`].
+pub async fn tile_sets(state: &Shared, source: &FileRef, levels: &[u32]) -> Result<Vec<TileManifest>, TilesError> {
+    let key = |level: u32| format!("{}:tiles{level}", source.hash);
+    let mut found = Vec::with_capacity(levels.len());
+    for &level in levels {
+        found.push(known(&state.files, &key(level)).await);
+    }
+    if found.iter().all(Option::is_some) {
+        return Ok(found.into_iter().flatten().collect());
     }
     let _making = MAKING.lock().await;
-    if let Some(m) = known(&state.files, &key).await {
-        return Ok(m);
+    let mut missing = Vec::new();
+    for (slot, &level) in found.iter_mut().zip(levels) {
+        if slot.is_none() {
+            *slot = known(&state.files, &key(level)).await;
+            if slot.is_none() && !missing.contains(&level) {
+                missing.push(level);
+            }
+        }
+    }
+    if missing.is_empty() {
+        return Ok(found.into_iter().flatten().collect());
     }
     let path = state.files.path(&source.hash, source.ext);
     if !tokio::fs::try_exists(&path).await.unwrap_or(false) {
@@ -153,17 +189,39 @@ pub async fn tile_set(state: &Shared, source: &FileRef, level: u32) -> Result<Ti
     }
     let t0 = Instant::now();
     let max_pixels = state.images.max_pixels;
+    let cut_levels = missing.clone();
     let made = state
         .images
-        .run(move || -> Result<(u32, u32, Cut), PictureError> {
+        .run(move || -> Result<(u32, u32, Vec<Cut>), PictureError> {
             let data = std::fs::read(&path).map_err(|e| PictureError::Decode(e.to_string()))?;
             let img = convert::decode(&data, max_pixels)?;
             drop(data);
-            let cut = cut(&img, level)?;
-            Ok((img.width(), img.height(), cut))
+            let cuts = cut_levels.iter().map(|&level| cut(&img, level)).collect::<Result<Vec<_>, _>>()?;
+            Ok((img.width(), img.height(), cuts))
         })
         .await?;
-    let (source_w, source_h, cut) = made.map_err(|e| TilesError::Bad(e.to_string()))?;
+    let (source_w, source_h, cuts) = made.map_err(|e| TilesError::Bad(e.to_string()))?;
+    for (level, cut) in missing.into_iter().zip(cuts) {
+        let manifest = store_set(state, source, (source_w, source_h), level, cut, t0).await?;
+        for (slot, &l) in found.iter_mut().zip(levels) {
+            if l == level {
+                *slot = Some(manifest.clone());
+            }
+        }
+    }
+    Ok(found.into_iter().flatten().collect())
+}
+
+/// Stores a cut's tiles, preview and manifest, and remembers the manifest in `derived.json`.
+async fn store_set(
+    state: &Shared,
+    source: &FileRef,
+    (source_w, source_h): (u32, u32),
+    level: u32,
+    cut: Cut,
+    t0: Instant,
+) -> Result<TileManifest, TilesError> {
+    let key = format!("{}:tiles{level}", source.hash);
     let mut tiles = Vec::with_capacity(cut.tiles.len());
     let mut bytes = 0u64;
     for t in &cut.tiles {
@@ -206,6 +264,48 @@ pub async fn tile_set(state: &Shared, source: &FileRef, level: u32) -> Result<Ti
     tracing::info!(target: "files", of = &source.hash[..12], level, width = cut.width, height = cut.height, tiles = manifest.tiles.len(),
         tile_bytes = bytes, ms = t0.elapsed().as_millis() as u64, "Tile set made");
     Ok(manifest)
+}
+
+/// The levels a TV can stream a `width × height` picture at — the ones [`cut_at_upload`] cuts.
+///
+/// The TV streams a map when its texture at the TV's density would pass
+/// [`STREAM_ABOVE_BYTES`] (app `shouldStream`, `tile-window.ts`). That density is at most the
+/// level picture's own, so the texture is at most the level's pixels × 4 bytes: a level under the
+/// threshold is never streamed whatever the grid, and only the levels over it are worth cutting
+/// before the grid is known — for most big maps just level 0.
+pub fn stream_levels(width: u32, height: u32) -> Vec<u32> {
+    (0..=MAX_LEVEL)
+        .take_while(|&k| {
+            let (w, h) = level_size(width, height, k);
+            u64::from(w) * u64::from(h) * BYTES_PER_TEXEL > STREAM_ABOVE_BYTES
+        })
+        .collect()
+}
+
+/// Starts cutting a just-stored picture's tile sets in the background (the levels of
+/// [`stream_levels`]; nothing for a picture too small to stream), so the TV's first
+/// `GET /api/tiles` finds them made — or, coming during the cut, waits for this same cut
+/// ([`tile_sets`]). Failures are only logged: the TV's request then cuts (or refuses) as before.
+pub fn cut_at_upload(state: &Shared, source: FileRef, width: u32, height: u32) {
+    if !matches!(source.ext, FileExt::Png | FileExt::Jpg | FileExt::Webp) {
+        return;
+    }
+    let levels = stream_levels(width, height);
+    if levels.is_empty() {
+        return;
+    }
+    let state = state.clone();
+    tracing::info!(target: "files", of = &source.hash[..12], levels = ?levels, width, height, "Tile cut started at upload");
+    tokio::spawn(async move {
+        let t0 = Instant::now();
+        match tile_sets(&state, &source, &levels).await {
+            Ok(sets) => tracing::info!(target: "files", of = &source.hash[..12], levels = ?levels,
+                tiles = sets.iter().map(|m| m.tiles.len()).sum::<usize>(), ms = t0.elapsed().as_millis() as u64, "Tile cut at upload done"),
+            Err(e) => {
+                tracing::warn!(target: "files", of = &source.hash[..12], levels = ?levels, error = format!("{e:#}"), "Tile cut at upload failed")
+            }
+        }
+    });
 }
 
 /// A manifest made before, when it and its files are still stored.
@@ -289,6 +389,17 @@ mod tests {
         assert_eq!(level_size(7616, 4256, 0), (7616, 4256));
         assert_eq!(level_size(7617, 4257, 1), (3809, 2129));
         assert_eq!(level_size(1, 1, 4), (1, 1));
+    }
+
+    #[test]
+    fn only_levels_a_tv_can_stream_are_cut_at_upload() {
+        // 7616 × 4256 = 32 Mpx → 130 MB at level 0, 32 MB at level 1
+        assert_eq!(stream_levels(7616, 4256), vec![0]);
+        // 12000 × 8000 = 96 Mpx → 384 MB, 96 MB, 24 MB
+        assert_eq!(stream_levels(12000, 8000), vec![0, 1]);
+        // 4096 × 4096 is exactly 64 MiB → not over
+        assert!(stream_levels(4096, 4096).is_empty());
+        assert!(stream_levels(2000, 1200).is_empty());
     }
 
     #[test]

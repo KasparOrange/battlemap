@@ -105,6 +105,19 @@ at the picture's 56 px per square is ~173 MB with mipmaps, it fits).
   `derived.json` as `<hash>:tiles<k>`; the same set is never cut twice. Picture-space tiles don't
   depend on the grid, so a grid edit needs no new set; the TV maps tile pixels to squares through
   the `RasterGrid` exactly as it maps the whole picture today (fog, grid, tokens line up the same).
+- **Cut at upload:** a picture stored through `POST /files` that a TV could stream starts its cut
+  in the background right after the upload answers (`cut_at_upload`). The grid isn't known yet,
+  so it cuts every level whose own pixels × 4 bytes pass the 64 MB threshold (`stream_levels`;
+  the TV's density is at most the level's, so a level under it never streams) — level 0 for most
+  big maps, levels 0 + 1 from one decode above ~67 Mpx. A TV asking during the cut waits for that
+  same cut (one lock, the set looked up again under it); never cut twice. Measured 2026-10-28 on
+  the Mac (M-series, release build): a painted 7616 × 4256 JPEG (3.9 MB) → 135 tiles (2.5 MB) +
+  preview in **2.4 s**, the upload itself still answers in 0.16 s; a `GET /api/tiles` sent right
+  after the upload answered when that cut finished.
+- **Open point — the box as LAN server:** when the TV box runs the server for LAN play, the cut
+  decodes the whole picture on the box once (7616 × 4256 RGBA ≈ 130 MB, plus the scaled copy at
+  level ≥ 1) — exactly what streaming keeps off the box's 2 GB. Not fixed; options: ask the
+  internet server (upstream) for the set and pull its tiles, or decode in strips.
 - **Level:** the largest k with `cellW / 2^k ≥` the TV's px per square (a 256 px/sq export → k 2,
   64 px/sq; the 56 px/sq outdoor map → k 0); each tile is decoded resized to the TV's density.
 - **TV window** (`tile-window.ts` pure maths, `tile-stream.ts` the loader): loaded = tiles under
