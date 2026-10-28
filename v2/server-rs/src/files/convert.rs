@@ -223,7 +223,7 @@ pub fn decode(data: &[u8], max_pixels: u64) -> Result<DynamicImage, PictureError
 }
 
 /// Lossy WebP at `quality` (0–100).
-fn webp_lossy(img: &DynamicImage, quality: f32) -> Result<Vec<u8>, PictureError> {
+pub(crate) fn webp_lossy(img: &DynamicImage, quality: f32) -> Result<Vec<u8>, PictureError> {
     webp_encode(img, Some(quality))
 }
 

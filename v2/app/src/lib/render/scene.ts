@@ -24,6 +24,7 @@ import { FogLayer, type RevealQuality } from './fog-layer.ts';
 import { GridLayer } from './grid-layer.ts';
 import { hitsAt, type Hit } from './hit.ts';
 import { MapLayer } from './map-layer.ts';
+import type { TileStreamStats } from './tile-stream.ts';
 import type { TableRenderer } from './pixi.ts';
 import { TableMask } from './table-mask.ts';
 import { DM_BUDGET, effectsBudget, TV_BUDGET, type TextureBudget } from './tiles.ts';
@@ -149,8 +150,10 @@ export class TableScene {
       },
       invalidate,
       upload: (t) => r.app.renderer.texture.initSource(t.source),
+      tileSets: this.dm ? undefined : opts.tileSets,
+      warmTileCache: opts.warmTileCache,
     });
-    this.grid = new GridLayer(this.slots.grid, this.dm ? 1 : 1.5);
+    this.grid =new GridLayer(this.slots.grid, this.dm ? 1 : 1.5);
     this.drawings = new DrawingsLayer(this.slots.drawings);
     this.tokens = new TokensLayer(this.slots.tokens, this.dm);
     this.fog = new FogLayer(this.slots.fog, this.dm ? { opacity: 0.7, deep: 0.9, tints: true } : { opacity: 1, deep: 1, tints: false }, r.scheduler);
@@ -634,6 +637,11 @@ export class TableScene {
   /** The map's decoded density. */
   get mapPxPerSquare(): number {
     return this.mapLayer.pxPerSquare;
+  }
+
+  /** A streamed map's tile counters (TV, big maps), else null. */
+  get mapStream(): TileStreamStats | null {
+    return this.mapLayer.streamStats();
   }
 
   /**

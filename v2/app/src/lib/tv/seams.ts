@@ -5,7 +5,10 @@
 import { api } from '../api/index.ts';
 import { shellBridge } from '../shell.ts';
 import { storage } from '../storage/index.ts';
+import type { Logger } from '../log.ts';
+import type { TileSetLoader } from '../render/index.ts';
 import type { TvPorts } from './ports.ts';
+import { deviceTileSets } from './tile-sets.ts';
 
 /**
  * Builds the ports TV mode runs on.
@@ -41,6 +44,17 @@ export function realPorts(): TvPorts {
       else location.reload();
     },
   };
+}
+
+/**
+ * The TV's tile-set loader for big maps: kept on the device, asked of the server once.
+ *
+ * @param settings - the device's settings (the ports' `settings`)
+ * @param log - the logger
+ * @returns the loader for the table view
+ */
+export function realTileSets(settings: TvPorts['settings'], log: Logger): TileSetLoader {
+  return deviceTileSets({ settings, fetch: (ref, level) => api.tileSet(ref, level), log });
 }
 
 /** Asks the browser to keep the TV's storage (logged by the storage package). */

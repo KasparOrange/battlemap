@@ -190,6 +190,7 @@ the shell sets it to its configured server, the VPS). Without it nothing changes
 | library | `GET /api/library[/<id>]` = local ∪ the upstream's (local id wins); the mirror is kept in `upstream.json`, so it lists offline too |
 | library files | prefetched after every sync (thumbs + every `FileRef` in each mirrored map) up to `UPSTREAM_PREFETCH_MAX_BYTES` (2 GiB): one online start of the box and a game night elsewhere has every library map |
 | other files | `GET /files/<hash>.<ext>` the table lacks → fetched from upstream, hash-checked, stored, served |
+| tile sets | `GET /api/tiles/<hash>.<ext>` of a picture the table lacks → the picture is pulled from upstream first, then cut here (`files/tiles.rs`) |
 | game backups | `PUT` here stores as usual, then pushes upstream 3 s later (with the files the game names that upstream lacks — HEAD, then `POST /files?format=asis`); `DELETE` here is repeated upstream; `GET /api/games` lists upstream's backups too, `GET /api/games/<id>` falls back to upstream. Offline, pushes and deletes wait for the next sync (`pushed`/`deletes` in `upstream.json`) |
 | logs | `POST /log` with no MwLog credentials (devices never hold them) is forwarded upstream; 503 when that fails, so the page's outbox keeps the batch |
 | status | `GET /api/upstream` → `{url, online, lastSyncAt, lastError, libraryMirrored, gamesMirrored, filesPulled, gamesPushed, logsForwarded}` (404 without upstream) |

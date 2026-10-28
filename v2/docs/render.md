@@ -88,6 +88,43 @@ filtering); tiles upload one per frame, then the bitmaps are closed (RAM back; a
 context reloads the map). Mipmaps on the DM only (it zooms far out). Pixi's texture GC is off —
 the layers free their own textures.
 
+### Tile streaming for big maps (TV)
+
+Decided 2026-10-26 (`docs/ai-art.md`): a map that would need more than **64 MB** of texture at
+the TV's density (`TV_BUDGET.tiledAboveBytes`; the 4 × 4-screen outdoor map, 136 × 76 squares,
+needs ~130 MB) is never decoded whole on the box; it streams **512 px tiles stored as separate
+files**. Smaller maps keep the path above; the companion keeps it too (192 MB budget; 136 × 76
+at the picture's 56 px per square is ~173 MB with mipmaps, it fits).
+
+- **Cutting: the server** (`server-rs/src/files/tiles.rs`), on the first
+  `GET /api/tiles/<hash>.<ext>?level=k`: decodes the original picture once (an image slot),
+  scales it by 2^-k, cuts 512 px tiles **in picture space** with a 1 px apron (no seams under
+  linear filtering), WebP q85, each tile a content-addressed file in `files/`; plus a
+  ≤ 1024 px **preview** of the whole map. The manifest (`TileManifest`, `wire.rs`: level size,
+  tile size, apron, tile refs row by row, preview ref) is a JSON file in the store, remembered in
+  `derived.json` as `<hash>:tiles<k>`; the same set is never cut twice. Picture-space tiles don't
+  depend on the grid, so a grid edit needs no new set; the TV maps tile pixels to squares through
+  the `RasterGrid` exactly as it maps the whole picture today (fog, grid, tokens line up the same).
+- **Level:** the largest k with `cellW / 2^k ≥` the TV's px per square (a 256 px/sq export → k 2,
+  64 px/sq; the 56 px/sq outdoor map → k 0); each tile is decoded resized to the TV's density.
+- **TV window** (`tile-window.ts` pure maths, `tile-stream.ts` the loader): loaded = tiles under
+  the screen + a ring of half a screen on every side, leaning a quarter screen into the last pan
+  direction (¾ ahead, ¼ behind: the same memory, the next screen comes sooner); tiles outside
+  that rect grown by a quarter tile are freed (two frames later, qa#21). Loads go visible first, then
+  nearest the centre; 2 fetch + decodes in flight, uploads one per frame as today. The preview
+  lies under the tiles, so a tile not loaded yet reads blurry, never black. The map is shown
+  once the preview and the visible tiles are up. `stats().mapStream` counts loaded / queued /
+  visible-missing / freed tiles. 2 × 2 screens of 34 × 19 at 56 px are 32 MB; whole 512 px tiles
+  round that up: measured 2026-10-28 (`e2e/tile-stream.e2e.ts`, synthetic 7616 × 4256 numbered
+  map, 135 tiles, 1920 × 1080, a serpentine of 12 one-screen pans): 26–38 MB at the map's edges,
+  **56 MB peak** mid-map (9 × 6 tiles), never all tiles, every visible tile up after each pan
+  settles (whole-picture decode would be ~130 MB). A small map (2000 × 1200) keeps the
+  whole-picture path.
+- **Offline:** tiles come through the TV's file cache (IndexedDB); the manifest is kept in the
+  TV's settings (`tiles:<hash>:<k>`); after the window settles the rest of the set is fetched into
+  the cache in the background, so the map plays without the server later. No manifest and no
+  server (or the legacy Bun server, which has no `/api/tiles`) → the whole-picture path above.
+
 ## Fog
 
 Texel channels (`fog-texels.ts`): R revealed · G reveal fade · B bits (staged reveal/hide, a

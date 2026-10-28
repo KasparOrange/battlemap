@@ -54,6 +54,66 @@ originalBytes: number | null,
 note: string | null, };
 
 /**
+ * A picture cut into tiles for the TV (`GET /api/tiles/<hash>.<ext>?level=k`): the picture
+ * scaled by 2^-level, cut into `tile` px squares in picture space (edge tiles smaller), each
+ * file carrying an `apron` px border from its neighbours (none at the picture's edge), plus a
+ * small preview of the whole picture. Made once per picture and level (`derived.json`).
+ */
+export type TileManifest = { 
+/**
+ * Format version (1).
+ */
+v: number, 
+/**
+ * The picture the set was cut from.
+ */
+source: FileRef, 
+/**
+ * Its width in pixels (upright).
+ */
+sourceW: number, 
+/**
+ * Its height in pixels.
+ */
+sourceH: number, 
+/**
+ * The level: the picture scaled by 2^-level.
+ */
+level: number, 
+/**
+ * The scaled picture's width in pixels (the tiles' space).
+ */
+width: number, 
+/**
+ * The scaled picture's height in pixels.
+ */
+height: number, 
+/**
+ * Core tile side in pixels (512).
+ */
+tile: number, 
+/**
+ * Border each tile file carries from its neighbours, in pixels (1).
+ */
+apron: number, 
+/**
+ * Tiles across.
+ */
+cols: number, 
+/**
+ * Tiles down.
+ */
+rows: number, 
+/**
+ * The tile files, row by row (`rows × cols`).
+ */
+tiles: FileRef[], 
+/**
+ * The whole picture at most 1024 px on its long side, WebP.
+ */
+preview: FileRef, };
+
+/**
  * What a link fetch found.
  */
 export type FetchKind = "picture" | "pdf" | "uvtt";

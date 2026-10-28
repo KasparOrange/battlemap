@@ -192,6 +192,11 @@ export interface TextureBudget {
   readonly maxTile: number;
   /** Lowest map density when the picture has more. */
   readonly floorPxPerSquare: number;
+  /**
+   * Maps needing more texture than this at the screen's density stream tiles instead of being
+   * decoded whole (`tile-stream.ts`); undefined = never (the DM).
+   */
+  readonly streamAboveBytes?: number;
 }
 
 /**
@@ -211,8 +216,8 @@ export function effectsBudget(b: TextureBudget): number {
   return Math.max(0, b.otherBytes - RESERVED_OTHER_BYTES);
 }
 
-/** The TV box: 128 MB of map, 32 MB for the rest, 2048 px tiles (smooth uploads). */
-export const TV_BUDGET: TextureBudget = { mapBytes: 128 * 2 ** 20, otherBytes: 32 * 2 ** 20, maxTile: 2048, floorPxPerSquare: 32 };
+/** The TV box: 128 MB of map, 32 MB for the rest, 2048 px tiles (smooth uploads). Maps over 64 MB stream tiles. */
+export const TV_BUDGET: TextureBudget = { mapBytes: 128 * 2 ** 20, otherBytes: 32 * 2 ** 20, maxTile: 2048, floorPxPerSquare: 32, streamAboveBytes: 64 * 2 ** 20 };
 
 /** The companion: tablets have more memory; 4096 px tiles. */
 export const DM_BUDGET: TextureBudget = { mapBytes: 192 * 2 ** 20, otherBytes: 96 * 2 ** 20, maxTile: 4096, floorPxPerSquare: 32 };
