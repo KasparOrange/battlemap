@@ -669,9 +669,24 @@ trees — never on roads, buildings, fences or painted grain/dirt (a pixel test 
 field polygon missed); `plants.json` lists each with its cell. One shared atlas, the slice's
 sprites: 2048 × 448, 3.5 MB GPU. Details: `out/summervale/HANDOVER-roofs-plants.md`.
 
+**summervale — the viewer (2026-10-28).** `docs/mockups/outdoor/summervale/` (`index.html`,
+`viewer.js`; `prepare.py` packages the run into 135 cells of 512 px, 13 MB committed): the map as
+the TV would stream it — a 34 × 19 window in whole squares (arrows, shift = a screen, drag), the
+window + half a screen round it loaded, a ¼-size preview under cells on their way, whole-map view.
+Canopy drawn per cell from the canopy picture and its clump-id map (no atlas), plants from the
+shared atlas, roofs static. Two water fixes: the masks are fitted to the painted river (the
+model painted the rapids up to 2 squares south of the layout; boulder foam from the painted
+boulders), and the noise runs in the river's own coordinates (along/across the centre line)
+instead of being rotated about the map's origin — on a 136-square map that greyed the noise out
+and the rapids stood still. Measured (M2 Max, 1920 × 1080, ×20): 0.15–0.48 ms GPU a frame; GPU
+memory 49–125 MB a window (ground 16–51, canopy 18–49, the rest shared) — over the ~35 MB
+planned: compressed textures or a smaller ring are v2's call. Details:
+`out/summervale/HANDOVER-viewer.md`.
+
 **Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `tiles`, `assemble`, `roof`, `canopy`, `canopy-tiles`, `canopy-assemble`), `tools/mapgen/canopy_cut.py`, `tools/mapgen/plants.py`, `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
-`prepare.py` → `scene.json`). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,
+`prepare.py` → `scene.json`); the big map's viewer `docs/mockups/outdoor/summervale/index.html`
+(`viewer.js`, `prepare.py` → `manifest.json` + `cells/`, `shoot.mjs` = the headless check). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,
 banks, bridge, boulders and walls; draw 2 dropped the road south of the bridge, draw 1 is the
 slice. Roof: 2 edits at 1K ($0.07); the first, sent at the crop's own aspect, came back 4 %
 stretched → the crop is now grown to an offered aspect first (`aspect_box`).
