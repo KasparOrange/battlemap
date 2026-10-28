@@ -1,7 +1,13 @@
 # Battlemap — archive (history, newest on top)
 
 Rule: **one entry per prompt that changed something** — in `docs/`, or in the code it
-governs. Never per session. Heading = `### YY-MM-DD HH:MM - <session id>`; body = nested
+governs. Never per session. Heading = `### 26-10-28 18:40 - 35913bb9 - summervale: the 4 × 4 outdoor map built
+- Konrad: build the 4 × 4 map now with all the decisions (painted look; the unlit light-lab look still waits for the box)
+	- orchestrated in helpers, one step each: layout + guide (`e4dbaa0`), tiled painting code (`c5aa652`) and run (`f40236e`, $1.94: master + 16 tiles, 14 redos — a tile box now never cuts a building, else the model painted it twice), canopy per screen (`2f32ebc`, $0.87: planner scaled, 552 trees / 3,532 clumps, stored per 512 px cell — packed atlases per cell would have been 4× the pixels), roofs + plants (`204e132`, $0.50: 12 roofs, 992 plants), viewer core (`42f3a85`: water masks moved onto the painted river) and interactions (`a6f8543`: tokens, canopy ghost, roof lift/tap, wind dial, ring bench → ¼-screen ring default)
+	- v2 TV tile streaming (`7848cce`, `4ce2f51`): server cuts 512 px tile sets at upload (2.4 s for 7,616 × 4,256), TV keeps window + ring, preview under unloaded tiles, offline kept; 3 pre-existing e2e failures in `companion-game-flow` (Undo covered) left open
+	- found: ground + canopy per window is 69–98 MB with a ¼ ring, not the planned 35 (that counted ground only) → compressed textures or no-ring are the v2 decision; the 1Password unlock (Touch ID) blocks painting until Konrad touches it
+
+### YY-MM-DD HH:MM - <session id>`; body = nested
 bullets. What was learned goes into the docs it belongs to (`architecture.md`, `setup.md`,
 `packages.md`, …); *that* it was learned, when, and why goes here. Newest entry goes
 **above** the first heading.
