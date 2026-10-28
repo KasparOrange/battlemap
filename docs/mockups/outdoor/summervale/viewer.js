@@ -1,5 +1,5 @@
 // summervale on the table: the 136 × 76 map streamed the way the TV would — 512 px cells at
-// 56 px/square, only the 34 × 19 window and a ring of half a screen loaded, a blurry preview under
+// 56 px/square, only the 34 × 19 window and a ring of a quarter screen loaded (bench fold: ½ · none), a blurry preview under
 // cells still on their way. Per cell: painted ground, water from the flow masks, the forest canopy
 // as leaf clumps cut from the cell's canopy picture by its id map, plants from one atlas, roofs.
 // Assets: prepare.py → manifest.json + cells/. Shaders follow the riverbend slice (../outdoor.js).
@@ -9,6 +9,7 @@
 
 const HEAD = `#version 300 es
 precision highp float;
+precision highp int;
 uniform vec4 u_view;      // squares → clip: x*sx + ox, y*sy + oy
 uniform float u_t;
 uniform vec2 u_dir;       // wind direction
@@ -17,6 +18,9 @@ uniform float u_gusts;    // 1 = gusts roll across the map
 uniform float u_cloud;    // cloud shadow strength 0..1
 uniform vec2 u_cloudOff;  // how far the clouds have drifted (integrated on the CPU)
 uniform sampler2D u_noise;
+uniform vec2 u_party[8];  // token centres (squares)
+uniform int u_nparty;
+uniform float u_ghost;    // 1 = crowns open around the party
 const float PPS = 56.0;   // map px per square
 float hash1(float n) { return fract(sin(n * 127.1) * 43758.5453); }
 float noise1(float x) { float i = floor(x), f = fract(x), u = f * f * (3.0 - 2.0 * f); return mix(hash1(i), hash1(i + 1.0), u); }
@@ -30,6 +34,13 @@ float cloud(vec2 sq) {
   vec2 p = sq / 30.0 - u_cloudOff;
   float n = texture(u_noise, p).r * 0.65 + texture(u_noise, p * 2.7 + 0.31).r * 0.35;
   return 1.0 - u_cloud * 0.30 * smoothstep(0.50, 0.70, n);
+}
+// the canopy over and near a token opens to a ghost (the slice's 22 %) so a mini under the forest stays seen
+float ghost(vec2 sq) {
+  if (u_ghost < 0.5) return 1.0;
+  float d = 99.0;
+  for (int i = 0; i < 8; i++) { if (i >= u_nparty) break; d = min(d, length(sq - u_party[i])); }
+  return mix(0.22, 1.0, smoothstep(1.4, 2.8, d));
 }
 vec4 clip(vec2 sq) { return vec4(sq.x * u_view.x + u_view.z, sq.y * u_view.y + u_view.w, 0, 1); }
 `;
@@ -101,7 +112,7 @@ void main() {
   vec2 d = u_texel * 1.5;
   float a = texture(u_small, v_uv).a * 0.4 + 0.15 * (texture(u_small, v_uv + vec2(d.x, 0)).a + texture(u_small, v_uv - vec2(d.x, 0)).a
           + texture(u_small, v_uv + vec2(0, d.y)).a + texture(u_small, v_uv - vec2(0, d.y)).a);
-  o = vec4(0.0, 0.0, 0.0, a * 0.42);
+  o = vec4(0.0, 0.0, 0.0, a * 0.42 * ghost(v_sq));
 }`;
 
 // The still under the clumps: the canopy's own silhouette, coloured from the blurred small copy and
@@ -112,7 +123,7 @@ void main() {
   float a = texture(u_canopy, v_uv).a;
   if (a < 0.004) discard;
   vec4 s = texture(u_small, v_uv);
-  o = vec4(s.rgb / max(s.a, 1e-3) * 0.62 * a * cloud(v_sq), a);
+  o = vec4(s.rgb / max(s.a, 1e-3) * 0.62 * a * cloud(v_sq), a) * ghost(v_sq);
 }`;
 
 // Leaf clumps: a quad over the clump's box (cut to the cell) swings round its branch end like the
@@ -144,7 +155,7 @@ void main() {
   if (abs(texelFetch(u_ids, ip, 0).r * 255.0 - v_id) > 0.5) discard;
   vec4 c = texture(u_canopy, px / u_cellPx.zw);
   c.rgb *= cloud(v_sq);
-  o = c;
+  o = c * ghost(v_src);
 }`;
 
 // Plants: the slice's plant shader (bushes, ferns, reeds bend as meshes, lilies turn, trunks still).
@@ -187,11 +198,11 @@ uniform sampler2D u_atlas; in vec2 v_uv, v_sq; in vec4 v_tint; out vec4 o;
 void main() { vec4 c = texture(u_atlas, v_uv); c.rgb *= v_tint.rgb; c *= v_tint.a; c.rgb *= cloud(v_sq); o = c; }`;
 
 const ROOF_FS = HEAD + `
-uniform sampler2D u_tex; uniform float u_shadow; in vec2 v_uv, v_sq; out vec4 o;
+uniform sampler2D u_tex; uniform float u_shadow, u_alpha; in vec2 v_uv, v_sq; out vec4 o;
 void main() {
   vec4 c = texture(u_tex, v_uv);
-  if (u_shadow > 0.5) { o = vec4(0.0, 0.0, 0.0, c.a * 0.38); return; }
-  c.rgb *= cloud(v_sq); o = c;
+  if (u_shadow > 0.5) { o = vec4(0.0, 0.0, 0.0, c.a * 0.38 * u_alpha); return; }
+  c.rgb *= cloud(v_sq); o = c * u_alpha;
 }`;
 
 // ---------------------------------------------------------------- GL helpers
@@ -321,7 +332,8 @@ function buildClumps(M, c) {
 // ---------------------------------------------------------------- streaming maths (as v2's tile-window.ts)
 
 const SW = 34, SH = 19;          // one TV screen in squares
-const RING = 0.5, LEAN = 0.25;   // ring per side and its lean into the pan direction, in screens
+const LEAN = 0.25;               // the ring leans this far into the pan direction (screens), at most the ring itself
+                                 // the ring per side (screens) is ui.state.ring: 0.25 (default since 4b) · 0.5 · 0 — the bench fold
 const KEEP = 0.25;               // a loaded cell may stay this many cells past the load rectangle
 
 // ---------------------------------------------------------------- the stage
@@ -368,6 +380,8 @@ export async function start(canvas, ui) {
 
   // ---- cells: key → { state: "loading" | "live", tex…, bytes, clumps (vao) }
   const cells = new Map(), roofTex = new Map();
+  const roofOpen = M.roofs.map(() => false), roofAlpha = M.roofs.map(() => 1);   // tapped open · shown alpha (eases at 6/s)
+  const party = ui.party || [];   // token centres in squares, [x, y, colour, label] — moved by the page
   let liveDirty = true, plantsArr = null, loading = 0;
   const queue = [];
   const freeCell = (key) => {
@@ -381,6 +395,7 @@ export async function start(canvas, ui) {
     const m = M.cells[key], c = cells.get(key);
     const base = `cells/${key}`;
     try {
+      if (ui.state.loadDelay) await new Promise((r) => setTimeout(r, ui.state.loadDelay));   // bench: a slower device's fetch + decode
       const [g, can, ids, w1, w2] = await Promise.all([
         bitmap(`${base}.g.webp`),
         m.canopy ? bitmap(`${base}.c.webp`, { premultiply: true, resize: 4 }) : null,
@@ -415,8 +430,9 @@ export async function start(canvas, ui) {
   const shown = { x: 0, y: 0 };
   const viewRect = () => ({ x0: view.x, y0: view.y, x1: view.x + SW, y1: view.y + SH });
   function plan() {
-    const v = viewRect(), d = view.dir;
-    const lr = { x0: v.x0 - SW * (RING - d.dx * LEAN), x1: v.x1 + SW * (RING + d.dx * LEAN), y0: v.y0 - SH * (RING - d.dy * LEAN), y1: v.y1 + SH * (RING + d.dy * LEAN) };
+    const v = viewRect(), d = view.dir, ring = ui.state.ring ?? 0.25, lean = Math.min(LEAN, ring);
+    const side = (k) => Math.max(0, ring + k * lean);
+    const lr = { x0: v.x0 - SW * side(-d.dx), x1: v.x1 + SW * side(d.dx), y0: v.y0 - SH * side(-d.dy), y1: v.y1 + SH * side(d.dy) };
     const k = KEEP * cellSq, keep = new Set(cellsIn({ x0: lr.x0 - k, y0: lr.y0 - k, x1: lr.x1 + k, y1: lr.y1 + k }));
     const vis = new Set(cellsIn(v)), cx = v.x0 + SW / 2, cy = v.y0 + SH / 2;
     const dist = (key) => { const [a, b] = key.split("_").map(Number); return Math.hypot((a + 0.5) * cellSq - cx, (b + 0.5) * cellSq - cy); };
@@ -461,14 +477,27 @@ export async function start(canvas, ui) {
     }
     canvas.setPointerCapture(e.pointerId);
     const sx = e.clientX, sy = e.clientY, vx = view.x, vy = view.y;
-    canvas.onpointermove = (m) => moveTo(vx - ((m.clientX - sx) * dpr()) / geo.s, vy - ((m.clientY - sy) * dpr()) / geo.s);
-    canvas.onpointerup = () => (canvas.onpointermove = null);
+    let far = false;
+    canvas.onpointermove = (m) => {
+      far ||= Math.hypot(m.clientX - sx, m.clientY - sy) > 6;
+      moveTo(vx - ((m.clientX - sx) * dpr()) / geo.s, vy - ((m.clientY - sy) * dpr()) / geo.s);
+    };
+    canvas.onpointerup = (u) => {   // a tap (no drag) on a house opens or closes its roof (the DM's hand, as on the slice)
+      canvas.onpointermove = null;
+      if (far) return;
+      const x = (u.offsetX * dpr() - geo.ox) / geo.s, y = (u.offsetY * dpr() - geo.oy) / geo.s;
+      M.roofs.forEach((r, i) => {
+        const [fx, fy, fw, fh] = r.footprint;
+        if (x > fx - 0.3 && x < fx + fw + 0.3 && y > fy - 0.3 && y < fy + fh + 0.3) roofOpen[i] = !roofOpen[i];
+      });
+    };
   });
   const dpr = () => Math.min(devicePixelRatio || 1, 2);
 
   // ---- frame
   let W = 0, H = 0;
   const cloudOff = [0, 0], t0 = performance.now();
+  let trace = null; const reads = [];
   let last = t0, frames = 0, fpsT = t0, fps = 0, gpuMs = 0, query = null, queryRepeat = 1;
   const stats = { live: 0, loading: 0, standIns: 0, gpuMB: 0, parts: {} };
 
@@ -481,7 +510,9 @@ export async function start(canvas, ui) {
     gl.uniform1f(p.u("u_cloud"), s.Clouds ? 1 : 0); gl.uniform2f(p.u("u_cloudOff"), cloudOff[0], cloudOff[1]);
     gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, S.noise.tex); gl.uniform1i(p.u("u_noise"), 7);
     gl.uniform2f(p.u("u_shift"), 0, 0);
+    gl.uniform2fv(p.u("u_party"), partyFlat); gl.uniform1i(p.u("u_nparty"), Math.min(8, party.length)); gl.uniform1f(p.u("u_ghost"), s["Canopy opens"] ? 1 : 0);
   }
+  const partyFlat = new Float32Array(16);
   const bind = (p, name, unit, t) => { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t.tex); gl.uniform1i(p.u(name), unit); };
   const box = (p, x, y, w, h) => gl.uniform4f(p.u("u_box"), x, y, w, h);
   const cellBox = (m) => [m.x / pps, m.y / pps, m.w / pps, m.h / pps];
@@ -536,8 +567,9 @@ export async function start(canvas, ui) {
       const p = P.roof; common(p, t); gl.bindVertexArray(boxVao.roof);
       for (const [i, rt] of roofTex) {
         if (rt === "loading") continue;
+        if (roofAlpha[i] < 0.01) continue;
         const r = M.roofs[i], b = [r.x / pps, r.y / pps, r.w / pps, r.h / pps];
-        bind(p, "u_tex", 0, rt);
+        bind(p, "u_tex", 0, rt); gl.uniform1f(p.u("u_alpha"), roofAlpha[i]);
         gl.uniform2f(p.u("u_shift"), 0.22, 0.3); gl.uniform1f(p.u("u_shadow"), 1); box(p, ...b); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
         gl.uniform2f(p.u("u_shift"), 0, 0); gl.uniform1f(p.u("u_shadow"), 0); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       }
@@ -560,7 +592,16 @@ export async function start(canvas, ui) {
     for (const k of ["x", "y"]) { const d = view[k] - shown[k]; shown[k] = Math.abs(d) < 0.01 ? view[k] : shown[k] + d * Math.min(1, dt * 18); }
     fit();
     const s = ui.state, cs = (s["Strong wind"] ? 0.05 : 0.022) * dt;
+    // the wind follows the dial's aim ~1 s behind (the slice's easing); the clouds' drift is integrated, so a turn never throws them
+    if (s.windAim != null) { const d = Math.atan2(Math.sin(s.windAim - s.windAngle), Math.cos(s.windAim - s.windAngle)); s.windAngle += d * Math.min(1, dt * 1.6); }
     cloudOff[0] += Math.cos(s.windAngle) * cs; cloudOff[1] += Math.sin(s.windAngle) * cs;
+    party.slice(0, 8).forEach(([x, y], i) => { partyFlat[i * 2] = x; partyFlat[i * 2 + 1] = y; });
+    // roofs: a token standing inside the footprint lifts it, a tap keeps it open
+    M.roofs.forEach((r, i) => {
+      const [fx, fy, fw, fh] = r.footprint;
+      const open = roofOpen[i] || (s["Roof opens"] && party.some(([x, y]) => x > fx && x < fx + fw && y > fy && y < fy + fh));
+      roofAlpha[i] += ((open ? 0 : 1) - roofAlpha[i]) * Math.min(1, dt * 6);
+    });
     if (liveDirty) {
       liveDirty = false;
       const idx = [];
@@ -603,13 +644,29 @@ export async function start(canvas, ui) {
       gpuMB: mb(Object.values(parts).reduce((a, b) => a + b, 0)), parts: Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, mb(v)])),
       gpuMs, fps, view: [view.x, view.y], whole: view.whole, scale: geo.s, drawn: list.length });
     ui.info(stats);
+    ui.layout?.({ s: geo.s / dpr(), ox: geo.ox / dpr(), oy: geo.oy / dpr(), win: [shown.x, shown.y, SW, SH], whole: view.whole });
+    if (trace) { trace.rows.push({ t: now, standIns, windAngle: s.windAngle, windAim: s.windAim, cloud: [...cloudOff], shown: [shown.x, shown.y] }); if (now >= trace.end) { trace.done(trace.rows); trace = null; } }
+    if (reads.length) {   // the bench's pixel probes: mean colour of a box in squares, read right after this frame's draw
+      for (const r of reads.splice(0)) {
+        const x = Math.round(geo.ox + r.x * geo.s), y = Math.round(geo.oy + r.y * geo.s), w = Math.max(1, Math.round(r.w * geo.s)), h = Math.max(1, Math.round(r.h * geo.s));
+        const buf = new Uint8Array(w * h * 4); gl.readPixels(x, H - y - h, w, h, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+        const m = [0, 0, 0]; for (let i = 0; i < buf.length; i += 4) { m[0] += buf[i]; m[1] += buf[i + 1]; m[2] += buf[i + 2]; }
+        r.done(m.map((v) => v / (w * h)));
+      }
+    }
     requestAnimationFrame(frame);
   }
 
   moveTo(ui.at?.[0] ?? 0, ui.at?.[1] ?? 0); shown.x = view.x; shown.y = view.y;
   requestAnimationFrame(frame);
   return {
-    stats, moveTo, view,
+    stats, moveTo, view, party, roofOpen, roofAlpha, roofs: M.roofs, trees: M.trees, plan,
+    /** Per-frame rows for `ms` (stand-ins, wind angle, cloud drift, shown window) — the bench's eyes on motion. */
+    trace: (ms) => new Promise((done) => (trace = { end: performance.now() + ms, rows: [], done })),
+    /** Map squares → CSS px on the page (for clicks in tests). */
+    toScreen: (x, y) => [(geo.ox + x * geo.s) / dpr(), (geo.oy + y * geo.s) / dpr()],
+    /** Mean RGB (0–255) of a box in map squares, read from the next frame. */
+    read: (x, y, w, h) => new Promise((done) => reads.push({ x, y, w, h, done })),
     setWhole(on) { view.whole = on; if (!on) { shown.x = view.x; shown.y = view.y; } },
     settled: () => stats.standIns === 0 && stats.loading === 0 && stats.queued === 0 && shown.x === view.x && shown.y === view.y,
   };

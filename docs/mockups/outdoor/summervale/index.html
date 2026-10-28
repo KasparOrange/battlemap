@@ -11,14 +11,27 @@
   .info{position:absolute;right:10px;top:8px;z-index:2;background:#000a;padding:4px 8px;border-radius:6px;font:11px/1.45 ui-monospace,monospace;color:#cfc;white-space:pre}
   .cap{position:absolute;left:10px;bottom:8px;right:10px;z-index:2;background:#000a;padding:6px 9px;border-radius:7px;-webkit-user-select:text;user-select:text;cursor:text}
   .cap b{color:#fff}
-  body.clean .bar, body.clean .info, body.clean .cap{display:none}
+  .tok{position:absolute;z-index:1;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px #000c;cursor:grab;touch-action:none;
+       display:grid;place-items:center;font:700 12px system-ui;color:#fff;transform:translate(-50%,-50%)}
+  .dial{position:absolute;z-index:2;right:14px;bottom:120px;width:96px;height:96px;touch-action:none;cursor:grab}
+  .dial svg{width:100%;height:100%;display:block}
+  .dial .ring{fill:#000b;stroke:#fff6;stroke-width:2}
+  .dial .aim{stroke:#f5c542;stroke-width:3;stroke-dasharray:4 4}
+  .dial .now line{stroke:#fff;stroke-width:4;stroke-linecap:round} .dial .now path{fill:#fff}
+  .dial span{position:absolute;left:0;right:0;bottom:-16px;text-align:center;font:11px system-ui;color:#ccc}
+  .bench{display:flex;gap:4px;align-items:center;background:#000a;border-radius:6px;padding:0 6px;font:11px system-ui;color:#aaa}
+  .bench summary{cursor:pointer;padding:3px 0;list-style:none}
+  .bench[open] summary{color:#fff}
+  .bench button{padding:1px 7px}
+  body.clean .bar, body.clean .dial, body.clean .info, body.clean .cap{display:none}
 </style>
 <canvas></canvas>
 <div class="bar" id="bar"></div><div class="info" id="info"></div>
 <div class="cap"><b>summervale — 136 × 76 squares, one TV screen (34 × 19) at a time.</b> Streamed the way the TV
-  would: 512 px cells, only the window and a ring of half a screen loaded, a blurry preview under cells still on their
+  would: 512 px cells, only the window and a ring of a quarter screen loaded, a blurry preview under cells still on their
   way. Arrows move a square, shift + arrow a screen, drag moves in whole squares, M or "Whole map" for the overview
-  (tap it to jump there).</div>
+  (tap it to jump there). Drag the party: crowns open around them, a roof lifts when one steps inside — or tap the
+  roof. Hold the wind dial and drag to turn the wind.</div>
 <script type="module">
 import { start } from "./viewer.js";
 
@@ -26,18 +39,68 @@ import { start } from "./viewer.js";
 const hash = new URLSearchParams(location.hash.slice(1));
 if (hash.has("clean")) document.body.classList.add("clean");
 const state = { Water: true, Plants: true, Canopy: true, Roofs: true, Clouds: true, Gusts: true, "Strong wind": false,
-  windAngle: 0.35, repeat: +(hash.get("repeat") || 1) };
+  "Canopy opens": true, "Roof opens": true, windAngle: 0.35, windAim: 0.35, ring: 0.25, repeat: +(hash.get("repeat") || 1) };
 const bar = document.getElementById("bar"), info = document.getElementById("info");
 const buttons = {};
-for (const k of ["Whole map", "Water", "Plants", "Canopy", "Roofs", "Clouds", "Gusts", "Strong wind"]) {
+for (const k of ["Whole map", "Water", "Plants", "Canopy", "Roofs", "Clouds", "Gusts", "Strong wind", "Canopy opens", "Roof opens"]) {
   const b = (buttons[k] = document.createElement("button")); b.textContent = k; b.className = state[k] ? "on" : "";
   b.onclick = () => k === "Whole map" ? ui.setWhole(!sv.view.whole) : (state[k] = !state[k], b.className = state[k] ? "on" : "");
   bar.append(b);
 }
+// bench fold: how much is loaded around the window (¼ screen per side is the default: pans as clean as ½, 21–43 MB less — HANDOVER-viewer.md)
+const bench = document.createElement("details"); bench.className = "bench";
+bench.innerHTML = "<summary>bench</summary>ring";
+for (const [label, v] of [["¼ screen", 0.25], ["½ screen", 0.5], ["none", 0]]) {
+  const b = document.createElement("button"); b.textContent = label; b.dataset.ring = v; b.className = v === state.ring ? "on" : "";
+  b.onclick = () => { state.ring = v; bench.querySelectorAll("button").forEach((o) => (o.className = +o.dataset.ring === v ? "on" : "")); sv.plan(); };
+  bench.append(b);
+}
+bar.append(bench);
+
+// the wind dial: hold and drag around it; the wind turns after your hand (~1 s behind, eased in the viewer's frame).
+// Gold = where you point, white = the wind now.
+const dial = document.createElement("div"); dial.className = "dial"; dial.title = "Hold and drag to turn the wind";
+dial.innerHTML = `<svg viewBox="-50 -50 100 100"><circle r="46" class="ring"/><line class="aim" x1="0" y1="0" x2="38" y2="0"/><g class="now"><line x1="-30" y1="0" x2="30" y2="0"/><path d="M38 0 L24 -9 L24 9 Z"/></g></svg><span>wind</span>`;
+document.body.append(dial);
+const turnTo = (e) => { const r = dial.getBoundingClientRect(); state.windAim = Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2); };
+dial.onpointerdown = (e) => { e.preventDefault(); dial.setPointerCapture(e.pointerId); turnTo(e); dial.onpointermove = turnTo; };
+dial.onpointerup = () => (dial.onpointermove = null);
+const aimEl = dial.querySelector(".aim"), nowEl = dial.querySelector(".now");
+
+// the party: tokens on square centres (map squares), dragged in whole squares; they stay on the map when the window pans
+const at0 = (hash.get("at") || "0,0").split(",").map(Number);
+const party = (hash.get("party") ? hash.get("party").split(";").map((p) => p.split(",").map(Number)) : [[15, 8], [17, 8], [15, 10], [17, 10]].map(([x, y]) => [at0[0] + x, at0[1] + y]))
+  .map(([x, y], i) => [Math.floor(x) + 0.5, Math.floor(y) + 0.5, ["#d33", "#36c", "#3a3", "#c90"][i % 4], "ABCD"[i % 4]]);
+let geo = null;
+const toks = party.map((p) => {
+  const el = document.createElement("div"); el.className = "tok"; el.style.background = p[2]; el.textContent = p[3];
+  el.onpointerdown = (e) => {
+    e.preventDefault(); el.setPointerCapture(e.pointerId);
+    el.onpointermove = (m) => {
+      if (!geo) return;
+      p[0] = Math.min(135, Math.max(0, Math.floor((m.clientX - geo.ox) / geo.s))) + 0.5;
+      p[1] = Math.min(75, Math.max(0, Math.floor((m.clientY - geo.oy) / geo.s))) + 0.5;
+    };
+    el.onpointerup = () => (el.onpointermove = null);
+  };
+  document.body.append(el); return el;
+});
 const f = (n, d = 1) => n.toFixed(d);
 const ui = {
   state,
   at: (hash.get("at") || "0,0").split(",").map(Number),
+  party,
+  layout(g) {   // every frame: tokens follow the shown window (hidden outside it and in the overview), the dial shows aim + wind
+    geo = g;
+    const [wx, wy, ww, wh] = g.win;
+    toks.forEach((el, i) => {
+      const [x, y] = party[i], out = g.whole || x < wx || y < wy || x > wx + ww || y > wy + wh;
+      el.style.display = out ? "none" : "grid";
+      if (!out) Object.assign(el.style, { left: `${g.ox + x * g.s}px`, top: `${g.oy + y * g.s}px`, width: `${g.s * 0.8}px`, height: `${g.s * 0.8}px` });
+    });
+    aimEl.setAttribute("transform", `rotate(${(state.windAim * 180) / Math.PI})`);
+    nowEl.setAttribute("transform", `rotate(${(state.windAngle * 180) / Math.PI})`);
+  },
   setWhole(on) { sv.setWhole(on); buttons["Whole map"].className = on ? "on" : ""; },
   info: (s) => (info.textContent =
     `window ${s.view[0]},${s.view[1]}${s.whole ? " · whole map" : ""} · ${f(s.scale)} px/sq\n` +

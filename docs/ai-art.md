@@ -683,6 +683,17 @@ memory 49–125 MB a window (ground 16–51, canopy 18–49, the rest shared) �
 planned: compressed textures or a smaller ring are v2's call. Details:
 `out/summervale/HANDOVER-viewer.md`.
 
+**summervale — the viewer's interactions (2026-10-28).** As on the slice: four party tokens
+dragged in whole squares (kept in map space when the window pans), crowns open to a 22 % ghost
+around them (clumps, under-silhouette and canopy shadow; trunk bases stay), a roof lifts when a
+token stands in its footprint or on a tap, the wind dial (wind ~1 s behind the hand, cloud drift
+integrated). The load ring is now a bench choice; measured with a per-cell load delay standing in
+for the box: a one-screen pan waits for the device's load time whatever the ring (½ holds only half
+the next screen), a one-square pan stays clean with ¼ even at 400 ms a cell and shows a preview
+column with no ring → **¼ screen is the default**: 37–98 MB a window (was 49–120). `shoot.mjs`
+checks ghost, roof lift, tap, dial and pan; `shoot.mjs … ring [delay]` runs the ring bench. Details:
+`out/summervale/HANDOVER-viewer.md`.
+
 **Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `tiles`, `assemble`, `roof`, `canopy`, `canopy-tiles`, `canopy-assemble`), `tools/mapgen/canopy_cut.py`, `tools/mapgen/plants.py`, `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`); the big map's viewer `docs/mockups/outdoor/summervale/index.html`
