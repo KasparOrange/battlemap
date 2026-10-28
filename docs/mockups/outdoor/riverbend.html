@@ -6,7 +6,9 @@
   html,body{margin:0;height:100%;background:#121214;color:#ddd;font:13px/1.4 system-ui,sans-serif;overflow:hidden}
   .stage{position:absolute;inset:0}
   canvas.stage{width:100%;height:100%;display:block}
-  .cap{position:absolute;left:10px;bottom:8px;right:10px;background:#000a;padding:6px 9px;border-radius:7px;pointer-events:none}
+  /* a control, not a document: only the caption selects, so a drag on a dial or token never paints a selection */
+  body{-webkit-user-select:none;user-select:none}
+  .cap{position:absolute;left:10px;bottom:8px;right:10px;background:#000a;padding:6px 9px;border-radius:7px;-webkit-user-select:text;user-select:text;cursor:text}
   .cap b{color:#fff}
   .fps{position:absolute;right:10px;top:8px;background:#000a;padding:3px 8px;border-radius:6px;font:12px ui-monospace,monospace;color:#9f9}
   .bar{position:absolute;left:10px;top:8px;display:flex;gap:6px;flex-wrap:wrap}
@@ -24,7 +26,7 @@
   .bar .arrow { display: inline-grid; place-items: center; width: 24px; height: 22px; background: #000a; border-radius: 6px; color: #fff; font-size: 15px }
   .tok { position: absolute; z-index: 1; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 6px #000c; cursor: grab; touch-action: none;
          display: grid; place-items: center; font: 700 12px system-ui; color: #fff; transform: translate(-50%, -50%) }
-  .dial { position: absolute; z-index: 2; right: 14px; bottom: 120px; width: 96px; height: 96px; touch-action: none; cursor: grab; user-select: none }
+  .dial { position: absolute; z-index: 2; right: 14px; bottom: 120px; width: 96px; height: 96px; touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none }
   .dial svg { width: 100%; height: 100%; display: block }
   .dial .ring { fill: #000b; stroke: #fff6; stroke-width: 2 }
   .dial .aim { stroke: #f5c542; stroke-width: 3; stroke-dasharray: 4 4 }
@@ -34,7 +36,7 @@
 </style>
 <canvas class="stage"></canvas>
 <div class="bar" id="bar"></div><div class="fps" id="fps"></div><div class="info" id="info"></div>
-<div class="cap"><b>Outdoor slice — one TV screen (34 × 19 squares).</b> The ground is one painting without crowns or roofs; the
+<div class="cap" data-select="text"><b>Outdoor slice — one TV screen (34 × 19 squares).</b> The ground is one painting without crowns or roofs; the
   river, every plant and the roof are drawn on top. Water: a flow map from our layout over the painted riverbed — slow
   and glinting where calm, white streaks and boiling foam in the rapids, light nets over the ford. The forest canopy is one painting
   (an edit pass on the ground) cut back into trees and leaf clumps. Plants: one atlas, one draw call, wind in the vertex shader (gusts roll across the map). Drag the party: crowns open around them, the
@@ -66,7 +68,7 @@ dial.innerHTML = `<svg viewBox="-50 -50 100 100"><circle r="46" class="ring"/><l
 document.body.append(dial);
 let aim = state.windAngle;
 const turnTo = (e) => { const r = dial.getBoundingClientRect(); aim = Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2); };
-dial.onpointerdown = (e) => { dial.setPointerCapture(e.pointerId); turnTo(e); dial.onpointermove = turnTo; };
+dial.onpointerdown = (e) => { e.preventDefault(); dial.setPointerCapture(e.pointerId); turnTo(e); dial.onpointermove = turnTo; };
 dial.onpointerup = () => (dial.onpointermove = null);
 let lastT = performance.now();
 (function ease(now) {
@@ -85,6 +87,7 @@ const grid = document.createElement("div"); grid.className = "grid"; grid.style.
 const toks = party.map((p, i) => {
   const el = document.createElement("div"); el.className = "tok"; el.style.background = p[2]; el.textContent = "ABCD"[i];
   el.onpointerdown = (e) => {
+    e.preventDefault();
     el.setPointerCapture(e.pointerId);
     el.onpointermove = (m) => { p[0] = (m.clientX - geo.left) / geo.sq; p[1] = (m.clientY - geo.top) / geo.sq; place(); };
     el.onpointerup = () => (el.onpointermove = null);

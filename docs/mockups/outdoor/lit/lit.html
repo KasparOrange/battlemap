@@ -4,7 +4,9 @@
 <style>
   html,body{margin:0;height:100%;background:#121214;color:#ddd;font:13px/1.4 system-ui,sans-serif;overflow:hidden}
   canvas.stage{position:absolute;inset:0;width:100%;height:100%;display:block}
-  .cap{position:absolute;left:10px;bottom:8px;right:10px;background:#000a;padding:6px 9px;border-radius:7px;pointer-events:none;z-index:3}
+  /* a control, not a document: only the caption selects, so a drag on a dial or token never paints a selection */
+  body{-webkit-user-select:none;user-select:none}
+  .cap{position:absolute;left:10px;bottom:8px;right:10px;background:#000a;padding:6px 9px;border-radius:7px;z-index:3;-webkit-user-select:text;user-select:text;cursor:text}
   canvas.cmp{position:absolute;inset:0;width:100%;height:100%;display:none;z-index:2;cursor:pointer}
   .cap b{color:#fff}
   .bar{position:absolute;left:10px;top:8px;display:flex;flex-direction:column;gap:5px;z-index:3}
@@ -17,7 +19,7 @@
   .stats{position:absolute;right:10px;top:8px;background:#000a;padding:4px 8px;border-radius:6px;font:11px ui-monospace,monospace;color:#cfc;z-index:3;text-align:right;white-space:pre}
   .tok{position:absolute;z-index:1;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px #000c;cursor:grab;touch-action:none;
        display:grid;place-items:center;font:700 12px system-ui;color:#fff;transform:translate(-50%,-50%)}
-  .dial{position:absolute;z-index:3;right:14px;width:84px;height:84px;touch-action:none;cursor:grab;user-select:none}
+  .dial{position:absolute;z-index:3;right:14px;width:84px;height:84px;touch-action:none;cursor:grab;-webkit-user-select:none;user-select:none}
   .dial svg{width:100%;height:100%;display:block}
   .dial .ring{fill:#000b;stroke:#fff6;stroke-width:2}
   .dial .aim{stroke:#f5c542;stroke-width:3;stroke-dasharray:4 4}
@@ -28,7 +30,7 @@
 </style>
 <canvas class="stage"></canvas><canvas class="cmp"></canvas>
 <div class="bar" id="bar"></div><div class="stats" id="stats"></div>
-<div class="cap"><b>Light lab — the light comes from the table, not the painting.</b> <i>Painted</i>: today's slice (light painted in, the
+<div class="cap" data-select="text"><b>Light lab — the light comes from the table, not the painting.</b> <i>Painted</i>: today's slice (light painted in, the
   fallback). <i>Lit trees</i>: the painted ground, crowns from unlit sprites lit by the table with the painting's sun — shadows,
   crevices where crowns meet. <i>All lit</i>: an unlit ground too, so the time of day and the sun move freely; lamps at dusk.
   Tree shape: <i>dome</i> (computed from the outline and leaf clumps), <i>model</i> (Depth Anything V2), <i>luma</i> (brighter = higher) — <i>Side by side</i> shows one forest patch in all three.
@@ -117,7 +119,7 @@ function dial(cls, bottom, label, key, follow) {
   document.body.append(d);
   let aim = state[key];
   const turn = (e) => { const r = d.getBoundingClientRect(); aim = Math.atan2(e.clientY - r.top - r.height / 2, e.clientX - r.left - r.width / 2); if (!follow) state[key] = aim; };
-  d.onpointerdown = (e) => { d.setPointerCapture(e.pointerId); turn(e); d.onpointermove = turn; };
+  d.onpointerdown = (e) => { e.preventDefault(); d.setPointerCapture(e.pointerId); turn(e); d.onpointermove = turn; };
   d.onpointerup = () => (d.onpointermove = null);
   let last = performance.now();
   (function ease(now) {
@@ -139,6 +141,7 @@ const grid = document.createElement("div"); grid.className = "grid"; grid.style.
 const toks = party.map((p, i) => {
   const el = document.createElement("div"); el.className = "tok"; el.style.background = p[2]; el.textContent = "ABCD"[i];
   el.onpointerdown = (e) => {
+    e.preventDefault();
     el.setPointerCapture(e.pointerId);
     el.onpointermove = (m) => { p[0] = (m.clientX - geo.left) / geo.sq; p[1] = (m.clientY - geo.top) / geo.sq; place(); };
     el.onpointerup = () => (el.onpointermove = null);
