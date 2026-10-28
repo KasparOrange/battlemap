@@ -16,6 +16,7 @@ Usage:
   tools/mapgen/outdoor.py paint layouts/riverbend.json --size 2K --n 2 --why "…"
   tools/mapgen/outdoor.py paint layouts/riverbend.json --albedo …  # unlit, for the table's light (docs/ai-art.md "Light lab")
   tools/mapgen/outdoor.py roof  out/riverbend/<run> [out_1.jpg]    # roof sprites from the painting
+  tools/mapgen/outdoor.py roof  out/summervale/<run> ground.png --out roofs [--only inn,barn] [--n 0 --pick "barn=raw/roof_barn_2.jpg"]
   tools/mapgen/outdoor.py canopy out/riverbend/<run> [--size 1K] [--plan]   # the forest canopy as one layer
   tools/mapgen/outdoor.py paint layouts/summervale.json --size 4K --tag master   # big map: the master (short prompt)
   tools/mapgen/outdoor.py tiles out/summervale/<run> [--only r1c2,…]   # 2K per screen from guide crop + master crop
@@ -544,57 +545,126 @@ def write_sheet(spec, folder, guide=None, pps=15):
 # ---------------------------------------------------------------- roofs
 
 
-def roof(spec, run, file=None, n=1):
-    """Roof sprites from the painting: per building, an edit pass on a crop around it puts a roof
-    on exactly its walls; the result is cut by our footprint (+ a small eave) → roof_<id>.png with
-    alpha, in map pixels, placed at the crop's offset (roofs.json)."""
+def _slug(name):
+    return "".join(ch if ch.isalnum() else "-" for ch in name.lower()).strip("-")
+
+
+def roof_cut(b, crop, edit, box, ppsx, ppsy):
+    """The roof sprite: what the edit changed, kept inside the outer walls + 0.45 squares (eaves,
+    chimney), and always the whole footprint; the biggest piece only, feathered. RGBA, crop size."""
+    x, y, w, h = b["rect"]
+    e = WALL / 2 + 0.45
+    near = Image.new("L", crop.size, 0)
+    ImageDraw.Draw(near).rectangle([(x - e) * ppsx - box[0], (y - e) * ppsy - box[1],
+                                    (x + w + e) * ppsx - box[0], (y + h + e) * ppsy - box[1]], 255)
+    core = Image.new("L", crop.size, 0)
+    ImageDraw.Draw(core).rectangle([(x - WALL / 2) * ppsx - box[0], (y - WALL / 2) * ppsy - box[1],
+                                    (x + w + WALL / 2) * ppsx - box[0], (y + h + WALL / 2) * ppsy - box[1]], 255)
+    diff = np.abs(np.asarray(edit, float) - np.asarray(crop, float)).mean(-1)
+    changed = ndi.binary_fill_holes(ndi.binary_opening(ndi.gaussian_filter(diff, 2) > 22, iterations=2))
+    m = (changed & (np.asarray(near) > 0)) | (np.asarray(core) > 0)
+    lab, k = ndi.label(m)
+    if k > 1:  # the roof is one piece; specks the edit changed in the grass around it drop out
+        m = lab == 1 + np.argmax(ndi.sum(m, lab, range(1, k + 1)))
+    mask = Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2))
+    sprite = edit.convert("RGBA")
+    sprite.putalpha(mask)
+    return sprite
+
+
+def roof(spec, run, file=None, n=1, folder=None, only=None, pick=None, size="1K"):
+    """Roof sprites from the painting: per roofed building (not `roof: "none"`), an edit pass on a
+    crop around it (±1.5 squares, grown to an offered aspect: `aspect_box`) puts a roof on exactly
+    its walls; the result is cut by our footprint (+ a small eave: `roof_cut`) → roof_<id>.png with
+    alpha, in map pixels at the crop's offset (roofs.json).
+
+    `folder` (default: the run) gets the raw edits (`raw/`), the sprites, roofs.json (every draw,
+    the pick per building — the newest, or `pick` {id: raw file}) and roofs-sheet.jpg (crop |
+    roof on it, per building). `n` = new draws per building, `only` = building ids; n=0 only
+    re-cuts the picks. Draws run 4 at a time."""
     meta = json.loads((run / "meta.json").read_text())
     file = file or meta["results"][0]["file"]
+    folder = folder or run
+    (folder / "raw").mkdir(parents=True, exist_ok=True)
+    rec_path = folder / "roofs.json"
+    old = json.loads(rec_path.read_text()) if rec_path.exists() else {}
+    draws, picks = old.get("draws", []), old.get("pick", {})
     img = Image.open(run / file).convert("RGB")
     cols, rows = spec["grid"]
     ppsx, ppsy = img.width / cols, img.height / rows
     template = (HERE / "prompts" / "edit-roof.txt").read_text()
-    out = []
-    for b in spec.get("buildings", []):
+    blds = [b for b in spec.get("buildings", []) if b.get("roof") != "none" and (not only or b["id"] in only)]
+    boxes = {}
+    for b in blds:
         x, y, w, h = b["rect"]
-        box = aspect_box(img.size, ((x - 1.5) * ppsx, (y - 1.5) * ppsy, (x + w + 1.5) * ppsx, (y + h + 1.5) * ppsy))
+        boxes[b["id"]] = aspect_box(img.size, ((x - 1.5) * ppsx, (y - 1.5) * ppsy, (x + w + 1.5) * ppsx, (y + h + 1.5) * ppsy))
+    jobs = [(b, i) for b in blds for i in range(n)]
+    from concurrent.futures import ThreadPoolExecutor
+
+    def one(job):
+        b, i = job
+        box = boxes[b["id"]]
         crop = img.crop(box[:4])
-        prompt = template.format(roof=b.get("roof", "thatched"), desc=b["desc"])
-        best = None
-        for i in range(n):
-            t0 = time.time()
-            data, mime, usage = mapgen.generate(prompt, [crop], box[4], "1K", None)
-            ext = ".png" if "png" in mime else ".jpg"
-            raw = run / f"roof_{b['id']}_{i + 1}_raw{ext}"
-            raw.write_bytes(data)
-            edit = Image.open(raw).convert("RGB").resize(crop.size, Image.LANCZOS)
-            print(f"{raw}  {time.time() - t0:.0f}s")
-            best = best or edit
-        box = box[:4]
-        # cut: what the edit changed, kept inside the outer walls + 0.45 squares (eaves, chimney),
-        # and always the whole footprint; feathered
-        e = WALL / 2 + 0.45
-        near = Image.new("L", crop.size, 0)
-        ImageDraw.Draw(near).rectangle([(x - e) * ppsx - box[0], (y - e) * ppsy - box[1],
-                                        (x + w + e) * ppsx - box[0], (y + h + e) * ppsy - box[1]], 255)
-        core = Image.new("L", crop.size, 0)
-        ImageDraw.Draw(core).rectangle([(x - WALL / 2) * ppsx - box[0], (y - WALL / 2) * ppsy - box[1],
-                                        (x + w + WALL / 2) * ppsx - box[0], (y + h + WALL / 2) * ppsy - box[1]], 255)
-        diff = np.abs(np.asarray(best, float) - np.asarray(crop, float)).mean(-1)
-        changed = ndi.binary_fill_holes(ndi.binary_opening(ndi.gaussian_filter(diff, 2) > 22, iterations=2))
-        m = (changed & (np.asarray(near) > 0)) | (np.asarray(core) > 0)
-        lab, k = ndi.label(m)
-        if k > 1:  # the roof is one piece; specks the edit changed in the grass around it drop out
-            m = lab == 1 + np.argmax(ndi.sum(m, lab, range(1, k + 1)))
-        mask = Image.fromarray((m * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(1.2))
-        sprite = best.convert("RGBA")
-        sprite.putalpha(mask)
-        name = f"roof_{b['id']}.png"
-        sprite.save(run / name)
+        t0 = time.time()
+        chimney = "Add a chimney above the hearth." if b.get("chimney", True) else "No chimney: this building has no hearth."
+        data, mime, usage = mapgen.generate(template.format(roof=b.get("roof", "thatched"), desc=b["desc"], chimney=chimney),
+                                            [crop], box[4], size, None)
+        k = sum(1 for d in draws if d["id"] == b["id"]) + i + 1
+        raw = folder / "raw" / f"roof_{_slug(b['id'])}_{k}{'.png' if 'png' in mime else '.jpg'}"
+        raw.write_bytes(data)
+        print(f"{raw.name}  {time.time() - t0:.0f}s", flush=True)
+        return {"id": b["id"], "file": f"raw/{raw.name}", "size": size, "box": box[:4], "aspect": box[4],
+                "seconds": round(time.time() - t0, 1)}
+
+    with ThreadPoolExecutor(4) as ex:
+        done = list(ex.map(one, jobs))
+    draws += done
+    for d in done:
+        picks[d["id"]] = d["file"]
+    picks.update(pick or {})
+    out = [r for r in old.get("roofs", []) if r["id"] not in boxes]
+    sheet = []
+    for b in blds:
+        if b["id"] not in picks:
+            continue
+        box = boxes[b["id"]][:4]
+        crop = img.crop(box)
+        edit = Image.open(folder / picks[b["id"]]).convert("RGB").resize(crop.size, Image.LANCZOS)
+        sprite = roof_cut(b, crop, edit, box, ppsx, ppsy)
+        name = f"roof_{_slug(b['id'])}.png"
+        sprite.save(folder / name)
+        a = np.asarray(sprite.getchannel("A"))
+        ys, xs = np.nonzero(a > 8)
         out.append({"id": b["id"], "file": name, "x": box[0], "y": box[1], "w": crop.width, "h": crop.height,
-                    "footprint": b["rect"]})
-    (run / "roofs.json").write_text(json.dumps({"image": file, "roofs": out}, indent=1))
-    print(run / "roofs.json")
+                    "footprint": b["rect"], "roof": b.get("roof", "thatched"), "draw": picks[b["id"]],
+                    "alpha_box": [int(box[0] + xs.min()), int(box[1] + ys.min()), int(box[0] + xs.max() + 1), int(box[1] + ys.max() + 1)]})
+        ab = out[-1]["alpha_box"]   # the 512 px map cells (the ground's TV tiles) the roof's pixels touch
+        out[-1]["cells"] = [f"{cx}_{cy}" for cy in range(ab[1] // 512, (ab[3] - 1) // 512 + 1)
+                            for cx in range(ab[0] // 512, (ab[2] - 1) // 512 + 1)]
+        on = crop.copy()
+        on.paste(sprite, (0, 0), sprite)
+        sheet.append((b["id"], crop, on))
+    cost = round(sum(mapgen.PRICE[d.get("size", "1K")] for d in draws), 3)
+    rec_path.write_text(json.dumps({"image": file, "pps": [ppsx, ppsy], "roofs": out, "draws": draws,
+                                    "pick": picks, "cost_usd": cost}, indent=1))
+    if sheet:   # contact sheet: crop | roof on it, two buildings a row, 300 px high each
+        H = 300
+        cells = []
+        for bid, crop, on in sheet:
+            k = H / crop.height
+            a_, b_ = (im.resize((round(im.width * k), H), Image.LANCZOS) for im in (crop, on))
+            c = Image.new("RGB", (a_.width + b_.width + 6, H + 22), (24, 24, 24))
+            c.paste(a_, (0, 22)); c.paste(b_, (a_.width + 6, 22))
+            ImageDraw.Draw(c).text((4, 4), bid, fill=(255, 255, 255))
+            cells.append(c)
+        W = max(c.width for c in cells)
+        per = 2
+        rows_ = -(-len(cells) // per)
+        sh = Image.new("RGB", (W * per + 8 * (per - 1), rows_ * (H + 30)), (12, 12, 12))
+        for i, c in enumerate(cells):
+            sh.paste(c, ((i % per) * (W + 8), (i // per) * (H + 30)))
+        sh.save(folder / "roofs-sheet.jpg", quality=86)
+    print(rec_path, f"{len(out)} roofs, ${cost} for {len(draws)} roof draws")
 
 
 def aspect_box(size, want):
@@ -1318,7 +1388,10 @@ def main():
     p.add_argument("--thinking", choices=["minimal", "medium", "high"])
     p.add_argument("--albedo", action="store_true", help="paint it unlit (flat light) for a table that lights it")
     r = sub.add_parser("roof"); r.add_argument("run"); r.add_argument("image", nargs="?")
-    r.add_argument("--n", type=int, default=1)
+    r.add_argument("--n", type=int, default=1, help="new draws per building (0 = re-cut the picks)")
+    r.add_argument("--out", help="folder in the run for raw edits, sprites, roofs.json (default: the run)")
+    r.add_argument("--only", help="comma list of building ids"); r.add_argument("--size", default="1K", choices=mapgen.PRICE)
+    r.add_argument("--pick", help="override picks: id=raw/roof_<id>_2.jpg;… (';'-separated, ids have commas never)")
     c = sub.add_parser("canopy"); c.add_argument("run"); c.add_argument("image", nargs="?")
     c.add_argument("--n", type=int, default=1); c.add_argument("--size", default="1K", choices=mapgen.PRICE)
     c.add_argument("--tag", default=""); c.add_argument("--plan", action="store_true", help="only write the guide, no call")
@@ -1370,7 +1443,9 @@ def main():
     if a.cmd == "roof":
         run = Path(a.run).resolve()
         spec = mapgen.load_spec(json.loads((run / "meta.json").read_text())["layout"])
-        roof(spec, run, a.image, a.n)
+        folder = run / a.out if a.out else None
+        pick = dict(kv.split("=", 1) for kv in a.pick.split(";")) if a.pick else None
+        roof(spec, run, a.image, a.n, folder, a.only.split(",") if a.only else None, pick, a.size)
         return
     spec = mapgen.load_spec(a.spec)
     if a.cmd == "guide":

@@ -657,7 +657,19 @@ sway) where the id is its own; under-copy and shadow come from the same texture'
 A window plus half a screen round it: at most 62 MB, 36 MB on average. Details and what's open:
 `out/summervale/HANDOVER-canopy.md`.
 
-**Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `tiles`, `assemble`, `roof`, `canopy`, `canopy-tiles`, `canopy-assemble`), `tools/mapgen/canopy_cut.py`, `prompts/outdoor.txt`,
+**summervale — roofs and small plants (2026-10-28, $0.50).** `outdoor.py roof <run> ground.png
+--out roofs`: one 1K edit per roofed building (12; the keep has `roof: "none"`), cut by our
+footprint → `roofs/roof_<id>.png` + `roofs.json` (sprite box in map px, footprint, the 512 px cells
+it touches). All twelve fit their walls; three redone — a barn and a chapel don't get chimneys
+(layout `"chimney": false`), a turf roof that covered only ⅔ of the hut (the prompt now says the
+roof reaches every outer wall). `tools/mapgen/plants.py <run>`: ~990 plants from our layout — bushes
+just past the canopy's rim and by the village houses, fence hedges, ferns at the forest's edge,
+reeds and cattails on the calm deep banks, lilies, and a trunk base under each of the 552 canopy
+trees — never on roads, buildings, fences or painted grain/dirt (a pixel test caught a bush the
+field polygon missed); `plants.json` lists each with its cell. One shared atlas, the slice's
+sprites: 2048 × 448, 3.5 MB GPU. Details: `out/summervale/HANDOVER-roofs-plants.md`.
+
+**Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `tiles`, `assemble`, `roof`, `canopy`, `canopy-tiles`, `canopy-assemble`), `tools/mapgen/canopy_cut.py`, `tools/mapgen/plants.py`, `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,
 banks, bridge, boulders and walls; draw 2 dropped the road south of the bridge, draw 1 is the

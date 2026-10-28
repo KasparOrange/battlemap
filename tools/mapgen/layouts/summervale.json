@@ -358,6 +358,7 @@
     },
     {
       "id": "chapel",
+      "chimney": false,
       "rect": [47.0, 1.5, 6.0, 5.5],
       "doors": [
         {
@@ -419,6 +420,7 @@
     },
     {
       "id": "barn",
+      "chimney": false,
       "rect": [59.0, 26.5, 7.0, 5.0],
       "doors": [
         {

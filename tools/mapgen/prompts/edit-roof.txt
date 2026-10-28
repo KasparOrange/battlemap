@@ -2,5 +2,5 @@ This is a crop of a top-down battle map. The building in the middle is shown wit
 taken off ({desc}). Put its {roof} roof back on, seen straight down from directly above: the
 roof covers exactly the building's outer walls with a small overhang, its ridge running along
 the building's long side, in the same painting style, palette and sunlight (from the upper
-left) as the rest of the picture. Add a chimney above the hearth. Keep everything outside the
-building exactly as it is.
+left) as the rest of the picture. {chimney} The roof must reach every outer wall: no wall top
+or floor left showing. Keep everything outside the building exactly as it is.
