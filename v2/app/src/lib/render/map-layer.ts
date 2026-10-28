@@ -6,6 +6,10 @@
  * sits under the picture over the whole map, so partial edge squares read dark. A load that
  * finishes after a newer one discards itself; the old map's textures are destroyed when the
  * new one shows.
+ *
+ * Big maps on the TV (over `budget.streamAboveBytes` at its density) are never decoded whole:
+ * with a `tileSets` loader they stream the server's 512 px tile set around the screen
+ * (`tile-stream.ts`); without a tile set they fall back to the path above.
  */
 import { Container, ImageSource, Rectangle, Sprite, Texture, Graphics } from 'pixi.js';
 import type { MapInfo } from '@battlemap/shared';
@@ -13,7 +17,9 @@ import type { Logger } from '../log.ts';
 import { SQUARE } from './camera.ts';
 import { IMAGE_HEAD_BYTES, imageSize } from './image-size.ts';
 import { planDecode, planTiles, type DecodePlan, type TextureBudget } from './tiles.ts';
-import type { FileLoader } from './types.ts';
+import { TileStream, type TileStreamStats } from './tile-stream.ts';
+import { shouldStream, tileLevel, type SquareRect } from './tile-window.ts';
+import type { FileLoader, TileSetLoader } from './types.ts';
 
 /** What happened to a map load (for notices and logs). */
 export type MapLoadEvent =
@@ -45,6 +51,12 @@ export class MapLayer {
   /** The density factor (lowered after a memory warning). */
   private densityFactor = 1;
   private current: MapInfo | null = null;
+  /** A big map's tiles around the screen (instead of `tiles`), once shown. */
+  private stream: TileStream | null = null;
+  /** The stream of a load still waiting for its first window. */
+  private pendingStream: TileStream | null = null;
+  /** The screen in squares (the last `cull`). */
+  private view: SquareRect | null = null;
 
   /**
    * @param parent - the scene's map slot
@@ -67,6 +79,10 @@ export class MapLayer {
       invalidate: () => void;
       /** Uploads a texture now (spreads uploads over frames). */
       upload: (t: Texture) => void;
+      /** TV: tile sets of big maps (`budget.streamAboveBytes`); without it every map is decoded whole. */
+      tileSets?: TileSetLoader;
+      /** TV: fetch a streamed map's whole tile set into the file cache once its window is loaded. */
+      warmTileCache?: boolean;
     },
   ) {
     this.container.addChild(this.back);
@@ -75,12 +91,17 @@ export class MapLayer {
 
   /** Texture bytes of the shown map. */
   get bytes(): number {
-    return this.bytesHeld;
+    return this.stream ? this.stream.bytes : this.bytesHeld;
   }
 
   /** The decoded density, px per square (0 before a map shows). */
   get pxPerSquare(): number {
-    return this.plan?.pxPerSquare ?? 0;
+    return this.stream ? this.stream.pxPerSquare : (this.plan?.pxPerSquare ?? 0);
+  }
+
+  /** A streamed map's tile counters, or null when the map was decoded whole. */
+  streamStats(): TileStreamStats | null {
+    return this.stream?.stats() ?? null;
   }
 
   /**
@@ -114,6 +135,11 @@ export class MapLayer {
    */
   cull(x0: number, y0: number, x1: number, y1: number): void {
     for (const t of this.tiles) t.sprite.visible = t.x1 >= x0 && t.x0 <= x1 && t.y1 >= y0 && t.y0 <= y1;
+    const v = this.view;
+    if (v && v.x0 === x0 && v.y0 === y0 && v.x1 === x1 && v.y1 === y1) return; // a shake, not a move
+    this.view = { x0, y0, x1, y1 };
+    this.stream?.setView(this.view);
+    this.pendingStream?.setView(this.view);
   }
 
   /**
@@ -148,6 +174,11 @@ export class MapLayer {
     const { log, budget } = this.opts;
     const ref = this.opts.preferTableCopy && info.tableCopy ? info.tableCopy : info.picture;
     this.opts.onEvent({ type: 'map-loading', mapId: info.id, name: info.name });
+    const wanted = this.opts.wantedPxPerSquare() * this.densityFactor;
+    if (this.opts.tileSets && budget.streamAboveBytes !== undefined && shouldStream(info.grid, wanted, budget.streamAboveBytes)) {
+      if (await this.loadStreamed(info, seq, wanted, t0)) return;
+      if (seq !== this.loadSeq) return;
+    }
     log.info('render', 'Map loading', { mapId: info.id, file: `${ref.hash}.${ref.ext}`, bytes: ref.bytes, tableCopy: ref !== info.picture });
     const made: ImageBitmap[] = [];
     const built: Tile[] = [];
@@ -256,6 +287,80 @@ export class MapLayer {
   }
 
   /**
+   * A big map: its tile set from the server (or the device), the preview, then the tiles under
+   * the screen; shown once those are on the GPU, the ring and lookahead keep loading after.
+   *
+   * @param info - the map
+   * @param seq - this load's number (a newer load wins)
+   * @param wanted - px per square the textures get
+   * @param t0 - when the load started
+   * @returns true when this path handled the load (shown or superseded); false = decode the
+   *   whole picture instead (no tile set, or it failed)
+   */
+  private async loadStreamed(info: MapInfo, seq: number, wanted: number, t0: number): Promise<boolean> {
+    const { log } = this.opts;
+    const level = tileLevel(info.grid.cellW, wanted);
+    log.info('render', 'Map loading as tiles', { mapId: info.id, file: `${info.picture.hash}.${info.picture.ext}`, level, pxPerSquare: Math.round(wanted * 10) / 10 });
+    let manifest;
+    try {
+      manifest = await this.opts.tileSets!(info.picture, level);
+    } catch (e) {
+      log.warn('render', 'Tile set unavailable — decoding the whole picture', { mapId: info.id, level, error: String(e) });
+      return seq !== this.loadSeq;
+    }
+    if (seq !== this.loadSeq) return true;
+    if (!manifest || manifest.source.hash !== info.picture.hash) {
+      log.info('render', 'No tile set — decoding the whole picture', { mapId: info.id, level });
+      return false;
+    }
+    const tFetch = performance.now();
+    const stream = new TileStream({
+      mapId: info.id,
+      manifest,
+      grid: info.grid,
+      files: this.opts.files,
+      pxPerSquare: wanted,
+      upload: this.opts.upload,
+      invalidate: this.opts.invalidate,
+      log,
+      warmCache: this.opts.warmTileCache ?? false,
+    });
+    this.pendingStream = stream;
+    let ready = false;
+    try {
+      await stream.loadPreview();
+      if (seq !== this.loadSeq) return true;
+      stream.setView(this.view ?? startView(info));
+      await stream.settled(true);
+      if (seq !== this.loadSeq) return true;
+      ready = true;
+    } catch (e) {
+      if (seq !== this.loadSeq) return true;
+      log.warn('render', 'Tiles failed — decoding the whole picture', { mapId: info.id, error: String(e) });
+      return false;
+    } finally {
+      if (this.pendingStream === stream) this.pendingStream = null;
+      // rv#2: a superseded or failed stream frees what it made
+      if (!ready) stream.destroy();
+    }
+    // Swap: the stream in, the old map out.
+    this.destroyTiles();
+    this.container.addChild(stream.container);
+    this.stream = stream;
+    this.plan = null;
+    this.opts.invalidate();
+    const s = stream.stats();
+    const ms = Math.round(performance.now() - t0);
+    const fetchMs = Math.round(tFetch - t0);
+    log.info('render', 'Map shown as tiles', {
+      mapId: info.id, ms, fetchMs, level, setTiles: s.total, tiles: s.loaded, queued: s.queued + s.inFlight,
+      pxPerSquare: Math.round(stream.pxPerSquare * 10) / 10, mb: Math.round(s.bytes / 2 ** 20),
+    });
+    this.opts.onEvent({ type: 'map-shown', mapId: info.id, ms, pxPerSquare: stream.pxPerSquare, tiles: s.loaded, bytes: s.bytes, fetchMs });
+    return true;
+  }
+
+  /**
    * Takes the tiles off the screen and frees them once a frame without them was drawn (qa#21:
    * destroying a texture source still bound in the batcher's bind group warns and may draw
    * garbage for a frame).
@@ -266,9 +371,11 @@ export class MapLayer {
     for (const t of this.tiles) t.sprite.removeFromParent();
     if (now) freeTiles(this.tiles);
     else retire(this.tiles);
-    if (this.tiles.length) this.opts.invalidate();
+    if (this.tiles.length || this.stream) this.opts.invalidate();
     this.tiles = [];
     this.bytesHeld = 0;
+    this.stream?.destroy(now);
+    this.stream = null;
   }
 
   private clear(): void {
@@ -285,6 +392,13 @@ export class MapLayer {
     this.back.clear();
     this.container.destroy({ children: true });
   }
+}
+
+/** The TV's first view before the camera told one: 34 × 19 squares at the map's centre. */
+function startView(info: MapInfo): SquareRect {
+  const cx = info.grid.cols / 2;
+  const cy = info.grid.rows / 2;
+  return { x0: cx - 17, y0: cy - 9.5, x1: cx + 17, y1: cy + 9.5 };
 }
 
 /** What makes a map's picture different: the file used and the grid on it. */

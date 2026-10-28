@@ -49,6 +49,7 @@ pub fn router(state: Shared) -> Router {
         .route("/files", post(crate::files::routes::upload))
         .route("/files/{*name}", get(crate::files::routes::get_file))
         .route("/uploads/{*name}", get(crate::files::routes::get_upload))
+        .route("/api/tiles/{*name}", get(crate::files::tiles::get_tiles))
         .route("/api/library", any(crate::library::routes::collection))
         .route("/api/library/{*id}", any(crate::library::routes::item))
         .route("/api/games", any(crate::backups::routes::collection))

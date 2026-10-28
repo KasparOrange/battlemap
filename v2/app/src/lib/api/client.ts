@@ -11,12 +11,14 @@
  * | {@link LibraryApi.list} / `add` / `remove` | `GET /api/library`, `POST /api/library`, `DELETE /api/library/<id>` |
  * | {@link BackupApi.put} / `list` / `get` / `delete` | `PUT /api/games/<id>`, `GET /api/games`, `GET /api/games/<id>`, `DELETE /api/games/<id>` |
  * | {@link Api.fetchLink} | `GET /api/fetch?url=` → `{url, name, bytes, kind, ext}`, then `GET <url>` (`/uploads/…`) |
+ * | {@link Api.tileSet} | `GET /api/tiles/<hash>.<ext>?level=k` → `TileManifest` (null on 404: a server without tiles) |
  *
  * Answers may come bare or wrapped (`{entries: […]}`, `{file: …}`): the client unwraps both,
  * so it doesn't break when the server settles on one.
  */
-import { check, FileExt, FileRef, Game, GameSummary, LibraryEntry, type Parsed } from '@battlemap/shared';
+import { check, FileExt, FileRef, Game, GameSummary, LibraryEntry, type Parsed, type TileManifest } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
+import { isTileManifest } from '../render/tile-window.ts';
 import { ApiError } from './errors.ts';
 import { withRetry, DEFAULT_RETRY, type RetryPolicy } from './retry.ts';
 import { defaultTransport, type HttpResponse, type Progress, type Transport } from './transport.ts';
@@ -115,6 +117,18 @@ export interface Api {
    * @throws {ApiError} — `http` with the server's reason when it refused the link
    */
   fetchLink(url: string, onProgress?: Progress, signal?: AbortSignal): Promise<FetchedLink>;
+  /**
+   * The tile set of a big map picture (the TV streams it instead of decoding the picture whole;
+   * `docs/render.md` "Tile streaming"). The first call for a picture makes the set on the
+   * server, which can take seconds — the link timeout applies.
+   *
+   * @param picture - the original picture
+   * @param level - the picture scaled by 2^-level
+   * @param signal - cancels the call
+   * @returns the manifest, or null when the server has no tile route or not that picture (404)
+   * @throws {ApiError}
+   */
+  tileSet(picture: FileRef, level: number, signal?: AbortSignal): Promise<TileManifest | null>;
 }
 
 /** Timeouts in ms. */
@@ -409,6 +423,28 @@ export function createApi(options: ApiOptions): Api {
         return out;
       } catch (err) {
         failed('Link fetch', path, err, t0, { link: url.slice(0, 200) });
+        throw err;
+      }
+    },
+
+    async tileSet(picture, level, signal) {
+      const path = `/api/tiles/${picture.hash}.${picture.ext}?level=${level}`;
+      const t0 = performance.now();
+      try {
+        const res = await withRetry('Tile set', path, async () => {
+          const r = await send({ method: 'GET', url: base + path, path, signal, idleMs: t.linkMs });
+          return r.status === 404 ? null : check(r, path);
+        }, policy, log, signal);
+        if (!res) {
+          log.info('api', 'Tile set: none on the server', { path, ms: Math.round(performance.now() - t0) });
+          return null;
+        }
+        const m = await jsonOf(res, path);
+        if (!isTileManifest(m)) throw new ApiError('invalid', 'Answer is not a tile set', path);
+        log.info('api', 'Tile set done', { path, tiles: m.tiles.length, ms: Math.round(performance.now() - t0) });
+        return m;
+      } catch (err) {
+        failed('Tile set', path, err, t0);
         throw err;
       }
     },

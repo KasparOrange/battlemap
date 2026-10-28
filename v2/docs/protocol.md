@@ -260,4 +260,6 @@ Not WebSocket messages, but part of the contract the server package implements:
 `GET /health`; `POST /log` (mwlog-ts browser batches); `GET /api/tables` (rooms with a TV
 online); `POST /files?ext=&format=` → `FileRef`, `GET /files/<hash>.<ext>` (immutable);
 `GET|POST|DELETE /api/library` (`LibraryEntry`); `PUT|GET /api/games/<id>` and `GET /api/games`
-(backups, `GameSummary`); `GET /api/fetch?url=` (a link's file, as the old `/fetch`).
+(backups, `GameSummary`); `GET /api/fetch?url=` (a link's file, as the old `/fetch`);
+`GET /api/tiles/<hash>.<ext>?level=k` → `TileManifest` (Rust server only: a big picture cut into
+512 px tiles for the TV, made on the first call; `render.md` "Tile streaming for big maps").

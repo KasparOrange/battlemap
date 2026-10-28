@@ -9,7 +9,7 @@ import type { FileRef, RootState } from '@battlemap/shared';
 import { createEffectsRuntime } from '../effects/index.ts';
 import { attachRenderStats } from '../debug-hook.ts';
 import type { Logger } from '../log.ts';
-import { createTableView, type TableViewEvent } from '../render/index.ts';
+import { createTableView, type TableViewEvent, type TileSetLoader } from '../render/index.ts';
 
 /** What TV mode uses of the renderer's table view. */
 export interface TvTableView {
@@ -27,6 +27,8 @@ export interface TvTableViewOptions {
   log: Logger;
   /** Loads a file (the device's cache, fetched from the server when missing). */
   files: (ref: FileRef) => Promise<Blob>;
+  /** Tile sets of big maps (kept on the device, `tile-sets.ts`); the whole set is cached once shown. */
+  tileSets?: TileSetLoader;
   /** Map loading, shown, failed; the renderer failing. */
   onEvent: (e: TableViewEvent) => void;
   /**
@@ -48,6 +50,8 @@ export function openTableView(host: HTMLElement, options: TvTableViewOptions): T
     profile: 'players',
     log: options.log,
     files: options.files,
+    tileSets: options.tileSets,
+    warmTileCache: true,
     effects: (slots, ctx) => createEffectsRuntime(slots, ctx),
     onEvent: options.onEvent,
     now: options.now,

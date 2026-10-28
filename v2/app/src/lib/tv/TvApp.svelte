@@ -32,7 +32,7 @@
   import { realTimers } from './timers.ts';
   import { answerRequest } from './requests.ts';
   import { PlayersFeed } from '../players/feed.ts';
-  import { realPorts, requestPersistentStorage } from './seams.ts';
+  import { realPorts, realTileSets, requestPersistentStorage } from './seams.ts';
   import { backAction, backGate, CHROME_MS, homeBadge, OFFLINE_RED_MS, PROBLEM_MS, problemBadge, screenFor } from './screen.ts';
   import type { TableViewEvent } from '../render/index.ts';
   import { openTableView, type TvTableView } from './table-view.ts';
@@ -320,7 +320,7 @@
       await refreshLists();
     });
 
-    view = openTableView(stage!, { log, files: (ref) => ports.files.get(ref), onEvent: onViewEvent, now: () => session.conn.serverNow() });
+    view = openTableView(stage!, { log, files: (ref) => ports.files.get(ref), tileSets: realTileSets(ports.settings, log), onEvent: onViewEvent, now: () => session.conn.serverNow() });
     view.ready.then(() => timing.mark('renderer'), () => timing.noMap());
     view.update(session.state);
 

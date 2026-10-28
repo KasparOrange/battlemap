@@ -5,18 +5,25 @@
  * @see ../../../../docs/architecture.md "work packages" (seams), "effects runtime"
  */
 import type { Container } from 'pixi.js';
-import type { Camera, FileRef, Light, MapGeometry, OneShot, PlacedEffect, Point } from '@battlemap/shared';
+import type { Camera, FileRef, Light, MapGeometry, OneShot, PlacedEffect, Point, TileManifest } from '@battlemap/shared';
 import type { Logger } from '../log.ts';
 import type { Insets, Size } from './camera.ts';
 import type { Hit } from './hit.ts';
 import type { MapLoadEvent } from './map-layer.ts';
 import type { RenderScheduler } from './scheduler.ts';
+import type { TileStreamStats } from './tile-stream.ts';
 
 /** `players`: the TV (the table). `dm`: the companion (the DM's view). */
 export type ViewProfile = 'players' | 'dm';
 
 /** Fetches a file by ref (pass the storage cache's `files.get`). */
 export type FileLoader = (ref: FileRef) => Promise<Blob>;
+
+/**
+ * Gets the tile set of a big map picture (`GET /api/tiles/…`, kept on the device for offline
+ * play), or null when there is none — the map is then decoded whole.
+ */
+export type TileSetLoader = (picture: FileRef, level: number) => Promise<TileManifest | null>;
 
 /**
  * The layer slots the effects runtime draws into. World slots are in world units —
@@ -106,6 +113,13 @@ export interface TableViewOptions {
   files?: FileLoader;
   /** The server's base URL for the default file loader (default: the page's origin). */
   serverUrl?: string;
+  /**
+   * TV: gets tile sets for big maps (default: `GET <serverUrl>/api/tiles/…`, no device copy).
+   * Ignored on the DM profile, which decodes every map whole.
+   */
+  tileSets?: TileSetLoader;
+  /** TV: after a streamed map's window is loaded, fetch its whole tile set into the file cache. */
+  warmTileCache?: boolean;
   /** The effects runtime's factory; without it the slots stay empty. */
   effects?: EffectsFactory;
   /** Gets load progress and failures (map loading, shown, failed). */
@@ -134,6 +148,8 @@ export interface RenderStats {
   tokens: number;
   /** The map's decoded density, px per square. */
   mapPxPerSquare: number;
+  /** A streamed map's tiles (TV, big maps), else null. */
+  mapStream: TileStreamStats | null;
   /** The GPU (unmasked renderer string) when the browser tells. */
   gpu: string | null;
 }

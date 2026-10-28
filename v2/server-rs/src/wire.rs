@@ -351,6 +351,45 @@ pub struct UploadResult {
     pub note: Option<String>,
 }
 
+/// A picture cut into tiles for the TV (`GET /api/tiles/<hash>.<ext>?level=k`): the picture
+/// scaled by 2^-level, cut into `tile` px squares in picture space (edge tiles smaller), each
+/// file carrying an `apron` px border from its neighbours (none at the picture's edge), plus a
+/// small preview of the whole picture. Made once per picture and level (`derived.json`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(test, derive(TS))]
+#[serde(rename_all = "camelCase")]
+pub struct TileManifest {
+    /// Format version (1).
+    pub v: u32,
+    /// The picture the set was cut from.
+    #[cfg_attr(test, ts(type = "FileRef"))]
+    pub source: FileRef,
+    /// Its width in pixels (upright).
+    pub source_w: u32,
+    /// Its height in pixels.
+    pub source_h: u32,
+    /// The level: the picture scaled by 2^-level.
+    pub level: u32,
+    /// The scaled picture's width in pixels (the tiles' space).
+    pub width: u32,
+    /// The scaled picture's height in pixels.
+    pub height: u32,
+    /// Core tile side in pixels (512).
+    pub tile: u32,
+    /// Border each tile file carries from its neighbours, in pixels (1).
+    pub apron: u32,
+    /// Tiles across.
+    pub cols: u32,
+    /// Tiles down.
+    pub rows: u32,
+    /// The tile files, row by row (`rows × cols`).
+    #[cfg_attr(test, ts(type = "FileRef[]"))]
+    pub tiles: Vec<FileRef>,
+    /// The whole picture at most 1024 px on its long side, WebP.
+    #[cfg_attr(test, ts(type = "FileRef"))]
+    pub preview: FileRef,
+}
+
 /// What a link fetch found.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[cfg_attr(test, derive(TS))]
@@ -529,6 +568,7 @@ mod tests {
         let decls: Vec<(String, String)> = vec![
             (ErrorBody::docs().unwrap_or_default(), ErrorBody::decl()),
             (UploadResult::docs().unwrap_or_default(), UploadResult::decl()),
+            (TileManifest::docs().unwrap_or_default(), TileManifest::decl()),
             (FetchKind::docs().unwrap_or_default(), FetchKind::decl()),
             (Fetched::docs().unwrap_or_default(), Fetched::decl()),
             (VersionInfo::docs().unwrap_or_default(), VersionInfo::decl()),

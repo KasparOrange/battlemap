@@ -31,9 +31,10 @@ import { isMemoryPressure, RESTORE_AFTER_MS } from './memory.ts';
 import type { Hit } from './hit.ts';
 import { createRenderer, type TableRenderer } from './pixi.ts';
 import { TableScene } from './scene.ts';
-import type { CameraChange, FileLoader, RenderStats, TableView, TableViewOptions } from './types.ts';
+import type { CameraChange, FileLoader, RenderStats, TableView, TableViewOptions, TileSetLoader } from './types.ts';
+import { isTileManifest } from './tile-window.ts';
 
-export type { CameraChange, EffectSlots, EffectsFactory, EffectsRuntime, FileLoader, RenderStats, TableView, TableViewEvent, TableViewOptions, ViewProfile } from './types.ts';
+export type { CameraChange, EffectSlots, EffectsFactory, EffectsRuntime, FileLoader, RenderStats, TableView, TableViewEvent, TableViewOptions, TileSetLoader, ViewProfile } from './types.ts';
 export type { Hit, HitInput } from './hit.ts';
 export { hitsAt, GRAB_PX } from './hit.ts';
 export type { DmCamera, DmLimits, Insets, Size } from './camera.ts';
@@ -59,6 +60,25 @@ export function httpFiles(serverUrl?: string): FileLoader {
 }
 
 /**
+ * The default tile-set loader: `GET <serverUrl>/api/tiles/<hash>.<ext>?level=k` (null on 404 —
+ * a server without tiles, the map is then decoded whole).
+ *
+ * @param serverUrl - the server's base URL (no trailing slash), default the page's origin
+ * @returns a loader
+ */
+export function httpTileSets(serverUrl?: string): TileSetLoader {
+  const base = serverUrl ?? (typeof location !== 'undefined' ? location.origin : '');
+  return async (ref, level) => {
+    const res = await fetch(`${base}/api/tiles/${ref.hash}.${ref.ext}?level=${level}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`HTTP ${res.status} for the tiles of ${ref.hash}.${ref.ext}`);
+    const m: unknown = await res.json();
+    if (!isTileManifest(m)) throw new Error(`Not a tile set: ${ref.hash}.${ref.ext}`);
+    return m;
+  };
+}
+
+/**
  * Creates the table view in a host element (the canvas fills it).
  *
  * @param host - the element to fill (give it a size; `touch-action: none` for gestures)
@@ -68,6 +88,7 @@ export function httpFiles(serverUrl?: string): FileLoader {
 export function createTableView(host: HTMLElement, opts: TableViewOptions): TableView {
   const { log } = opts;
   const files = opts.files ?? httpFiles(opts.serverUrl);
+  const sceneOpts: TableViewOptions = { ...opts, tileSets: opts.tileSets ?? httpTileSets(opts.serverUrl) };
   let renderer: TableRenderer | null = null;
   let scene: TableScene | null = null;
   let pending: RootState | null = null;
@@ -100,7 +121,7 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
     }
     renderer = r;
     gpu = r.gpu;
-    scene = new TableScene(r, opts, files);
+    scene = new TableScene(r, sceneOpts, files);
     const canvas = r.app.canvas;
     canvas.addEventListener('webglcontextlost', () => log.warn('render', 'WebGL context lost', { profile: opts.profile }));
     canvas.addEventListener('webglcontextrestored', () => {
@@ -186,6 +207,7 @@ export function createTableView(host: HTMLElement, opts: TableViewOptions): Tabl
         budget: { map: scene?.budget.mapBytes ?? 0, other: scene?.budget.otherBytes ?? 0 },
         tokens: scene?.tokenCount ?? 0,
         mapPxPerSquare: scene?.mapPxPerSquare ?? 0,
+        mapStream: scene?.mapStream ?? null,
         gpu,
       };
     },
