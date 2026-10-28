@@ -622,17 +622,22 @@ writes `guide-sheet.jpg` (screens drawn on) and `crops/`: one guide crop + promp
 draw of it is 67 px per square) for the tiled painting. Boulder foam now trails per group of
 boulders. What paint/roof/canopy still need for the big size: `out/summervale/HANDOVER-layout.md`.
 
-**summervale — tiled painting (code 2026-10-28, not painted yet).** `paint` on a map bigger than
-one screen sends the master a compact prompt (same descriptions share a line, buildings and props
-keep their first clause: 13.5 → 11 KB). `outdoor.py tiles <run>` paints each screen's crop at 2K
-from two pictures — its guide crop and the master's crop — "keep the second image's look, the
-guide's positions win" (`tiles.json`: every draw, the pick per tile; `--only r2c2` redoes one).
-`outdoor.py assemble <run> --pps 56` joins the picks into `ground.png`/`.webp` (7616 × 4256): each
-tile's low frequencies replaced by the master's (σ 4 squares, one colour and brightness for the
-whole map), then a two-band seam on every screen border — the blurred part crossfades over ±1.5
-squares, the detail over ±0.4, so shifted detail doesn't ghost; plus `ground-sheet.jpg` and
-`seams.jpg` (all 24 border midpoints). Checked on the guide's own crops: the blend returns the
-guide exactly. Painting it (~$1) waits on the Gemini key (1Password locked):
+**summervale — tiled painting (painted 2026-10-28, $1.94).** `paint` on a map bigger than
+one screen sends the master a compact prompt (buildings and props with the same description share
+a line and keep their first clause; areas keep a line each — merged, the forests lost the southern
+woods). `outdoor.py tiles <run>` paints each screen's crop at 2K from two pictures — its guide crop
+and the master's crop — "keep the second image's look, the guide's positions win" (`tiles.json`:
+every draw with its box, the pick per tile; `--only r2c2` redoes one). Crop boxes cut no building,
+bridge or prop: the model paints a cut object whole and pushes it inside the frame, which doubled
+the fisher's hut, a barn and the keep's walls 2–3 squares from the border in the first pass; now
+the box is the smallest one in any model aspect that keeps 1.7 squares past each inner border and
+cuts nothing (16:9, 3:2, 5:4, 4:3 — 55–67 px per square). `outdoor.py assemble <run> --pps 56`
+joins the picks into `ground.png`/`.webp` (7616 × 4256, 18 s): each tile's low frequencies
+replaced by the master's (σ 4 squares, blurred at 1/28 size), then a two-band seam on every screen
+border — the blurred part crossfades over ±1.5 squares, the detail over ±0.4; plus
+`ground-sheet.jpg` and `seams.jpg` (all 24 border midpoints). The run: `out/summervale/261028-191924-master`
+— the 4K master (no thinking; `--thinking high` invented buildings and painted crowns), 16 tiles
++ 14 redos; one look over the whole map, no visible seam. Details and what's open:
 `out/summervale/HANDOVER-ground.md`.
 
 **Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `roof`, `canopy`), `prompts/outdoor.txt`,

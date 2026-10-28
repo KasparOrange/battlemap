@@ -230,7 +230,8 @@ def build_prompt(spec, box=None, compact=False):
     only what reaches into the box is listed, its squares counted from the box's top-left, and
     the size is the box's (whole squares, rounded).
     `compact` = the master's prompt for a big map (the 136 × 76 one ran to 86 lines, 13 KB):
-    areas with the same description share one line (the forests, the seven standing stones),
+    buildings and props with the same description share one line (the seven standing stones;
+    areas such as the forests keep a line each — merged, the master lost the southern woods),
     building and prop descriptions keep only their first clause (the tiles paint the detail)."""
     cols, rows = spec["grid"]
     bx0, by0, bx1, by1 = box or (0, 0, cols, rows)
@@ -256,6 +257,7 @@ def build_prompt(spec, box=None, compact=False):
     for z in spec.get("zones", []):
         if z.get("desc") and (w := where(*bbox(z["poly"], cols, rows))):
             lines.append(f"- {z['id']} ({w}): {z['desc']}")
+    n_zones = len(lines)   # areas keep a line each: merged, the 1K master dropped 3 of 4 forests
     if spec.get("river"):
         rs = river_samples(spec)
         if any(where(x - w / 2 - 0.5, y - w / 2 - 0.5, x + w / 2 + 0.5, y + w / 2 + 0.5) for x, y, w in rs[:, :3]):
@@ -272,8 +274,8 @@ def build_prompt(spec, box=None, compact=False):
             lines.append(f"- {b.get('id', 'prop')} ({wh}): {desc}")
     if compact:   # one line per description: "- a, b (where; where): desc"
         merged = {}
-        for ln in lines:
-            if ln.startswith("- river:"):
+        for i, ln in enumerate(lines):
+            if ln.startswith("- river:") or i < n_zones:
                 merged[ln] = None
                 continue
             head, desc = ln[2:].split("): ", 1)
@@ -408,6 +410,8 @@ def write_layers(spec, folder):
 
 SCREEN = (34, 19)     # one TV screen in squares (the table's window, CLAUDE.md "The table")
 CROP_MARGIN = 2       # squares of overlap a tile's crop reaches past its screen (at least)
+CROP_KEEP = 1.7       # squares a crop keeps past each inner screen border (the seam blend's ±1.5)
+OBJ_PAD = 0.25        # the guide draws walls ±0.15 squares round a building's rect
 
 
 def screens(spec):
@@ -418,16 +422,83 @@ def screens(spec):
             for r in range(math.ceil(rows / sh)) for c in range(math.ceil(cols / sw))]
 
 
-def crop_boxes(spec, margin=CROP_MARGIN, pps=GUIDE_PPS):
+def _cut_objects(spec, box):
+    """The buildings, bridges and props (x0, y0, x1, y1 in squares) a crop box (squares) cuts:
+    they reach into it but don't fit in it."""
+    x0, y0, x1, y1 = box
+    out = []
+    for o in spec.get("bridges", []) + spec.get("buildings", []) + spec.get("props", []):
+        ox, oy, ow, oh = o["rect"]
+        a = (ox - OBJ_PAD, oy - OBJ_PAD, ox + ow + OBJ_PAD, oy + oh + OBJ_PAD)
+        if a[0] < x1 and a[2] > x0 and a[1] < y1 and a[3] > y0 and not (
+                a[0] >= x0 and a[2] <= x1 and a[1] >= y0 and a[3] <= y1):
+            out.append(a)
+    return out
+
+
+def _whole_box(spec, scr, keep=None, step=0.25, grow=1.6):
+    """The smallest box (squares, x0, y0, x1, y1) in one of the model's aspects that holds the screen
+    `scr` + `keep` squares on every inner side and cuts no building, bridge or prop (prop-cuts
+    allowed as a fallback); None when nothing fits within `grow` × the screen's width."""
+    keep = CROP_KEEP if keep is None else keep
+    cols, rows = spec["grid"]
+    sx0, sy0, sx1, sy1 = scr
+    objs = [o["rect"] for o in spec.get("bridges", []) + spec.get("buildings", [])]
+    props = [o["rect"] for o in spec.get("props", [])]
+    need = (sx0 - keep if sx0 > 0 else 0, sy0 - keep if sy0 > 0 else 0,
+            sx1 + keep if sx1 < cols else cols, sy1 + keep if sy1 < rows else rows)
+
+    def search(rects):
+        R = np.array([(x - OBJ_PAD, y - OBJ_PAD, x + w + OBJ_PAD, y + h + OBJ_PAD) for x, y, w, h in rects], float).reshape(-1, 4)
+        best = None
+        for asp in mapgen.ASPECTS:
+            ra = int(asp.split(":")[0]) / int(asp.split(":")[1])
+            for w in np.arange(max(need[2] - need[0], (need[3] - need[1]) * ra), grow * (sx1 - sx0), step):
+                h = w / ra
+                if w > cols or h > rows:
+                    break
+                xs = np.arange(max(0, need[2] - w), min(need[0], cols - w) + 1e-6, step)
+                ys = np.arange(max(0, need[3] - h), min(need[1], rows - h) + 1e-6, step)
+                if not len(xs) or not len(ys):
+                    continue
+                X0, Y0 = np.meshgrid(xs, ys, indexing="ij")
+                X0, Y0 = X0[..., None], Y0[..., None]
+                X1, Y1 = X0 + w, Y0 + h
+                inter = (R[:, 0] < X1) & (R[:, 2] > X0) & (R[:, 1] < Y1) & (R[:, 3] > Y0)
+                fits = (R[:, 0] >= X0) & (R[:, 2] <= X1) & (R[:, 1] >= Y0) & (R[:, 3] <= Y1)
+                ok = ~np.any(inter & ~fits, axis=-1)
+                if ok.any():
+                    # most centred of the fitting positions
+                    off = np.abs((X0[..., 0] + w / 2) - (sx0 + sx1) / 2) + np.abs((Y0[..., 0] + h / 2) - (sy0 + sy1) / 2)
+                    i = np.unravel_index(np.argmin(np.where(ok, off, np.inf)), ok.shape)
+                    cand = (w * h, asp, (float(xs[i[0]]), float(ys[i[1]]), float(xs[i[0]] + w), float(ys[i[1]] + h)))
+                    if best is None or cand[0] < best[0]:
+                        best = cand
+                    break
+        return best
+
+    best = search(objs + props) or search(objs)
+    return best and (best[2], best[1])
+
+
+def crop_boxes(spec, margin=CROP_MARGIN, pps=GUIDE_PPS, whole=True):
     """One crop per screen for tiled painting: the screen + `margin` squares round it, grown to
     the nearest aspect the model offers (34 × 19 + 2 → 38 × 23 → 16:9 = 40.9 × 23 squares, so
     ~3.4 squares of overlap left and right, 2 above and below) and shifted back onto the map at
-    its edges (the overlap then all lies on the inner side). Boxes in guide px (ints) + squares."""
+    its edges (the overlap then all lies on the inner side). Boxes in guide px (ints) + squares.
+
+    `whole`: no building, bridge or prop is cut by a crop's edge — the model paints a cut object
+    whole and pushes it inside the frame (summervale's first tiles doubled the fisher's hut, the
+    barn and the keep's walls 2–3 squares in from the screen border). Then the box is the
+    smallest one in any of the model's aspects that keeps CROP_KEEP squares past each inner screen
+    border (the seam blend's room) and cuts nothing (`_whole_box`); the plain box when none fits."""
     cols, rows = spec["grid"]
     out = []
     for r, c, (x0, y0, x1, y1) in screens(spec):
         want = ((x0 - margin) * pps, (y0 - margin) * pps, (x1 + margin) * pps, (y1 + margin) * pps)
         *box, aspect = aspect_box((cols * pps, rows * pps), want)
+        if whole and _cut_objects(spec, [v / pps for v in box]) and (wb := _whole_box(spec, (x0, y0, x1, y1))):
+            box, aspect = [round(v * pps) for v in wb[0]], wb[1]
         out.append({"screen": [r, c], "screen_sq": [x0, y0, x1, y1], "box_px": box,
                     "box_sq": [round(v / pps, 3) for v in box], "aspect": aspect,
                     "screen_in_crop_px": [x0 * pps - box[0], y0 * pps - box[1], x1 * pps - box[0], y1 * pps - box[1]]})
@@ -769,7 +840,10 @@ This is one part of a bigger map, painted in tiles. The SECOND image is this sam
 painted, at low detail, as a crop of the whole map's painting. Keep its colours, light, textures,
 style and the look of every area exactly, so this part joins its neighbours without a seam
 (especially along all four edges of the frame), and paint it at full detail. Where the second
-image and the guide disagree, the guide's positions and shapes win."""
+image and the guide disagree, the guide's positions and shapes win.
+The frame cuts through the map: a building, wall, field, jetty or anything else that crosses a
+frame edge is cut off by that edge. Paint only the part inside the frame, exactly where the guide
+has it; never move it inward, shrink it or complete it inside the frame."""
 
 
 def master_crop(master, spec, box_sq):
@@ -830,6 +904,23 @@ def _ramp(x, a, b):
     return np.clip((x - a) / (b - a), 0, 1).astype(np.float32)
 
 
+def _blur(a, sigma):
+    """Gaussian blur of an H × W × 3 float32 array, σ = `sigma` px. Wide blurs run on a copy shrunk
+    by f = σ / 8 and are scaled back up (bicubic): at full size σ = 224 px (match 4 × 56 px/sq)
+    took over 6 minutes on the whole ground, this way ~1 s; the error is far below one level."""
+    f = int(sigma // 8)
+    if f < 2:
+        return ndi.gaussian_filter(a, (sigma, sigma, 0))
+    h, w = a.shape[:2]
+    sw, sh = max(1, round(w / f)), max(1, round(h / f))
+    out = np.empty_like(a)
+    for ch in range(a.shape[2]):
+        small = np.asarray(Image.fromarray(a[..., ch], "F").resize((sw, sh), Image.BOX), np.float32)
+        small = ndi.gaussian_filter(small, sigma * sw / w, mode="nearest")
+        out[..., ch] = np.asarray(Image.fromarray(small, "F").resize((w, h), Image.BICUBIC), np.float32)
+    return out
+
+
 def assemble(spec, run, pps=56, pick=None, match=4.0, soft=1.5, sharp=0.4):
     """The tiles joined into one ground at `pps` px per square (ground.png + .webp, ground-sheet.jpg
     with the screens drawn on, seams.jpg = every seam's middle at full size).
@@ -849,18 +940,19 @@ def assemble(spec, run, pps=56, pick=None, match=4.0, soft=1.5, sharp=0.4):
     mup = None
     if match:
         mup = np.asarray(master.resize((W, H), Image.BICUBIC), np.float32)
-        mup = ndi.gaussian_filter(mup, (match * pps, match * pps, 0))
+        mup = _blur(mup, match * pps)
     sig = 0.75 * pps   # the band split
+    drawn = {d["file"]: d["box_sq"] for d in rec["draws"]}   # each draw's own box (crop_boxes changed once)
     for b in crop_boxes(spec):
         r, c = b["screen"]
         t = f"r{r}c{c}"
-        x0, y0, x1, y1 = b["box_sq"]
+        x0, y0, x1, y1 = drawn.get(picks[t], b["box_sq"])
         X0, Y0 = round(x0 * pps), round(y0 * pps)
         tw, th = round(x1 * pps) - X0, round(y1 * pps) - Y0
         tile = np.asarray(Image.open(run / picks[t]).convert("RGB").resize((tw, th), Image.LANCZOS), np.float32)
         if match:
-            tile = tile + mup[Y0:Y0 + th, X0:X0 + tw] - ndi.gaussian_filter(tile, (match * pps, match * pps, 0))
-        low = ndi.gaussian_filter(tile, (sig, sig, 0))
+            tile = tile + mup[Y0:Y0 + th, X0:X0 + tw] - _blur(tile, match * pps)
+        low = _blur(tile, sig)
         xs = (X0 + np.arange(tw) + 0.5) / pps
         ys = (Y0 + np.arange(th) + 0.5) / pps
         sx0, sy0, sx1, sy1 = b["screen_sq"]
