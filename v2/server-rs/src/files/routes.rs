@@ -2,7 +2,7 @@
 //!
 //! | Route | What |
 //! |---|---|
-//! | `POST /files?ext=&format=` | store an upload → [`UploadResult`](crate::wire::UploadResult) (201) |
+//! | `POST /files?ext=&format=` | store an upload → [`UploadResult`](crate::wire::UploadResult) (201); a picture big enough to stream starts its tile cut ([`cut_at_upload`](super::tiles::cut_at_upload)) |
 //! | `GET /files/<hash>.<ext>` | a stored file, cached forever (`immutable`) |
 //! | `GET /uploads/<name>` | a link fetch's file (temporary, 7 days) |
 //!
@@ -27,7 +27,7 @@ use super::store::FILE_NAME;
 use super::upload::{UploadError, store_upload};
 use crate::http::respond::{BodyError, json, over, refuse};
 use crate::state::Shared;
-use crate::wire::FileExt;
+use crate::wire::{FileExt, FileRef};
 
 /// Names of link-fetch files in `uploads/`.
 pub static UPLOAD_NAME: LazyLock<Regex> =
@@ -153,6 +153,14 @@ pub async fn upload(State(state): State<Shared>, Query(q): Query<HashMap<String,
         Ok(r) => {
             tracing::info!(target: "files", hash = &r.hash[..12], ext = r.ext.as_str(), bytes = r.bytes, asked = asked.map(String::as_str), format = format.name(),
                 original_bytes = r.original_bytes, note = r.note.as_deref(), width = r.width, height = r.height, thumb = r.thumb.is_some(), "Stored");
+            if let (Some(w), Some(h)) = (r.width, r.height) {
+                let source = FileRef {
+                    hash: r.hash.clone(),
+                    ext: r.ext,
+                    bytes: r.bytes,
+                };
+                super::tiles::cut_at_upload(&state, source, w, h);
+            }
             json(StatusCode::CREATED, &r)
         }
         Err(UploadError::Bad(reason)) => {
