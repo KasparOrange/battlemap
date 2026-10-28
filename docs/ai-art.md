@@ -640,7 +640,24 @@ border — the blurred part crossfades over ±1.5 squares, the detail over ±0.4
 + 14 redos; one look over the whole map, no visible seam. Details and what's open:
 `out/summervale/HANDOVER-ground.md`.
 
-**Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `roof`, `canopy`), `prompts/outdoor.txt`,
+**summervale — the forest canopy (painted 2026-10-28, $0.87).** The roof trick per screen:
+`canopy_plan` now throws darts in proportion to the map's area with grid-hash spacing tests
+(1,147 crowns in 11 s; zones and road distances are rasters in `Ground`) and lines the whole river
+with alders — a closed band in the forest, a loose row in the open so the water stays in view;
+`canopy_guide` draws each crown in its own small box (2 s instead of hours). `outdoor.py
+canopy-tiles <run>` lays the crowns on the assembled ground and edits each screen's crop (the
+ground's boxes) at 2K; `canopy-assemble` cuts each edit by our crowns + leafy fringe and joins them
+two-band like the ground → `canopy/canopy.png` at 56 px per square; no seam visible, one look with
+the slice's. `tools/mapgen/canopy_cut.py` cuts it into 552 trees and 3,532 leaf clumps in 24 s
+(the slice's cut, with per-crown boxes and a C watershed). **The canopy stays in map space**, not
+in a packed atlas: the slice's way measured 3.9× the canopy's pixels in clump boxes alone (123 MB
+for the worst TV window); instead the canopy is cut into the ground's 512 px cells plus an 8-bit
+clump-id map per cell, and a clump is a quad that samples its own map pixels (shifted by its
+sway) where the id is its own; under-copy and shadow come from the same texture's blurred mips.
+A window plus half a screen round it: at most 62 MB, 36 MB on average. Details and what's open:
+`out/summervale/HANDOVER-canopy.md`.
+
+**Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `tiles`, `assemble`, `roof`, `canopy`, `canopy-tiles`, `canopy-assemble`), `tools/mapgen/canopy_cut.py`, `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`). Run `261026-001219-ground`: 2 draws at 2K ($0.10) — both kept river,
 banks, bridge, boulders and walls; draw 2 dropped the road south of the bridge, draw 1 is the
