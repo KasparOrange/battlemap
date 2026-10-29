@@ -605,7 +605,7 @@ on `battlemap-mapgen`. Open:
   cartoony there, tune `edit-canopy.txt` (they come from the ground painting's own style).
 - Paint the garden bushes and reeds the same way, or redraw them in the canopy's look.
 - A big map: load the canopy atlas per window like the ground (every tree is unique pixels).
-- The 4 × 4 map's painting — the layout and guide exist (below, "summervale").
+- The 4 × 4 map — built 2026-10-28 (below, "summervale"; its open list at the end).
 
 **summervale — the 4 × 4 map's layout (2026-10-28).** `layouts/summervale.json`, 136 × 76: the
 river enters in the west past a watermill and a fisher's hut, under a stone bridge by an
@@ -694,6 +694,21 @@ column with no ring → **¼ screen is the default**: 37–98 MB a window (was 4
 checks ghost, roof lift, tap, dial and pan; `shoot.mjs … ring [delay]` runs the ring bench. Details:
 `out/summervale/HANDOVER-viewer.md`.
 
+**summervale — open (2026-10-29).**
+- Not on the box yet: Konrad's look, the window streaming, the memory. A window needs 37–98 MB
+  (the ~35 MB plan counted the ground only; the canopy about doubles it) → test compressed
+  textures on the box in the same session.
+- Not playable at the table: water, wind, canopy and roofs live only on the viewer page; the app
+  shows the painted ground. Quick path: flatten canopy + roofs into the ground picture.
+- Built in the *painted* look (light painted in, canopy painted per screen and cut). Konrad
+  (2026-10-29) wants the light lab's *All lit* route for big maps: unlit ground, the forest from
+  reusable unlit crown sprites lit by the table. It waits on the light lab's box run (fps). It
+  would also cut the canopy's 18–49 MB a window to one shared atlas; against it, his 2026-10-26
+  verdict on sprite forests ("cauliflower"), which the table's crevices only partly fix.
+- Ground leftovers (small): a few stray standing stones below the burial mound (redo r3c2), the
+  sheepfold is a stone oval, not the fenced rectangle; lone-tree mounds sit under their crowns.
+- The `HANDOVER-*.md` files in `out/summervale/` are committed (forced past `out/`'s ignore).
+
 **Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `tiles`, `assemble`, `roof`, `canopy`, `canopy-tiles`, `canopy-assemble`), `tools/mapgen/canopy_cut.py`, `tools/mapgen/plants.py`, `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`); the big map's viewer `docs/mockups/outdoor/summervale/index.html`
@@ -768,7 +783,8 @@ picture per shipped sprite set; the roof painted unlit (today it keeps its paint
 the canopy outline in the fast path (only the deferred one has it); a pick between the two unlit
 grounds and the look for the big map.
 
-Gotchas: `ige paint` takes the base picture's aspect only if asked — pass `--aspect 16:9` or the
+Gotchas: the Gemini key comes from 1Password (Touch ID) unless `$GEMINI_API_KEY` is set — fetch it
+once before helpers start a paint run, or the run stalls on an unanswered unlock; `ige paint` takes the base picture's aspect only if asked — pass `--aspect 16:9` or the
 map comes back square (two edits lost); Depth Anything on a big map needs tiles high-passed one
 by one, else every tile seam shows; timing a nearly idle Apple GPU reads 2–3× too slow (it
 clocks down) — repeat the pass (`#repeat=20`) before comparing.

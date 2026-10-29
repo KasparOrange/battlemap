@@ -21,6 +21,7 @@ installable companion, v1 import. Nothing has run on the real box and tablet yet
 - TV save on page hide/reload doesn't await the storage write — the last ~2 s before a reload can be lost (`tv/games.ts`).
 - Sound: one-shot pads have no volume of their own.
 - Players' view and installable companion: never tried on real phones; sound, moments, secrets never on the real box.
+- Big maps (summervale, 2026-10-28): window streaming + cut at upload never ran on the real box; a window with canopy needs up to 98 MB → try compressed textures there (`docs/ai-art.md` "summervale — open").
 - e2e: a game-night run once wrote under another helper's ports (6411/6412) — check the harness respects `BATTLEMAP_*_PORT` (from wave 3).
 
 ## Plan B for the TV renderer
