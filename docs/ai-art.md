@@ -709,6 +709,20 @@ checks ghost, roof lift, tap, dial and pan; `shoot.mjs … ring [delay]` runs th
   sheepfold is a stone oval, not the fenced rectangle; lone-tree mounds sit under their crowns.
 - The `HANDOVER-*.md` files in `out/summervale/` are committed (forced past `out/`'s ignore).
 
+**Jev as the judge (idea, 2026-10-30, not decided).** Every draw is judged by eye today (a session
+or Konrad over the sheets); TypeSafe's decision model could do the first pass in `outdoor.py`
+right after each draw: a Box per building, bridge and prop compared with its layout box (catches
+the doubled fisher's hut / barn / keep walls and r2c0's hut moved 6 squares), a Noul per layout
+rule on each roof edit (`"chimney": false` → "the roof has a chimney"; "the roof reaches every
+outer wall" — the three roof redos), a Score of each tile against the master's crop when `--n 2`
+offers a pick. Fail or low confidence → redo up to a limit, then flag for a look. Cost: well
+under a cent per map. The money it could save is indirect: unattended runs make Nano Banana's
+batch tier (half price, hours) usable — summervale's $3.31 would be ≈ $1.65. Caveats: its image
+input is experimental (TypeSafe: not for production), takes 280–1,568 px per side (scale 2K
+crops down), and Box never says "not found" (pair with a Noul). Test it first on summervale's
+recorded draws — `tiles.json`, `roofs.json` and the HANDOVER files say which were bad. Facts and
+adoption rules: `~/stack/docs/research/2026-10-30-jev.md`.
+
 **Built:** `tools/mapgen/outdoor.py` (`guide`, `crops`, `paint` [`--albedo`: unlit], `tiles`, `assemble`, `roof`, `canopy`, `canopy-tiles`, `canopy-assemble`), `tools/mapgen/canopy_cut.py`, `tools/mapgen/plants.py`, `prompts/outdoor.txt`,
 `prompts/edit-roof.txt`, `prompts/edit-canopy.txt`; the slice page `docs/mockups/outdoor/riverbend.html` (`outdoor.js`,
 `prepare.py` → `scene.json`); the big map's viewer `docs/mockups/outdoor/summervale/index.html`

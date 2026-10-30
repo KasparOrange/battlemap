@@ -86,6 +86,12 @@ yet discussed with Konrad.
 | L14 | **Digital mode** (dormant code, parity `D` items): initiative tracker with active-token glow, token sizes 2×2–4×4, token pictures, per-token line of sight, 3D dice on the TV, automated damage, condition durations, spell slots, stat blocks, combat log | the stretch goal "far down the roadmap" | feature-ideas "digital mode", CLAUDE.md vision — ⚠ HP, initiative and dice stay on paper |
 | L15 | **Tokens linked to ledger characters** with live HP and conditions on the TV | proposed on the tabletop board | tabletop board step 6 — ⚠ HP on the TV is digital mode |
 
+*Jev (idea, 2026-10-30, not decided):* TypeSafe's decision model is a second candidate for L1's
+unattended judging (next to Gemini Flash; the mapgen side is in `docs/ai-art.md` "Jev as the
+judge") and could preselect the map pages in S16's PDF page picker (one Choice per page: map /
+text / art, well under a cent per PDF; the DM still confirms). Its image input is experimental.
+Facts and adoption rules: `~/stack/docs/research/2026-10-30-jev.md`.
+
 ## Settled, rejected or contradictory — keep out unless Konrad reopens
 
 | Item | Status |
