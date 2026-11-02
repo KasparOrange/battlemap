@@ -1,6 +1,6 @@
 /**
  * The fluent clock — the one source of motion timing for the kit
- * (stack/claude/ui-fluent-expansion.md rule 4, the same numbers as the tafel demo's
+ * (organic-design/docs/expansion-rules.md rule 4, the same numbers as the tafel demo's
  * fluent-motion.ts and bridge's fluent.ts).
  *
  * A control's own surface grows into its plane; the duration follows the pixels revealed,

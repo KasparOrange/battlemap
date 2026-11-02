@@ -2,7 +2,7 @@
 
 battlemap's application of the fleet's fluent language. The model is the MitWare tafel demo
 (`~/code/MitWare/docs/mockups/mitware-demo`, its `docs/vision.md` guidelines), the motion rules
-are the stack's fluent expansion (`~/stack/claude/ui-fluent-expansion.md`), the performance
+are organic-design's expansion rules (`~/code/organic-design/docs/expansion-rules.md`), the performance
 rules are `~/stack/claude/ui-performance.md`. This file says what those mean for a D&D table:
 the tokens, the layout per device, how the DM's tools are grouped, and which component to
 reach for. The kit itself is `app/src/lib/ui/`; its gallery is `app/kit.html` (`Kit.svelte`).
