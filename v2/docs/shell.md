@@ -238,7 +238,9 @@ only through the Mac — `adb -s <tv> forward tcp:15930 tcp:5930`, then the tabl
 Through latrine (a session's own adb can't reach the Wi-Fi); serials `xiaomi` and the tablet's.
 
 1. Build: `cd v2/app && bun run build`, then `v2/shell/build.sh release` (both ABIs; or
-   `BATTLEMAP_ABIS=arm64-v8a` for a smaller APK — both devices are arm64).
+   `BATTLEMAP_ABIS="armeabi-v7a arm64-v8a"` for the real devices — the Xiaomi box runs a **32-bit** userspace
+   (`ro.product.cpu.abilist` = `armeabi-v7a,armeabi`; an arm64-only APK fails with
+   `INSTALL_FAILED_NO_MATCHING_ABIS`, seen 2026-11-03), the tablet is arm64).
 2. Install on both, keeping data: `latrine android install v2/shell/build/battlemap-0.1.0-release.apk xiaomi`
    (and the tablet).
 3. Once per box: `latrine android shell "pm grant app.battlemap.table android.permission.WRITE_SECURE_SETTINGS" xiaomi`,
