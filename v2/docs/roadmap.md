@@ -16,6 +16,45 @@ jeopardising the TV as the main platform.
 (say why, keep it out unless Konrad decides otherwise). *Ahead* = a proposal of this inventory, not
 yet discussed with Konrad.
 
+## Until 14 Nov — Juri's first game (feature freeze)
+
+**This is the only work until 2026-11-14, Juri's first real game with the app. No new features,
+no feature creep:** only fixes, comfort and a calmer UI for Juri. Everything else in this file —
+Next, Soon, Later, Juri's tier 2 — waits until after the 14th. Planned for the next two sessions
+with Juri (two or three short meetings or one or two long ones, times kept flexible). Source:
+Konrad's voice message to Juri, 2026-11-03 17:13, answering Juri's tier-1 list from "Juri's cave"
+the same afternoon ("if the app didn't crash when the tablet locks, I could play with it on the
+14th already").
+
+0. **Settle which app the 14th runs on.** Juri's 2026-11-03 test and screenshots are v1 (Flutter,
+   the seven-tab companion); Konrad's plan names v2's tabs (effects, sound). The fixes below go
+   into that app only.
+1. **Hide the extra features.** The effects, sound, moments-style tabs and the rest not needed for
+   tabletop play are not shown at all (behind a setting, not deleted); what stays: maps, loading,
+   measure, fog, tokens, camera, starting the TV remotely. In v2 this also clears qa#36 (Undo/Redo
+   pushed off the tablet).
+2. **Companion crashed right after start** (Juri tier 1 #1) — find it in MwLog, fix.
+3. **Tablet screen lock kills the app** (tier 1 #2): it loses the TV and must be closed and
+   reopened. Best: keep the screen awake in a game and never drop the connection; at least
+   reconnect by itself on unlock.
+4. **Panning and zooming trigger tools** (tier 1 #0): the map can't be dragged to its last rows
+   (the finger covers them), and shrinking it to get there taps the map, e.g. reveals fog by
+   accident. Fix: a discreet "no tool" button always at hand, and "back to the last tool" right
+   beside it with a clear gap.
+5. **Fog stops at the cave walls** (tier 1 #2b, #3) — the one build item, because Juri's cave
+   needs it. A small AI model (the mapgen pipeline's kind) finds where the walls run on the map
+   (the brown-to-white edge is the hint) and writes them as wall data; Room and Circle reveal stop
+   there by default, like torchlight (down a tunnel, not around a corner), and a reveal lights the
+   wall itself and the whole room, not only the walkable squares.
+6. **Juri can fix it without Konrad.** His own Claude on his PC can make a quick fix and deploy it
+   during the game night — worst case everyone takes a toilet break while Juri prompts Claude.
+   Check the path end to end before the 14th.
+7. **Basics checked at Juri's table:** load a map, measure, fog, start the TV from the tablet.
+
+After the 14th: Juri's tier 2 (map margin shows the rest of the map or fog black instead of grey,
+a dim-light fog for darkvision, placeable hazards by brush / circle / square / line), AI maps for
+his campaign (water, fire), then the tiers below.
+
 ## Next
 
 | # | Item | Why | Source |

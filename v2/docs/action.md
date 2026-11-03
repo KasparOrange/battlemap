@@ -11,6 +11,8 @@ installable companion, v1 import. Since 2026-11-03 it runs on the real box and t
 
 ## Next
 
+0. **Feature freeze until 2026-11-14, Juri's first game:** only the list in `roadmap.md`
+   "Until 14 Nov" — no new features until then; everything below waits unless it is on that list.
 1. **Fix the wave-5 leftovers** below — qa#36 first (it breaks the tablet's Undo/Redo).
 2. **Real devices at Juri's:** the WebView gate (roadmap N1) and the table test (N4) decide plan B.
 3. **Roadmap** — the open items of `roadmap.md` (light from walls S5, select a token by tapping N10,
