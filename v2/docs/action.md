@@ -48,7 +48,7 @@ plus the bridge. Two candidates (Konrad 26-10-25: Bevy):
 
 ## Waiting on the real devices
 
-The Xiaomi box and the Tab A11+ stand at Juri's (Tailscale `battlemap-table`, offline on
+The Xiaomi box and the Tab A11+ stand at Juri's (Tailscale `nildrek-juri`, offline on
 2026-10-25). The WebGL gate (probe ≥ 50 fps avg, 1 % low ≥ 30) and the bench can only be decided
 there — `shell.md` has the one-line command.
 

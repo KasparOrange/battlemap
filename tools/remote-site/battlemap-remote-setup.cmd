@@ -90,7 +90,7 @@ try {
 
   # --- 3. Sign in and share the two devices --------------------------------------------------
   Step '3/5  Sign in to Konrad''s Tailscale network'
-  if ($status.BackendState -eq 'Running' -and $status.Self.HostName -eq 'battlemap-table') {
+  if ($status.BackendState -eq 'Running' -and $status.Self.HostName -in @('nildrek-juri','battlemap-table')) {
     Say 'Already set up - refreshing the shared devices.' 'Green'
     & $ts set --advertise-routes=$Routes | Out-Host
   } elseif ($status.BackendState -eq 'Running') {
@@ -99,14 +99,14 @@ try {
     if (-not (Ask 'Share the TV box and the tablet through this account?' $false)) {
       throw 'Stopped - nothing changed. Tell Konrad Tailscale is already in use on this PC; he will send another way.'
     }
-    & $ts set --advertise-routes=$Routes --hostname=battlemap-table | Out-Host
+    & $ts set --advertise-routes=$Routes --hostname=nildrek-juri | Out-Host
   } else {
     Say 'Konrad either sent you a key (starts with tskey-), or you send him a login link.'
     Say 'Tailscale may also open its own window and a sign-in page in the browser: do NOT sign in there.' 'Yellow'
     Say 'The address of that browser page is the same login link - sending Konrad that works too.' 'Yellow'
     $key = (Read-Host 'Paste the key, or just press Enter for a login link').Trim()
     $common = @('up', '--unattended', "--advertise-routes=$Routes", '--accept-routes=false', '--accept-dns=false',
-                '--hostname=battlemap-table')
+                '--hostname=nildrek-juri')
     if ($key) {
       & $ts @common "--auth-key=$key" | Out-Host
     } else {
