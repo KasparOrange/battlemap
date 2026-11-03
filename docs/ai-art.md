@@ -694,12 +694,15 @@ column with no ring → **¼ screen is the default**: 37–98 MB a window (was 4
 checks ghost, roof lift, tap, dial and pan; `shoot.mjs … ring [delay]` runs the ring bench. Details:
 `out/summervale/HANDOVER-viewer.md`.
 
-**summervale — open (2026-10-29).**
-- Not on the box yet: Konrad's look, the window streaming, the memory. A window needs 37–98 MB
-  (the ~35 MB plan counted the ground only; the canopy about doubles it) → test compressed
-  textures on the box in the same session.
-- Not playable at the table: water, wind, canopy and roofs live only on the viewer page; the app
-  shows the painted ground. Quick path: flatten canopy + roofs into the ground picture.
+**summervale — open (2026-11-03).**
+- On the table since 2026-11-03 as a flat picture: ground + canopy + the 12 roofs composited
+  (PIL `alpha_composite`, roofs at `roofs.json` x/y) → 7616 × 4256 WebP q90, 8.6 MB, in the VPS
+  library as "Summervale (4 × 4)" (136 × 76, 56 px a square, map id `9a2985ffdb02`). The box
+  loaded it whole from its own LAN server (half size, 31 MB, 5.6 s) — the window streaming and
+  its memory on the box are still untested (v2 `docs/action.md` "Real devices at Juri's"). A
+  window needs 37–98 MB (the canopy about doubles the ground) → compressed textures on the box.
+- Water, wind, the canopy ghost and lifting roofs live only on the viewer page; the table shows
+  the still picture.
 - Built in the *painted* look (light painted in, canopy painted per screen and cut). Konrad
   (2026-10-29) wants the light lab's *All lit* route for big maps: unlit ground, the forest from
   reusable unlit crown sprites lit by the table. It waits on the light lab's box run (fps). It

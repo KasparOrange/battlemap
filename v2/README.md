@@ -9,13 +9,12 @@ phones, and by any browser. Updates are a new web bundle, not a new APK.
 
 The Flutter app keeps running until v2 has replaced it; both install side by side.
 
-## Status (2026-10-25)
+## Status (2026-11-03)
 
-Foundation laid: the architecture and the protocol are written, `shared/` holds the whole
-protocol, game model, reducer and geometry (tested), the app and the server are scaffolded and
-talk to each other end to end (a TV page and a companion page exchange commands through the
-relay; logs reach MwLog). The real screens, the renderer's scene, storage, map import and
-effects are the next wave — see `docs/architecture.md` "Work packages".
+Waves 1–5 are done (parity with v1 plus curtain, scenes, effects, LAN play, Rust server in
+production, secrets, moments, sound, players' view) — `docs/archive.md`. Since 2026-11-03 it runs
+on the real Xiaomi box and Tab A11+ at Juri's (installed remotely, the 4 × 4 map summervale on the
+table); the WebView gate and a full table test are still open — `docs/action.md`.
 
 ## How it fits together
 

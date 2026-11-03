@@ -233,9 +233,21 @@ emulators can't see each other: no mDNS between them, and the tablet reaches the
 only through the Mac — `adb -s <tv> forward tcp:15930 tcp:5930`, then the tablet uses
 `http://10.0.2.2:15930` (10.0.2.2 = the Mac). On a real Wi-Fi none of that is needed.
 
-### At Juri's: the real box + Tab A11+ (offline today — the steps)
+### At Juri's: the real box + Tab A11+ (done 2026-11-03 — the steps)
 
 Through latrine (a session's own adb can't reach the Wi-Fi); serials `xiaomi` and the tablet's.
+
+**Reaching them (2026-11-03):** Juri's PC advertises the two `/32` routes, but they are not
+approved in the Tailscale admin console, so `latrine android connect 192.168.178.149:5555` times
+out. Until they are: SSH forwards through his PC — `ssh -o ControlPath=none -N -L
+15555:192.168.178.149:5555 -L 15930:192.168.178.149:5930 juri-pc`, then serial `127.0.0.1:15555`
+(and `http://127.0.0.1:15930/app/?mode=companion` is a web companion on the box from the Mac). A
+background job lives at most 2 h — the forward dies with it. After a reboot both devices close
+:5555: Wireless debugging on, then find its random port by a TCP sweep of 30000–50000 from his
+PC (mDNS doesn't cross the tunnel), forward it and `adb connect`; a new pairing works through a
+forward too (`adb pair 127.0.0.1:<fwd> <code>`, the tablet is paired since 2026-11-03). Through
+a forward, "connected but not ready" means the far port is closed — the SSH end answered, no
+device prompt is waiting.
 
 1. Build: `cd v2/app && bun run build`, then `v2/shell/build.sh release` (both ABIs; or
    `BATTLEMAP_ABIS="armeabi-v7a arm64-v8a"` for the real devices — the Xiaomi box runs a **32-bit** userspace
@@ -247,7 +259,8 @@ Through latrine (a session's own adb can't reach the Wi-Fi); serials `xiaomi` an
    `… "appops set app.battlemap.table SYSTEM_ALERT_WINDOW allow" xiaomi`,
    `… "appops set app.battlemap.table REQUEST_INSTALL_PACKAGES allow" xiaomi`,
    `… "cmd hdmi_control cec_setting set tv_send_standby_on_sleep 0" xiaomi`.
-4. Start the box in TV mode with hosting and start-on-boot, the VPS as upstream:
+4. Start the box in TV mode with hosting and start-on-boot, the VPS as upstream (2026-11-03: it
+   hosted on `:5930` even without `--es host on`):
    `latrine android shell "am start -S -n app.battlemap.table/.MainActivity --es mode tv --es host on --es boot on --es server https://battlemap.srv1189697.hstgr.cloud" xiaomi`.
    While the box is online it mirrors the VPS library and prefetches its maps (watch
    `latrine android log "Synced with upstream" 5 xiaomi`).

@@ -2,6 +2,18 @@
 
 Done waves and decisions, newest on top. Append-only; live work is in `action.md`.
 
+## 2026-11-03 — first run on the real devices at Juri's
+
+Session with Juri, remotely over Tailscale. VPS redeployed (`server-rs/deploy.sh --app`, rs-71caa6d:
+tile cut at upload went live; the 10-25 build predated it). APK rebuilt for both ARM ABIs — the
+Xiaomi box is 32-bit (`armeabi-v7a`), the arm64-only build failed to install. Installed on box +
+tablet over SSH forwards through Juri's PC (the tailnet routes aren't approved); tablet paired
+through a forward. Summervale flattened (ground + canopy + roofs) into the VPS library and opened
+on the TV from its library with D-pad keys; new games start fully fogged → revealed from a web
+companion on the Mac (box server forwarded to `:15930`). TV calibrated to Juri's Thomson from v1's
+10-10 numbers: 38.7 in + 5 % overscan → 34 × 19 on the glass. Tailscale machines renamed
+`nildrek-juri` / `kmbp-konrad`. Details and leftovers: `action.md` "Real devices at Juri's".
+
 ## 2026-10-26 — wave 5 finished (and how)
 
 Wave 5 was cut off by the usage limit at 21:45 on 10-25. The big orchestrating session was not
