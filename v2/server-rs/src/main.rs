@@ -8,13 +8,7 @@ use battlemap_server::config::Config;
 
 #[tokio::main]
 async fn main() -> ExitCode {
-    let log = match battlemap_server::log::init(env!("CARGO_PKG_VERSION")) {
-        Ok(g) => g,
-        Err(e) => {
-            eprintln!("battlemap-server: logging could not start: {e}");
-            return ExitCode::FAILURE;
-        }
-    };
+    let log = battlemap_server::log::init(env!("CARGO_PKG_VERSION"));
     let config = match Config::from_env() {
         Ok(c) => c,
         Err(e) => {

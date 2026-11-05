@@ -36,11 +36,8 @@ pub static LOG_BATCHES: logbook::Tally = logbook::Tally::new("http", "Log batche
 /// Peer messages relayed.
 pub static RELAY_MESSAGES: logbook::Tally = logbook::Tally::new("relay", "Messages");
 
-/// Starts the logging stack.
-///
-/// # Errors
-/// When the local log folder can't be made.
-pub fn init(version: &'static str) -> std::io::Result<logbook::Guard> {
+/// Starts the logging stack. Never fails: problems are in the guard's `error()`.
+pub fn init(version: &'static str) -> logbook::Guard {
     logbook::init(logbook::Init {
         app: APP,
         tenant: "battlemap",
@@ -65,10 +62,8 @@ pub fn init(version: &'static str) -> std::io::Result<logbook::Guard> {
 
 /// Starts the logging stack for the embedded server ([`crate::embed`]): daily files under
 /// `state_dir/logs/`, plus the host's `layers` (the ring the shell drains, logcat).
-///
-/// # Errors
-/// When a global subscriber is already installed.
-pub fn init_embedded(version: &'static str, state_dir: std::path::PathBuf, layers: Vec<logbook::parts::BoxLayer>) -> std::io::Result<logbook::Guard> {
+/// Never fails: a second subscriber is reported in the guard's `error()`.
+pub fn init_embedded(version: &'static str, state_dir: std::path::PathBuf, layers: Vec<logbook::parts::BoxLayer>) -> logbook::Guard {
     logbook::init(logbook::Init {
         app: APP,
         tenant: "battlemap",

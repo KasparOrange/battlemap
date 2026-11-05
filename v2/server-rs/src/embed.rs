@@ -172,8 +172,7 @@ pub fn start(settings: &str, sink: Option<LineSink>) -> Result<u16> {
             // JVM) doesn't read HOME. logbook looks for its tenant file under HOME.
             unsafe { std::env::set_var("HOME", home) };
         }
-        let guard = crate::log::init_embedded(env!("CARGO_PKG_VERSION"), state_dir, vec![Box::new(RingLayer::new(sink))])
-            .context("logging could not start")?;
+        let guard = crate::log::init_embedded(env!("CARGO_PKG_VERSION"), state_dir, vec![Box::new(RingLayer::new(sink))]);
         let _ = LOG.set(guard);
     }
     let shipper = LOG.get().map(|g| g.shipper()).unwrap_or_else(|| logbook::Shipper::inert(crate::log::APP));
