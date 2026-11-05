@@ -5,7 +5,7 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { init } from 'mwlog';
+import { init } from 'logbook';
 import { cleanup } from '../src/cleanup.ts';
 import { clientIp } from '../src/server.ts';
 

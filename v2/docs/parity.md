@@ -60,7 +60,7 @@ grid squares; measure, strokes, camera in wpx; 1 sq = 5 ft; colours ARGB (stroke
 - [ ] P · TV-33 · The game canvas must never take key focus (Flame's autofocus swallowed every key = dead remote); focus parks on the back arrow · `ui/tv_shell.dart:179-185,1950-1957`
 - [ ] P · TV-34 · Library cards: arrow-key traversal, select / enter / A open; focused = green border 2 px · `ui/tv_shell.dart:2292-2341`
 - [ ] P · TV-35 · No D-pad pan/zoom in the game (not built; candidate for the fallback)
-- [ ] X · TV-36 · Every key press sent over the relay as `tv.log` — noise; log locally/MwLog only · `ui/tv_shell.dart:1860`
+- [ ] X · TV-36 · Every key press sent over the relay as `tv.log` — noise; log locally/logbook only · `ui/tv_shell.dart:1860`
 
 ## 3. Rendering (shared by TV and companion)
 
@@ -420,7 +420,7 @@ grid squares; measure, strokes, camera in wpx; 1 sq = 5 ft; colours ARGB (stroke
 - [ ] P · RL-04 · `peer_connected` / `peer_disconnected` only between table and companion; the bot never pairs, so the TV broadcasts only while a real companion is there · `tools/vtt_relay.py:184-192,340-341`
 - [ ] P · RL-05 · Relay pings every 20 s; > 45 s silent → close "zombie timeout"; unstamped pong swallowed, stamped pong `{t}` forwarded (round trip) · `tools/vtt_relay.py:214-238,288-291`
 - [ ] P · RL-06 · Max frame 50 MB; bad JSON skipped; > 200 msg/s logged "High message rate" (warn only) · `tools/vtt_relay.py:49,195-211,280-284`
-- [ ] P · RL-07 · Diagnostics to MwLog `src=relay`, tag `relay`: Registered, Disconnected (closeCode, upS, silentS), zombie close, "Burst right after register (sent while offline)", "Dropped while this side was away", "Traffic last minute" (per type), queue 5000 / batches 500 / retry 5 s · `tools/vtt_relay.py:87-181,329-444`, `setup §relay diagnostics`
+- [ ] P · RL-07 · Diagnostics to logbook `src=relay`, tag `relay`: Registered, Disconnected (closeCode, upS, silentS), zombie close, "Burst right after register (sent while offline)", "Dropped while this side was away", "Traffic last minute" (per type), queue 5000 / batches 500 / retry 5 s · `tools/vtt_relay.py:87-181,329-444`, `setup §relay diagnostics`
 - [ ] P · RL-08 · Must exit cleanly on SIGTERM (the September relay survived it holding live sockets → `kill -9`) and restart on its own (no systemd units in v1) · `setup §starting services`
 
 ### client (TV and companion)
@@ -457,12 +457,12 @@ grid squares; measure, strokes, camera in wpx; 1 sq = 5 ft; colours ARGB (stroke
 
 ## 23. Logs and diagnostics
 
-- [ ] P · LG-01 · One logger → MwLog (VictoriaLogs tenant `battlemap`): POST `<base>/insert/jsonline?_stream_fields=app,src&_msg_field=msg&_time_field=ts`, `Content-Type: application/json` (form bodies are silently dropped), basic auth from build config (never in source); fields app, src (tv | companion | relay), level, tag, msg, ts + extras · `network/remote_log.dart:57-137`, `setup §logs`
+- [ ] P · LG-01 · One logger → logbook (VictoriaLogs tenant `battlemap`): POST `<base>/insert/jsonline?_stream_fields=app,src&_msg_field=msg&_time_field=ts`, `Content-Type: application/json` (form bodies are silently dropped), basic auth from build config (never in source); fields app, src (tv | companion | relay), level, tag, msg, ts + extras · `network/remote_log.dart:57-137`, `setup §logs`
 - [ ] P · LG-02 · Failed posts stay queued (≤ 2000, oldest dropped) and retry every 5 s, so an outage's lines arrive afterwards · `network/remote_log.dart:72,234-242`
 - [ ] P · LG-03 · Device info line at start (platform, OS, app version/build, screen size, pixel ratio) · `network/remote_log.dart:179`
 - [ ] P · LG-04 · Relay diagnostics on both clients (tag `relay`): Connecting, Socket open (connectMs), Registered (connectMs, outageMs), Relay connection lost (closeCode, upS, lastDataAgoMs), Forcing reconnect (reason), Reconnect scheduled (delayS), Dropped while offline, Sent while the peer was away, Late messages, Round trip, Slow handler, Event loop stalled, App lifecycle · `setup §relay diagnostics`
 - [ ] P · LG-05 · Web build logs too (v1's web build had a no-op stub — the web companion was blind) · `network/remote_log_stub.dart`
-- [ ] P · LG-06 · Developer screen: back (autofocus), auto-scroll toggle (default on), clear, info (relay host:port, platform, line count), log lines monospace coloured (error red, warn orange, [TV] cyan); buffer 500 lines `[HH:MM:SS]`, also to MwLog tag `devlog` · `ui/dev_screen.dart:28-211`, `ui/dev_log.dart:22-50`
+- [ ] P · LG-06 · Developer screen: back (autofocus), auto-scroll toggle (default on), clear, info (relay host:port, platform, line count), log lines monospace coloured (error red, warn orange, [TV] cyan); buffer 500 lines `[HH:MM:SS]`, also to logbook tag `devlog` · `ui/dev_screen.dart:28-211`, `ui/dev_log.dart:22-50`
 - [ ] P · LG-07 · v1 quirk: no level filtering, debug ships in production — v2 decides a floor · `network/remote_log.dart:97`
 
 ## 24. Updates and deploy

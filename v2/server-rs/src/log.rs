@@ -1,7 +1,7 @@
-//! The server's logging: mwlog-rs, tenant `battlemap`, app `battlemap-v2-rs` (the Bun server is
+//! The server's logging: logbook-rs, tenant `battlemap`, app `battlemap-v2-rs` (the Bun server is
 //! `battlemap-v2`; both run side by side on the VPS). The UI's lines that come in at `POST /log`
 //! are re-logged as `app=battlemap-v2-ui`, as the Bun server does. Credentials from
-//! `~/.config/mwlog/battlemap.env` (or the environment); `MWLOG_DISABLE=1` ships nothing (tests).
+//! `~/.config/logbook/battlemap.env` (or the environment); `LOGBOOK_DISABLE=1` ships nothing (tests).
 //!
 //! Every module logs with `tracing` and a `target:` naming its area (`http`, `relay`, `files`,
 //! `library`, `games`, `fetch`, `cleanup`, `lifecycle`). Hot paths (app files, file downloads,
@@ -23,26 +23,26 @@ use crate::state::Shared;
 pub const APP: &str = "battlemap-v2-rs";
 /// The app name of the UI's re-logged lines.
 pub const UI_APP: &str = "battlemap-v2-ui";
-/// Largest `/log` batch body (mwlog-ts's limit).
+/// Largest `/log` batch body (logbook-ts's limit).
 pub const UI_MAX_BYTES: u64 = 64 * 1024;
 
 /// App files served (counted, one line per 10 s).
-pub static APP_FILES: mwlog::Summary = mwlog::Summary::new();
+pub static APP_FILES: logbook::Summary = logbook::Summary::new();
 /// Stored files downloaded.
-pub static FILE_DOWNLOADS: mwlog::Summary = mwlog::Summary::new();
+pub static FILE_DOWNLOADS: logbook::Summary = logbook::Summary::new();
 /// `/health` answered.
-pub static HEALTH_CHECKS: mwlog::Summary = mwlog::Summary::new();
+pub static HEALTH_CHECKS: logbook::Summary = logbook::Summary::new();
 /// `/log` batches taken.
-pub static LOG_BATCHES: mwlog::Summary = mwlog::Summary::new();
+pub static LOG_BATCHES: logbook::Summary = logbook::Summary::new();
 /// Peer messages relayed.
-pub static RELAY_MESSAGES: mwlog::Summary = mwlog::Summary::new();
+pub static RELAY_MESSAGES: logbook::Summary = logbook::Summary::new();
 
 /// Starts the logging stack.
 ///
 /// # Errors
 /// When the local log folder can't be made.
-pub fn init(version: &'static str) -> std::io::Result<mwlog::Guard> {
-    mwlog::init(mwlog::Init {
+pub fn init(version: &'static str) -> std::io::Result<logbook::Guard> {
+    logbook::init(logbook::Init {
         app: APP,
         tenant: "battlemap",
         version,
@@ -68,8 +68,8 @@ pub fn init(version: &'static str) -> std::io::Result<mwlog::Guard> {
 ///
 /// # Errors
 /// When a global subscriber is already installed.
-pub fn init_embedded(version: &'static str, state_dir: std::path::PathBuf, layers: Vec<mwlog::BoxLayer>) -> std::io::Result<mwlog::Guard> {
-    mwlog::init(mwlog::Init {
+pub fn init_embedded(version: &'static str, state_dir: std::path::PathBuf, layers: Vec<logbook::BoxLayer>) -> std::io::Result<logbook::Guard> {
+    logbook::init(logbook::Init {
         app: APP,
         tenant: "battlemap",
         version,
@@ -83,8 +83,8 @@ pub fn init_embedded(version: &'static str, state_dir: std::path::PathBuf, layer
 }
 
 /// With `BATTLEMAP_LOG_STDERR=1`, every line also goes to stderr as text (systemd's journal,
-/// the contract runner's log files) — mwlog only writes to stderr when it is a terminal.
-fn stderr_layer() -> Vec<mwlog::BoxLayer> {
+/// the contract runner's log files) — logbook only writes to stderr when it is a terminal.
+fn stderr_layer() -> Vec<logbook::BoxLayer> {
     if std::env::var("BATTLEMAP_LOG_STDERR").is_ok_and(|v| v == "1") {
         vec![Box::new(
             tracing_subscriber::fmt::layer().with_writer(std::io::stderr).with_ansi(false),
@@ -116,7 +116,7 @@ pub async fn summaries() {
     }
 }
 
-/// `POST /log`: a batch of the app's log lines (mwlog-ts browser forwarder; `application/json`
+/// `POST /log`: a batch of the app's log lines (logbook-ts browser forwarder; `application/json`
 /// or `text/plain` from `sendBeacon`) → 204; 400 for a batch that isn't JSON, 413 for one over
 /// 64 kB or 200 lines.
 pub async fn browser_log(
@@ -133,7 +133,7 @@ pub async fn browser_log(
     let Ok(batch) = serde_json::from_slice::<Value>(&text) else {
         return refuse_batch(StatusCode::BAD_REQUEST, "not a JSON batch", text.len() as u64);
     };
-    // A table server on the LAN holds no MwLog credentials: its upstream ships the batch. When
+    // A table server on the LAN holds no logbook credentials: its upstream ships the batch. When
     // that fails the page's outbox keeps the batch (503) and tries again later.
     if !state.shipper.is_active()
         && let Some(up) = &state.upstream
@@ -149,7 +149,7 @@ pub async fn browser_log(
     }
     let mut extra = Map::new();
     extra.insert("ip".into(), Value::String(client_ip(&headers, peer.ip())));
-    match mwlog::ui::relog_as(&state.shipper, &batch, &extra, Some(UI_APP)) {
+    match logbook::ui::relog_as(&state.shipper, &batch, &extra, Some(UI_APP)) {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
         Err(reason @ "too many lines") => refuse_batch(StatusCode::PAYLOAD_TOO_LARGE, reason, text.len() as u64),
         Err(_) => refuse_batch(StatusCode::BAD_REQUEST, "not a JSON batch", text.len() as u64),

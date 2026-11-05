@@ -161,4 +161,4 @@ case "$PAGE" in
 esac
 say "starting ${EXTRAS[*]}"
 adb shell am start -S -n "$PKG/.MainActivity" "${EXTRAS[@]}" >/dev/null || { say "start failed"; exit 5; }
-say "done — logs: adb -s $SERIAL logcat -s battlemap  (MwLog: logq battlemap)"
+say "done — logs: adb -s $SERIAL logcat -s battlemap  (logbook: logq battlemap)"

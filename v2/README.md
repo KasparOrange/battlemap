@@ -22,7 +22,7 @@ table); the WebView gate and a full table test are still open — `docs/action.m
   (`shared/src/reducer/`), numbers it and broadcasts it; companions run the same reducer as a
   prediction, so a tap answers at once.
 - **The server is dumb on purpose**: relay rooms (one TV + its companions), files by hash, the
-  shared map library, game backups, the log forward to MwLog.
+  shared map library, game backups, the log forward to logbook.
 - **Nothing renders unless something changed** — the Xiaomi box (Mali-G310, 2 GB) is the floor.
 
 Read [`docs/architecture.md`](docs/architecture.md), then [`docs/protocol.md`](docs/protocol.md).
@@ -31,7 +31,7 @@ How to work here: [`CLAUDE.md`](CLAUDE.md).
 ## Run it
 
 Needs [Bun](https://bun.sh) ≥ 1.4 and the stack's logging client checked out next to this repo
-(`~/code/mwlog-ts`, a path dependency).
+(`~/code/logbook-ts`, a path dependency).
 
 ```bash
 cd v2
@@ -52,8 +52,8 @@ Open the TV at <http://localhost:5884/app/?mode=tv> and a companion at
 | `bun run e2e` | Playwright flows (starts server and app unless they run) |
 
 Server settings: `PORT` (5929), `HOST`, `APP_DIR` (`../app/dist`), `DATA_DIR` (`./data`). Logs:
-MwLog tenant `battlemap` — `app=battlemap-v2` (server) and `app=battlemap-v2-ui` (every
-device, through the server's `/log`); credentials in `~/.config/mwlog/battlemap.env`, never in
+logbook tenant `battlemap` — `app=battlemap-v2` (server) and `app=battlemap-v2-ui` (every
+device, through the server's `/log`); credentials in `~/.config/logbook/battlemap.env`, never in
 the bundle.
 
 ## Layout

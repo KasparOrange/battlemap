@@ -121,7 +121,7 @@ Exact types: `shell/bridge.d.ts`. All calls are synchronous; long jobs answer wi
 |---|---|
 | `info(): string` | JSON: shell version, device (model, Android, WebView version, isTv, isFireTv), start mode, device id, dev/server URL, bundle (source, version), display (window px, density, output mode e.g. 3840 × 2160) |
 | `ready()` | the app booted — confirms a downloaded bundle (see updates). Call once per load |
-| `takeLogs(): string` | buffered shell log lines (JSON), then live `log` events — forward them to MwLog with `src=shell` |
+| `takeLogs(): string` | buffered shell log lines (JSON), then live `log` events — forward them to logbook with `src=shell` |
 | `setKeepAwake(on)` | screen stays on (TV mode starts on, companion off) |
 | `setImmersive(on)` | hide/show the system bars (both modes start immersive) |
 | `openExternal(url): boolean` | http(s)/mailto outside the app; false if nothing can open it |
@@ -191,7 +191,7 @@ inside the shell, so tablets on the same Wi-Fi play without internet.
 - The TV page then loads with `server=http://127.0.0.1:5930&upstream=<configured server>`: its
   relay, files and library are the box's own; `upstream` (the VPS) is for game backups while
   online. If the server fails to start, the page reloads with the configured server.
-- Server log lines reach the page every 2 s as shell lines prefixed `server:` (→ MwLog with
+- Server log lines reach the page every 2 s as shell lines prefixed `server:` (→ logbook with
   `src=shell`), and logcat under the tag `battlemap-server`.
 
 ### How companions find the table

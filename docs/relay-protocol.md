@@ -37,7 +37,7 @@ logged as `Round trip` / `Slow round trip`); an unstamped pong only answers the 
 
 **`sent` stamp (since 2026-10-10):** every message the Dart client sends carries `sent` (epoch
 ms, its own clock). the receiver logs a message older than 1.5 s as `Late message from peer`
-(MwLog tag `relay`). receivers ignore the field; older builds simply don't send it.
+(logbook tag `relay`). receivers ignore the field; older builds simply don't send it.
 
 ## navigation (companion → table)
 

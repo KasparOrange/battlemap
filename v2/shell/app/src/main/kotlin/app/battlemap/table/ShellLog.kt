@@ -6,7 +6,7 @@ import org.json.JSONObject
 
 /**
  * The shell's one logger. Every line goes to logcat (tag `battlemap`) and to the web app,
- * whose logger forwards it to MwLog with `src=shell`.
+ * whose logger forwards it to logbook with `src=shell`.
  *
  * Delivery to the page: lines are buffered (last [BUFFER_MAX]) until the page calls
  * `BattlemapShell.takeLogs()`; from then on each line is sent as a `log` event right away.

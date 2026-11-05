@@ -21,7 +21,7 @@ http-body-util = "0.1"
 imagesize = "0.14"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif", "tiff", "bmp"] }
 mime_guess = "2"
-mwlog = { path = "../../../mwlog-rs" }
+logbook = { path = "../../../logbook-rs" }
 percent-encoding = "2"
 qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 regex = "1"

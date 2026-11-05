@@ -15,11 +15,11 @@ import java.io.File
  * - `files/server/data` — the server's data: files, shared library, game backups;
  * - `files/server/app` — the web app it serves to browser companions (`http://<box>:5930/app/`):
  *   the active downloaded bundle, else a copy of the APK's built-in one (made once per install);
- * - `files/server/state/logs` — the server's daily log files (mwlog, 7 kept).
+ * - `files/server/state/logs` — the server's daily log files (logbook, 7 kept).
  *
  * Memory caps for the 2 GB box: `LOSSLESS_MAX_PIXELS` 8 MP (libwebp lossless needs ~40 B per
  * pixel), `MAX_PIXELS` 64 MP, one picture job at a time, two worker threads.
- * Its log lines are drained every 2 s into [ShellLog] (→ the page → MwLog, `src=shell`).
+ * Its log lines are drained every 2 s into [ShellLog] (→ the page → logbook, `src=shell`).
  *
  * See v2/docs/shell.md "Table server" and v2/docs/server-rs.md "Embedded in the shell".
  */

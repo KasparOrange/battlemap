@@ -6,7 +6,7 @@
   (counted on the WebGL context), GPU ms when the driver has a timer query, texture MB (the
   renderer's own accounting), JS heap and its growth, and idle frames after the scene stops
   (must be 0). One summary line per scene goes to the log (area `bench`), so a run on the TV
-  box can be read from MwLog afterwards; `window.__bench` holds the results for Playwright.
+  box can be read from logbook afterwards; `window.__bench` holds the results for Playwright.
 
   URL: `?scene=all|<id>[,<id>]` `&profile=players|dm` `&seconds=8` `&warmup=1` `&fx=all|none|<id>`.
   No props.

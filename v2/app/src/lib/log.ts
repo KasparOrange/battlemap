@@ -1,7 +1,7 @@
 /**
- * The app's one logger. Lines go through mwlog-ts's browser forwarder (batched, 3 s / 50 lines,
+ * The app's one logger. Lines go through logbook-ts's browser forwarder (batched, 3 s / 50 lines,
  * global error catchers, a flush when the page hides) to the server's `/log`, which ships them
- * to MwLog (tenant `battlemap`, `app=battlemap-v2-ui`) with credentials no device holds. Batches
+ * to logbook (tenant `battlemap`, `app=battlemap-v2-ui`) with credentials no device holds. Batches
  * that can't be delivered wait in the localStorage outbox (`log-outbox.ts`). In development the
  * lines are mirrored to the console. Never use `console.log` directly.
  *
@@ -9,7 +9,7 @@
  *
  * @see ../../../docs/architecture.md "logs"
  */
-import { createBrowserLog, type BrowserLog } from 'mwlog/browser';
+import { createBrowserLog, type BrowserLog } from 'logbook/browser';
 import { appConfig } from './config.ts';
 import { createOutbox } from './log-outbox.ts';
 import { LogRing } from './log-ring.ts';

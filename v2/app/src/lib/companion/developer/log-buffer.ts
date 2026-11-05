@@ -1,12 +1,12 @@
 /**
  * The developer screen's view of this page's last log lines (parity LG-06: 500 lines). The lines
  * themselves live in the logger's own ring (`logRing` in `lib/log.ts`), which gets every line the
- * logger ships — the same lines MwLog gets, including the global error catchers' and the summary
+ * logger ships — the same lines logbook gets, including the global error catchers' and the summary
  * lines — in the logger's batches (≤ 3 s). This module only turns them into what the screen
  * shows (a running number, a time, the line's own fields without the page context every line
  * carries) and filters them.
  */
-import type { Level } from 'mwlog/browser';
+import type { Level } from 'logbook/browser';
 import { logRing } from '../../log.ts';
 import type { LogEntry, LogRing } from '../../log-ring.ts';
 
@@ -80,7 +80,7 @@ export function bufferedLines(ring: LogRing = logRing): BufferedLine[] {
 }
 
 /**
- * Forgets the kept lines (MwLog keeps them).
+ * Forgets the kept lines (logbook keeps them).
  *
  * @param ring - the ring (default the logger's)
  */

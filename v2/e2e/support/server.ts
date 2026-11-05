@@ -109,7 +109,7 @@ export async function waitHealthy(url: string, timeoutMs = 15_000): Promise<void
  *
  * @param opts.port - a fixed port (default: a free one)
  * @param opts.dataDir - an existing data folder to use (default: a new temp folder)
- * @param opts.env - extra environment (e.g. MWLOG_* to ship logs)
+ * @param opts.env - extra environment (e.g. LOGBOOK_* to ship logs)
  * @returns the running server
  * @throws Error when it doesn't come up
  */

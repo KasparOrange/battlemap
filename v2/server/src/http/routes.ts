@@ -4,7 +4,7 @@
  * | Route | What | Where |
  * |---|---|---|
  * | `GET /health` | ok, builds, uptime, rooms, sockets, library and backup counts, the log shipper | here |
- * | `POST /log` | log batches from the app (mwlog-ts browser forwarder) → MwLog | here |
+ * | `POST /log` | log batches from the app (logbook-ts browser forwarder) → logbook | here |
  * | `GET /api/tables` | the rooms with a TV online (the companion's table picker) | here |
  * | `POST /files`, `GET /files/…`, `GET /uploads/…` | the file store | `files/routes.ts` |
  * | `/api/library…` | the shared map library | `library/routes.ts` |
@@ -131,6 +131,6 @@ async function health(ctx: RouteContext): Promise<Record<string, unknown>> {
     ...ctx.relay.stats(),
     library: entries?.length ?? null,
     games: games?.length ?? null,
-    mwlog: ctx.log.health(),
+    logbook: ctx.log.health(),
   };
 }

@@ -8,7 +8,7 @@
 //! - **pulls** a file it lacks from upstream when asked for it (`GET /files/…`);
 //! - **pushes** its own game backups (with the files they name that upstream lacks) and deletes
 //!   them there too — the TV's storage stays authoritative, the VPS keeps a copy;
-//! - **forwards** the page's log batches (`POST /log`) when it has no MwLog credentials itself
+//! - **forwards** the page's log batches (`POST /log`) when it has no logbook credentials itself
 //!   (devices never hold them) — a refused forward answers 503 so the page's outbox keeps the
 //!   batch for later.
 //!

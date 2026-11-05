@@ -13,7 +13,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@battlemap/shared": "workspace:*",
-        "mwlog": "file:../../../mwlog-ts",
+        "logbook": "file:../../../logbook-ts",
         "pdfjs-dist": "^6.4.299",
         "pixi.js": "^8.22.0",
       },
@@ -32,7 +32,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@battlemap/shared": "workspace:*",
-        "mwlog": "file:../../../mwlog-ts",
+        "logbook": "file:../../../logbook-ts",
         "sharp": "^0.35.5",
       },
       "devDependencies": {
@@ -329,16 +329,16 @@
 
     "zimmerframe": ["zimmerframe@1.1.5", "", {}, "sha512-msJxIvYDYcoNL+PJsu+7qmpDWsYmAxTY+2TNYXXF0hzBzBk0BMecOqDOG/EckUoKCuKwObfbugIl8QpqHDXeFA=="],
 
-    "@battlemap/app/mwlog": ["mwlog@file:../../mwlog-ts", { "devDependencies": { "@types/bun": "latest", "typescript": "^5" } }],
+    "@battlemap/app/logbook": ["logbook@file:../../logbook-ts", { "devDependencies": { "@types/bun": "latest", "typescript": "^5" } }],
 
-    "@battlemap/server/mwlog": ["mwlog@file:../../mwlog-ts", { "devDependencies": { "@types/bun": "latest", "typescript": "^5" } }],
+    "@battlemap/server/logbook": ["logbook@file:../../logbook-ts", { "devDependencies": { "@types/bun": "latest", "typescript": "^5" } }],
 
     "@types/node/undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
     "svelte/magic-string": ["magic-string@0.30.21", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.5" } }, "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ=="],
 
-    "@battlemap/app/mwlog/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+    "@battlemap/app/logbook/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
-    "@battlemap/server/mwlog/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+    "@battlemap/server/logbook/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
   }
 }

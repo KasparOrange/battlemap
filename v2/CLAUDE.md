@@ -38,7 +38,7 @@ folder needs goes into your report, not into their files.
   params, returns, throws, `@see`). Svelte components get a top comment: what it is, props.
 - **Log generously** through the one logger (`app/src/lib/log.ts`, `server/src/log.ts`): every
   IO, every state change that matters, every error with context, connection lifecycle,
-  timings of slow steps. Lines go to MwLog tenant `battlemap` (`docs/architecture.md` "logs").
+  timings of slow steps. Lines go to logbook tenant `battlemap` (`docs/architecture.md` "logs").
   Never `console.log` directly.
 - **No IO without visible feedback** (notice, progress bar or spinner); debounce action buttons.
 - **TV remote fallback:** every TV-side control is reachable and activatable with D-pad + OK.
@@ -57,7 +57,7 @@ folder needs goes into your report, not into their files.
 ## Secrets (never commit)
 
 - Gemini API key: `~/.config/battlemap/gemini.key` (`GEMINI_API_KEY=$(cat …)`).
-- MwLog credentials: `~/.config/mwlog/battlemap.env` (`MWLOG_USER`, `MWLOG_PASS`).
+- logbook credentials: `~/.config/logbook/battlemap.env` (`LOGBOOK_USER`, `LOGBOOK_PASS`).
 
 ## Git
 

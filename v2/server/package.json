@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@battlemap/shared": "workspace:*",
-    "mwlog": "file:../../../mwlog-ts",
+    "logbook": "file:../../../logbook-ts",
     "sharp": "^0.35.5"
   },
   "devDependencies": {

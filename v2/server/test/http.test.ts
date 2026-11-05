@@ -12,7 +12,7 @@ describe('http', () => {
   test('/health says ok, the build and the counts', async () => {
     const body = (await (await fetch(`${srv.base}/health`)).json()) as Record<string, unknown>;
     expect(body).toMatchObject({ ok: true, build: 'test-build', rooms: 0 });
-    expect(body.mwlog).toBeDefined();
+    expect(body.logbook).toBeDefined();
   });
 
   test('/log takes a browser batch (204) from any origin, refuses junk (400)', async () => {

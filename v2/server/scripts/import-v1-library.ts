@@ -14,7 +14,7 @@
  */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { init } from 'mwlog';
+import { init } from 'logbook';
 import type { FileRef, LibraryEntry, MapInfo } from '@battlemap/shared';
 import { makeTableCopy, pictureInfo } from '../src/files/convert.ts';
 import type { UploadResult } from '../src/files/upload.ts';

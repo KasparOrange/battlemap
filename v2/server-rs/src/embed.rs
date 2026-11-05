@@ -2,11 +2,11 @@
 //! [`crate::android`] — instead of running as its own process. One server per process,
 //! started and stopped by calls instead of signals; its log lines also go into a small ring
 //! the host drains ([`take_logs`]) and writes into its own log (the shell forwards them to the
-//! page, which ships them to MwLog like every other shell line).
+//! page, which ships them to logbook like every other shell line).
 //!
 //! Settings come as `KEY=VALUE` lines with the same names as the environment of the standalone
-//! binary ([`Config::from_lookup`]), plus `STATE_DIR` (mwlog's daily files, default
-//! `<DATA_DIR>/../state`) and `HOME` (where mwlog looks for `.config/mwlog/battlemap.env`).
+//! binary ([`Config::from_lookup`]), plus `STATE_DIR` (logbook's daily files, default
+//! `<DATA_DIR>/../state`) and `HOME` (where logbook looks for `.config/logbook/battlemap.env`).
 //!
 //! See `../docs/server-rs.md` "Embedded in the shell".
 
@@ -43,7 +43,7 @@ static RING: Mutex<Ring> = Mutex::new(Ring {
 
 /// The tracing layer that formats every `info`/`warn`/`error` line as `area: message k=v …`
 /// into the ring, and hands every line (debug too) to the optional [`LineSink`]. Lines of
-/// mwlog's own targets (`mwlog_ui`: the page's lines re-logged at `/log`) are skipped.
+/// logbook's own targets (`logbook_ui`: the page's lines re-logged at `/log`) are skipped.
 pub struct RingLayer {
     sink: Option<LineSink>,
 }
@@ -83,10 +83,10 @@ impl Visit for Text {
 impl<S: Subscriber> tracing_subscriber::Layer<S> for RingLayer {
     fn on_event(&self, event: &Event<'_>, _ctx: LayerContext<'_, S>) {
         let meta = event.metadata();
-        // The page's own lines re-logged at `/log` (mwlog's `mwlog_ui`): the shell forwards
+        // The page's own lines re-logged at `/log` (logbook's `logbook_ui`): the shell forwards
         // ring lines to the page, which sends them back to `/log` — keeping them out of the
         // ring (and logcat, where the page's console already is) breaks that loop.
-        if meta.target().starts_with("mwlog") {
+        if meta.target().starts_with("logbook") {
             return;
         }
         let mut text = Text::default();
@@ -132,7 +132,7 @@ struct Embedded {
     running: Running,
 }
 
-static LOG: OnceLock<mwlog::Guard> = OnceLock::new();
+static LOG: OnceLock<logbook::Guard> = OnceLock::new();
 static SERVER: Mutex<Option<Embedded>> = Mutex::new(None);
 
 /// Parses `KEY=VALUE` lines (blank lines and `#` comments skipped).
@@ -169,14 +169,14 @@ pub fn start(settings: &str, sink: Option<LineSink>) -> Result<u16> {
             .unwrap_or_else(|| config.data_dir.join("../state"));
         if let Some(home) = map.get("HOME") {
             // SAFETY: called once, before the server's threads exist; the host (the shell's
-            // JVM) doesn't read HOME. mwlog looks for its tenant file under HOME.
+            // JVM) doesn't read HOME. logbook looks for its tenant file under HOME.
             unsafe { std::env::set_var("HOME", home) };
         }
         let guard = crate::log::init_embedded(env!("CARGO_PKG_VERSION"), state_dir, vec![Box::new(RingLayer::new(sink))])
             .context("logging could not start")?;
         let _ = LOG.set(guard);
     }
-    let shipper = LOG.get().map(|g| g.shipper()).unwrap_or_else(|| mwlog::Shipper::inert(crate::log::APP));
+    let shipper = LOG.get().map(|g| g.shipper()).unwrap_or_else(|| logbook::Shipper::inert(crate::log::APP));
     let threads = map.get("WORKER_THREADS").and_then(|v| v.parse().ok()).unwrap_or(2usize).max(1);
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .worker_threads(threads)
@@ -236,13 +236,13 @@ mod tests {
     fn start_serve_stop() {
         let dir = tempfile::tempdir().unwrap();
         let settings = format!(
-            "PORT=0\nHOST=127.0.0.1\nDATA_DIR={}\nAPP_DIR={}\nSTATE_DIR={}\nBUILD_POLL_MS=0\nCLEANUP_EVERY_MS=0\nMWLOG_DISABLE=1",
+            "PORT=0\nHOST=127.0.0.1\nDATA_DIR={}\nAPP_DIR={}\nSTATE_DIR={}\nBUILD_POLL_MS=0\nCLEANUP_EVERY_MS=0\nLOGBOOK_DISABLE=1",
             dir.path().join("data").display(),
             dir.path().join("app").display(),
             dir.path().join("state").display()
         );
         // SAFETY: test-only, before the server's threads exist.
-        unsafe { std::env::set_var("MWLOG_DISABLE", "1") };
+        unsafe { std::env::set_var("LOGBOOK_DISABLE", "1") };
         let port = start(&settings, None).unwrap();
         assert!(port > 0);
         assert_eq!(super::port(), Some(port));

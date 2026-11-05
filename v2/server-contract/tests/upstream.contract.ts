@@ -35,7 +35,7 @@ describe.skipIf(!FIXES || !BIN || !PORT)('table server with an upstream (LAN pla
     proc = spawn({
       cmd: [BIN],
       env: {
-        ...process.env, MWLOG_DISABLE: '1', HOST: '127.0.0.1', PORT: String(PORT), DATA_DIR: data, APP_DIR: join(data, 'app'),
+        ...process.env, LOGBOOK_DISABLE: '1', HOST: '127.0.0.1', PORT: String(PORT), DATA_DIR: data, APP_DIR: join(data, 'app'),
         UPSTREAM_URL: BASE, UPSTREAM_SYNC_MS: '400', BUILD_POLL_MS: '0', CLEANUP_EVERY_MS: '0', BATTLEMAP_LOG_STDERR: '1',
       },
       stdout: 'ignore',

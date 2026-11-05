@@ -4,7 +4,7 @@
   commands, the log outbox); the page's last 500 log lines (the logger's `logRing`, read through
   `log-buffer.ts`; they arrive in the logger's batches, ≤ 3 s) with a level
   filter, copy and clear; and "Send diagnostics", which writes one snapshot line of all of it to
-  the logs (MwLog tenant `battlemap`, area `diag`) and ships the outbox at once.
+  the logs (logbook tenant `battlemap`, area `diag`) and ships the outbox at once.
   Opened from the library's menu, the table picker and the Game tab.
 
   Props:
@@ -12,7 +12,7 @@
 -->
 <script lang="ts">
   import { untrack } from 'svelte';
-  import type { Level } from 'mwlog/browser';
+  import type { Level } from 'logbook/browser';
   import { appConfig } from '../../config.ts';
   import { log, logOutbox } from '../../log.ts';
   import { shellInfo } from '../../shell.ts';
@@ -144,7 +144,7 @@
   function clear(): void {
     clearBuffer();
     lines = [];
-    notify('Log view cleared — the lines stay in MwLog.');
+    notify('Log view cleared — the lines stay in logbook.');
   }
 
   const time = (t: number) => new Date(t).toTimeString().slice(0, 8);

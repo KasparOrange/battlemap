@@ -433,7 +433,7 @@ bun tools/import-v1.ts --server https://<v2 server> [--calibrate table-xxxx]    
 `--listing <file>` imports from a saved listing without the TV (maps then only from the dev
 server); `--no-tv-transfer` never makes the TV open a game; `--json` prints the report as JSON.
 Exit code 0 = everything stored, 1 = something left out (the report says what), 2 = could not
-start (TV not on the relay). Logs: MwLog app `battlemap-v2-import-v1`. Don't run it while
+start (TV not on the relay). Logs: logbook app `battlemap-v2-import-v1`. Don't run it while
 someone plays on the v1 box: a map only the TV has makes the TV open that game.
 
 **Checked:** 16 tests (`tools/import-v1/`): every converter on v1-shaped JSON built from

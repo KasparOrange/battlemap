@@ -39,7 +39,7 @@ Counts: bugs 1–25 → 23 fixed, 1 decided (#25), 1 open (#11); new 26–36 →
 | fixtures | `e2e/support/fixtures.ts` | `table`, `privateServer`, `privateTable`; on failure the bot's last messages and the server's output are attached to the report |
 | harness self-test | `e2e/harness.e2e.ts` | the harness checks itself |
 | the game night | `e2e/game-night.e2e.ts` | `../../docs/test-session.md` scenes 0–7 as 33 flows, one beat each on its own table |
-| soak bot | `tools/bot.ts` | a scripted companion: hundreds of random valid commands, bursts, reconnects, optional TV reloads; checks convergence, prediction, offline rule, order; logs to MwLog |
+| soak bot | `tools/bot.ts` | a scripted companion: hundreds of random valid commands, bursts, reconnects, optional TV reloads; checks convergence, prediction, offline rule, order; logs to logbook |
 | device deploy | `tools/deploy-devices.sh` | build app → shell APK with it → `adb install -r` → start in a mode, optionally on a dev URL / server |
 | device bench | `tools/bench-run.ts` | the shell's WebGL probe + the app's `bench.html` inside the device's WebView, numbers as JSON |
 
@@ -199,7 +199,7 @@ pixels unchanged until Apply), door tap, a stroke, measure line ("30 ft"), ruler
 a second and third map (each keeps its own fog/tokens; the 30 MB castle shows 5.5 s after "Add to
 the game", 67 MB of textures), a DM layer (0 bytes on the TV), the calibration dialog with the
 pattern, TV remote (back arrow after a key, Escape → library, Enter reopens in 81 ms), reload of
-both pages (game identical after the TV reload). Logs from TV and companion arrive in MwLog (tenant
+both pages (game identical after the TV reload). Logs from TV and companion arrive in logbook (tenant
 `battlemap`, app `battlemap-v2-ui`). Idle TV: 1 frame in 5 s. What broke is in the bug list;
 screenshots in `docs/qa/`.
 
@@ -232,7 +232,7 @@ T = `tv-mode.e2e.ts` (TV package), C = `companion-*.e2e.ts` (companion packages)
 | 20 | games and persistence | G scenes 4, 5 (listing, reopen, restart, backup restore, double load) | rename / delete stored games |
 | 21 | undo | G scenes 1, 3; B | — |
 | 22 | networking | G scene 5 (offline taps dropped with a notice, outage recovery), scene 7 (300-command burst in order), H; B (reconnects, convergence) | takeover (L11, L12) in a flow |
-| 23 | logs and diagnostics | G scene 0 (`diag.status`); B logs to MwLog | the outbox after an outage |
+| 23 | logs and diagnostics | G scene 0 (`diag.status`); B logs to logbook | the outbox after an outage |
 | 24 | updates and deploy | `tools/deploy-devices.sh` | `server.build` → reload offer, `deploy.prepare` in a flow |
 | 25 | notices, stepper, full screen | G scene 5 (the offline notice) | C |
 | 26 | remote fallback | G scene 0, T | — |
@@ -259,7 +259,7 @@ Probe (`--es page probe`, 20 s at 1920 × 1080, load 1), from logcat:
 |---|---|---|---|---|---|---|
 | 30.8 | 5.5 | 16.7 / 166.7 / 216.7 | 0.5 / 2.5 | 123 of 622 | 1262 / 105 ms | no (the emulator under load; earlier, on a quiet Mac: 55 / 14) |
 
-Bench (`/app/bench.html`, all scenes; from MwLog area `bench`, because `tools/bench-run.ts` returned `{}` per scene — fixed, bug 17):
+Bench (`/app/bench.html`, all scenes; from logbook area `bench`, because `tools/bench-run.ts` returned `{}` per scene — fixed, bug 17):
 
 | scene | fps avg | 1 % low | frame p95 ms | CPU avg / p95 ms | draw calls | idle frames |
 |---|---|---|---|---|---|---|
@@ -298,8 +298,8 @@ is open. Screenshots: `docs/qa/*.jpg`.
 |---|---|---|---|---|---|---|---|
 | 1 | major (fixed) | companion-game | `effect_update_depth_exceeded` on every map load (game start, map switch, reopen) on tablet and phone layouts, Chromium and WebView 113; afterwards the "Loading …" card sticks and the page stops following the TV | start a game from the tablet; console | `CompanionApp.svelte:58` — the `tv.status` effect read `busy` and wrote a new `busy` object; now read with `untrack` | 39× in e2e run 1's log; Vite trace "updated at $effect (CompanionApp.svelte:89)" | fixed in 6970164 |
 | 2 | major | shared | **Room and Circle reveal ignore walls that aren't on grid lines** — on the vampire lair a Room tap in the top room reveals 264 of 266 squares (whole map, outside the walls too). Dungeondraft walls sit mid-square (e.g. y = 4.876), and `segmentEdges` blocks only the grid lines a segment *crosses*, so a horizontal wall inside a row never blocks north–south steps. v1's `wall_grid.dart` has the same rule; the e2e fixtures have on-grid walls, so no test sees it | upload `04-vampire-lair-19x14.dd2vtt`, Fog ▸ Room, tap the top room; or `floodFill(buildWallGrid(19,14,geo,[]), 3*19+7).length` → 264 | `shared/src/geometry/walls.ts:40-97` (segmentEdges) | `docs/qa/room-reveal-leaks-tv.jpg` | fixed in a753382 — verified (W4: a Room tap in the lair's top room fills 36 of 266 squares, was 264) |
-| 3 | major | tv | **The TV forgets its calibration on every start.** On boot TV mode reports its viewport (`table.viewport`, `TvApp.svelte:221`) before `games.boot()` has read the stored calibration (`:247`); `changed()` sees `savedTable` = NaN and stores the default 34.5 in, which `boot()` then reads | Measure the TV → 26 cm → Apply → Done; wait; reload the TV → `table.widthInches` 34.5 again. MwLog: "Calibration saved widthInches=34.5" 2 ms before every "Booted" | `app/src/lib/tv/games.ts:166,255` (+ the order in `TvApp.svelte`) | IndexedDB `settings/tv.table` = 34.5 after the reload | fixed in 850d632 — verified (W4: 26 in survives a reload) |
-| 4 | major (fixed) | e2e | the e2e protocol client sent no heartbeat → the relay closed the bot as a zombie after 45 s; long flows failed with "table did not sync" / "not connected" | any flow > 45 s with an idle bot | `e2e/support/proto.ts` (now pings every 15 s) | MwLog "Closing a silent socket (zombie) client=bot-…" | fixed in 6970164 |
+| 3 | major | tv | **The TV forgets its calibration on every start.** On boot TV mode reports its viewport (`table.viewport`, `TvApp.svelte:221`) before `games.boot()` has read the stored calibration (`:247`); `changed()` sees `savedTable` = NaN and stores the default 34.5 in, which `boot()` then reads | Measure the TV → 26 cm → Apply → Done; wait; reload the TV → `table.widthInches` 34.5 again. logbook: "Calibration saved widthInches=34.5" 2 ms before every "Booted" | `app/src/lib/tv/games.ts:166,255` (+ the order in `TvApp.svelte`) | IndexedDB `settings/tv.table` = 34.5 after the reload | fixed in 850d632 — verified (W4: 26 in survives a reload) |
+| 4 | major (fixed) | e2e | the e2e protocol client sent no heartbeat → the relay closed the bot as a zombie after 45 s; long flows failed with "table did not sync" / "not connected" | any flow > 45 s with an idle bot | `e2e/support/proto.ts` (now pings every 15 s) | logbook "Closing a silent socket (zombie) client=bot-…" | fixed in 6970164 |
 | 5 | minor | companion-game | side-panel rows are wider than the panel: the "On the table" badge in Game ▸ Maps and the DM-layer row's controls are cut off at the right edge | Game tab with two maps; View ▸ DM layers with a layer | `tabs/settings/SettingsPanel.svelte:117`, `tabs/layers/LayersSection.svelte` | `docs/qa/tab-maps-list-clipped.jpg` | fixed in 9ff8a0b (Game ▸ Maps), 5e4d956 asserts the layer row fits |
 | 6 | minor | server / state | commands sent while the TV page reloads are lost silently: no `relay.undelivered`, no notice; the prediction is rolled back only by the next snapshot | `bun tools/bot.ts --commands 2000 --tv-reload-every 400` → 9 × "command lost: timeout" at i = 386, `undelivered` 0 | relay (`server/src/relay`) / `state/client.ts` | bot summary | fixed in f5589c9 (companion: ack timeout 5 s → roll back + one notice); the relay still sends no `relay.undelivered` for them |
 | 7 | minor | companion-lib | the library's Continue card offers a game this TV doesn't hold (another TV's server backup) — a fresh emulator TV got "Session 1 · castle · Continue" from the Mac's TV | pair a new TV on a server that has other TVs' backups | `companion/library/library-logic.ts:64` (`continueGame` doesn't skip `where === 'server'`, the TV's own rule does) | tablet emulator library | fixed in 7258e98 |

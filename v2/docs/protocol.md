@@ -250,14 +250,14 @@ they say otherwise; without a game they are refused ("No game is open."), except
 | `vtt.setScaleFactor` | broke the one-inch rule (already ignored since 1.1.9) |
 | `vtt.clearMap` | the TV never shows a game without a map now |
 | `update.check`, `update.versionInfo`, `update.download`, `update.progress`, `patch.*` | the bundle is the update: `server.build` + `tv.reload` |
-| `tv.log` | logs go to MwLog from every device directly |
+| `tv.log` | logs go to logbook from every device directly |
 | `tv.error`, `tv.rendering` | → `tv.notice`, `tv.status` |
 | `bot` role | a test bot is just another companion now (several are allowed) |
 
 ## Over HTTP (server, for the record)
 
 Not WebSocket messages, but part of the contract the server package implements:
-`GET /health`; `POST /log` (mwlog-ts browser batches); `GET /api/tables` (rooms with a TV
+`GET /health`; `POST /log` (logbook-ts browser batches); `GET /api/tables` (rooms with a TV
 online); `POST /files?ext=&format=` → `FileRef`, `GET /files/<hash>.<ext>` (immutable);
 `GET|POST|DELETE /api/library` (`LibraryEntry`); `PUT|GET /api/games/<id>` and `GET /api/games`
 (backups, `GameSummary`); `GET /api/fetch?url=` (a link's file, as the old `/fetch`);

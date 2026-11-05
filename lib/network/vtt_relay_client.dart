@@ -60,7 +60,7 @@ enum RelayConnectionState {
 ///   `vtt.mapChunk`, and `vtt.mapEnd` messages.
 /// - **Connection state stream** — listeners can observe
 ///   [RelayConnectionState] transitions via [stateStream].
-/// - **Connection diagnostics** to MwLog (tag `relay`, both devices): every
+/// - **Connection diagnostics** to logbook (tag `relay`, both devices): every
 ///   attempt, drop (close code, how long it lived), outage length, commands
 ///   dropped while offline, round-trip time per heartbeat, late messages from the peer
 ///   (their `sent` stamp), slow handlers and stalled event loops.
@@ -213,7 +213,7 @@ class VttRelayClient {
   int _consecutiveSendFailures = 0;
   static const int _maxSendFailures = 5;
 
-  // --- Diagnostics (MwLog, tag `relay`) ---
+  // --- Diagnostics (logbook, tag `relay`) ---
 
   /// When the current connection attempt started (for `connectMs`).
   DateTime? _attemptStartedAt;

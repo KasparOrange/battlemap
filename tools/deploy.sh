@@ -64,8 +64,8 @@ fi
 cd "$SRC"
 if has tv || has tablet; then
   # shellcheck disable=SC1090
-  . "$HOME/.config/mwlog/battlemap.env"
-  "$F" build apk --release --dart-define=MWLOG_AUTH="$MWLOG_USER:$MWLOG_PASS" | tail -1
+  . "$HOME/.config/logbook/battlemap.env"
+  "$F" build apk --release --dart-define=LOGBOOK_AUTH="$LOGBOOK_USER:$LOGBOOK_PASS" | tail -1
   APK="$SRC/build/app/outputs/flutter-apk/app-release.apk"
 fi
 if has web; then

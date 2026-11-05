@@ -155,7 +155,7 @@ export interface BattlemapShell {
   ready(): void;
   /**
    * Returns the shell's buffered log lines (JSON array of {@link ShellLogLine}) and switches to
-   * live `log` events. Forward them to the app's logger (MwLog, `src=shell`).
+   * live `log` events. Forward them to the app's logger (logbook, `src=shell`).
    */
   takeLogs(): string;
   /** Keep the screen on (TV mode starts with it on, companion with it off). */

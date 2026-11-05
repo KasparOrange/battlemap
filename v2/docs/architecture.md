@@ -24,7 +24,7 @@ Five rules carry the design:
 | TV box — Xiaomi TV Box S 3rd gen (Google TV), also Fire TV | the app in TV mode, inside the Android shell's WebView | Mali-G310 (~42 GFLOPS), **2 GB RAM**, 4K output; WebGL2 (GLES 3.2); input is a D-pad remote only, as a fallback — the tablet drives everything |
 | Android tablet / phone | the app in companion mode, same shell | touch, pinch; sleeps and drops sockets (the old tablet did) |
 | Browsers — Safari on iPhone, desktop Chrome/Firefox | the same bundle, companion (or TV mode in a tab for development) | Safari's WebGL2 and IndexedDB quirks; may run on plain http in LAN play |
-| Server — Bun on the VPS (dev: on the Mac) | relay, files, shared map library, game backups, `/log` | holds the only secrets (MwLog credentials); behind Caddy's HTTPS in production |
+| Server — Bun on the VPS (dev: on the Mac) | relay, files, shared map library, game backups, `/log` | holds the only secrets (logbook credentials); behind Caddy's HTTPS in production |
 
 **The Android shell** (`shell/`, [`shell.md`](shell.md), typed bridge `shell/bridge.d.ts`) serves
 the bundle from its own secure origin, `https://appassets.androidplatform.net/app/` (built in, or a
@@ -37,7 +37,7 @@ downloaded bundle) — so the app is **built for the base `/app/`**, and the ser
 - **`ready()`** once the app has mounted — a downloaded bundle that loads three times without it
   is dropped for the built-in one.
 - **Shell logs:** `takeLogs()` and the live `log` events go into the app's logger (area
-  `shell`), so the shell's own lines reach MwLog the same way.
+  `shell`), so the shell's own lines reach logbook the same way.
 - **Events:** `back` (call `preventDefault()` when the app handled it), `memory` (Android wants
   memory back: the renderer drops textures it can rebuild), `bundle` / `apk` progress.
 - **Developer settings** from the app: `setServerUrl`, `setStartMode`, `setDevUrl`.
@@ -66,7 +66,7 @@ flowchart LR
   TV -- HTTPS: download files, back up games --> F
   C -- log batches --> L
   TV -- log batches --> L
-  L -- with credentials --> M[(MwLog<br/>tenant battlemap)]
+  L -- with credentials --> M[(logbook<br/>tenant battlemap)]
 ```
 
 Small JSON messages travel over the relay; anything big (a map picture, a DM layer, a game
@@ -80,7 +80,7 @@ messages do not change (see "networking").
 v2/
   shared/   protocol + game model + reducer + pure geometry   (no DOM, no Node — imported by app and server)
   app/      the one web app: TV mode and companion mode
-    src/lib/log.ts        the logger (mwlog-ts browser forwarder → the server's /log)
+    src/lib/log.ts        the logger (logbook-ts browser forwarder → the server's /log)
     src/lib/log-outbox.ts undelivered log batches kept in localStorage, sent later
     src/lib/config.ts     server URL, mode, device and table ids (URL → shell → remembered)
     src/lib/shell.ts      the Android shell's bridge, typed, a no-op in browsers
@@ -402,13 +402,13 @@ flowchart LR
   A[app on TV / tablet<br/>lib/log.ts] -- batches, POST /log --> S[server<br/>handleBrowserLog]
   A -. offline .-> O[(localStorage outbox<br/>≤ 1000 lines)]
   O -. back online .-> S
-  S -- MWLOG_URL + credentials --> M[(MwLog · tenant battlemap)]
+  S -- LOGBOOK_URL + credentials --> M[(logbook · tenant battlemap)]
   SV[server's own lines] --> M
 ```
 
-Devices hold no secrets: the app uses mwlog-ts's browser forwarder (`mwlog/browser`) and posts
-batches to the server's `/log`; the server (mwlog-ts `init`, credentials from
-`~/.config/mwlog/battlemap.env`) re-logs them as `app=battlemap-v2-ui` and ships them with its
+Devices hold no secrets: the app uses logbook-ts's browser forwarder (`logbook/browser`) and posts
+batches to the server's `/log`; the server (logbook-ts `init`, credentials from
+`~/.config/logbook/battlemap.env`) re-logs them as `app=battlemap-v2-ui` and ships them with its
 own `app=battlemap-v2` lines. Every UI line carries `role` (tv | companion), `device`, `table`,
 `client`, `build`. When the server is unreachable the forwarder keeps lines in memory with
 backoff; batches it can't deliver move to a `localStorage` outbox that survives a reload and is
@@ -447,7 +447,7 @@ tokens=40&fx=rain`): a large tiled map, a fog mask changing at 30 Hz, tokens mov
 instances; it runs each for a fixed time and reports frame-time percentiles (rAF deltas and the
 CPU time of `render()`, GPU time via `EXT_disjoint_timer_query_webgl2` when the driver has it),
 dropped frames, texture bytes and heap, on screen and to the log (area `bench`, one line per
-scenario), so a run on the box is readable from MwLog afterwards.
+scenario), so a run on the box is readable from logbook afterwards.
 
 ## Updates and deploy
 
@@ -458,7 +458,7 @@ scenario), so a run on the box is readable from MwLog afterwards.
   itself when it is in the library or on `tv.reload` from the tablet, and reopens its game — a
   break of a second or two, not the old 15 s APK install. No Shorebird, no APK per change; the
   shell changes rarely.
-- **Server deploy:** `bun build` bundles `server/` into one file (mwlog-ts included, so the VPS
+- **Server deploy:** `bun build` bundles `server/` into one file (logbook-ts included, so the VPS
   needs no checkout of it), copied with `app/dist` to the VPS, run as a systemd unit behind
   Caddy (HTTPS, `/ws` upgraded). Its own ports; the old relay (9090) and dev server (4242) keep
   running for the Flutter app until v2 replaces it.
@@ -515,7 +515,7 @@ ones faded on `dm`), doors (markers on `dm`, drawn leaves on AI maps), ruler, di
 layers, the players' frame, the table mask and calibration pattern; the TV camera from
 `tvView`, the DM camera (pinch/pan API, clamps); hit testing; the `memory` event; the bench's
 scenes and its log lines. *Done when:* the bench runs its scenes on the Xiaomi box within the
-budgets (lines in MwLog), idle is 0 frames, pure parts (tile planning, budget, hit tests) have
+budgets (lines in logbook), idle is 0 frames, pure parts (tile planning, budget, hit tests) have
 tests.
 
 **3 · TV mode.** Start, waiting ("Waiting for the tablet · table …"), library mirror, game,
@@ -560,4 +560,4 @@ frame budget on the box.
 ten maps, several maps per game, fog, doors, tokens, disc, calibration), a scripted
 companion-as-bot for soak tests (the old bench robot's job), the bench run on the Android
 emulators and the real box through the shell, a device deploy script. *Done when:* `bun run e2e`
-runs the game night green, and a bench report from the box is in MwLog.
+runs the game night green, and a bench report from the box is in logbook.

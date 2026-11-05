@@ -3,7 +3,7 @@
  * Runs the performance checks inside a device's WebView and prints the numbers as JSON:
  * the shell's WebGL probe (`--es page probe`, result from logcat `PROBE_RESULT`) and the app's
  * renderer bench (`/app/bench.html`, results from `window.__bench` over the DevTools protocol —
- * debug APKs only). The bench also logs one line per scene to MwLog (area `bench`).
+ * debug APKs only). The bench also logs one line per scene to logbook (area `bench`).
  *
  *   bun v2/tools/bench-run.ts <serial> [--probe] [--bench] [--query 'scene=all&seconds=8']
  *                             [--probe-query 'load=2'] [--out file.json]

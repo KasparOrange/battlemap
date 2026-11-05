@@ -16,7 +16,7 @@ limits and data layout as the Bun server (`server.md`); the black-box suite in
 | `library/` | the shared library (`library.json`) |
 | `backups/` | game backups, versions, trash |
 | `fetch/` | the address guard (`guard.rs`), streaming download (`download.rs`), share links / page pictures (`link.rs`) |
-| `log.rs` | mwlog-rs (tenant `battlemap`, app `battlemap-v2-rs`), `/log` → `battlemap-v2-ui`, 10-s counts of hot paths |
+| `log.rs` | logbook-rs (tenant `battlemap`, app `battlemap-v2-rs`), `/log` → `battlemap-v2-ui`, 10-s counts of hot paths |
 | `cleanup.rs` | temp cleanup at start and every 6 h |
 | `schema.rs` | the shared types' JSON Schema, embedded |
 | `wire.rs` | every JSON type the server writes; TypeScript generated for the server-only ones |
@@ -159,10 +159,10 @@ shell's process as `libbattlemap_server.so` (crate type `cdylib` next to the `rl
 
 | Piece | What |
 |---|---|
-| `src/embed.rs` | one server per process: `start(settings, sink)` (KEY=VALUE lines, the env names of the binary + `STATE_DIR`, `HOME`, `WORKER_THREADS`) on its own tokio runtime (2 workers), `stop(grace)` (the graceful stop), `port()`, `take_logs()` — a 500-line ring of the server's info/warn/error lines (mwlog's own `mwlog_ui` lines excluded, else the page's lines would loop back through `/log`) |
+| `src/embed.rs` | one server per process: `start(settings, sink)` (KEY=VALUE lines, the env names of the binary + `STATE_DIR`, `HOME`, `WORKER_THREADS`) on its own tokio runtime (2 workers), `stop(grace)` (the graceful stop), `port()`, `take_logs()` — a 500-line ring of the server's info/warn/error lines (logbook's own `logbook_ui` lines excluded, else the page's lines would loop back through `/log`) |
 | `src/android.rs` | the JNI glue for Kotlin's `ServerBridge` (`nativeStart`, `nativeStop`, `nativePort`, `nativeTakeLogs`), panics caught, every line also to logcat (tag `battlemap-server`) |
-| `src/log.rs` `init_embedded` | mwlog with the daily files in `STATE_DIR/logs` and the ring layer; never writes to the host's stderr |
-| `shell/…/TableServer.kt`, `TableService.kt` | folders, settings and memory caps, the log pump (ring → `ShellLog` → page → MwLog), the foreground service — `shell.md` "Table server" |
+| `src/log.rs` `init_embedded` | logbook with the daily files in `STATE_DIR/logs` and the ring layer; never writes to the host's stderr |
+| `shell/…/TableServer.kt`, `TableService.kt` | folders, settings and memory caps, the log pump (ring → `ShellLog` → page → logbook), the foreground service — `shell.md` "Table server" |
 
 Build: `shell/build.sh` runs `cargo ndk -t arm64-v8a -t x86_64 -o shell/app/build/jniLibs build
 --release --lib` (`BATTLEMAP_ABIS` picks ABIs, `BATTLEMAP_NO_SERVER=1` skips). The libraries are
@@ -192,7 +192,7 @@ the shell sets it to its configured server, the VPS). Without it nothing changes
 | other files | `GET /files/<hash>.<ext>` the table lacks → fetched from upstream, hash-checked, stored, served |
 | tile sets | `GET /api/tiles/<hash>.<ext>` of a picture the table lacks → the picture is pulled from upstream first, then cut here (`files/tiles.rs`) |
 | game backups | `PUT` here stores as usual, then pushes upstream 3 s later (with the files the game names that upstream lacks — HEAD, then `POST /files?format=asis`); `DELETE` here is repeated upstream; `GET /api/games` lists upstream's backups too, `GET /api/games/<id>` falls back to upstream. Offline, pushes and deletes wait for the next sync (`pushed`/`deletes` in `upstream.json`) |
-| logs | `POST /log` with no MwLog credentials (devices never hold them) is forwarded upstream; 503 when that fails, so the page's outbox keeps the batch |
+| logs | `POST /log` with no logbook credentials (devices never hold them) is forwarded upstream; 503 when that fails, so the page's outbox keeps the batch |
 | status | `GET /api/upstream` → `{url, online, lastSyncAt, lastError, libraryMirrored, gamesMirrored, filesPulled, gamesPushed, logsForwarded}` (404 without upstream) |
 | sync | at start, every `UPSTREAM_SYNC_MS` (10 min) and 3 s after a local save/delete |
 
@@ -244,7 +244,7 @@ data on the first deploy (`~/battlemap-v2/data` → `~/battlemap-v2-rs/data`; `-
 new one), writes and restarts the systemd unit **`battlemap-v2-rs`** (port **5930**, the Bun
 server's built app in `~/battlemap-v2/app`), checks `/health` and prints both servers' RSS.
 Caddy and the Bun unit `battlemap-v2` are not touched (since the switch, Caddy points at 5930 —
-"Production switch"); the Rust server is also reachable at `http://72.62.88.197:5930`. Logs: `journalctl -u battlemap-v2-rs`, MwLog app `battlemap-v2-rs`.
+"Production switch"); the Rust server is also reachable at `http://72.62.88.197:5930`. Logs: `journalctl -u battlemap-v2-rs`, logbook app `battlemap-v2-rs`.
 
 First deploy (2026-10-25): data snapshot 37 MB, `/health` ok with 15 library maps, the
 library JSON byte-identical to the Bun server's, thumbnails served, a WebSocket hello welcomed.

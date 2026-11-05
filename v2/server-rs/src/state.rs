@@ -37,7 +37,7 @@ pub struct AppState {
     /// When the server started (epoch ms).
     pub started_ms: u64,
     /// The log shipper (for `/log` and `/health`).
-    pub shipper: mwlog::Shipper,
+    pub shipper: logbook::Shipper,
     /// The internet server above this table server (LAN play), when `UPSTREAM_URL` is set.
     pub upstream: Option<Upstream>,
 }

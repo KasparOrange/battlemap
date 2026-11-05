@@ -24,7 +24,7 @@ the VPS (the Mac builds debug APKs for the emulators too).
 
 ## VPS services
 
-two Python servers run on the VPS (the log server is retired — logs go to MwLog, see "logs" below):
+two Python servers run on the VPS (the log server is retired — logs go to logbook, see "logs" below):
 
 | service | port | purpose |
 |---------|------|---------|
@@ -141,7 +141,7 @@ or from the Mac: `tools/deploy.sh tv` (rolling deploy, below). What it rests on,
   message) keeps re-registering and fights the native app for the companion slot — close it or
   point it at `about:blank` before opening Companion Mode in the app.
 - **tablet asleep**: when the tablet dozes, Android cuts the companion's relay socket
-  (logcat: `Software caused connection abort`; in MwLog `App lifecycle: paused`, then the relay's
+  (logcat: `Software caused connection abort`; in logbook `App lifecycle: paused`, then the relay's
   `Disconnected closeCode=1006` ~5 s later). On wake it reconnects at once and the TV resends its
   game; taps made while it was offline are dropped with "Not connected to the TV — that wasn't
   sent" (since 1.1.15 — before, they waited in the socket and hit the TV all at once).
@@ -215,7 +215,7 @@ data kept, relaunched into Companion Mode). `deploy.sh tv tablet` runs since 1.1
 evening): TV back in its game after ~15 s each time, the tablet relaunched into Companion Mode.
 
 Needs: box + tablet paired with this Mac (`latrine android devices`), the bench venv
-(`~/.local/share/battlemap/venv`, created on first run), `~/.config/mwlog/battlemap.env`.
+(`~/.local/share/battlemap/venv`, created on first run), `~/.config/logbook/battlemap.env`.
 Rule of thumb: batch changes — every TV deploy interrupts the table.
 
 Gotcha (2026-10-10): `deploy.sh tablet` alone leaves the **box on the older build** — the ruler
@@ -293,7 +293,7 @@ round trip in a plain `test` with `Hive.init(<temp dir>)` (found 2026-10-10).
 
 ## logs
 
-Logs go to **MwLog** — VictoriaLogs on this VPS, tenant `battlemap`
+Logs go to **logbook** — VictoriaLogs on this VPS, tenant `battlemap`
 (`https://srv1189697.hstgr.cloud/p/battlemap/…`, registry in `/opt/victorialogs/projects.md`).
 `tools/log_server.py` is retired; `/tmp/battlemap.log` on the VPS now only holds the relay's
 per-message forwards (see "relay diagnostics").
@@ -301,8 +301,8 @@ per-message forwards (see "relay diagnostics").
 The APK needs the credential baked in at build time (web builds use the stub and never log):
 
 ```bash
-. ~/.config/mwlog/battlemap.env
-flutter build apk --release --dart-define=MWLOG_AUTH=$MWLOG_USER:$MWLOG_PASS
+. ~/.config/logbook/battlemap.env
+flutter build apk --release --dart-define=LOGBOOK_AUTH=$LOGBOOK_USER:$LOGBOOK_PASS
 # shorebird release / patch take the same --dart-define
 ```
 
@@ -346,7 +346,7 @@ logq story --tenant battlemap --at 19:57 --around 3m        # start here
 logq lines --tenant battlemap --where 'tag:relay' --since 1h --level info,warn,error
 ```
 
-The relay ships with `~/.config/mwlog/battlemap.env` on the VPS (no file → local only); its
+The relay ships with `~/.config/logbook/battlemap.env` on the VPS (no file → local only); its
 per-message forwards stay in `/tmp/battlemap.log` there (millisecond stamps).
 
 Restarting the relay: copy `tools/vtt_relay.py` over, `kill <pid>` in its own ssh call, start it with

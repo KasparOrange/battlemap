@@ -176,7 +176,7 @@ class _VttCompanionScreenState extends State<VttCompanionScreen> {
     _state.addListener(_onStateChanged);
     _overlayImages.addListener(_onOverlayImagesChanged);
     if (_isNetworked) {
-      // The companion's lines (relay diagnostics, DevLog) go to MwLog as
+      // The companion's lines (relay diagnostics, DevLog) go to logbook as
       // src=companion next to the TV's.
       RemoteLog.setSource('companion');
       RemoteLog.sendDeviceInfo();

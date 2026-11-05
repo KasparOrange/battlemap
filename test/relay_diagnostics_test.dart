@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:battlemap/network/vtt_relay_client.dart';
 
-/// The relay client's connection diagnostics (MwLog tag `relay`): late
+/// The relay client's connection diagnostics (logbook tag `relay`): late
 /// messages by their `sent` stamp, sends without a socket. 2026-10-10: a
 /// minute of tablet commands reached the TV all at once after a reconnect.
 void main() {

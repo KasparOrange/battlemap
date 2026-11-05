@@ -71,7 +71,7 @@ The fork lives in `~/code/flutter-tvos` (1.10.0, pins Flutter 3.47.2 + the tvOS 
 - **tvOS simulator** (`Apple TV 4K (3rd generation)`, tvOS 26.5): builds, runs, mode selector
   → TV mode via the select key (Siri Remote = arrow keys + Return in the Simulator window).
 - **physical Apple TV** (`TV`, tvOS 26.6, paired over Wi-Fi): `--release` builds, installs,
-  runs (Impeller/Metal) and logs into MwLog. Signing just worked (the fork put the `PN7996GFJ3`
+  runs (Impeller/Metal) and logs into logbook. Signing just worked (the fork put the `PN7996GFJ3`
   team from the dev certificate into `tvos/Runner.xcodeproj`).
   **Debug on the device does not attach**: the wireless lldb attach times out ("Dart VM Service
   was not found"), even with `FLUTTER_TVOS_LLDB_ATTACH_TIMEOUT_SECONDS=600`, and the debug
@@ -87,8 +87,8 @@ The fork lives in `~/code/flutter-tvos` (1.10.0, pins Flutter 3.47.2 + the tvOS 
 export PATH="$PATH:$HOME/code/flutter-tvos/bin"      # put in ~/.zshrc
 cd ~/code/battlemap
 flutter-tvos devices                                  # simulator + "TV" when it is awake
-. ~/.config/mwlog/battlemap.env
-flutter-tvos run -d <id> --dart-define=MWLOG_AUTH=$MWLOG_USER:$MWLOG_PASS
+. ~/.config/logbook/battlemap.env
+flutter-tvos run -d <id> --dart-define=LOGBOOK_AUTH=$LOGBOOK_USER:$LOGBOOK_PASS
 ```
 
 `flutter-tvos` is a drop-in for `flutter` (`pub get`, `build tvos --simulator`, …); the plain
@@ -122,4 +122,4 @@ arrive as PNG (next section).
   (`ws://…:9090`) and map transfer (`http://…:4242`) need no Info.plist exception.
 - **no TV-side input needed**: the TV shell is driven by the phone; the D-pad fallback maps
   to the Siri Remote's arrows/select automatically.
-- **logging** goes to MwLog exactly as on Android (`docs/setup.md` "logs").
+- **logging** goes to logbook exactly as on Android (`docs/setup.md` "logs").

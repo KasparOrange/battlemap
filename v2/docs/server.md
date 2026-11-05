@@ -27,8 +27,8 @@ the app can show.
 
 | Route | Body / answer |
 |---|---|
-| `GET /health` | `{ok, build (app), serverBuild, uptimeS, startedAt, rooms, tvs, companions, members, waiting, library, games, mwlog}` |
-| `POST /log` | mwlog-ts browser batches → MwLog (`app=battlemap-v2-ui`) |
+| `GET /health` | `{ok, build (app), serverBuild, uptimeS, startedAt, rooms, tvs, companions, members, waiting, library, games, logbook}` |
+| `POST /log` | logbook-ts browser batches → logbook (`app=battlemap-v2-ui`) |
 | `GET /api/tables` | `{tables: [{room, tvName, companions, since}]}` — rooms with a TV online |
 | `GET /ws` | the relay (WebSocket) — `protocol.md` |
 | `POST /files?ext=&format=` | raw bytes (≤ 200 MB) → 201 `UploadResult` = `FileRef` (`hash`, `ext`, `bytes`) + `width`, `height`, `thumb` (`FileRef`, ≤ 288 px WebP, pictures only), `originalBytes`, `note`. `ext` = png \| jpg \| webp \| json \| pdf (optional; the bytes decide for pictures), `format` = webp \| jpeg \| png \| asis (default) |
@@ -97,7 +97,7 @@ battlemap.srv1189697.hstgr.cloud {
 ```
 
 (`*.srv1189697.hstgr.cloud` resolves to the VPS, so Caddy gets the certificate itself; WebSocket
-upgrade is automatic.) Logs: `journalctl -u battlemap-v2`, MwLog app `battlemap-v2`.
+upgrade is automatic.) Logs: `journalctl -u battlemap-v2`, logbook app `battlemap-v2`.
 
 ## v1 library import
 

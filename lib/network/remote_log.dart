@@ -38,7 +38,7 @@ enum LogLevel {
 /// ```
 ///
 /// Entries are batched in [_queue] and flushed asynchronously over HTTPS POST
-/// to `_remoteUrl` — MwLog (VictoriaLogs, tenant "battlemap"); query them with
+/// to `_remoteUrl` — logbook (VictoriaLogs, tenant "battlemap"); query them with
 /// `logq --tenant battlemap` or the vmui admin UI. The companion sets
 /// [setSource] to `companion`; the relay ships its own lines as `relay`.
 ///
@@ -50,7 +50,7 @@ enum LogLevel {
 /// * [LogLevel] for the level enum.
 /// * `docs/setup.md` "logs" for querying and the build-time credential.
 class RemoteLog {
-  /// MwLog ingest endpoint (VictoriaLogs behind Caddy, tenant "battlemap").
+  /// logbook ingest endpoint (VictoriaLogs behind Caddy, tenant "battlemap").
   ///
   /// Entries are posted as JSON lines; `app`/`src` become the stream fields,
   /// `msg` the message, `ts` the event time. See `docs/setup.md` "logs".
@@ -59,9 +59,9 @@ class RemoteLog {
       '?_stream_fields=app,src&_msg_field=msg&_time_field=ts';
 
   /// Basic-auth credentials `user:password`, injected at build time:
-  /// `--dart-define=MWLOG_AUTH=battlemap:<password>` (from
-  /// `~/.config/mwlog/battlemap.env`). Empty → remote logging is disabled.
-  static const String _auth = String.fromEnvironment('MWLOG_AUTH');
+  /// `--dart-define=LOGBOOK_AUTH=battlemap:<password>` (from
+  /// `~/.config/logbook/battlemap.env`). Empty → remote logging is disabled.
+  static const String _auth = String.fromEnvironment('LOGBOOK_AUTH');
 
   /// Pending entries waiting to be flushed to the server.
   static final List<Map<String, dynamic>> _queue = [];
@@ -133,7 +133,7 @@ class RemoteLog {
     _enqueue(entry);
   }
 
-  /// Stamps the fields every MwLog entry carries and schedules a flush.
+  /// Stamps the fields every logbook entry carries and schedules a flush.
   static void _enqueue(Map<String, dynamic> entry) {
     entry['app'] = 'battlemap';
     entry['ts'] = DateTime.now().toUtc().toIso8601String();

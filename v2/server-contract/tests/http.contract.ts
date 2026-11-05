@@ -18,7 +18,7 @@ describe('health', () => {
     expect(body).toMatchObject({ ok: true, build: 'test-build', serverBuild: 'contract' });
     for (const k of ['uptimeS', 'rooms', 'tvs', 'companions', 'members', 'waiting', 'library', 'games']) expect(typeof body[k]).toBe('number');
     expect(Number.isFinite(Date.parse(body.startedAt))).toBe(true);
-    expect(body.mwlog).toBeDefined();
+    expect(body.logbook).toBeDefined();
   });
 });
 

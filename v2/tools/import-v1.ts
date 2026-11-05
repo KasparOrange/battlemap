@@ -29,13 +29,13 @@
  * settings (fog look, trim, fade, effects, map lights, preview first, Draw/Measure tabs). What
  * doesn't is listed per game. Running it again overwrites the backups with v1's state (the
  * server keeps the ten previous versions). Exit code 0 = every game stored, 1 = something was
- * left out, 2 = could not start. Logs: MwLog app `battlemap-v2-import-v1`.
+ * left out, 2 = could not start. Logs: logbook app `battlemap-v2-import-v1`.
  *
  * @see ../docs/features.md "v1 import"
  */
 import { parseArgs } from 'node:util';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { init } from '../server/node_modules/mwlog/src/index.ts';
+import { init } from '../server/node_modules/logbook/src/index.ts';
 import { ProtoClient } from '../e2e/support/proto.ts';
 import { V1Bot } from './import-v1/relay.ts';
 import { importV1, type ImportV1Report } from './import-v1/run.ts';

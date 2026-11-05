@@ -12,7 +12,7 @@
 //! | [`library`] | the shared map library |
 //! | [`backups`] | game backups and their versions |
 //! | [`fetch`] | the link fetch with its address guard |
-//! | [`log`] | mwlog setup, `/log`, counted hot paths |
+//! | [`log`] | logbook setup, `/log`, counted hot paths |
 //! | [`cleanup`] | the temp cleanup |
 //! | [`schema`] | the shared types' JSON Schema (generated from `shared/`) |
 //! | [`wire`] | every JSON type the server writes; TypeScript for the server-only ones |
@@ -100,7 +100,7 @@ pub async fn read_build(app_dir: &std::path::Path) -> Option<String> {
 /// # Errors
 /// When the data folder can't be made, the link fetcher can't be built or the port can't be
 /// bound.
-pub async fn start(config: Config, shipper: mwlog::Shipper) -> Result<Running> {
+pub async fn start(config: Config, shipper: logbook::Shipper) -> Result<Running> {
     schema::warm_up();
     for sub in ["files", "games", "uploads", "trash"] {
         let dir = config.data_dir.join(sub);

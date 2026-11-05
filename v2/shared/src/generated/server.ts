@@ -301,9 +301,9 @@ library: number | null,
  */
 games: number | null, 
 /**
- * The log shipper's state (mwlog).
+ * The log shipper's state (logbook).
  */
-mwlog: Record<string, unknown>, 
+logbook: Record<string, unknown>, 
 /**
  * Rooms open.
  */

@@ -31,10 +31,10 @@ class DevLog {
   /// Appends a timestamped log message to [lines] and notifies listeners.
   ///
   /// The message is also forwarded to [debugPrint] for console output and,
-  /// unless [remote] is false, to MwLog via [RemoteLog] under tag `devlog`
+  /// unless [remote] is false, to logbook via [RemoteLog] under tag `devlog`
   /// (warn when it reads like a failure) — the companion's whole log, which
   /// before 2026-10-10 never left the tablet. Pass `remote: false` for lines
-  /// that are already in MwLog (the TV's own lines echoed via `tv.log`).
+  /// that are already in logbook (the TV's own lines echoed via `tv.log`).
   /// If the buffer exceeds [maxLines], the oldest entries are trimmed.
   static void add(String msg, {bool remote = true}) {
     if (remote) {

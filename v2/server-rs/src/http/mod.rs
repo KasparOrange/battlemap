@@ -3,7 +3,7 @@
 //! | Route | What | Where |
 //! |---|---|---|
 //! | `GET /health` | ok, builds, uptime, rooms, sockets, library and backup counts, the log shipper | [`health`] |
-//! | `POST /log` | log batches from the app (mwlog-ts browser forwarder) → MwLog | [`crate::log::browser_log`] |
+//! | `POST /log` | log batches from the app (logbook-ts browser forwarder) → logbook | [`crate::log::browser_log`] |
 //! | `GET /api/tables` | the rooms with a TV online (the companion's table picker) | [`tables`] |
 //! | `GET /ws` | the relay (WebSocket) | [`crate::relay::socket`] |
 //! | `POST /files`, `GET /files/…`, `GET /uploads/…` | the file store | [`crate::files::routes`] |
@@ -184,7 +184,7 @@ async fn health(State(state): State<Shared>) -> Response {
         relay: state.relay.stats(),
         library: library.map(|n| n as u32),
         games: games.map(|n| n as u32),
-        mwlog: state.shipper.health(),
+        logbook: state.shipper.health(),
     })
 }
 

@@ -15,11 +15,11 @@ to the companion instead of replacing it. Bot messages go to the table; table
 messages go to the companion AND the bot. Pairing is between table and
 companion only — the bot never triggers peer_connected/peer_disconnected.
 
-Diagnostics go to MwLog (tenant battlemap, src=relay) next to the TV's and the
+Diagnostics go to logbook (tenant battlemap, src=relay) next to the TV's and the
 companion's lines: connects, registers, drops with close code and lifetime,
 messages that arrive in a burst right after a register (sent while offline,
 delivered late), messages dropped for want of a peer, and a per-minute
-traffic summary. Credentials: ~/.config/mwlog/battlemap.env. Forwards stay in
+traffic summary. Credentials: ~/.config/logbook/battlemap.env. Forwards stay in
 /tmp/battlemap.log (one line each, millisecond stamps).
 """
 
@@ -84,9 +84,9 @@ traffic = {}
 TRAFFIC_EVERY = 60  # seconds
 
 
-def _load_mwlog_env():
-    """Reads ~/.config/mwlog/battlemap.env; returns (insert URL, auth) or None."""
-    path = os.path.expanduser("~/.config/mwlog/battlemap.env")
+def _load_logbook_env():
+    """Reads ~/.config/logbook/battlemap.env; returns (insert URL, auth) or None."""
+    path = os.path.expanduser("~/.config/logbook/battlemap.env")
     env = {}
     try:
         with open(path) as f:
@@ -96,7 +96,7 @@ def _load_mwlog_env():
                     env[k] = v.strip().strip('"')
     except OSError:
         return None
-    base, user, pw = env.get("MWLOG_URL"), env.get("MWLOG_USER"), env.get("MWLOG_PASS")
+    base, user, pw = env.get("LOGBOOK_URL"), env.get("LOGBOOK_USER"), env.get("LOGBOOK_PASS")
     if not (base and user and pw):
         return None
     url = (base.rstrip("/") + "/insert/jsonline"
@@ -105,13 +105,13 @@ def _load_mwlog_env():
     return url, auth
 
 
-_mwlog = _load_mwlog_env()
-_mwlog_queue = queue.Queue(maxsize=5000)
+_logbook = _load_logbook_env()
+_logbook_queue = queue.Queue(maxsize=5000)
 
 
-def mwlog(level, msg, **fields):
-    """Queues one MwLog line (src=relay, tag=relay); a thread ships them."""
-    if not _mwlog:
+def logbook(level, msg, **fields):
+    """Queues one logbook line (src=relay, tag=relay); a thread ships them."""
+    if not _logbook:
         return
     entry = {
         "app": "battlemap",
@@ -123,21 +123,21 @@ def mwlog(level, msg, **fields):
     }
     entry.update({k: v for k, v in fields.items() if v is not None})
     try:
-        _mwlog_queue.put_nowait(entry)
+        _logbook_queue.put_nowait(entry)
     except queue.Full:
         pass
 
 
-def _mwlog_shipper():
+def _logbook_shipper():
     """Posts queued lines in batches; keeps a failed batch and retries."""
-    url, auth = _mwlog
+    url, auth = _logbook
     pending = []
     while True:
         if not pending:
-            pending.append(_mwlog_queue.get())
+            pending.append(_logbook_queue.get())
         while len(pending) < 500:
             try:
-                pending.append(_mwlog_queue.get_nowait())
+                pending.append(_logbook_queue.get_nowait())
             except queue.Empty:
                 break
         body = "\n".join(json.dumps(e, separators=(",", ":")) for e in pending).encode()
@@ -147,7 +147,7 @@ def _mwlog_shipper():
             urllib.request.urlopen(req, timeout=10).read()
             pending = []
         except Exception as e:
-            log.warning("mwlog ship failed (%d lines kept): %s", len(pending), e)
+            log.warning("logbook ship failed (%d lines kept): %s", len(pending), e)
             pending = pending[-2000:]
             time.sleep(5)
 
@@ -205,7 +205,7 @@ def check_rate(ws):
             log.warning("rate limit: %s sending %.0f msg/sec (threshold %d)",
                         meta.get("role", "?"), rate, RATE_WARN_THRESHOLD)
             relay_log("rate_warning", role=meta.get("role", "?"), rate=round(rate))
-            mwlog("warn", "High message rate", role=meta.get("role", "?"), rate=round(rate))
+            logbook("warn", "High message rate", role=meta.get("role", "?"), rate=round(rate))
         # Reset window
         meta["msg_count"] = 0
         meta["rate_window_start"] = now
@@ -225,7 +225,7 @@ async def ping_loop(ws):
                 role = meta.get("role", "?")
                 log.info("zombie    %s (no message for %.0fs), closing", role, elapsed)
                 relay_log("zombie_close", role=role, silent_seconds=round(elapsed))
-                mwlog("warn", "Closing silent connection (zombie)", role=role,
+                logbook("warn", "Closing silent connection (zombie)", role=role,
                       silentS=round(elapsed))
                 await ws.close(1000, "zombie timeout")
                 return
@@ -243,7 +243,7 @@ async def handler(ws, path=None):
     remote = ws.remote_address
     log.info("connect  %s:%s", remote[0], remote[1])
     relay_log("connect", ip=remote[0], port=remote[1])
-    mwlog("debug", "Socket connected", ip=remote[0], port=remote[1])
+    logbook("debug", "Socket connected", ip=remote[0], port=remote[1])
 
     now = time.monotonic()
     conn_meta[id(ws)] = {
@@ -329,11 +329,11 @@ async def handler(ws, path=None):
                 registered_at = time.monotonic()
                 register_sent = msg.get("sent")
                 burst_logged = isinstance(register_sent, int)  # new client: no check
-                mwlog("info", "Registered", role=role, ip=remote[0], paired=paired,
+                logbook("info", "Registered", role=role, ip=remote[0], paired=paired,
                       registerMs=round((registered_at - opened) * 1000))
                 peer_dropped = dropped_no_peer.pop(peer_role, 0)
                 if peer_dropped:
-                    mwlog("warn", "Dropped while this side was away", role=role,
+                    logbook("warn", "Dropped while this side was away", role=role,
                           fromRole=peer_role, count=peer_dropped)
 
                 # Notify peer (the bot is invisible to pairing)
@@ -361,7 +361,7 @@ async def handler(ws, path=None):
                         log.warning("burst    %s sent %d messages right after register "
                                     "(queued while offline): %s", role, n, dict(burst))
                         relay_log("register_burst", role=role, count=n, types=dict(burst))
-                        mwlog("warn", "Burst right after register (sent while offline)",
+                        logbook("warn", "Burst right after register (sent while offline)",
                               role=role, count=n, types=json.dumps(dict(burst)))
 
             # Forward everything else to the peer
@@ -399,7 +399,7 @@ async def handler(ws, path=None):
         log.info("closed   %s code=%s reason=%s", role or "?", e.code, e.reason)
     except Exception as e:
         log.error("error    %s: %s", role or "?", e)
-        mwlog("error", "Connection handler failed", role=role, error=str(e))
+        logbook("error", "Connection handler failed", role=role, error=str(e))
     finally:
         ping_task.cancel()
         meta = conn_meta.pop(id(ws), None)
@@ -414,7 +414,7 @@ async def handler(ws, path=None):
                       upS=lived, silentS=silent)
             # 1000/1001 = a clean close; 1006 = the socket died without a
             # close frame (network gone, app killed or paused).
-            mwlog("info" if close_code in (1000, 1001) else "warn", "Disconnected",
+            logbook("info" if close_code in (1000, 1001) else "warn", "Disconnected",
                   role=role, ip=remote[0], closeCode=close_code,
                   closeReason=close_reason or None, upS=lived, silentS=silent,
                   forwarded=forwarded)
@@ -424,7 +424,7 @@ async def handler(ws, path=None):
             log.info("disconn  %s:%s (unregistered)", remote[0], remote[1])
             relay_log("disconnect", ip=remote[0], role=role or "unregistered",
                       code=close_code)
-            mwlog("debug", "Disconnected (replaced or never registered)",
+            logbook("debug", "Disconnected (replaced or never registered)",
                   role=role, ip=remote[0], closeCode=close_code, upS=lived)
 
 
@@ -438,7 +438,7 @@ async def traffic_loop():
         traffic.clear()
         total = sum(c for c, _ in snap.values())
         top = sorted(snap.items(), key=lambda kv: -kv[1][0])[:12]
-        mwlog("debug", "Traffic last minute", messages=total,
+        logbook("debug", "Traffic last minute", messages=total,
               kb=round(sum(b for _, b in snap.values()) / 1024),
               slots=",".join(sorted(slots)),
               types=json.dumps({f"{r}:{t}": c for (r, t), (c, _) in top}))
@@ -447,11 +447,11 @@ async def traffic_loop():
 async def main():
     log.info("VTT relay starting on port %d (max_size=%d MB)", PORT, MAX_MSG_SIZE // (1024*1024))
     relay_log("start", port=PORT)
-    if _mwlog:
-        threading.Thread(target=_mwlog_shipper, daemon=True).start()
+    if _logbook:
+        threading.Thread(target=_logbook_shipper, daemon=True).start()
     else:
-        log.warning("no ~/.config/mwlog/battlemap.env: relay diagnostics stay local")
-    mwlog("info", "Relay starting", port=PORT)
+        log.warning("no ~/.config/logbook/battlemap.env: relay diagnostics stay local")
+    logbook("info", "Relay starting", port=PORT)
     asyncio.create_task(traffic_loop())
     async with websockets.serve(
         handler,
@@ -467,7 +467,7 @@ async def main():
         await stop
     log.info("VTT relay stopped")
     relay_log("stop")
-    mwlog("info", "Relay stopped")
+    logbook("info", "Relay stopped")
     time.sleep(1)  # let the shipper post the last lines
 
 

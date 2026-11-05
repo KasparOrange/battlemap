@@ -67,7 +67,7 @@ mkdirSync(tightData, { recursive: true });
 
 const common = {
   ...process.env,
-  MWLOG_DISABLE: '1',
+  LOGBOOK_DISABLE: '1',
   HOST: '127.0.0.1',
   APP_DIR: appDir,
   BATTLEMAP_SERVER_BUILD: 'contract',

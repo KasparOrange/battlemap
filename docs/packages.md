@@ -14,7 +14,7 @@
 | `wakelock_plus` | >=1.3.3 <1.8.0 | keep the TV screen awake (Google TV's 4 h inattentive sleep ignores it — `setup.md` "box asleep mid-game") | pinned <1.8 (its tvOS support breaks `pod install`); tvOS: `wakelock_plus_tvos` |
 | `uuid` | ^4.0.0 | generate unique IDs | map entries, sessions, tokens |
 
-## adopted: MwLog (VictoriaLogs) for remote logs — 2026-09-05
+## adopted: logbook (VictoriaLogs) for remote logs — 2026-09-05
 
 **what:** [VictoriaLogs](https://docs.victoriametrics.com/victorialogs/) (single Go binary,
 Apache-2) behind Caddy on the VPS, one tenant per private project (`/opt/victorialogs/projects.md`
@@ -26,7 +26,7 @@ SSH. VictoriaLogs keeps 180 days, has a query language with regex + counts, a UI
 token-cheap query tool (`logq --tenant battlemap`, `~/.local/bin/logq`).
 
 **how:** `lib/network/remote_log.dart` posts JSON lines with basic auth; the credential comes from
-`--dart-define=MWLOG_AUTH=user:pass` (never in source — the repo is public). No new package.
+`--dart-define=LOGBOOK_AUTH=user:pass` (never in source — the repo is public). No new package.
 
 ## dev target: Apple TV — see `docs/apple-tv-dev.md`
 

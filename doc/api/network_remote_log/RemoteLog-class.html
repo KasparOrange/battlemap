@@ -59,7 +59,7 @@
 <pre class="language-json"><code class="language-json">{"src": "tv", "level": "info", "tag": "session", "msg": "Session resumed"}
 </code></pre>
 <p>Entries are batched in <code>_queue</code> and flushed asynchronously over HTTPS POST
-to <code>_remoteUrl</code> — MwLog (VictoriaLogs, tenant "battlemap"); query them with
+to <code>_remoteUrl</code> — logbook (VictoriaLogs, tenant "battlemap"); query them with
 <code>logq.sh</code> from the my-tube repo or the vmui admin UI.</p>
 <p>Use <a href="../network_remote_log/RemoteLog/debug.html">debug</a>, <a href="../network_remote_log/RemoteLog/info.html">info</a>, <a href="../network_remote_log/RemoteLog/warn.html">warn</a>, or <a href="../network_remote_log/RemoteLog/error.html">error</a> for tagged level-aware logging.
 The legacy <a href="../network_remote_log/RemoteLog/send.html">send</a> and <a href="../network_remote_log/RemoteLog/sendEvent.html">sendEvent</a> entry points remain for compatibility

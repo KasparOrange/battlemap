@@ -1,12 +1,12 @@
 /**
- * The server's logger: mwlog-ts, tenant `battlemap`, app `battlemap-v2` (the UI's lines it
- * forwards arrive as `battlemap-v2-ui`). Credentials from `~/.config/mwlog/battlemap.env` (or the
- * environment on the VPS); `MWLOG_DISABLE=1` keeps tests from shipping anything.
+ * The server's logger: logbook-ts, tenant `battlemap`, app `battlemap-v2` (the UI's lines it
+ * forwards arrive as `battlemap-v2-ui`). Credentials from `~/.config/logbook/battlemap.env` (or the
+ * environment on the VPS); `LOGBOOK_DISABLE=1` keeps tests from shipping anything.
  */
-import { init, type MwLog } from 'mwlog';
+import { init, type Logbook } from 'logbook';
 
 /** The logger type every server module takes. */
-export type ServerLog = MwLog;
+export type ServerLog = Logbook;
 
 /**
  * Creates the logger (once per process).

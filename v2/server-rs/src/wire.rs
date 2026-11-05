@@ -544,9 +544,9 @@ pub struct Health {
     pub library: Option<u32>,
     /// Game backups, or null when they can't be read.
     pub games: Option<u32>,
-    /// The log shipper's state (mwlog).
+    /// The log shipper's state (logbook).
     #[cfg_attr(test, ts(type = "Record<string, unknown>"))]
-    pub mwlog: Value,
+    pub logbook: Value,
 }
 
 #[cfg(test)]

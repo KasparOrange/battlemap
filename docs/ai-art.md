@@ -59,7 +59,7 @@ the Gemini app is also wanted for hand exploration.
 `tools/mapgen/mapgen.py` (Python 3, Pillow + numpy; runs on the Mac or the VPS). Since
 2026-10-11 its model call goes through the **image generation engine**
 (`~/code/image-generation-engine`, `ige.paint`; needs that repo next to battlemap or `$IGE_HOME`):
-one Nano Banana client for every project, logged to MwLog tenant `image-generation-engine`
+one Nano Banana client for every project, logged to logbook tenant `image-generation-engine`
 (app `mapgen`). Guide, checks, judge, fix and pack stay here. For hand exploration of a map
 idea as a tree of variants (vary, merge, upscale, pick), an `ige` project; horizon's image
 generation plugin will show those trees (horizon `docs/plugins.md`).

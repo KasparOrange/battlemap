@@ -1,7 +1,7 @@
 /**
  * The last log lines of this page, kept in memory for the developer screen (parity LG-06): a
  * ring of the newest `size` lines (default 500) and listeners told of each new one. Fed by the
- * logger with every line it ships — the same lines MwLog gets, including the global error
+ * logger with every line it ships — the same lines logbook gets, including the global error
  * catchers' and the summary `count` lines — so they arrive in the logger's batches (≤ 3 s).
  * Plain TS, tested under `bun test`.
  *

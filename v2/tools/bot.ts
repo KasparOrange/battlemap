@@ -30,7 +30,7 @@
  *   on the TV after the reconnect.
  * - **Order**: revisions of its own applied commands only grow.
  *
- * Logs: MwLog tenant `battlemap`, app `battlemap-v2-bot`, area `bot` (one line per phase, every
+ * Logs: logbook tenant `battlemap`, app `battlemap-v2-bot`, area `bot` (one line per phase, every
  * failure with context, a summary) — `logq battlemap 'app:battlemap-v2-bot'`. Exit code 0 = all
  * checks held, 1 = a check failed, 2 = could not start.
  *
@@ -38,7 +38,7 @@
  */
 import { parseArgs } from 'node:util';
 import { apply, buildWallGrid, circleCells, classicDisc, floodFillWithin, newId, type Command, type MapPlay, type RootState } from '../shared/src/index.ts';
-import { init } from '../server/node_modules/mwlog/src/index.ts';
+import { init } from '../server/node_modules/logbook/src/index.ts';
 import { fixture, uploadMap, type UploadedMap } from '../e2e/support/maps.ts';
 import { ProtoClient } from '../e2e/support/proto.ts';
 

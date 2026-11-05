@@ -58,7 +58,7 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 ### 26-10-10 22:40 - TV overscan - Measure the TV: edges the set cuts off, pattern switch, back to auto
 - Konrad: Measure the TV misbehaves — the pivot does not show on the TV (show it, switch it on and off); the TV should hold 35 × 19 squares but says 38 × 21, and no fine-tuning hits it; look for logic errors; a button back to auto (34 × 19)
 	- pivot: the box still ran 1.1.17+27, built before the pivot commit (tablet had 1.1.18) — fixed by deploying
-	- 38 × 21: MwLog shows the width stepped in 1 cm steps up to ~39 in; 35 × 19 visible at that scale means the Thomson cuts ~5 % off each edge (overscan), so the app counted squares nobody sees. Logic gap: `TableGrid` assumed every pixel is on the glass. The Thomson's EDID (58 × 32 cm, 2011, "DTV") is generic, no help
+	- 38 × 21: logbook shows the width stepped in 1 cm steps up to ~39 in; 35 × 19 visible at that scale means the Thomson cuts ~5 % off each edge (overscan), so the app counted squares nobody sees. Logic gap: `TableGrid` assumed every pixel is on the glass. The Thomson's EDID (58 × 32 cm, 2011, "DTV") is generic, no help
 	- `TableGrid.overscanPercent` + `visible`: squares counted in what the set shows, inch unchanged, pivot inside; `VttState.tvOverscanPercent` stored on the TV (`TvCalibrationStore`), `vtt.setOverscan`, in `vtt.fullState`; the pattern paints cut-off strips red with a blue border line
 	- dialog: "Edges the TV cuts off" stepper (0–12 %), "Pattern and ruler on the TV" switch, "Back to auto (34 × 19)" button (resets width + overscan, undo) replacing the small Reset action; 1.1.20+30, 624 tests green
 	- also repaired this file's header: an earlier insert had split the rule line and left a fragment between entries
@@ -228,7 +228,7 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 ### 26-10-10 20:10 - 0d5d9ed1 - relay diagnostics: why the TV reacted late
 - Konrad: the TV reacted late to a tablet action — was something stuck in the relay? if the logs can't show it, log both sides so they can
 	- from the VPS relay's own forward log: the tablet's socket died at 19:56:10 (close 1006, no close frame), it came back only at 19:57:15; the 31 commands made in that minute (window moves, a brush stroke) waited in the tablet's socket buffer and reached the TV in the same instant as the new `register` — the delayed reaction
-	- why the socket died and why the reconnect took 65 s was invisible: the companion sent nothing to MwLog (only DevLog, on the tablet), the clients logged no connection events, the relay only to `/tmp` on the VPS
+	- why the socket died and why the reconnect took 65 s was invisible: the companion sent nothing to logbook (only DevLog, on the tablet), the clients logged no connection events, the relay only to `/tmp` on the VPS
 	- now: companion logs as `src=companion` (DevLog lines too, tag `devlog`); both clients log every attempt, drop (close code, lifetime), outage, commands sent while offline / dropped, late messages by a new `sent` stamp, round trips (stamped pongs now forwarded by the relay), slow handlers, event-loop stalls, app lifecycle; the relay ships connects, drops, post-register bursts, no-peer drops and a per-minute traffic line as `src=relay`; failed log posts are retried instead of dropped
 	- `docs/setup.md` "relay diagnostics", `docs/relay-protocol.md` heartbeat; 5 new tests; not in a build yet, relay not restarted on the VPS (Konrad is playing)
 	- open: the behaviour fix — drop or confirm commands made while offline instead of replaying them late, and a connect timeout so a hanging attempt doesn't wait out the OS's ~60 s
@@ -387,7 +387,7 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- verified: bench run 48/48, remote back goes game → library once, tablet shows the revealed room after prep
 
 ### 26-10-10 17:58 - 93f94292 - TV app 1.1.5+15 on the Xiaomi box from the Mac
-- Konrad: "deploy the current version of the TV app to the TV that is connected via wireless debugging" → release APK of `34d7c92` (VPS relay, MwLog on), built in a temporary worktree, `install -r` over 1.1.1+11; app started (mode selector)
+- Konrad: "deploy the current version of the TV app to the TV that is connected via wireless debugging" → release APK of `34d7c92` (VPS relay, logbook on), built in a temporary worktree, `install -r` over 1.1.1+11; app started (mode selector)
 	- the box's app is signed with the Mac's debug key (same SHA-256), so the update kept its data
 	- a session's adb can't reach the box (Local Network privacy) → latrine got an `android` adapter for that; `docs/setup.md` "TV update" has the Mac route
 
@@ -501,12 +501,12 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 
 ### 26-09-06 01:05 - 389d2c14-05de-4f55-9d3c-6695b9d6b48e
 - Konrad: "make sure the documentation is up to date" → sweep for what the day made stale
-	- `CLAUDE.md`: log server line → MwLog, apple-tv-dev.md description; `README.md`: Flutter ≥ 3.47, Apple TV dev target, dev_server next to the relay, PDFs rasterized on the phone; `architecture.md` maps flow + render-order row; `setup.md` dropped the retired 4243 health check; `packages.md` pdfrx row; `apple-tv-dev.md` audit row (legacy path still touches pdfrx); `feature-ideas.md` Apple TV item ticked
+	- `CLAUDE.md`: log server line → logbook, apple-tv-dev.md description; `README.md`: Flutter ≥ 3.47, Apple TV dev target, dev_server next to the relay, PDFs rasterized on the phone; `architecture.md` maps flow + render-order row; `setup.md` dropped the retired 4243 health check; `packages.md` pdfrx row; `apple-tv-dev.md` audit row (legacy path still touches pdfrx); `feature-ideas.md` Apple TV item ticked
 
 ### 26-09-06 00:45 - 389d2c14-05de-4f55-9d3c-6695b9d6b48e
 - Konrad: picked a PNG on the phone, "nothing happened afterwards" → relay showed companion + Apple TV paired (the TV's "Library loaded: 0 maps" also proves the Hive cache-dir fix on the real device) but no upload ever reached the dev server → the pick returned null
 	- Cause: `file_picker_web` ≥ 3 cancels the pick on the window `focus` event by default; iOS Safari fires it when the Files sheet closes. The deprecated top-level flag is ignored by the web plugin — only `FilePickerWebOptions` counts, so `lib/network/file_picker_options_{stub,web}.dart` (conditional import, `file_picker_web` now a direct dependency)
-	- Version 1.1.4+14, web deployed from the Mac; APK rebuilt on the VPS (Flutter 3.47.2) with the MwLog define
+	- Version 1.1.4+14, web deployed from the Mac; APK rebuilt on the VPS (Flutter 3.47.2) with the logbook define
 
 ### 26-09-06 00:20 - 389d2c14-05de-4f55-9d3c-6695b9d6b48e
 - Konrad: "make everything ready for me to test … how I upload a PDF … to the rasterizing pipeline" → #36 built, services up
@@ -518,7 +518,7 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 ### 26-09-05 23:35 - 389d2c14-05de-4f55-9d3c-6695b9d6b48e
 - Konrad: "check the plans … for the new plan to make a development build for TVOS and then start executing that" → `docs/apple-tv-dev.md` setup executed on the Mac
 	- `fluttertv/flutter-tvos` 1.10.0 cloned to `~/code/flutter-tvos` (Flutter 3.47.2), CocoaPods via brew, `tvos/` host project generated and committed (bundle `com.example.battlemap`, team from the dev cert)
-	- **Runs on the tvOS simulator** (mode selector → TV mode via select key, logs "Device info … platform tvos" into MwLog). **Physical Apple TV**: `--release` runs and logs into MwLog (osVersion 26.6); debug's wireless lldb attach times out three times running → simulator for hot reload, release on the TV. Hive moved to the cache dir on tvOS (Documents is read-only on the real device — `openBox` threw)
+	- **Runs on the tvOS simulator** (mode selector → TV mode via select key, logs "Device info … platform tvos" into logbook). **Physical Apple TV**: `--release` runs and logs into logbook (osVersion 26.6); debug's wireless lldb attach times out three times running → simulator for hot reload, release on the TV. Hive moved to the cache dir on tvOS (Documents is read-only on the real device — `openBox` threw)
 	- Dependency fallout (all platforms, VPS needs Flutter ≥ 3.47 now): `pdfrx` → 2.6.1 (+ `pdfrxFlutterInitialize()`), `package_info_plus` → 10, `file_picker` → 12 (API migrated in the two pickers), `wakelock_plus` pinned <1.8 (its own tvOS pod breaks `pod install`), four `*_tvos` ports added; `flutter analyze` clean, 346 tests green
 	- Not done: the relay is still stopped on the VPS, so TV mode on the Apple TV only shows "Connecting to relay…"; #36 (PDF on the phone) still needed for PDF maps on tvOS
 
@@ -534,14 +534,14 @@ bullets. What was learned goes into the docs it belongs to (`architecture.md`, `
 	- Committed as `9d40331` from the Mac, pushed; VPS working copy (identical patch) discarded and fast-forwarded — both checkouts clean at the same commit
 
 ### 26-09-05 22:40 - 48b4e98a-9b23-47cd-a6dc-d0f31542c131
-- Konrad: "do we have a local project? put all of this in its documentation" (from the my-tube session that built MwLog)
-	- Local `~/code/battlemap` found stale (ahead 1 obsolete commit, behind 2) → reset to origin/main, MwLog patch applied
+- Konrad: "do we have a local project? put all of this in its documentation" (from the my-tube session that built logbook)
+	- Local `~/code/battlemap` found stale (ahead 1 obsolete commit, behind 2) → reset to origin/main, logbook patch applied
 	- New `docs/apple-tv-dev.md`: flutter-tvos fork as a Mac-only dev target, dependency audit (only `pdfrx` blocks — native PDFium, no tvOS build), plan to rasterize PDFs on the phone, tvOS caveats (purgeable storage, pixel ratio, dart:io bypasses ATS)
-	- `architecture.md` diagram + data flow → MwLog; `packages.md` "adopted: MwLog" + tvOS ports; `feature-ideas.md` + `CLAUDE.md` roadmap #35 (logs → MwLog, needs APK rebuild), #36 (PDF on phone), #37 (Apple TV dev target)
+	- `architecture.md` diagram + data flow → logbook; `packages.md` "adopted: logbook" + tvOS ports; `feature-ideas.md` + `CLAUDE.md` roadmap #35 (logs → logbook, needs APK rebuild), #36 (PDF on phone), #37 (Apple TV dev target)
 
 ### 26-09-05 22:20 - 48b4e98a-9b23-47cd-a6dc-d0f31542c131
-- Konrad: "set that up" → logs moved off the hand-started `tools/log_server.py` (down since the 2026-07-07 VPS reboot, log file in /tmp gone) to **MwLog**: VictoriaLogs + Caddy on the same VPS, tenant `battlemap` (AccountID 2) next to MyTube's
-	- `lib/network/remote_log.dart`: JSON lines, basic auth, `app`/`ts` stamped on every entry, credential via `--dart-define=MWLOG_AUTH` (repo is public → never in source), silent when absent; `dart analyze` clean on the VPS
+- Konrad: "set that up" → logs moved off the hand-started `tools/log_server.py` (down since the 2026-07-07 VPS reboot, log file in /tmp gone) to **logbook**: VictoriaLogs + Caddy on the same VPS, tenant `battlemap` (AccountID 2) next to MyTube's
+	- `lib/network/remote_log.dart`: JSON lines, basic auth, `app`/`ts` stamped on every entry, credential via `--dart-define=LOGBOOK_AUTH` (repo is public → never in source), silent when absent; `dart analyze` clean on the VPS
 	- `docs/setup.md` "logs": build define + `logq.sh` queries; `log_server.py` retired
 	- Measured on the way: VictoriaLogs silently drops form-encoded bodies (answers 200) — always send `Content-Type: application/json`; the Caddyfile is bind-mounted by inode, so a replaced file needs `docker compose restart caddy`, not `caddy reload`
 	- Not done: APK rebuild with the define; relay/dev server still stopped (no systemd units)
