@@ -411,7 +411,7 @@ export class Relay {
     from.messages++;
     const msg = env.value;
     const text = JSON.stringify({ ...msg, from: from.hello.client });
-    this.log.count('relay', 'Messages', { role: from.hello.role, type: msg.type }, { bytes });
+    this.log.tally('relay', 'Messages', { role: from.hello.role, type: msg.type }, { bytes });
     if (from.hello.role === 'companion') {
       room.traffic.companionMessages++;
       room.traffic.companionBytes += bytes;

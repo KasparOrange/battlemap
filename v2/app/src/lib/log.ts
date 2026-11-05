@@ -1,15 +1,15 @@
 /**
- * The app's one logger. Lines go through logbook-ts's browser forwarder (batched, 3 s / 50 lines,
+ * The app's one logger. Lines go through logbook's browser forwarder (~/code/logbook/ts) (batched, 3 s / 50 lines,
  * global error catchers, a flush when the page hides) to the server's `/log`, which ships them
  * to logbook (tenant `battlemap`, `app=battlemap-v2-ui`) with credentials no device holds. Batches
  * that can't be delivered wait in the localStorage outbox (`log-outbox.ts`). In development the
  * lines are mirrored to the console. Never use `console.log` directly.
  *
- * Usage: `log.info('net', 'Welcomed', { outageMs })` — area, message, props.
+ * Usage: `log.info('net', 'Welcomed', { outageMs })` — area, message, fields.
  *
  * @see ../../../docs/architecture.md "logs"
  */
-import { createBrowserLog, type BrowserLog } from 'logbook/browser';
+import { init, type Logger as BrowserLogger } from 'logbook/browser';
 import { appConfig } from './config.ts';
 import { createOutbox } from './log-outbox.ts';
 import { LogRing } from './log-ring.ts';
@@ -25,8 +25,8 @@ export interface Logger {
   warn(area: string, msg: string, props?: Record<string, unknown>): void;
   /** Broken. */
   error(area: string, msg: string, props?: Record<string, unknown>): void;
-  /** One summary line per 10 s for things that happen often (sums of `nums`, call count). */
-  count?(area: string, msg: string, fixed?: Record<string, unknown>, nums?: Record<string, number>): void;
+  /** One tally line per 10 s for things that happen often (sums of `nums`, call count). */
+  tally?(area: string, msg: string, fixed?: Record<string, unknown>, nums?: Record<string, number>): void;
 }
 
 const config = appConfig();
@@ -50,7 +50,7 @@ export const logOutbox = createOutbox({
 export const logRing = new LogRing(500);
 
 /** The logger. */
-export const log: BrowserLog = createBrowserLog({
+export const log: BrowserLogger = init({
   send: (lines) => {
     logRing.push(lines);
     return logOutbox.send(lines);

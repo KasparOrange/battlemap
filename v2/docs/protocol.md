@@ -257,7 +257,7 @@ they say otherwise; without a game they are refused ("No game is open."), except
 ## Over HTTP (server, for the record)
 
 Not WebSocket messages, but part of the contract the server package implements:
-`GET /health`; `POST /log` (logbook-ts browser batches); `GET /api/tables` (rooms with a TV
+`GET /health`; `POST /log` (logbook browser batches); `GET /api/tables` (rooms with a TV
 online); `POST /files?ext=&format=` → `FileRef`, `GET /files/<hash>.<ext>` (immutable);
 `GET|POST|DELETE /api/library` (`LibraryEntry`); `PUT|GET /api/games/<id>` and `GET /api/games`
 (backups, `GameSummary`); `GET /api/fetch?url=` (a link's file, as the old `/fetch`);

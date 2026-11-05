@@ -241,8 +241,7 @@ mod tests {
             dir.path().join("app").display(),
             dir.path().join("state").display()
         );
-        // SAFETY: test-only, before the server's threads exist.
-        unsafe { std::env::set_var("LOGBOOK_DISABLE", "1") };
+        logbook::testing::disable();
         let port = start(&settings, None).unwrap();
         assert!(port > 0);
         assert_eq!(super::port(), Some(port));

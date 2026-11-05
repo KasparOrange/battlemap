@@ -141,7 +141,7 @@ export class SyncHost {
     this.state = result.state;
     this.rev++;
     if (ms > 5) this.log.warn('sync', 'Slow command', { type: cmd.type, ms: Math.round(ms) });
-    this.log.count?.('sync', 'Commands applied', { type: cmd.type }, { ms });
+    this.log.tally?.('sync', 'Commands applied', { type: cmd.type }, { ms });
     this.send({ type: 'sync.applied', epoch: this.epoch, rev: this.rev, by: from, seq, cmd });
     this.onChange?.(this.state, cmd);
     return true;

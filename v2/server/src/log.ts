@@ -1,7 +1,7 @@
 /**
- * The server's logger: logbook-ts, tenant `battlemap`, app `battlemap-v2` (the UI's lines it
+ * The server's logger: logbook (~/code/logbook/ts), tenant `battlemap`, app `battlemap-v2` (the UI's lines it
  * forwards arrive as `battlemap-v2-ui`). Credentials from `~/.config/logbook/battlemap.env` (or the
- * environment on the VPS); `LOGBOOK_DISABLE=1` keeps tests from shipping anything.
+ * environment on the VPS); tests call `disable()` from `logbook/testing` so nothing ships.
  */
 import { init, type Logbook } from 'logbook';
 

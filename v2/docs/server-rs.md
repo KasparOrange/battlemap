@@ -16,7 +16,7 @@ limits and data layout as the Bun server (`server.md`); the black-box suite in
 | `library/` | the shared library (`library.json`) |
 | `backups/` | game backups, versions, trash |
 | `fetch/` | the address guard (`guard.rs`), streaming download (`download.rs`), share links / page pictures (`link.rs`) |
-| `log.rs` | logbook-rs (tenant `battlemap`, app `battlemap-v2-rs`), `/log` → `battlemap-v2-ui`, 10-s counts of hot paths |
+| `log.rs` | logbook (rust/) (tenant `battlemap`, app `battlemap-v2-rs`), `/log` → `battlemap-v2-ui`, hot paths as 10-s tallies |
 | `cleanup.rs` | temp cleanup at start and every 6 h |
 | `schema.rs` | the shared types' JSON Schema, embedded |
 | `wire.rs` | every JSON type the server writes; TypeScript generated for the server-only ones |

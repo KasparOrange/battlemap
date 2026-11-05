@@ -100,7 +100,7 @@ export function createTvSound(opts: TvSoundOptions): TvSound {
         log.info('sound', game ? 'Game sound' : 'No game: silence', game ? { game: game.id, on: game.sound.on, beds: game.sound.beds.length } : {});
       }
       engine.apply(game?.sound ?? null);
-      if (engine.locked() && game?.sound.on) log.count?.('sound', 'Audio waits for a key press (autoplay)');
+      if (engine.locked() && game?.sound.on) log.tally?.('sound', 'Audio waits for a key press (autoplay)');
       const now = (opts.now ?? Date.now)();
       if (state.live.sounds !== lastSounds) {
         lastSounds = state.live.sounds;

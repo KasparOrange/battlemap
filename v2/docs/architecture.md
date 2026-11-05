@@ -80,7 +80,7 @@ messages do not change (see "networking").
 v2/
   shared/   protocol + game model + reducer + pure geometry   (no DOM, no Node — imported by app and server)
   app/      the one web app: TV mode and companion mode
-    src/lib/log.ts        the logger (logbook-ts browser forwarder → the server's /log)
+    src/lib/log.ts        the logger (logbook browser forwarder → the server's /log)
     src/lib/log-outbox.ts undelivered log batches kept in localStorage, sent later
     src/lib/config.ts     server URL, mode, device and table ids (URL → shell → remembered)
     src/lib/shell.ts      the Android shell's bridge, typed, a no-op in browsers
@@ -399,15 +399,15 @@ exist now.
 
 ```mermaid
 flowchart LR
-  A[app on TV / tablet<br/>lib/log.ts] -- batches, POST /log --> S[server<br/>handleBrowserLog]
+  A[app on TV / tablet<br/>lib/log.ts] -- batches, POST /log --> S[server<br/>log.uiHandler]
   A -. offline .-> O[(localStorage outbox<br/>≤ 1000 lines)]
   O -. back online .-> S
   S -- LOGBOOK_URL + credentials --> M[(logbook · tenant battlemap)]
   SV[server's own lines] --> M
 ```
 
-Devices hold no secrets: the app uses logbook-ts's browser forwarder (`logbook/browser`) and posts
-batches to the server's `/log`; the server (logbook-ts `init`, credentials from
+Devices hold no secrets: the app uses logbook's browser forwarder (`logbook/browser`) and posts
+batches to the server's `/log`; the server (logbook (ts/) `init`, credentials from
 `~/.config/logbook/battlemap.env`) re-logs them as `app=battlemap-v2-ui` and ships them with its
 own `app=battlemap-v2` lines. Every UI line carries `role` (tv | companion), `device`, `table`,
 `client`, `build`. When the server is unreachable the forwarder keeps lines in memory with
@@ -458,7 +458,7 @@ scenario), so a run on the box is readable from logbook afterwards.
   itself when it is in the library or on `tv.reload` from the tablet, and reopens its game — a
   break of a second or two, not the old 15 s APK install. No Shorebird, no APK per change; the
   shell changes rarely.
-- **Server deploy:** `bun build` bundles `server/` into one file (logbook-ts included, so the VPS
+- **Server deploy:** `bun build` bundles `server/` into one file (logbook (ts/) included, so the VPS
   needs no checkout of it), copied with `app/dist` to the VPS, run as a systemd unit behind
   Caddy (HTTPS, `/ws` upgraded). Its own ports; the old relay (9090) and dev server (4242) keep
   running for the Flutter app until v2 replaces it.

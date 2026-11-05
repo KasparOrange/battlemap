@@ -6,12 +6,13 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { init } from 'logbook';
+import { disable } from 'logbook/testing';
 import { PROTOCOL_VERSION } from '@battlemap/shared';
 import { readConfig, type RelayLimits, type ServerConfig } from '../src/config.ts';
 import type { Downloader } from '../src/fetch/download.ts';
 import { startServer, type RunningServer } from '../src/server.ts';
 
-process.env.LOGBOOK_DISABLE = '1';
+disable();
 
 /** A server for one test file, with its temp folder. */
 export interface TestServer {

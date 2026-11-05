@@ -3,7 +3,7 @@
 //! | Route | What | Where |
 //! |---|---|---|
 //! | `GET /health` | ok, builds, uptime, rooms, sockets, library and backup counts, the log shipper | [`health`] |
-//! | `POST /log` | log batches from the app (logbook-ts browser forwarder) → logbook | [`crate::log::browser_log`] |
+//! | `POST /log` | log batches from the app (logbook (ts/) browser forwarder) → logbook | [`crate::log::browser_log`] |
 //! | `GET /api/tables` | the rooms with a TV online (the companion's table picker) | [`tables`] |
 //! | `GET /ws` | the relay (WebSocket) | [`crate::relay::socket`] |
 //! | `POST /files`, `GET /files/…`, `GET /uploads/…` | the file store | [`crate::files::routes`] |
@@ -138,7 +138,7 @@ async fn around(State(_state): State<Shared>, ConnectInfo(peer): ConnectInfo<Soc
     let mut res = next.run(req).await;
     add_cors(res.headers_mut());
     let elapsed = t0.elapsed();
-    let ms = (elapsed.as_secs_f64() * 10_000.0).round() / 10.0;
+    let ms = logbook::ms(t0);
     let status = res.status().as_u16();
     let get_like = method == Method::GET || method == Method::HEAD;
     let counter = if path.starts_with("/app/") {
@@ -184,7 +184,7 @@ async fn health(State(state): State<Shared>) -> Response {
         relay: state.relay.stats(),
         library: library.map(|n| n as u32),
         games: games.map(|n| n as u32),
-        logbook: state.shipper.health(),
+        logbook: serde_json::to_value(logbook::Health::from(&state.shipper)).unwrap_or_default(),
     })
 }
 

@@ -184,7 +184,6 @@ pub async fn start(config: Config, shipper: logbook::Shipper) -> Result<Running>
             }
         }));
     }
-    timers.push(tokio::spawn(log::summaries()));
     if let Some(u) = &state.upstream {
         tracing::info!(target: "lifecycle", upstream = %u.base, sync_s = c.upstream_sync.as_secs(), "Upstream set (LAN table server)");
         timers.push(tokio::spawn(upstream::Upstream::run(state.clone(), c.upstream_sync)));

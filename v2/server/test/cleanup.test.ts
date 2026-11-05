@@ -6,8 +6,11 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { init } from 'logbook';
+import { disable } from 'logbook/testing';
 import { cleanup } from '../src/cleanup.ts';
 import { clientIp } from '../src/server.ts';
+
+disable();
 
 describe('cleanup', () => {
   test('old link fetches, old trash and stale temp files go; the store and fresh files stay', async () => {

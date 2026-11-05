@@ -3,7 +3,7 @@
  * deliver in `localStorage` (≤ `maxLines`, oldest dropped first) so an outage's lines survive a
  * reload and arrive afterwards. Plain TS (no Svelte), so it is tested under `bun test`.
  *
- * @see ./log.ts which feeds it from logbook-ts's browser forwarder
+ * @see ./log.ts which feeds it from logbook's browser forwarder (~/code/logbook/ts)
  */
 
 /** The bit of `Storage` the outbox uses. */

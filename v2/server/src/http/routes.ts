@@ -4,7 +4,7 @@
  * | Route | What | Where |
  * |---|---|---|
  * | `GET /health` | ok, builds, uptime, rooms, sockets, library and backup counts, the log shipper | here |
- * | `POST /log` | log batches from the app (logbook-ts browser forwarder) → logbook | here |
+ * | `POST /log` | log batches from the app (logbook (ts/) browser forwarder) → logbook | here |
  * | `GET /api/tables` | the rooms with a TV online (the companion's table picker) | here |
  * | `POST /files`, `GET /files/…`, `GET /uploads/…` | the file store | `files/routes.ts` |
  * | `/api/library…` | the shared map library | `library/routes.ts` |
@@ -18,6 +18,7 @@
  *
  * @see ../../../docs/server.md
  */
+import { ms as msSince } from 'logbook';
 import type { ServerLog } from '../log.ts';
 import type { Relay } from '../relay/relay.ts';
 import type { FileStore } from '../files/store.ts';
@@ -79,10 +80,10 @@ export async function route(req: Request, ip: string, ctx: RouteContext): Promis
   const path = url.pathname;
   const t0 = performance.now();
   const res = await answer(req, url, ip, ctx);
-  const ms = Math.round((performance.now() - t0) * 10) / 10;
+  const ms = msSince(t0);
   const quiet = path.startsWith('/app/') || ((req.method === 'GET' || req.method === 'HEAD') && (path.startsWith('/files/') || path === '/health')) || path === '/log';
   if (quiet && res.status < 400) {
-    ctx.log.count('http', quiet && path.startsWith('/files/') ? 'File downloads' : path === '/log' ? 'Log batches' : path === '/health' ? 'Health checks' : 'App files', { status: res.status }, { ms });
+    ctx.log.tally('http', quiet && path.startsWith('/files/') ? 'File downloads' : path === '/log' ? 'Log batches' : path === '/health' ? 'Health checks' : 'App files', { status: res.status }, { ms });
   } else {
     const props = { method: req.method, path: path.length > 120 ? path.slice(0, 120) + '…' : path, status: res.status, ms, ip };
     if (res.status >= 500) ctx.log.error('http', 'Request failed', props);
@@ -99,7 +100,7 @@ async function answer(req: Request, url: URL, ip: string, ctx: RouteContext): Pr
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   try {
     if (path === '/log' && req.method === 'POST') {
-      const res = await ctx.log.handleBrowserLog(req, { ip });
+      const res = await ctx.log.uiHandler({ fields: { ip } })(req);
       return new Response(res.body, { status: res.status, headers: { ...Object.fromEntries(res.headers), ...CORS } });
     }
     if (path.startsWith('/app/') && (req.method === 'GET' || req.method === 'HEAD')) return await serveApp(ctx.appDir, path);

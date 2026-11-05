@@ -31,7 +31,7 @@ How to work here: [`CLAUDE.md`](CLAUDE.md).
 ## Run it
 
 Needs [Bun](https://bun.sh) ≥ 1.4 and the stack's logging client checked out next to this repo
-(`~/code/logbook-ts`, a path dependency).
+(`~/code/logbook/ts`, a path dependency).
 
 ```bash
 cd v2
